@@ -10,6 +10,7 @@ import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { CharacterMediaSection } from "./CharacterMediaSection";
+import { CharacterMemorySection, type MemoryPatch } from "./CharacterMemorySection";
 import { CharacterVoiceSection } from "./CharacterVoiceSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { PencilIcon, TrashIcon, XIcon } from "./icons";
@@ -28,6 +29,7 @@ export function CharacterProfileModal({
   onBubbleChange,
   onVoiceChange,
   onMediaChange,
+  onMemoryChange,
   onNotice,
 }: {
   character: CharacterDetail;
@@ -43,6 +45,7 @@ export function CharacterProfileModal({
   onBubbleChange: (next: BubbleStyle | null) => void;
   onVoiceChange: (next: CharacterVoiceConfig | null) => void;
   onMediaChange: (next: CharacterMedia | null) => void;
+  onMemoryChange: (next: MemoryPatch) => void;
   onNotice?: (msg: string) => void;
 }) {
   const [showBible, setShowBible] = useState(false);
@@ -124,6 +127,22 @@ export function CharacterProfileModal({
               )}
             </div>
           )}
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Ingatan jangka panjang
+            </h4>
+            <CharacterMemorySection
+              key={`${character.id}|${character.memoryUpdatedAt ?? ""}`}
+              characterId={character.id}
+              characterName={character.name}
+              memoryEnabled={character.memoryEnabled}
+              memorySummary={character.memorySummary}
+              memoryUpdatedAt={character.memoryUpdatedAt}
+              onChange={onMemoryChange}
+              onNotice={onNotice}
+            />
+          </div>
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">

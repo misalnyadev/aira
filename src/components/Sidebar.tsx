@@ -170,6 +170,14 @@ export function Sidebar({
                           📖
                         </span>
                       )}
+                      {c.memoryEnabled && (
+                        <span
+                          className="ml-1 text-[11px]"
+                          title="Ingatan jangka panjang & sadar waktu aktif"
+                        >
+                          🧠
+                        </span>
+                      )}
                     </p>
                     <span className="shrink-0 text-[11px] text-muted">
                       {formatListTime(c.updatedAt)}

@@ -39,6 +39,7 @@ import {
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { CallOverlay } from "./CallOverlay";
+import { type MemoryPatch } from "./CharacterMemorySection";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
 import { CharactersView } from "./CharactersView";
@@ -579,6 +580,22 @@ export function ChatApp() {
     }
   }
 
+  function handleCharacterMemorySync(id: string, next: MemoryPatch) {
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, memoryEnabled: next.memoryEnabled } : c))
+    );
+    setProfileDetail((cur) =>
+      cur && cur.id === id
+        ? {
+            ...cur,
+            memoryEnabled: next.memoryEnabled,
+            memorySummary: next.memorySummary,
+            memoryUpdatedAt: next.memoryUpdatedAt,
+          }
+        : cur
+    );
+  }
+
   const profileProviderLabel = (() => {
     if (!profileDetail) return "";
     const chosen = profileDetail.providerId
@@ -841,6 +858,7 @@ export function ChatApp() {
           onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
           onVoiceChange={(next) => handleCharacterVoice(profileDetail.id, next)}
           onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
+          onMemoryChange={(next) => handleCharacterMemorySync(profileDetail.id, next)}
           onNotice={showToast}
         />
       )}
