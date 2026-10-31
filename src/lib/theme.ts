@@ -143,6 +143,8 @@ export function useTheme() {
 
 /**
  * Skrip kecil yang dipasang di <head> sebelum aplikasi tampil, supaya saat
- * pengguna memakai mode gelap halaman tidak sempat berkedip putih lebih dulu.
+ * pengguna memakai mode gelap halaman tidak sempat berkedip putih lebih dulu,
+ * sekaligus menandai mode aplikasi layar penuh iPhone (`ios-standalone`) sejak
+ * frame pertama agar tinggi `.app-shell` langsung penuh 100vh.
  */
-export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';var c=d?'#000000':'#fafafa';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';if(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches)r.classList.add('ios-standalone');var c=d?'#000000':'#fafafa';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){}})();`;

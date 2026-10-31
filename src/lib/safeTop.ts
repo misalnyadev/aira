@@ -47,11 +47,17 @@ function isIOS(): boolean {
   return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
 }
 
-function isAppMode(): boolean {
+function isStandaloneShell(): boolean {
   if (typeof navigator === "undefined") return false;
   if ((navigator as Navigator & { standalone?: boolean }).standalone === true) return true;
   const mq = (mode: string) => window.matchMedia(`(display-mode: ${mode})`).matches;
-  if (mq("standalone") || mq("fullscreen") || mq("minimal-ui")) return true;
+  return mq("standalone") || mq("fullscreen");
+}
+
+function isAppMode(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (isStandaloneShell()) return true;
+  if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
   return window.screen.height - window.innerHeight < 100;
 }
 
@@ -86,6 +92,7 @@ export function useSafeTop() {
 
     const apply = () => {
       if (!isIOS()) return;
+      root.classList.toggle("ios-standalone", isStandaloneShell());
       root.style.setProperty("--safe-top", `${Math.round(resolveSafeTop())}px`);
     };
 

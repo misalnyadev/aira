@@ -14,6 +14,7 @@ const display = localFont({
 export const metadata: Metadata = {
   title: "Aisherly — AI Chat",
   description: "Ngobrol natural dengan karakter AI kustom",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -28,6 +29,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fafafa" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
@@ -40,11 +42,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`h-full ${display.variable}`} suppressHydrationWarning>
+    <html lang="id" className={display.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="h-full antialiased">{children}</body>
+      <body className="text-ink antialiased">{children}</body>
     </html>
   );
 }

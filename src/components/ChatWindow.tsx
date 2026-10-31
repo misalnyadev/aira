@@ -151,7 +151,7 @@ export function ChatWindow({
           className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
           aria-label="Kembali ke daftar chat"
         >
-          <BackIcon className="h-[28px] w-[28px]" />
+          <BackIcon className="h-[30px] w-[30px]" />
         </button>
 
         <button
