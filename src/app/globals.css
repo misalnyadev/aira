@@ -283,20 +283,26 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Bilah atas tembus pandang                                           */
+/* Bilah atas & bawah tembus pandang                                   */
 /* ------------------------------------------------------------------ */
 /*
- * Header memakai kaca, bukan bidang pekat. Dengan begitu latar chat / wallpaper
- * tetap terlihat sampai tepi atas layar — tidak ada garis potong di bawah
- * status bar.
+ * Header & komposer memakai kaca buram yang sama, bukan bidang pekat. Dengan
+ * begitu warna keduanya ikut membiaskan latar chat / foto / video secara
+ * dinamis dan seragam di bagian atas maupun bawah layar.
  */
 .top-bar {
   background-color: color-mix(in srgb, var(--header) 78%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
 }
 
+.bottom-bar {
+  background-color: color-mix(in srgb, var(--header) 78%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+}
+
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .top-bar {
+  .top-bar,
+  .bottom-bar {
     background-color: color-mix(in srgb, var(--header) 62%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(18px);
     backdrop-filter: saturate(180%) blur(18px);
