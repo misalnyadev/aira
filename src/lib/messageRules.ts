@@ -1,3 +1,5 @@
+import { speakableText } from "./voiceRules";
+
 /**
  * Aturan seputar pesan — dipisah dari komponen supaya bisa diuji tanpa React,
  * dan dipakai bersama oleh layar chat dan mesin balasan.
@@ -18,22 +20,27 @@ export function lastAssistantId(messages: MinimalMessage[]): string | null {
   return null;
 }
 
-export type ActionLabel = "Salin teks" | "Ulangi balasan" | "Hapus pesan";
+export type ActionLabel = "Salin teks" | "Bacakan" | "Ulangi balasan" | "Hapus pesan";
 
 /**
  * Aksi apa saja yang masuk akal untuk sebuah pesan.
  *
  * - "Salin" hanya kalau ada teksnya (pesan foto saja tidak ada yang disalin).
+ * - "Bacakan" hanya untuk balasan asisten yang punya kata-kata terbaca, bila
+ *   browser mendukung suara.
  * - "Ulangi" hanya untuk balasan asisten terakhir, dan tidak saat karakter
  *   sedang mengetik — kalau tidak, dua balasan bisa dibuat sekaligus.
  * - "Hapus" selalu ada.
  */
 export function messageActionsFor(
   message: MinimalMessage,
-  options: { isLastAssistant: boolean; isTyping: boolean }
+  options: { isLastAssistant: boolean; isTyping: boolean; canSpeak?: boolean }
 ): ActionLabel[] {
   const actions: ActionLabel[] = [];
   if (message.content.trim()) actions.push("Salin teks");
+  if (options.canSpeak && message.role === "assistant" && speakableText(message.content)) {
+    actions.push("Bacakan");
+  }
   if (options.isLastAssistant && !options.isTyping) actions.push("Ulangi balasan");
   actions.push("Hapus pesan");
   return actions;
