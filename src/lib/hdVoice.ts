@@ -48,18 +48,32 @@ export const HD_TTS_MODELS: {
 export const FEMALE_VOICE_PRESETS: { id: string; label: string; hint: string }[] = [
   { id: "EXAVITQu4vr4xnSDxMaL", label: "Sarah", hint: "Lembut & hangat" },
   { id: "cgSgspJ2msm6clMCkdW9", label: "Jessica", hint: "Ceria & ekspresif" },
-  { id: "21m00Tcm4TlvDq8ikWAM", label: "Rachel", hint: "Tenang & jernih" },
+  { id: "hpp4J3VqNfWAUOO0d1Us", label: "Bella", hint: "Cerah & ramah" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", label: "Lily", hint: "Halus & anggun" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", label: "Laura", hint: "Antusias & santai" },
+  { id: "Xb7hH8MSUJpSbSDYk0k2", label: "Alice", hint: "Jernih & tenang" },
+  { id: "XrExE9yKIg1WjnnlVkGX", label: "Matilda", hint: "Dewasa & kalem" },
 ];
 
 export const MALE_VOICE_PRESETS: { id: string; label: string; hint: string }[] = [
-  { id: "nPczCjzI2devNBz1zQrb", label: "Brian", hint: "Hangat & santai" },
+  { id: "nPczCjzI2devNBz1zQrb", label: "Brian", hint: "Dalam & hangat" },
   { id: "TX3LPaxmHKxFdv7VOQHJ", label: "Liam", hint: "Muda & akrab" },
-  { id: "onwK4e9ZLuTAKqWW03F9", label: "Daniel", hint: "Tenang & jelas" },
+  { id: "iP95p4xoKVk53GoZ742B", label: "Chris", hint: "Santai & ramah" },
+  { id: "bIHbv24MWmeRgasZH58o", label: "Will", hint: "Tenang & optimis" },
+  { id: "cjVigY5qzO86Huf0OWal", label: "Eric", hint: "Halus & mantap" },
+  { id: "onwK4e9ZLuTAKqWW03F9", label: "Daniel", hint: "Jelas & berwibawa" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", label: "George", hint: "Hangat & bercerita" },
+  { id: "IKne3meq5aSn9XLyUdCD", label: "Charlie", hint: "Tegas & bertenaga" },
 ];
 
 export const DEFAULT_FEMALE_VOICE_ID = FEMALE_VOICE_PRESETS[0].id;
 export const DEFAULT_MALE_VOICE_ID = MALE_VOICE_PRESETS[0].id;
 export const DEFAULT_HD_MODEL_ID: HdTtsModelId = "eleven_flash_v2_5";
+
+/** ID suara v1 lama yang sudah dipensiunkan ElevenLabs -> dipetakan otomatis ke penerusnya. */
+const RETIRED_VOICE_MAP: Record<string, string> = {
+  "21m00Tcm4TlvDq8ikWAM": "hpp4J3VqNfWAUOO0d1Us", // Rachel (v1 retired) -> Bella
+};
 
 /** Batas aman panjang teks sekali kirim ke ElevenLabs agar kuota terjaga. */
 export const MAX_HD_TEXT_CHARS = 900;
@@ -115,7 +129,8 @@ const SAFE_VOICE_ID = /^[A-Za-z0-9_-]{8,64}$/;
 export function cleanVoiceId(value: unknown, fallback = ""): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
-  return SAFE_VOICE_ID.test(trimmed) ? trimmed : fallback;
+  if (!SAFE_VOICE_ID.test(trimmed)) return fallback;
+  return RETIRED_VOICE_MAP[trimmed] ?? trimmed;
 }
 
 function clampUnit(value: unknown, fallback: number): number {

@@ -73,6 +73,8 @@ let activeAudioFinish: (() => void) | null = null;
 export type SpeakOptions = {
   append?: boolean;
   target?: ResolvedVoiceTarget;
+  /** Bila `false` (mis. tombol Tes HD), jangan jatuh ke suara robot perangkat saat HD gagal. */
+  allowDeviceFallback?: boolean;
   onFallback?: (reason: string) => void;
 };
 
@@ -579,7 +581,10 @@ export function speak(
               ? err.message
               : "Suara HD sedang tidak tersedia.";
           options.onFallback?.(reason);
-          // Jatuh mulus ke suara perangkat agar karakter tidak mendadak bisu.
+          if (options.allowDeviceFallback === false) {
+            return;
+          }
+          // Jatuh mulus ke suara perangkat agar karakter tidak mendadak bisu di ruang chat.
           const fallbackClean = speakableText(text);
           if (fallbackClean && isSpeechSupported()) {
             await playDeviceChunks(fallbackClean, settings, currentGeneration);
