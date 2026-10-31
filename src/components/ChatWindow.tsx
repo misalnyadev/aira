@@ -1,24 +1,54 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
-import { Avatar } from "./Avatar";
-import { BackIcon, SpeakerIcon, SpeakerOffIcon } from "./icons";
-import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
 import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
+import { Avatar } from "./Avatar";
+import {
+  BackIcon,
+  CheckIcon,
+  DoubleCheckIcon,
+  SpeakerIcon,
+  SpeakerOffIcon,
+} from "./icons";
+import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return "Hari ini";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Kemarin";
+  return d.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: d.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function Ticks({ pending }: { pending?: boolean }) {
+  if (pending) {
+    return <CheckIcon className="h-3.5 w-3.5 text-ink-soft/60" />;
+  }
+  return <DoubleCheckIcon className="h-3.5 w-3.5 text-ink-soft/80" />;
 }
 
 function TypingBubble() {
   return (
     <div className="flex justify-start">
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white px-4 py-3 shadow-sm">
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-bubble-in px-4 py-3 shadow-sm">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
       </div>
     </div>
   );
@@ -71,6 +101,16 @@ export function ChatWindow({
   const lastAssistant = lastAssistantId(messages);
   const openMessage = messages.find((m) => m.id === openFor) ?? null;
 
+  const items = useMemo(
+    () =>
+      messages.map((message, index) => {
+        const label = dayLabel(message.createdAt);
+        const previousLabel = index > 0 ? dayLabel(messages[index - 1].createdAt) : null;
+        return { message, divider: label && label !== previousLabel ? label : null };
+      }),
+    [messages]
+  );
+
   function actionsFor(message: ChatMessage): MessageAction[] {
     const labels = messageActionsFor(message, {
       isLastAssistant: message.id === lastAssistant,
@@ -93,25 +133,39 @@ export function ChatWindow({
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col bg-[#efeae2]">
+    <div className="chat-wallpaper flex h-full min-h-0 flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 bg-[#f0f2f5] px-4 py-2.5 shadow-sm">
-        <button onClick={onBack} className="rounded-full p-1.5 text-slate-600 hover:bg-slate-200 md:hidden">
-          <BackIcon className="h-5 w-5" />
+      <div className="z-10 flex items-center gap-2 border-b border-line bg-header px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+        <button
+          onClick={onBack}
+          className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
+          aria-label="Kembali ke daftar chat"
+        >
+          <BackIcon className="h-[28px] w-[28px]" />
         </button>
-        <button onClick={onOpenProfile} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+
+        <button
+          onClick={onOpenProfile}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          title="Lihat profil karakter"
+        >
           <Avatar name={character.name} src={character.avatarUrl} size={40} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">{character.name}</p>
-            <p className="truncate text-xs text-emerald-600">
-              {isTyping ? "sedang mengetik..." : isSpeaking ? "sedang berbicara..." : "online"}
+            <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+            <p className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}>
+              {isTyping
+                ? "sedang mengetik..."
+                : isSpeaking
+                  ? "sedang berbicara..."
+                  : character.shortBio || "online"}
             </p>
           </div>
         </button>
+
         {isSpeaking && (
           <button
             onClick={onStopSpeaking}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200"
+            className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink ring-1 ring-line transition hover:bg-line/60"
             title="Hentikan suara"
             aria-label="Hentikan suara"
           >
@@ -119,15 +173,16 @@ export function ChatWindow({
             <span>Hentikan</span>
           </button>
         )}
+
         <button
           onClick={onOpenVoice}
-          className="relative shrink-0 rounded-full p-2 text-slate-600 hover:bg-slate-200"
+          className="relative shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
           title="Pengaturan Suara"
           aria-label="Pengaturan Suara"
         >
           <SpeakerIcon className="h-5 w-5" />
           {voiceEnabled && (
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
           )}
         </button>
       </div>
@@ -139,54 +194,90 @@ export function ChatWindow({
           const el = e.currentTarget;
           setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
         }}
-        className="flex-1 space-y-1.5 overflow-y-auto px-4 py-4 md:px-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.035) 1px, transparent 0)",
-          backgroundSize: "18px 18px",
-        }}
+        className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
       >
-        {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              onTouchStart={() => startLongPress(m.id)}
-              onTouchEnd={cancelLongPress}
-              onTouchMove={cancelLongPress}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setOpenFor(m.id);
-              }}
-              onClick={(e) => {
-                if (consumeLongPress()) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              }}
-              className={`relative max-w-[78%] cursor-default select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                m.role === "user"
-                  ? "rounded-br-sm bg-[#d9fdd3] text-slate-800"
-                  : "rounded-bl-sm bg-white text-slate-800"
-              } ${m.pending ? "opacity-60" : ""}`}
-            >
-              {m.imageUrl && (
-                <img
-                  src={m.imageUrl}
-                  alt="lampiran"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onImageClick(m.imageUrl!);
-                  }}
-                  className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover"
-                />
+        <div className="mx-auto w-full max-w-3xl">
+          {items.map(({ message: m, divider }) => (
+            <div key={m.id}>
+              {divider && (
+                <div className="my-3 flex justify-center">
+                  <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[11px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
+                    {divider}
+                  </span>
+                </div>
               )}
-              {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
-              <span className="float-right ml-2 mt-1 select-none text-[10px] text-slate-400">
-                {formatTime(m.createdAt)}
-              </span>
+
+              <div
+                className={`group mb-1.5 flex items-end gap-1 ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {m.role === "user" && !m.pending && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenFor(m.id)}
+                    aria-label="Menu pesan"
+                    className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                  >
+                    <span className="px-1 text-xs leading-none">•••</span>
+                  </button>
+                )}
+
+                <div
+                  onTouchStart={() => startLongPress(m.id)}
+                  onTouchEnd={cancelLongPress}
+                  onTouchMove={cancelLongPress}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setOpenFor(m.id);
+                  }}
+                  onClick={(e) => {
+                    if (consumeLongPress()) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  className={`bubble-in relative max-w-[85%] cursor-default rounded-2xl px-3 py-2 text-sm shadow-xs max-md:select-none sm:max-w-[75%] ${
+                    m.role === "user"
+                      ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
+                      : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
+                  } ${m.pending ? "opacity-60" : ""}`}
+                >
+                  {m.imageUrl && (
+                    <img
+                      src={m.imageUrl}
+                      alt="lampiran foto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (consumeLongPress()) return;
+                        onImageClick(m.imageUrl!);
+                      }}
+                      className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
+                    />
+                  )}
+                  {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
+                  <span className="float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[11px] text-ink-soft/80">
+                    {formatTime(m.createdAt)}
+                    {m.role === "user" && <Ticks pending={m.pending} />}
+                  </span>
+                </div>
+
+                {m.role === "assistant" && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenFor(m.id)}
+                    aria-label="Menu pesan"
+                    className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                  >
+                    <span className="px-1 text-xs leading-none">•••</span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        {isTyping && <TypingBubble />}
+          ))}
+
+          {isTyping && <TypingBubble />}
+        </div>
       </div>
 
       {openMessage && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { PaperclipIcon, SendIcon, XIcon } from "./icons";
+import { PlusIcon, SendIcon, XIcon } from "./icons";
 
 export function Composer({
   onSend,
@@ -11,10 +11,18 @@ export function Composer({
   disabled?: boolean;
 }) {
   const [text, setText] = useState("");
+  const [multiline, setMultiline] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  function syncSize(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    const next = Math.min(el.scrollHeight, 120);
+    el.style.height = `${next}px`;
+    setMultiline(next > 46);
+  }
 
   function handlePickFile(file: File) {
     setImageFile(file);
@@ -33,71 +41,92 @@ export function Composer({
     onSend(trimmed, imageFile);
     setText("");
     clearImage();
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      setMultiline(false);
+    }
   }
 
   return (
-    <div className="border-t border-slate-200 bg-[#f0f2f5] px-3 py-2.5">
-      {imagePreview && (
-        <div className="mb-2 flex items-center gap-2">
-          <div className="relative">
-            <img src={imagePreview} alt="preview" className="h-16 w-16 rounded-lg object-cover" />
-            <button
-              onClick={clearImage}
-              className="absolute -right-1.5 -top-1.5 rounded-full bg-slate-800 p-0.5 text-white"
-            >
-              <XIcon className="h-3 w-3" />
-            </button>
+    <div className="composer-bar border-t border-line bg-header px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-3 sm:py-2.5">
+      <div className="mx-auto w-full max-w-3xl">
+        {imagePreview && (
+          <div className="mb-2 flex items-center gap-2">
+            <div className="relative">
+              <img
+                src={imagePreview}
+                alt="preview"
+                className="h-16 w-16 rounded-lg object-cover ring-1 ring-line"
+              />
+              <button
+                onClick={clearImage}
+                aria-label="Batalkan foto"
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-brand p-0.5 text-brand-ink shadow"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            </div>
+            <span className="text-xs text-ink-soft">Foto siap dikirim</span>
           </div>
-          <span className="text-xs text-slate-500">Foto siap dikirim</span>
+        )}
+
+        <div className="flex items-end gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handlePickFile(file);
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={disabled}
+            className="mb-0.5 shrink-0 p-[5px] text-ink-soft transition active:opacity-50 disabled:opacity-50"
+            title="Kirim foto"
+            aria-label="Lampirkan foto"
+          >
+            <PlusIcon className="h-[28px] w-[28px]" />
+          </button>
+
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                syncSize(e.target);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              rows={1}
+              placeholder="Ketik pesan"
+              disabled={disabled}
+              autoComplete="off"
+              enterKeyHint="send"
+              aria-label="Tulis pesan"
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
+                multiline ? "rounded-2xl" : "rounded-full"
+              }`}
+            />
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={disabled || (!text.trim() && !imageFile)}
+            className="mb-0.5 shrink-0 rounded-full bg-brand p-2.5 text-brand-ink transition hover:bg-brand-strong disabled:opacity-40"
+            title="Kirim"
+            aria-label="Kirim pesan"
+          >
+            <SendIcon className="h-5 w-5" />
+          </button>
         </div>
-      )}
-      <div className="flex items-end gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handlePickFile(file);
-          }}
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={disabled}
-          className="mb-1 shrink-0 rounded-full p-2 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
-          title="Kirim foto"
-        >
-          <PaperclipIcon className="h-5 w-5" />
-        </button>
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            e.target.style.height = "auto";
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit();
-            }
-          }}
-          rows={1}
-          placeholder="Ketik pesan"
-          disabled={disabled}
-          className="max-h-[120px] flex-1 resize-none rounded-full border-none bg-white px-4 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:opacity-60"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={disabled || (!text.trim() && !imageFile)}
-          className="mb-0.5 shrink-0 rounded-full bg-emerald-600 p-2.5 text-white transition hover:bg-emerald-700 disabled:opacity-40"
-          title="Kirim"
-        >
-          <SendIcon className="h-5 w-5" />
-        </button>
       </div>
     </div>
   );

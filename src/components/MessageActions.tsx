@@ -12,8 +12,8 @@ export type MessageAction = {
  * Menu aksi per pesan.
  *
  * Di HP dibuka dengan tekan lama (~450 ms), di desktop dengan klik kanan atau
- * titik tiga. Tekan lama sengaja tidak langsung memicu aksi — menu dulu, baru
- * pengguna memilih — supaya tidak ada pesan yang terhapus tanpa sengaja.
+ * tombol titik tiga. Tekan lama membuka lembar pilihan lebih dulu agar tidak ada
+ * pesan yang terhapus tanpa sengaja.
  */
 export function useMessageActions() {
   const [openFor, setOpenFor] = useState<string | null>(null);
@@ -45,10 +45,6 @@ export function useMessageActions() {
     clearTimer();
   }, [clearTimer]);
 
-  /**
-   * Dipakai di onClick: kalau barusan tekan lama, klik yang mengikutinya
-   * diabaikan supaya tidak ikut membuka profil atau memperbesar gambar.
-   */
   const consumeLongPress = useCallback(() => {
     if (longPressed.current) {
       longPressed.current = false;
@@ -83,11 +79,11 @@ export function MessageActionSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 sm:items-center"
+      className="fade-in fixed inset-0 z-[80] flex items-end justify-center bg-black/50 backdrop-blur-[2px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-t-2xl bg-white p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl"
+        className="pop-in w-full max-w-sm rounded-t-3xl border border-line bg-surface p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {actions.map((action) => (
@@ -97,8 +93,8 @@ export function MessageActionSheet({
               onClose();
               action.onClick();
             }}
-            className={`w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition hover:bg-slate-100 ${
-              action.danger ? "text-rose-600" : "text-slate-800"
+            className={`w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition hover:bg-surface-2 ${
+              action.danger ? "text-rose-500" : "text-ink"
             }`}
           >
             {action.label}
@@ -106,7 +102,7 @@ export function MessageActionSheet({
         ))}
         <button
           onClick={onClose}
-          className="mt-1 w-full rounded-xl bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-slate-600"
+          className="mt-1 w-full rounded-xl bg-surface-2 px-4 py-3 text-center text-sm font-semibold text-ink-soft transition hover:text-ink"
         >
           Batal
         </button>

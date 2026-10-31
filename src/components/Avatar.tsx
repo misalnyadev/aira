@@ -1,9 +1,9 @@
 const PALETTE = [
-  "from-rose-400 to-orange-300",
-  "from-violet-400 to-indigo-300",
-  "from-emerald-400 to-teal-300",
-  "from-amber-400 to-pink-300",
-  "from-sky-400 to-cyan-300",
+  "from-neutral-500 to-neutral-400",
+  "from-stone-500 to-stone-400",
+  "from-zinc-500 to-zinc-400",
+  "from-slate-500 to-slate-400",
+  "from-gray-500 to-gray-400",
 ];
 
 function colorFor(name: string) {
@@ -38,7 +38,9 @@ export function Avatar({
         src={src}
         alt={name}
         style={style}
-        className={`shrink-0 rounded-full object-cover ${ring ? "ring-2 ring-emerald-400 ring-offset-2" : ""}`}
+        className={`shrink-0 rounded-full object-cover ${
+          ring ? "ring-2 ring-ink/15 ring-offset-2 ring-offset-surface" : ""
+        }`}
       />
     );
   }
@@ -48,7 +50,9 @@ export function Avatar({
       style={style}
       className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorFor(
         name || "?"
-      )} font-semibold text-white ${ring ? "ring-2 ring-emerald-400 ring-offset-2" : ""}`}
+      )} font-semibold text-white ${
+        ring ? "ring-2 ring-ink/15 ring-offset-2 ring-offset-surface" : ""
+      }`}
     >
       <span style={{ fontSize: size * 0.38 }}>{initials || "?"}</span>
     </div>

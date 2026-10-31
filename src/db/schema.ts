@@ -26,6 +26,8 @@ export const users = pgTable("users", {
   age: integer("age"),
   occupation: text("occupation").notNull().default(""),
   about: text("about").notNull().default(""),
+  /** Foto profil pengguna (`/api/attachments/{id}` atau `/uploads/...`). */
+  avatarUrl: text("avatar_url"),
 
   /** Pindah otomatis ke provider lain saat semua key provider utama kena limit/gagal. */
   autoFallback: boolean("auto_fallback").notNull().default(true),

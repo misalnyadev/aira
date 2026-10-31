@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
+import { useKeyboardPan } from "@/lib/keyboardPan";
 import { MAX_CHARACTERS } from "@/lib/limits";
+import { useSafeTop } from "@/lib/safeTop";
+import { useScrollGuard } from "@/lib/scrollGuard";
+import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
 import {
   loadVoiceSettings,
   speak,
@@ -14,14 +18,18 @@ import {
   useVoiceSettings,
 } from "@/lib/voice";
 import { useAuth } from "./AuthGate";
-import { Sidebar } from "./Sidebar";
-import { ChatWindow } from "./ChatWindow";
-import { Composer } from "./Composer";
-import { SettingsModal } from "./SettingsModal";
-import { VoiceModal } from "./VoiceModal";
+import { Avatar } from "./Avatar";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
-import { XIcon } from "./icons";
+import { CharactersView } from "./CharactersView";
+import { ChatWindow } from "./ChatWindow";
+import { Composer } from "./Composer";
+import { MobileTabBar, NavRail, type AppView } from "./Navigation";
+import { ProfileView } from "./ProfileView";
+import { SettingsView } from "./SettingsView";
+import { Sidebar } from "./Sidebar";
+import { VoiceView } from "./VoiceView";
+import { PlusIcon, SettingsIcon, XIcon } from "./icons";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,11 +47,16 @@ export function ChatApp() {
   const speechSupported = useSpeechSupported();
   const isSpeaking = useIsSpeaking();
 
-  // iOS Safari: buka mesin suara pada sentuhan pertama supaya auto-baca tidak dibungkam.
+  // Jaga jarak aman status bar, kunci posisi halaman, dan selaraskan keyboard iPhone.
+  useSafeTop();
+  useScrollGuard();
+  useKeyboardPan();
   useSpeechUnlock();
 
+  const [view, setView] = useState<AppView>("chats");
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
   const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -51,8 +64,6 @@ export function ChatApp() {
   const [typingFor, setTypingFor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const [showSettings, setShowSettings] = useState(false);
-  const [showVoice, setShowVoice] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
@@ -79,8 +90,7 @@ export function ChatApp() {
 
   /**
    * Semua permintaan lewat sini supaya 401 ditangani di satu tempat.
-   * Kalau sesi sudah berakhir, layar masuk ditampilkan lagi — bukan diam-diam
-   * gagal dengan daftar kosong yang membingungkan.
+   * Kalau sesi sudah berakhir, layar masuk ditampilkan lagi.
    */
   const api = useCallback(
     async (input: string, init?: RequestInit) => {
@@ -107,9 +117,18 @@ export function ChatApp() {
     if (typeof data.autoFallback === "boolean") setAutoFallback(data.autoFallback);
   }, [api]);
 
+  const fetchProfile = useCallback(async () => {
+    const res = await api("/api/profile");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.profile) setProfile(data.profile);
+  }, [api]);
+
   useEffect(() => {
-    Promise.all([fetchCharacters(), fetchProviders()]).finally(() => setLoaded(true));
-  }, [fetchCharacters, fetchProviders]);
+    Promise.all([fetchCharacters(), fetchProviders(), fetchProfile()]).finally(() =>
+      setLoaded(true)
+    );
+  }, [fetchCharacters, fetchProviders, fetchProfile]);
 
   const fetchMessages = useCallback(
     async (characterId: string) => {
@@ -121,8 +140,15 @@ export function ChatApp() {
     [api]
   );
 
+  function handleViewChange(next: AppView) {
+    if (next !== "chats") stopSpeaking();
+    setView(next);
+    if (next === "chats") setMobileShowChat(false);
+  }
+
   function handleSelect(id: string) {
     if (id !== activeId) stopSpeaking();
+    setView("chats");
     setActiveId(id);
     setMobileShowChat(true);
     if (!messagesMap[id]) fetchMessages(id);
@@ -183,7 +209,7 @@ export function ChatApp() {
 
       if (!res.ok) {
         setTypingFor(null);
-        showToast(data.error || "Gagal mendapatkan balasan. Cek Pengaturan API key.");
+        showToast(data.error || "Gagal mendapatkan balasan. Cek Setelan API key.");
         return;
       }
 
@@ -218,13 +244,11 @@ export function ChatApp() {
     }
   }
 
-  /** Salin teks pesan ke papan klip, dengan cadangan untuk browser lama. */
   async function handleCopyMessage(text: string) {
     try {
       await navigator.clipboard.writeText(text);
       showToast("Teks disalin.");
     } catch {
-      // Safari lama / bukan HTTPS: pakai textarea sementara.
       const area = document.createElement("textarea");
       area.value = text;
       area.style.position = "fixed";
@@ -252,7 +276,6 @@ export function ChatApp() {
       return;
     }
 
-    // Buang dari layar tanpa memuat ulang seluruh riwayat.
     setMessagesMap((prev) => {
       const next: Record<string, ChatMessage[]> = {};
       for (const [key, list] of Object.entries(prev)) {
@@ -323,25 +346,22 @@ export function ChatApp() {
     }
   }
 
-  async function handleToggleAutoFallback(next: boolean) {
-    setAutoFallback(next);
-    const res = await api("/api/providers", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ autoFallback: next }),
-    });
-    if (!res.ok) {
-      setAutoFallback(!next);
-      showToast("Gagal menyimpan pengaturan fallback.");
-    }
-  }
-
   async function openProfile(id: string) {
     const res = await api(`/api/characters/${id}`);
     const data = await res.json();
     if (res.ok) {
       setProfileDetail(data.character);
       setShowProfile(true);
+    }
+  }
+
+  async function openEdit(id: string) {
+    const res = await api(`/api/characters/${id}`);
+    const data = await res.json();
+    if (res.ok) {
+      setEditDetail(data.character);
+    } else {
+      showToast(data.error || "Gagal memuat data karakter.");
     }
   }
 
@@ -360,100 +380,144 @@ export function ChatApp() {
 
   const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
-  const hasProviders = providers.length > 0;
+  const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
+  const showMobileTabBar = !(view === "chats" && mobileShowChat);
 
   if (!loaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-400">
+      <div className="app-shell flex items-center justify-center bg-app text-sm text-muted">
         Memuat Aisherly...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-100">
-      <div className={`${mobileShowChat ? "hidden" : "flex"} w-full md:flex`}>
-        <Sidebar
-          characters={characters}
-          activeId={activeId}
-          onSelect={handleSelect}
-          onNewCharacter={() => setShowCreate(true)}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenVoice={() => setShowVoice(true)}
-          hasProviders={hasProviders}
-          voiceEnabled={voice.enabled}
-          limit={limit}
-        />
-      </div>
+    <div className="app-shell flex bg-app text-ink">
+      <NavRail view={view} onChange={handleViewChange} profile={profile} />
 
-      <div className={`${mobileShowChat ? "flex" : "hidden"} w-full flex-1 flex-col md:flex`}>
-        {activeCharacter ? (
-          <>
-            <ChatWindow
-              character={activeCharacter}
-              messages={activeMessages}
-              isTyping={typingFor === activeId}
-              isSpeaking={isSpeaking}
-              canSpeak={speechSupported}
-              voiceEnabled={voice.enabled}
-              onBack={() => {
-                stopSpeaking();
-                setMobileShowChat(false);
-              }}
-              onOpenProfile={() => openProfile(activeCharacter.id)}
-              onOpenVoice={() => setShowVoice(true)}
-              onImageClick={(url) => setLightbox(url)}
-              onCopyMessage={handleCopyMessage}
-              onSpeakMessage={handleSpeakMessage}
-              onStopSpeaking={stopSpeaking}
-              onDeleteMessage={handleDeleteMessage}
-              onRegenerate={handleRegenerate}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1">
+          {view === "chats" && (
+            <>
+              <div className={`${mobileShowChat ? "hidden" : "flex"} min-h-0 w-full md:w-auto md:flex`}>
+                <Sidebar
+                  characters={characters}
+                  activeId={activeId}
+                  profile={profile}
+                  onSelect={handleSelect}
+                  onNewCharacter={() => setShowCreate(true)}
+                  onOpenSettings={() => handleViewChange("settings")}
+                  onOpenProfile={() => handleViewChange("profile")}
+                  hasProviders={hasProviders}
+                  limit={limit}
+                />
+              </div>
+
+              <div className={`${mobileShowChat ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col md:flex`}>
+                {activeCharacter ? (
+                  <>
+                    <ChatWindow
+                      character={activeCharacter}
+                      messages={activeMessages}
+                      isTyping={typingFor === activeId}
+                      isSpeaking={isSpeaking}
+                      canSpeak={speechSupported}
+                      voiceEnabled={voice.enabled}
+                      onBack={() => {
+                        stopSpeaking();
+                        setMobileShowChat(false);
+                      }}
+                      onOpenProfile={() => openProfile(activeCharacter.id)}
+                      onOpenVoice={() => handleViewChange("voice")}
+                      onImageClick={(url) => setLightbox(url)}
+                      onCopyMessage={handleCopyMessage}
+                      onSpeakMessage={handleSpeakMessage}
+                      onStopSpeaking={stopSpeaking}
+                      onDeleteMessage={handleDeleteMessage}
+                      onRegenerate={handleRegenerate}
+                    />
+                    <Composer onSend={handleSend} disabled={typingFor === activeId} />
+                  </>
+                ) : (
+                  <div className="dot-grid relative flex h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-app px-5 py-10 text-center">
+                    <div className="fade-in w-full max-w-md">
+                      {characters.length > 0 && (
+                        <div className="mb-5 flex justify-center -space-x-3">
+                          {characters.slice(0, 3).map((c, i) => (
+                            <div
+                              key={c.id}
+                              style={{ zIndex: 3 - i }}
+                              className="rounded-full ring-4 ring-app"
+                            >
+                              <Avatar name={c.name} src={c.avatarUrl} size={56} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+                        Aisherly<span className="text-muted">.</span>
+                      </h2>
+                      <p className="mx-auto mt-2 max-w-xs text-sm text-ink-soft">
+                        Pilih karakter di sebelah kiri untuk mulai ngobrol, atau buat karaktermu
+                        sendiri lalu impor bible perannya.
+                      </p>
+
+                      <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          onClick={() => handleViewChange("settings")}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98]"
+                        >
+                          <SettingsIcon className="h-4 w-4" /> Atur API Key
+                        </button>
+                        <button
+                          onClick={() => setShowCreate(true)}
+                          disabled={characters.length >= limit}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <PlusIcon className="h-4 w-4" /> Buat Karakter
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {view === "voice" && <VoiceView settings={voice} onChange={setVoice} />}
+
+          {view === "characters" && (
+            <CharactersView
+              characters={characters}
+              limit={limit}
+              onChat={handleSelect}
+              onNew={() => setShowCreate(true)}
+              onEdit={openEdit}
+              onDelete={handleDeleteCharacter}
             />
-            <Composer onSend={handleSend} disabled={typingFor === activeId} />
-          </>
-        ) : (
-          <div className="flex h-full flex-1 flex-col items-center justify-center bg-[#f7f8fa] px-6 text-center">
-            <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-4xl">
-              💬
-            </div>
-            <h2 className="text-xl font-semibold text-slate-800">Aisherly</h2>
-            <p className="mt-2 max-w-sm text-sm text-slate-500">
-              Pilih karakter di sebelah kiri untuk mulai ngobrol, atau buat karaktermu sendiri lalu
-              impor bible perannya.
-            </p>
-            {!hasProviders && (
-              <button
-                onClick={() => setShowSettings(true)}
-                className="mt-4 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                Atur API Key Dulu
-              </button>
-            )}
-          </div>
-        )}
+          )}
+
+          {view === "profile" && (
+            <ProfileView
+              key={`${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}`}
+              profile={profile}
+              onSaved={setProfile}
+            />
+          )}
+
+          {view === "settings" && (
+            <SettingsView
+              providers={providers}
+              autoFallback={autoFallback}
+              onAutoFallbackChange={setAutoFallback}
+              onChanged={fetchProviders}
+            />
+          )}
+        </div>
+
+        {showMobileTabBar && <MobileTabBar view={view} onChange={handleViewChange} />}
       </div>
-
-      {showSettings && (
-        <SettingsModal
-          providers={providers}
-          autoFallback={autoFallback}
-          onToggleAutoFallback={handleToggleAutoFallback}
-          onClose={() => setShowSettings(false)}
-          onRefresh={fetchProviders}
-          onOpenVoice={() => {
-            setShowSettings(false);
-            setShowVoice(true);
-          }}
-        />
-      )}
-
-      {showVoice && (
-        <VoiceModal
-          settings={voice}
-          onChange={setVoice}
-          onClose={() => setShowVoice(false)}
-        />
-      )}
 
       {showCreate && (
         <CharacterModal
@@ -489,18 +553,32 @@ export function ChatApp() {
 
       {lightbox && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          className="fade-in fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
           onClick={() => setLightbox(null)}
         >
-          <button className="absolute right-5 top-5 text-white" onClick={() => setLightbox(null)}>
+          <button
+            className="absolute right-5 top-5 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+            onClick={() => setLightbox(null)}
+            aria-label="Tutup gambar"
+          >
             <XIcon className="h-7 w-7" />
           </button>
-          <img src={lightbox} alt="preview" className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain" />
+          <img
+            src={lightbox}
+            alt="preview"
+            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain"
+          />
         </div>
       )}
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
+        <div
+          className={`fixed left-1/2 z-[70] max-w-[90vw] -translate-x-1/2 rounded-full bg-brand px-4 py-2 text-center text-xs font-medium text-brand-ink shadow-lg ${
+            showMobileTabBar
+              ? "bottom-[calc(var(--tabbar-space)+0.25rem)] md:bottom-6"
+              : "bottom-20 md:bottom-6"
+          }`}
+        >
           {toast}
         </div>
       )}

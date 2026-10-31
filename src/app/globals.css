@@ -1,21 +1,263 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ */
+/* Sistem warna Aisherly — terang & gelap (paritas desain WaiChat)     */
+/* ------------------------------------------------------------------ */
+:root {
+  --app: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --header: #fafafa;
+  --line: #e4e4e7;
+
+  --ink: #0a0a0a;
+  --ink-soft: #52525b;
+  --muted: #71717a;
+
+  --brand: #18181b;
+  --brand-strong: #09090b;
+  --brand-ink: #ffffff;
+
+  --bubble-out: #e4e4e7;
+  --bubble-out-ink: #0a0a0a;
+  --bubble-in: #ffffff;
+  --bubble-in-ink: #0a0a0a;
+
+  --wallpaper-base: #f4f4f5;
+  --wallpaper-dot-1: rgba(0, 0, 0, 0.03);
+  --wallpaper-dot-2: rgba(0, 0, 0, 0.025);
+
+  --shadow-color: 15 23 42;
+}
+
+.dark {
+  --app: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #171717;
+  --header: #0a0a0a;
+  --line: #262626;
+
+  --ink: #fafafa;
+  --ink-soft: #a1a1aa;
+  --muted: #71717a;
+
+  --brand: #fafafa;
+  --brand-strong: #e4e4e7;
+  --brand-ink: #0a0a0a;
+
+  --bubble-out: #262626;
+  --bubble-out-ink: #fafafa;
+  --bubble-in: #171717;
+  --bubble-in-ink: #fafafa;
+
+  --wallpaper-base: #000000;
+  --wallpaper-dot-1: rgba(255, 255, 255, 0.04);
+  --wallpaper-dot-2: rgba(255, 255, 255, 0.025);
+
+  --shadow-color: 0 0 0;
+}
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-display), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-header: var(--header);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-bubble-out: var(--bubble-out);
+  --color-bubble-out-ink: var(--bubble-out-ink);
+  --color-bubble-in: var(--bubble-in);
+  --color-bubble-in-ink: var(--bubble-in-ink);
+}
+
 html,
 body {
   height: 100%;
+  overscroll-behavior: none;
+  overflow: hidden;
+  overflow: clip;
+  -webkit-text-size-adjust: 100%;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+/* ------------------------------------------------------------------ */
+/* Jarak aman atas (poni / Dynamic Island iPhone)                      */
+/* ------------------------------------------------------------------ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
-*::-webkit-scrollbar {
+/* ------------------------------------------------------------------ */
+/* Shell aplikasi — terikat ke viewport, stabil saat keyboard naik      */
+/* ------------------------------------------------------------------ */
+.app-shell {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  overflow: clip;
+}
+
+html.kb-panned .app-shell {
+  bottom: auto;
+  height: calc(var(--vv-height, 100dvh) + var(--kb-gap, 0px));
+  transform: translate3d(0, var(--vv-top, 0px), 0);
+  will-change: transform;
+}
+
+body {
+  background-color: var(--app);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scrollbar tipis & ikut tema */
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-*::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.18);
-  border-radius: 999px;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.45);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Wallpaper chat halus yang ikut tema */
+.chat-wallpaper {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--wallpaper-base);
+  background-image: radial-gradient(var(--wallpaper-dot-1) 1px, transparent 0),
+    radial-gradient(var(--wallpaper-dot-2) 1px, transparent 0);
+  background-size: 26px 26px;
+  background-position: 0 0, 13px 13px;
+}
+
+/* Pola titik halus untuk panel kosong di desktop */
+.dot-grid {
+  background-image: radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bubble-in {
+  animation: bubble-in 0.2s ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.22s ease-out both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pop-in {
+  animation: pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-in,
+  .fade-in,
+  .pop-in {
+    animation: none;
+  }
+  body {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Kapsul kaca (glassmorphism) untuk navigasi bawah                     */
+/* ------------------------------------------------------------------ */
+.glass-capsule {
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow:
+    0 12px 32px -12px rgb(var(--shadow-color) / 0.45),
+    0 2px 10px -4px rgb(var(--shadow-color) / 0.25);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-capsule {
+    background-color: color-mix(in srgb, var(--surface) 58%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    backdrop-filter: saturate(180%) blur(22px);
+  }
+}
+
+/* Tinggi tab bar mengambang (dipakai untuk padding konten agar tidak tertutup) */
+:root {
+  --tabbar-space: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Kapsul nav disembunyikan saat keyboard aktif supaya tidak menutupi field */
+.mobile-tabbar {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+@media (max-width: 767px) {
+  body:has(input:focus, textarea:focus, select:focus) .mobile-tabbar {
+    opacity: 0;
+    transform: translateY(0.75rem);
+    pointer-events: none;
+  }
 }
