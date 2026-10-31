@@ -178,6 +178,14 @@ export function Sidebar({
                           🧠
                         </span>
                       )}
+                      {c.browsingEnabled && (
+                        <span
+                          className="ml-1 text-[11px]"
+                          title="Browsing internet & baca link aktif"
+                        >
+                          🌐
+                        </span>
+                      )}
                     </p>
                     <span className="shrink-0 text-[11px] text-muted">
                       {formatListTime(c.updatedAt)}

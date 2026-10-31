@@ -86,6 +86,14 @@ export function CharactersView({
                           🧠 Ingatan
                         </span>
                       )}
+                      {c.browsingEnabled && (
+                        <span
+                          title="Browsing internet & baca link aktif"
+                          className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line"
+                        >
+                          🌐 Web
+                        </span>
+                      )}
                     </div>
                     <p className="truncate text-xs text-ink-soft">
                       {c.shortBio || "Tanpa status singkat"}

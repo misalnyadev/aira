@@ -582,7 +582,15 @@ export function ChatApp() {
 
   function handleCharacterMemorySync(id: string, next: MemoryPatch) {
     setCharacters((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, memoryEnabled: next.memoryEnabled } : c))
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              memoryEnabled: next.memoryEnabled,
+              browsingEnabled: next.browsingEnabled,
+            }
+          : c
+      )
     );
     setProfileDetail((cur) =>
       cur && cur.id === id
@@ -591,6 +599,7 @@ export function ChatApp() {
             memoryEnabled: next.memoryEnabled,
             memorySummary: next.memorySummary,
             memoryUpdatedAt: next.memoryUpdatedAt,
+            browsingEnabled: next.browsingEnabled,
           }
         : cur
     );
