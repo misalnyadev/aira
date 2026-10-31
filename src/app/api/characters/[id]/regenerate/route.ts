@@ -12,6 +12,7 @@ import {
   toChatTurns,
 } from "@/lib/chatEngine";
 import { ensureDb } from "@/lib/dbReady";
+import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { staleAssistantIds } from "@/lib/messageRules";
 import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
@@ -45,7 +46,7 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     .from(messages)
     .where(eq(messages.characterId, id))
     .orderBy(desc(messages.createdAt))
-    .limit(40);
+    .limit(MAX_HISTORY_MESSAGES + 12);
 
   const lastUser = all.find((m) => m.role === "user");
   if (!lastUser) {
@@ -69,6 +70,9 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
   }
 
   const image = await readImageAsBase64(lastUser.imageUrl, user.id);
+  const chronologicalPrior = all
+    .filter((m) => m.createdAt.getTime() < lastUser.createdAt.getTime() && m.id !== lastUser.id)
+    .reverse();
 
   try {
     const result = await generateBubbles({
@@ -77,18 +81,21 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       candidates,
       userText: lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : ""),
       image,
-      history: toChatTurns(
-        all.filter((m) => m.createdAt.getTime() < lastUser.createdAt.getTime()),
-        lastUser.id
-      ),
+      history: toChatTurns(chronologicalPrior, lastUser.id),
       userProfile: profile,
     });
 
     const assistantMessages = [];
-    for (const bubble of result.bubbles) {
+    const baseTime = Date.now();
+    for (let i = 0; i < result.bubbles.length; i++) {
       const [row] = await db
         .insert(messages)
-        .values({ characterId: id, role: "assistant", content: bubble })
+        .values({
+          characterId: id,
+          role: "assistant",
+          content: result.bubbles[i],
+          createdAt: new Date(baseTime + i),
+        })
         .returning();
       assistantMessages.push(row);
     }

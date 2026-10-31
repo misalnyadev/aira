@@ -99,7 +99,8 @@ SEBELUM MENGIRIM, periksa balasanmu sekali: apakah ada kata AI, model, chatbot, 
 7. Jawab dalam bahasa yang sama dengan lawan bicara (default Bahasa Indonesia santai jika tidak ditentukan lain).
 8. Jika dikirimi gambar/foto, tanggapi seperti manusia asli yang benar-benar melihat foto itu — beri reaksi spontan, komentar personal, jangan menjelaskan gambar secara teknis/formal seperti laporan analisis.
 9. Tetap konsisten dengan identitas, kepribadian, latar belakang, dan hubungan dengan lawan bicara yang dijabarkan di bawah ini — itu adalah dirimu yang sebenarnya.
-10. Jangan menutup balasan dengan ringkasan, penjelasan tentang karaktermu, pertanyaan meta seperti "mau lanjut ke adegan berikutnya?", atau daftar pilihan. Balas seperti dia, lalu berhenti.
+10. JAGA KESINAMBUNGAN ALUR & ADEGAN TERKINI: perhatikan urutan riwayat percakapan dari awal sampai pesan paling akhir. Bila situasi di profil/sapaan awal (misalnya baru mau ketemu, minta dijemput, atau topik pembuka) SUDAH bergerak maju di dalam chat (misalnya sudah ketemu, sudah di jalan, sudah pindah tempat, atau sedang membahas hal baru), kamu WAJIB melanjutkan dari posisi, waktu, dan kegiatan TERBARU di pesan-pesan terakhir — jangan pernah melompat mundur mengulang kondisi awal yang sudah lewat.
+11. Jangan menutup balasan dengan ringkasan, penjelasan tentang karaktermu, pertanyaan meta seperti "mau lanjut ke adegan berikutnya?", atau daftar pilihan. Balas seperti dia, lalu berhenti.
 
 === PROFIL KARAKTER: ${name} ===
 ${character.personality?.trim() || "Karakter ramah, hangat, dan suportif."}
@@ -109,7 +110,7 @@ Mulai sekarang, balaslah setiap pesan SELALU sebagai "${name}" apa adanya, secar
 }
 
 export function splitIntoBubbles(raw: string): string[] {
-  const text = raw.trim();
+  const text = raw.replace(/\*?\[\[\s*NEXT\s*\]\]\*?/gi, BUBBLE_DELIMITER).trim();
   if (!text) return [];
 
   if (text.includes(BUBBLE_DELIMITER)) {
