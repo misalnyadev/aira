@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { messages } from "@/db/schema";
-import { AiProviderError } from "@/lib/ai";
+import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import {
   NO_PROVIDER_ERROR,
   generateBubbles,
-  loadUserProfile,
-  pickProvider,
+  loadUserChatSettings,
+  pickProviderCandidates,
   toChatTurns,
 } from "@/lib/chatEngine";
 import { ensureDb } from "@/lib/dbReady";
@@ -55,8 +55,9 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     );
   }
 
-  const provider = await pickProvider(user.id, character.providerId);
-  if (!provider) {
+  const { profile, autoFallback } = await loadUserChatSettings(user.id);
+  const candidates = await pickProviderCandidates(user.id, character.providerId, autoFallback);
+  if (!candidates.length) {
     return NextResponse.json({ error: NO_PROVIDER_ERROR }, { status: 412 });
   }
 
@@ -70,20 +71,21 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
   const image = await readImageAsBase64(lastUser.imageUrl, user.id);
 
   try {
-    const bubbles = await generateBubbles({
+    const result = await generateBubbles({
+      userId: user.id,
       character,
-      provider,
+      candidates,
       userText: lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : ""),
       image,
       history: toChatTurns(
         all.filter((m) => m.createdAt.getTime() < lastUser.createdAt.getTime()),
         lastUser.id
       ),
-      userProfile: await loadUserProfile(user.id),
+      userProfile: profile,
     });
 
     const assistantMessages = [];
-    for (const bubble of bubbles) {
+    for (const bubble of result.bubbles) {
       const [row] = await db
         .insert(messages)
         .values({ characterId: id, role: "assistant", content: bubble })
@@ -95,9 +97,15 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       removedIds: stale.map((m) => m.id),
       lastUserId: lastUser.id,
       assistantMessages,
+      fallbackUsed: result.fallbackUsed,
+      providerLabel: result.providerLabel,
+      primaryLabel: result.primaryLabel,
+      keyRotated: result.keyRotated,
     });
   } catch (err) {
-    const message = err instanceof AiProviderError ? err.message : "Gagal menghubungi penyedia AI.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json(
+      { error: toUserFacingError(err) },
+      { status: 502 }
+    );
   }
 }

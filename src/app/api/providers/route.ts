@@ -1,32 +1,13 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, providerTypeValues, type ProviderType } from "@/db/schema";
+import { apiProviders, providerTypeValues, users, type ProviderType } from "@/db/schema";
 import { PROVIDER_META } from "@/lib/ai/providerDefaults";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { cleanBackupKeys, serializeProviderRow } from "@/lib/providerPool";
 
 export const dynamic = "force-dynamic";
-
-function maskKey(key: string): string {
-  if (!key) return "";
-  if (key.length <= 6) return "••••";
-  return `${key.slice(0, 3)}••••${key.slice(-3)}`;
-}
-
-function serialize(row: typeof apiProviders.$inferSelect) {
-  return {
-    id: row.id,
-    type: row.type,
-    label: row.label,
-    baseUrl: row.baseUrl,
-    model: row.model,
-    isDefault: row.isDefault,
-    hasKey: Boolean(row.apiKey),
-    maskedKey: maskKey(row.apiKey),
-    createdAt: row.createdAt,
-  };
-}
 
 export async function GET() {
   await ensureDb();
@@ -36,13 +17,23 @@ export async function GET() {
     return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
   }
 
-  const rows = await db
-    .select()
-    .from(apiProviders)
-    .where(eq(apiProviders.userId, user.id))
-    .orderBy(apiProviders.createdAt);
+  const [rows, [userRow]] = await Promise.all([
+    db
+      .select()
+      .from(apiProviders)
+      .where(eq(apiProviders.userId, user.id))
+      .orderBy(apiProviders.createdAt),
+    db
+      .select({ autoFallback: users.autoFallback })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  ]);
 
-  return NextResponse.json({ providers: rows.map(serialize) });
+  return NextResponse.json({
+    providers: rows.map(serializeProviderRow),
+    autoFallback: userRow?.autoFallback ?? true,
+  });
 }
 
 export async function POST(req: Request) {
@@ -56,10 +47,11 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { type, label, apiKey, baseUrl, model, isDefault } = body as {
+  const { type, label, apiKey, backupKeys, baseUrl, model, isDefault } = body as {
     type?: string;
     label?: string;
     apiKey?: string;
+    backupKeys?: unknown;
     baseUrl?: string;
     model?: string;
     isDefault?: boolean;
@@ -83,6 +75,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Model wajib diisi." }, { status: 400 });
   }
 
+  let primaryKey = apiKey?.trim() || "";
+  let cleanedBackups = cleanBackupKeys(backupKeys, primaryKey);
+  if (!primaryKey && cleanedBackups.length > 0) {
+    primaryKey = cleanedBackups[0];
+    cleanedBackups = cleanedBackups.slice(1);
+  }
+
+  if (providerType !== "custom" && !primaryKey) {
+    return NextResponse.json({ error: "API key wajib diisi." }, { status: 400 });
+  }
+
   if (isDefault) {
     // Hanya default milik sendiri yang dilepas, punya orang lain tidak disentuh.
     await db
@@ -97,12 +100,36 @@ export async function POST(req: Request) {
       userId: user.id,
       type: providerType,
       label: label?.trim() || meta.name,
-      apiKey: apiKey?.trim() || "",
+      apiKey: primaryKey,
+      backupKeys: JSON.stringify(cleanedBackups),
       baseUrl: baseUrl?.trim() || meta.baseUrl || null,
       model: finalModel,
       isDefault: Boolean(isDefault),
     })
     .returning();
 
-  return NextResponse.json({ provider: serialize(row) }, { status: 201 });
+  return NextResponse.json({ provider: serializeProviderRow(row) }, { status: 201 });
+}
+
+/** Simpan preferensi auto-fallback antar provider milik akun ini. */
+export async function PATCH(req: Request) {
+  await ensureDb();
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.autoFallback !== "boolean") {
+    return NextResponse.json({ error: "autoFallback harus berupa boolean." }, { status: 400 });
+  }
+
+  const [row] = await db
+    .update(users)
+    .set({ autoFallback: body.autoFallback })
+    .where(eq(users.id, user.id))
+    .returning({ autoFallback: users.autoFallback });
+
+  return NextResponse.json({ autoFallback: row?.autoFallback ?? body.autoFallback });
 }

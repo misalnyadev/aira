@@ -2,9 +2,15 @@ import type { ProviderType } from "@/db/schema";
 import { generateGeminiReply } from "./gemini";
 import { generateOpenAICompatibleReply } from "./openaiCompatible";
 import { PROVIDER_META } from "./providerDefaults";
-import { AiProviderError, type GenerateReplyInput } from "./types";
+import {
+  AiProviderError,
+  isKeyRotatableError,
+  isProviderFallbackError,
+  toUserFacingError,
+  type GenerateReplyInput,
+} from "./types";
 
-export { AiProviderError };
+export { AiProviderError, isKeyRotatableError, isProviderFallbackError, toUserFacingError };
 export { buildSystemPrompt, splitIntoBubbles, BUBBLE_DELIMITER } from "./promptBuilder";
 export type { ChatTurn } from "./types";
 
@@ -33,7 +39,9 @@ export async function generateCharacterReply(
       });
     case "custom": {
       if (!input.baseUrl) {
-        throw new AiProviderError("Base URL untuk provider custom belum diatur.");
+        throw new AiProviderError("Base URL untuk provider custom belum diatur.", {
+          retryable: false,
+        });
       }
       return generateOpenAICompatibleReply({
         ...input,
@@ -42,6 +50,6 @@ export async function generateCharacterReply(
       });
     }
     default:
-      throw new AiProviderError(`Provider tidak dikenal: ${providerType}`);
+      throw new AiProviderError(`Provider tidak dikenal: ${providerType}`, { retryable: false });
   }
 }

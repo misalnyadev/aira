@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { messages } from "@/db/schema";
-import { AiProviderError } from "@/lib/ai";
+import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import {
   NO_PROVIDER_ERROR,
   generateBubbles,
-  loadUserProfile,
-  pickProvider,
+  loadUserChatSettings,
+  pickProviderCandidates,
   toChatTurns,
 } from "@/lib/chatEngine";
 import { ensureDb } from "@/lib/dbReady";
@@ -53,8 +53,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
   }
 
-  const provider = await pickProvider(user.id, character.providerId);
-  if (!provider) {
+  const { profile, autoFallback } = await loadUserChatSettings(user.id);
+  const candidates = await pickProviderCandidates(user.id, character.providerId, autoFallback);
+  if (!candidates.length) {
     return NextResponse.json({ error: NO_PROVIDER_ERROR }, { status: 412 });
   }
 
@@ -80,17 +81,18 @@ export async function POST(req: Request) {
     .limit(21);
 
   try {
-    const bubbles = await generateBubbles({
+    const result = await generateBubbles({
+      userId: user.id,
       character,
-      provider,
+      candidates,
       userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
       image,
       history: toChatTurns(historyRows, userMessage.id),
-      userProfile: await loadUserProfile(user.id),
+      userProfile: profile,
     });
 
     const assistantMessages = [];
-    for (const bubble of bubbles) {
+    for (const bubble of result.bubbles) {
       const [row] = await db
         .insert(messages)
         .values({ characterId, role: "assistant", content: bubble })
@@ -98,9 +100,18 @@ export async function POST(req: Request) {
       assistantMessages.push(row);
     }
 
-    return NextResponse.json({ userMessage, assistantMessages });
+    return NextResponse.json({
+      userMessage,
+      assistantMessages,
+      fallbackUsed: result.fallbackUsed,
+      providerLabel: result.providerLabel,
+      primaryLabel: result.primaryLabel,
+      keyRotated: result.keyRotated,
+    });
   } catch (err) {
-    const message = err instanceof AiProviderError ? err.message : "Gagal menghubungi penyedia AI.";
-    return NextResponse.json({ userMessage, error: message }, { status: 502 });
+    return NextResponse.json(
+      { userMessage, error: toUserFacingError(err) },
+      { status: 502 }
+    );
   }
 }

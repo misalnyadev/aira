@@ -1,10 +1,59 @@
 import { AiProviderError, type GenerateReplyInput } from "./types";
 
+function describeGeminiError(status: number, raw: string): {
+  message: string;
+  retryable?: boolean;
+} {
+  if (status === 400 && /API key not valid|API_KEY_INVALID/i.test(raw)) {
+    return {
+      message:
+        "API key Gemini tidak valid. Ambil key baru di aistudio.google.com/apikey lalu perbarui di Pengaturan.",
+      retryable: true,
+    };
+  }
+  if (status === 401 || status === 403) {
+    return {
+      message: `Gemini menolak API key (${status}). Periksa key di Pengaturan.`,
+      retryable: true,
+    };
+  }
+  if (status === 404) {
+    return {
+      message: `Model Gemini tidak ditemukan. Coba model seperti gemini-2.5-flash. (${raw.slice(0, 160)})`,
+      retryable: false,
+    };
+  }
+  if (status === 429) {
+    return {
+      message:
+        "Kuota Gemini habis atau terlalu banyak permintaan (429). Tunggu sebentar atau tambahkan key cadangan.",
+      retryable: true,
+    };
+  }
+  return {
+    message: `Gemini API error (${status}): ${raw.slice(0, 300)}`,
+  };
+}
+
+function normalizeModelName(model: string): string {
+  const clean = model.trim();
+  return clean.startsWith("models/") ? clean.slice("models/".length) : clean;
+}
+
 export async function generateGeminiReply(input: GenerateReplyInput): Promise<string> {
-  const { apiKey, model, systemPrompt, history, userText, image } = input;
+  const { apiKey, systemPrompt, history, userText, image } = input;
+  const model = normalizeModelName(input.model);
 
   if (!apiKey) {
-    throw new AiProviderError("API key Gemini belum diisi. Buka Pengaturan untuk menambahkannya.");
+    throw new AiProviderError("API key Gemini belum diisi. Buka Pengaturan untuk menambahkannya.", {
+      status: 401,
+      retryable: true,
+    });
+  }
+  if (!model) {
+    throw new AiProviderError("Model Gemini belum diisi (contoh: gemini-2.5-flash).", {
+      retryable: false,
+    });
   }
 
   const contents = history.map((turn) => ({
@@ -30,6 +79,16 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     model
   )}:generateContent`;
 
+  const generationConfig: Record<string, unknown> = {
+    temperature: 1.05,
+    topP: 0.95,
+    maxOutputTokens: 1024,
+  };
+  // Gemini 2.5 Flash menyalakan "thinking" secara bawaan; matikan supaya balasan chat cepat.
+  if (/^gemini-2\.5-flash/i.test(model)) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
+
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -39,11 +98,7 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: {
-        temperature: 1.05,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      },
+      generationConfig,
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -54,23 +109,37 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new AiProviderError(
-      `Gemini API error (${res.status}): ${text.slice(0, 400) || res.statusText}`
-    );
+    const raw = await res.text().catch(() => "");
+    const described = describeGeminiError(res.status, raw || res.statusText);
+    throw new AiProviderError(described.message, {
+      status: res.status,
+      retryable: described.retryable,
+    });
   }
 
   const data = await res.json();
   const candidate = data?.candidates?.[0];
-  const parts = candidate?.content?.parts as { text?: string }[] | undefined;
-  const textOut = parts?.map((p) => p.text ?? "").join("\n").trim();
+  const parts = candidate?.content?.parts as { text?: string; thought?: boolean }[] | undefined;
+  const textOut = parts
+    ?.filter((p) => !p.thought)
+    .map((p) => p.text ?? "")
+    .join("\n")
+    .trim();
 
   if (!textOut) {
     const finishReason = candidate?.finishReason;
+    const blockReason = data?.promptFeedback?.blockReason;
+    if (blockReason) {
+      throw new AiProviderError(
+        `Pesan diblokir filter keamanan Gemini (${blockReason}). Coba ubah kalimatnya.`,
+        { retryable: false }
+      );
+    }
     throw new AiProviderError(
       finishReason
-        ? `Gemini tidak mengembalikan teks (finishReason: ${finishReason}).`
-        : "Gemini tidak mengembalikan teks."
+        ? `Gemini tidak mengembalikan teks (${finishReason}).`
+        : "Gemini tidak mengembalikan teks.",
+      { retryable: false }
     );
   }
 
