@@ -45,3 +45,9 @@ export const MAX_PROVIDER_FALLBACKS = 3;
  * 25–35 tanya-jawab utuh tetap diingat tanpa memberatkan kuota token.
  */
 export const MAX_HISTORY_MESSAGES = 80;
+
+/** Batas karakter Buku Ingatan Jangka Panjang per karakter (~600–800 token). */
+export const MAX_MEMORY_SUMMARY_CHARS = 4_000;
+
+/** Minimal gelembung lama yang belum dirangkum sebelum rangkuman otomatis jalan. */
+export const AUTO_MEMORY_BATCH_MIN = 20;

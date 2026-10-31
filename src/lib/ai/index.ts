@@ -11,7 +11,12 @@ import {
 } from "./types";
 
 export { AiProviderError, isKeyRotatableError, isProviderFallbackError, toUserFacingError };
-export { buildSystemPrompt, splitIntoBubbles, BUBBLE_DELIMITER } from "./promptBuilder";
+export {
+  buildSystemPrompt,
+  splitIntoBubbles,
+  BUBBLE_DELIMITER,
+  type MemoryPromptContext,
+} from "./promptBuilder";
 export type { ChatTurn } from "./types";
 
 export async function generateCharacterReply(

@@ -15,6 +15,7 @@ import { normalizeCharacterVoice, parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
   MAX_GREETING_CHARS,
+  MAX_MEMORY_SUMMARY_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
@@ -41,6 +42,9 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
     media: parseCharacterMedia(row.media),
     voiceConfig: parseCharacterVoice(row.voiceConfig),
+    memoryEnabled: Boolean(row.memoryEnabled),
+    memorySummary: row.memorySummary ?? "",
+    memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
   };
 }
 
@@ -82,6 +86,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     bubbleStyle,
     media,
     voiceConfig,
+    memoryEnabled,
+    memorySummary,
   } = body as {
     name?: string;
     avatarUrl?: string | null;
@@ -95,6 +101,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     bubbleStyle?: unknown | null;
     media?: unknown | null;
     voiceConfig?: unknown | null;
+    memoryEnabled?: boolean;
+    memorySummary?: string;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -118,6 +126,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (bible !== undefined && bible.trim().length > MAX_BIBLE_CHARS) {
     return NextResponse.json(
       { error: `Bible maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.` },
+      { status: 400 }
+    );
+  }
+  if (
+    typeof memorySummary === "string" &&
+    memorySummary.trim().length > MAX_MEMORY_SUMMARY_CHARS
+  ) {
+    return NextResponse.json(
+      {
+        error: `Buku Ingatan maksimal ${MAX_MEMORY_SUMMARY_CHARS.toLocaleString("id-ID")} karakter.`,
+      },
       { status: 400 }
     );
   }
@@ -146,6 +165,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("voiceConfig" in body) {
     const cleaned = voiceConfig === null ? null : normalizeCharacterVoice(voiceConfig);
     updates.voiceConfig = cleaned ? JSON.stringify(cleaned) : null;
+  }
+  if (typeof memoryEnabled === "boolean") {
+    updates.memoryEnabled = memoryEnabled;
+  }
+  if (typeof memorySummary === "string") {
+    const trimmed = memorySummary.trim();
+    updates.memorySummary = trimmed;
+    updates.memoryUpdatedAt = trimmed ? new Date() : null;
+    if (!trimmed) updates.memoryThroughAt = null;
   }
 
   /*

@@ -114,6 +114,14 @@ export const characters = pgTable("characters", {
   media: text("media"),
   /** Pilihan suara khusus karakter: ikut bawaan, perangkat, HD perempuan, HD laki-laki, atau custom (JSON). */
   voiceConfig: text("voice_config"),
+  /** Aktifkan ingatan jangka panjang + kesadaran waktu & pencarian arsip obrolan pada karakter ini. */
+  memoryEnabled: boolean("memory_enabled").notNull().default(false),
+  /** Buku ingatan jangka panjang (rencana, fakta lawan bicara, dan momen penting ber-tanggal). */
+  memorySummary: text("memory_summary").notNull().default(""),
+  /** Batas waktu pesan terakhir yang sudah dirangkum ke dalam `memory_summary`. */
+  memoryThroughAt: timestamp("memory_through_at", { withTimezone: true }),
+  /** Kapan `memory_summary` terakhir kali diperbarui. */
+  memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

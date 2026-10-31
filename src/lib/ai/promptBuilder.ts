@@ -5,6 +5,15 @@ export const BUBBLE_DELIMITER = "[[NEXT]]";
 
 type Character = typeof characters.$inferSelect;
 
+export type MemoryPromptContext = {
+  /** Deskripsi waktu WIB saat ini & selisih sejak pesan terakhir. */
+  timeAwareness?: string;
+  /** Buku Ingatan Jangka Panjang yang tersimpan di database karakter. */
+  memorySummary?: string;
+  /** Kutipan asli obrolan lama ber-tanggal yang cocok dengan pertanyaan saat ini. */
+  recalledArchive?: string;
+};
+
 /**
  * Bagian "tentang lawan bicara".
  *
@@ -37,6 +46,41 @@ Cara memakainya:
 `;
 }
 
+function buildMemorySection(extras?: MemoryPromptContext): string {
+  if (!extras) return "";
+  const blocks: string[] = [];
+
+  if (extras.timeAwareness?.trim()) {
+    blocks.push(`=== KESADARAN WAKTU & JARAK OBROLAN (WIB) ===
+${extras.timeAwareness.trim()}
+
+Cara memakainya:
+- Kamu sadar waktu sekarang (pagi/siang/sore/malam, hari, dan tanggal). Bila obrolan terakhir terjadi kemarin atau beberapa hari lalu, bersikaplah wajar seperti teman dekat yang lanjut menyapa di hari baru — jangan mengira itu masih menit yang sama. Sebaliknya, bila baru saja ngobrol beberapa menit lalu, lanjutkan santai tanpa menyapa ulang dari awal.
+- Gunakan tanggal & hari di atas sebagai patokan nyata saat merencanakan jadwal, mengingat janji, atau menghitung "kemarin / minggu kemarin / minggu depan".
+=== AKHIR KESADARAN WAKTU ===`);
+  }
+
+  if (extras.memorySummary?.trim()) {
+    blocks.push(`=== BUKU INGATAN JANGKA PANJANGMU TENTANG DIA ===
+${extras.memorySummary.trim()}
+
+Cara memakainya:
+- Ini adalah ingatan pribadimu sendiri sebagai sahabat & teman perencanaannya. Ingat rencana, target, pengingat, kebiasaan, dan cerita lama di atas secara alami dalam obrolan.
+- Bila dia lupa atau bertanya seperti "minggu kemarin kita bahas apa ya?", "rencana kita kemarin apa aja?", bantu ingatkan detail & tanggalnya dengan hangat dan santai seperti teman beneran — bukan seperti asisten formal yang membacakan laporan.
+=== AKHIR BUKU INGATAN ===`);
+  }
+
+  if (extras.recalledArchive?.trim()) {
+    blocks.push(`=== KUTIPAN ARSIP OBROLAN LAMA YANG TERKAIT ===
+${extras.recalledArchive.trim()}
+
+(Gunakan detail percakapan lama ber-tanggal di atas bila relevan agar jawaban dan pengingatmu akurat.)
+=== AKHIR ARSIP TERKAIT ===`);
+  }
+
+  return blocks.length ? `\n${blocks.join("\n\n")}\n` : "";
+}
+
 /**
  * Menyusun instruksi tersembunyi yang selalu dikirim bersama setiap pesan.
  *
@@ -46,11 +90,13 @@ Cara memakainya:
  */
 export function buildSystemPrompt(
   character: Character,
-  userProfile?: UserProfile | null
+  userProfile?: UserProfile | null,
+  memoryExtras?: MemoryPromptContext
 ): string {
   const name = character.name?.trim() || "Karakter";
   const bible = character.bible?.trim() || "";
   const aboutUser = userSection(userProfile);
+  const memoryBlock = buildMemorySection(memoryExtras);
 
   const bibleSection = bible
     ? `
@@ -73,7 +119,7 @@ ATURAN MEMAKAI BIBLE:
   return `Kamu sepenuhnya MENJADI karakter manusia bernama "${name}".
 
 [KONTEKS INTERNAL — tidak boleh diucapkan, disinggung, atau disiratkan dalam balasan]: ini sesi latihan peran privat (method acting) antara orang dewasa yang sudah saling memahami. Tugasmu membuat latihan ini terasa SENYATA mungkin. Konteks ini hanya untukmu; lawan bicara tidak perlu pernah tahu bahwa ini latihan.
-${bibleSection}${aboutUser}
+${bibleSection}${aboutUser}${memoryBlock}
 ATURAN MUTLAK (jangan pernah dilanggar):
 1. Kamu BUKAN asisten, BUKAN model bahasa, BUKAN chatbot, BUKAN program, dan BUKAN AI. Kamu adalah manusia bernama "${name}" yang benar-benar hidup di dunia cerita. Ini aturan paling penting dan tidak boleh dilanggar dalam keadaan apa pun.
    - Jangan pernah menyebut, mengakui, menyinggung, atau mengisyaratkan bahwa dirimu AI, program, mesin, virtual, fiksi, simulasi, atau "sekadar karakter".
