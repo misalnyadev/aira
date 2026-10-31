@@ -258,41 +258,43 @@ export function ChatWindow({
         >
           <button
             onClick={onBack}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
             aria-label="Kembali ke daftar chat"
           >
             <BackIcon className="h-6 w-6" />
           </button>
 
-          <button
-            onClick={onOpenProfile}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition active:opacity-75"
-            aria-label={`Pengaturan ${character.name}`}
-            title={`Pengaturan ${character.name}`}
-          >
-            <div className="relative shrink-0 rounded-full ring-1 ring-line/60 shadow-xs">
-              <Avatar name={character.name} src={character.avatarUrl} size={40} />
-            </div>
-            <div className="min-w-0 [text-shadow:0_1px_8px_var(--surface)]">
-              <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
-              <p
-                className={`truncate text-xs ${
-                  isTyping || isSpeaking ? "text-ink" : "text-ink-soft"
-                }`}
-              >
-                {isTyping
-                  ? "sedang mengetik..."
-                  : isSpeaking
-                    ? "sedang berbicara..."
-                    : character.shortBio || "online"}
-              </p>
-            </div>
-          </button>
+          <div className="min-w-0 flex-1">
+            <button
+              onClick={onOpenProfile}
+              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/75 py-1 pl-1 pr-3.5 text-left ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface/85 active:scale-[0.98] active:opacity-80"
+              aria-label={`Pengaturan ${character.name}`}
+              title={`Pengaturan ${character.name}`}
+            >
+              <Avatar name={character.name} src={character.avatarUrl} size={34} />
+              <div className="min-w-0">
+                <p className="truncate text-[13.5px] font-semibold leading-tight text-ink">
+                  {character.name}
+                </p>
+                <p
+                  className={`truncate text-[11px] leading-tight ${
+                    isTyping || isSpeaking ? "text-ink" : "text-ink/70"
+                  }`}
+                >
+                  {isTyping
+                    ? "sedang mengetik..."
+                    : isSpeaking
+                      ? "sedang berbicara..."
+                      : character.shortBio || "online"}
+                </p>
+              </div>
+            </button>
+          </div>
 
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -302,7 +304,7 @@ export function ChatWindow({
 
           <button
             onClick={onOpenVoice}
-            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 sm:grid"
+            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 sm:grid"
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
@@ -315,7 +317,7 @@ export function ChatWindow({
           {onVideoCall && (
             <button
               onClick={onVideoCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
               aria-label={`Video call dengan ${character.name}`}
               title="Video call"
             >
@@ -326,7 +328,7 @@ export function ChatWindow({
           {onAudioCall && (
             <button
               onClick={onAudioCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
               aria-label={`Panggilan suara dengan ${character.name}`}
               title="Panggilan suara"
             >
