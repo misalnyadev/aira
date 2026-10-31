@@ -108,6 +108,8 @@ export const characters = pgTable("characters", {
   chatBackground: text("chat_background"),
   /** Gaya gelembung khusus karakter (JSON); `null` = ikut gelembung bawaan akun. */
   bubbleStyle: text("bubble_style"),
+  /** Media pribadi karakter di R2: video chat, video call, dan suara telepon (JSON). */
+  media: text("media"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

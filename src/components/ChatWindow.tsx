@@ -12,6 +12,7 @@ import {
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { Avatar } from "./Avatar";
+import { ChatVideoBackground, ChatVideoPanel } from "./ChatVideo";
 import {
   BackIcon,
   CheckIcon,
@@ -20,6 +21,10 @@ import {
   SpeakerOffIcon,
 } from "./icons";
 import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
+
+const READ_WORDS_PER_SECOND = 2.6;
+const READ_MIN_MS = 2000;
+const READ_MAX_MS = 45000;
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -109,6 +114,52 @@ export function ChatWindow({
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
   const backdrop = chatBackgroundProps(background, isDark);
+  const chatMedia = character.media;
+  const chatVideo = chatMedia?.chatVideoKey
+    ? { videoKey: chatMedia.chatVideoKey, posterUrl: chatMedia.chatVideoPosterUrl }
+    : null;
+  const chatVideoFull = Boolean(chatVideo && (chatMedia?.chatVideoLayout ?? "tile") === "full");
+
+  const [reading, setReading] = useState(false);
+  const readTimer = useRef(0);
+  const startTimer = useRef(0);
+  const wasTyping = useRef(false);
+
+  useEffect(() => {
+    const typingNow = isTyping;
+    const typingBefore = wasTyping.current;
+    wasTyping.current = typingNow;
+
+    if (!typingBefore || typingNow) return;
+
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+
+    const words = last.content.trim().split(/\s+/).filter(Boolean).length;
+    const ms = Math.min(
+      READ_MAX_MS,
+      Math.max(READ_MIN_MS, Math.round((words / READ_WORDS_PER_SECOND) * 1000))
+    );
+    window.clearTimeout(readTimer.current);
+    startTimer.current = window.setTimeout(() => {
+      setReading(true);
+      readTimer.current = window.setTimeout(() => setReading(false), ms);
+    }, 0);
+    return () => window.clearTimeout(startTimer.current);
+  }, [isTyping, messages]);
+
+  useEffect(() => () => window.clearTimeout(readTimer.current), []);
+
+  useEffect(() => {
+    if (!isSpeaking) return;
+    window.clearTimeout(startTimer.current);
+    window.clearTimeout(readTimer.current);
+    const id = window.setTimeout(() => setReading(false), 0);
+    return () => window.clearTimeout(id);
+  }, [isSpeaking]);
+
+  const videoPlaying = isSpeaking || (reading && !isTyping);
+
   const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
     useMessageActions();
 
@@ -157,6 +208,16 @@ export function ChatWindow({
       className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
       style={backdrop.style}
     >
+      {chatVideo && chatVideoFull && (
+        <ChatVideoBackground
+          videoKey={chatVideo.videoKey}
+          posterUrl={chatVideo.posterUrl}
+          dim={0.12}
+          playing={videoPlaying}
+          restartOnPlay
+        />
+      )}
+
       {/* Header — kaca, supaya latar chat tetap terlihat sampai status bar */}
       <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
         <button
@@ -209,6 +270,19 @@ export function ChatWindow({
           )}
         </button>
       </div>
+
+      {chatVideo && !chatVideoFull && (
+        <div className="px-3 pt-3 sm:px-4">
+          <div className="mx-auto w-full max-w-lg">
+            <ChatVideoPanel
+              videoKey={chatVideo.videoKey}
+              posterUrl={chatVideo.posterUrl}
+              dim={0.05}
+              name={character.name}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div
