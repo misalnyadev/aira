@@ -247,12 +247,23 @@ Tekan lama sebuah gelembung (di HP), atau klik kanan (di desktop):
 | Aksi | Berlaku untuk |
 |---|---|
 | **Salin teks** | pesan yang ada teksnya |
+| **Bacakan** | balasan karakter yang punya kata-kata terbaca (bila browser mendukung suara) |
 | **Ulangi balasan** | hanya balasan asisten paling akhir |
 | **Hapus pesan** | semua pesan, dengan konfirmasi |
 
 Menekan lama tidak langsung melakukan apa pun — muncul menu, baru kamu pilih. Jadi tidak ada pesan yang terhapus tanpa sengaja.
 
 **Ulangi balasan** menghapus balasan asisten setelah pesan terakhirmu, lalu meminta balasan baru. Pesanmu sendiri tidak pernah ikut terhapus.
+
+## Suara karakter (TTS lokal)
+
+Karakter bisa membacakan balasannya memakai **Web Speech API** bawaan browser perangkat — gratis, tanpa API key, dan teksnya tidak dikirim ke server mana pun.
+
+- Buka dari ikon 🔊 di daftar chat, di kanan atas ruang obrolan, atau lewat **Pengaturan → Suara**.
+- **Bacakan balasan** (otomatis) maupun manual per gelembung lewat menu tekan lama (**Bacakan**).
+- Tersedia **5 preset** (*Natural*, *Hangat*, *Santai*, *Ceria*, *Jelas*) serta pengatur **kecepatan**, **nada**, **volume**, dan **jeda antar kalimat**.
+- Teks dibersihkan dari markdown/emoji lalu dipecah per kalimat supaya intonasi wajar dan tidak terpotong di iOS Safari.
+- Setelan suara disimpan di perangkat per akun (karena daftar suara mengikuti masing-masing HP/laptop).
 
 ## Kode undangan
 

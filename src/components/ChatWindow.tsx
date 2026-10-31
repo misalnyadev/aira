@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 import { Avatar } from "./Avatar";
-import { BackIcon } from "./icons";
+import { BackIcon, SpeakerIcon, SpeakerOffIcon } from "./icons";
 import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
 import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
 
@@ -28,20 +28,32 @@ export function ChatWindow({
   character,
   messages,
   isTyping,
+  isSpeaking,
+  canSpeak,
+  voiceEnabled,
   onBack,
   onOpenProfile,
+  onOpenVoice,
   onImageClick,
   onCopyMessage,
+  onSpeakMessage,
+  onStopSpeaking,
   onDeleteMessage,
   onRegenerate,
 }: {
   character: CharacterSummary;
   messages: ChatMessage[];
   isTyping: boolean;
+  isSpeaking: boolean;
+  canSpeak: boolean;
+  voiceEnabled: boolean;
   onBack: () => void;
   onOpenProfile: () => void;
+  onOpenVoice: () => void;
   onImageClick: (url: string) => void;
   onCopyMessage: (text: string) => void;
+  onSpeakMessage: (text: string) => void;
+  onStopSpeaking: () => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
 }) {
@@ -63,11 +75,15 @@ export function ChatWindow({
     const labels = messageActionsFor(message, {
       isLastAssistant: message.id === lastAssistant,
       isTyping,
+      canSpeak,
     });
 
     return labels.map((label): MessageAction => {
       if (label === "Salin teks") {
         return { label, onClick: () => onCopyMessage(message.content) };
+      }
+      if (label === "Bacakan") {
+        return { label, onClick: () => onSpeakMessage(message.content) };
       }
       if (label === "Ulangi balasan") {
         return { label, onClick: onRegenerate };
@@ -79,7 +95,7 @@ export function ChatWindow({
   return (
     <div className="flex h-full flex-1 flex-col bg-[#efeae2]">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-200 bg-[#f0f2f5] px-4 py-2.5 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-slate-200 bg-[#f0f2f5] px-4 py-2.5 shadow-sm">
         <button onClick={onBack} className="rounded-full p-1.5 text-slate-600 hover:bg-slate-200 md:hidden">
           <BackIcon className="h-5 w-5" />
         </button>
@@ -88,9 +104,31 @@ export function ChatWindow({
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-900">{character.name}</p>
             <p className="truncate text-xs text-emerald-600">
-              {isTyping ? "sedang mengetik..." : "online"}
+              {isTyping ? "sedang mengetik..." : isSpeaking ? "sedang berbicara..." : "online"}
             </p>
           </div>
+        </button>
+        {isSpeaking && (
+          <button
+            onClick={onStopSpeaking}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200"
+            title="Hentikan suara"
+            aria-label="Hentikan suara"
+          >
+            <SpeakerOffIcon className="h-3.5 w-3.5" />
+            <span>Hentikan</span>
+          </button>
+        )}
+        <button
+          onClick={onOpenVoice}
+          className="relative shrink-0 rounded-full p-2 text-slate-600 hover:bg-slate-200"
+          title="Pengaturan Suara"
+          aria-label="Pengaturan Suara"
+        >
+          <SpeakerIcon className="h-5 w-5" />
+          {voiceEnabled && (
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />
+          )}
         </button>
       </div>
 

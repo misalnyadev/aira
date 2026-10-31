@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CharacterSummary } from "@/types/chat";
 import { Avatar } from "./Avatar";
-import { PlusIcon, SearchIcon, SettingsIcon } from "./icons";
+import { PlusIcon, SearchIcon, SettingsIcon, SpeakerIcon } from "./icons";
 
 function formatListTime(iso: string) {
   const d = new Date(iso);
@@ -19,7 +19,9 @@ export function Sidebar({
   onSelect,
   onNewCharacter,
   onOpenSettings,
+  onOpenVoice,
   hasProviders,
+  voiceEnabled,
   limit,
 }: {
   characters: CharacterSummary[];
@@ -27,7 +29,9 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNewCharacter: () => void;
   onOpenSettings: () => void;
+  onOpenVoice: () => void;
   hasProviders: boolean;
+  voiceEnabled: boolean;
   limit: number;
 }) {
   const [query, setQuery] = useState("");
@@ -52,6 +56,17 @@ export function Sidebar({
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenVoice}
+            className="relative rounded-full p-2 text-slate-600 hover:bg-slate-200"
+            title="Pengaturan Suara"
+            aria-label="Pengaturan Suara"
+          >
+            <SpeakerIcon className="h-5 w-5" />
+            {voiceEnabled && (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />
+            )}
+          </button>
           <button
             onClick={onOpenSettings}
             className="relative rounded-full p-2 text-slate-600 hover:bg-slate-200"

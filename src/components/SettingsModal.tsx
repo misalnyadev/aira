@@ -31,10 +31,12 @@ export function SettingsModal({
   providers,
   onClose,
   onRefresh,
+  onOpenVoice,
 }: {
   providers: ProviderSummary[];
   onClose: () => void;
   onRefresh: () => Promise<void>;
+  onOpenVoice?: () => void;
 }) {
   const [type, setType] = useState<ProviderType>("gemini");
   const [label, setLabel] = useState("");
@@ -256,13 +258,21 @@ export function SettingsModal({
               <p className="mt-0.5 text-[11px] text-slate-400">
                 Karakter & API key di akun ini terpisah dari akun lain.
               </p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setShowProfile(true)}
                   className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                 >
                   Profil Saya
                 </button>
+                {onOpenVoice && (
+                  <button
+                    onClick={onOpenVoice}
+                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    Suara
+                  </button>
+                )}
                 <button
                   onClick={() => void signOut()}
                   className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white"

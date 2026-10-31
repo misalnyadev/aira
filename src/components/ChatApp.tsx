@@ -4,11 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
 import { MAX_CHARACTERS } from "@/lib/limits";
+import {
+  loadVoiceSettings,
+  speak,
+  stopSpeaking,
+  useIsSpeaking,
+  useSpeechSupported,
+  useSpeechUnlock,
+  useVoiceSettings,
+} from "@/lib/voice";
 import { useAuth } from "./AuthGate";
 import { Sidebar } from "./Sidebar";
 import { ChatWindow } from "./ChatWindow";
 import { Composer } from "./Composer";
 import { SettingsModal } from "./SettingsModal";
+import { VoiceModal } from "./VoiceModal";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
 import { XIcon } from "./icons";
@@ -24,7 +34,13 @@ function typingDelayFor(text: string) {
 }
 
 export function ChatApp() {
-  const { expire } = useAuth();
+  const { user, expire } = useAuth();
+  const [voice, setVoice] = useVoiceSettings(user.id);
+  const speechSupported = useSpeechSupported();
+  const isSpeaking = useIsSpeaking();
+
+  // iOS Safari: buka mesin suara pada sentuhan pertama supaya auto-baca tidak dibungkam.
+  useSpeechUnlock();
 
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
@@ -35,6 +51,7 @@ export function ChatApp() {
   const [loaded, setLoaded] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showVoice, setShowVoice] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
@@ -44,6 +61,14 @@ export function ChatApp() {
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
+
+  // Hentikan suara saat keluar dari akun atau sesi berakhir.
+  useEffect(() => () => stopSpeaking(), []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -95,6 +120,7 @@ export function ChatApp() {
   );
 
   function handleSelect(id: string) {
+    if (id !== activeId) stopSpeaking();
     setActiveId(id);
     setMobileShowChat(true);
     if (!messagesMap[id]) fetchMessages(id);
@@ -102,6 +128,8 @@ export function ChatApp() {
 
   async function handleSend(text: string, imageFile: File | null) {
     if (!activeId) return;
+    const target = activeId;
+    stopSpeaking();
 
     let imageUrl: string | null = null;
     if (imageFile) {
@@ -120,7 +148,7 @@ export function ChatApp() {
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
       id: tempId,
-      characterId: activeId,
+      characterId: target,
       role: "user",
       content: text,
       imageUrl,
@@ -131,24 +159,24 @@ export function ChatApp() {
 
     setMessagesMap((prev) => ({
       ...prev,
-      [activeId]: [...(prev[activeId] ?? []), optimisticMsg],
+      [target]: [...(prev[target] ?? []), optimisticMsg],
     }));
 
-    setTypingFor(activeId);
+    setTypingFor(target);
 
     try {
       const res = await api("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: activeId, content: text, imageUrl }),
+        body: JSON.stringify({ characterId: target, content: text, imageUrl }),
       });
       const data = await res.json();
 
       setMessagesMap((prev) => {
-        const list = (prev[activeId] ?? []).map((m) =>
+        const list = (prev[target] ?? []).map((m) =>
           m.id === tempId ? (data.userMessage ?? { ...m, pending: false }) : m
         );
-        return { ...prev, [activeId]: list };
+        return { ...prev, [target]: list };
       });
 
       if (!res.ok) {
@@ -159,12 +187,16 @@ export function ChatApp() {
 
       const bubbles: ChatMessage[] = data.assistantMessages ?? [];
       for (let i = 0; i < bubbles.length; i++) {
-        setTypingFor(activeId);
+        setTypingFor(target);
         await sleep(typingDelayFor(bubbles[i].content));
         setMessagesMap((prev) => ({
           ...prev,
-          [activeId]: [...(prev[activeId] ?? []), bubbles[i]],
+          [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
+        const currentVoice = loadVoiceSettings(user.id);
+        if (currentVoice.enabled && activeIdRef.current === target) {
+          speak(bubbles[i].content, currentVoice, { append: i > 0 });
+        }
         if (i < bubbles.length - 1) await sleep(350);
       }
       setTypingFor(null);
@@ -200,6 +232,7 @@ export function ChatApp() {
 
   async function handleDeleteMessage(id: string) {
     if (!confirm("Hapus pesan ini?")) return;
+    stopSpeaking();
 
     const res = await api(`/api/messages/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
@@ -219,10 +252,17 @@ export function ChatApp() {
     fetchCharacters();
   }
 
+  function handleSpeakMessage(text: string) {
+    if (!speak(text, voice)) {
+      showToast("Pesan ini tidak bisa dibacakan di browser ini.");
+    }
+  }
+
   async function handleRegenerate() {
     if (!activeId || typingFor === activeId) return;
 
     const target = activeId;
+    stopSpeaking();
     setTypingFor(target);
 
     try {
@@ -249,6 +289,10 @@ export function ChatApp() {
           ...prev,
           [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
+        const currentVoice = loadVoiceSettings(user.id);
+        if (currentVoice.enabled && activeIdRef.current === target) {
+          speak(bubbles[i].content, currentVoice, { append: i > 0 });
+        }
         if (i < bubbles.length - 1) await sleep(350);
       }
       setTypingFor(null);
@@ -274,6 +318,7 @@ export function ChatApp() {
     setShowProfile(false);
     setEditDetail(null);
     if (activeId === id) {
+      stopSpeaking();
       setActiveId(null);
       setMobileShowChat(false);
     }
@@ -301,7 +346,9 @@ export function ChatApp() {
           onSelect={handleSelect}
           onNewCharacter={() => setShowCreate(true)}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenVoice={() => setShowVoice(true)}
           hasProviders={hasProviders}
+          voiceEnabled={voice.enabled}
           limit={limit}
         />
       </div>
@@ -313,10 +360,19 @@ export function ChatApp() {
               character={activeCharacter}
               messages={activeMessages}
               isTyping={typingFor === activeId}
-              onBack={() => setMobileShowChat(false)}
+              isSpeaking={isSpeaking}
+              canSpeak={speechSupported}
+              voiceEnabled={voice.enabled}
+              onBack={() => {
+                stopSpeaking();
+                setMobileShowChat(false);
+              }}
               onOpenProfile={() => openProfile(activeCharacter.id)}
+              onOpenVoice={() => setShowVoice(true)}
               onImageClick={(url) => setLightbox(url)}
               onCopyMessage={handleCopyMessage}
+              onSpeakMessage={handleSpeakMessage}
+              onStopSpeaking={stopSpeaking}
               onDeleteMessage={handleDeleteMessage}
               onRegenerate={handleRegenerate}
             />
@@ -349,6 +405,18 @@ export function ChatApp() {
           providers={providers}
           onClose={() => setShowSettings(false)}
           onRefresh={fetchProviders}
+          onOpenVoice={() => {
+            setShowSettings(false);
+            setShowVoice(true);
+          }}
+        />
+      )}
+
+      {showVoice && (
+        <VoiceModal
+          settings={voice}
+          onChange={setVoice}
+          onClose={() => setShowVoice(false)}
         />
       )}
 
