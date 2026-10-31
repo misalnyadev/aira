@@ -123,7 +123,11 @@ export function ChatApp() {
     const charObj = characterId
       ? charactersRef.current.find((c) => c.id === characterId)
       : undefined;
-    return resolveVoiceTarget(charObj?.voiceConfig, engineChoice, ttsSummaryRef.current.hasKey);
+    return resolveVoiceTarget(
+      charObj?.voiceConfig,
+      engineChoice,
+      ttsSummaryRef.current.hasActiveKey
+    );
   }
 
   /**
@@ -594,9 +598,9 @@ export function ChatApp() {
   const callVoiceTarget = useMemo(
     () =>
       callCharacter
-        ? resolveVoiceTarget(callCharacter.voiceConfig, voice.engine, ttsSummary.hasKey)
+        ? resolveVoiceTarget(callCharacter.voiceConfig, voice.engine, ttsSummary.hasActiveKey)
         : undefined,
-    [callCharacter, voice.engine, ttsSummary.hasKey]
+    [callCharacter, voice.engine, ttsSummary.hasActiveKey]
   );
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
@@ -665,7 +669,7 @@ export function ChatApp() {
                     messages={activeMessages}
                     isTyping={typingFor === activeId}
                     isSpeaking={isSpeaking}
-                    canSpeak={speechSupported || ttsSummary.hasKey}
+                    canSpeak={speechSupported || ttsSummary.hasActiveKey}
                     voiceEnabled={voice.enabled}
                     background={activeCharacter.chatBackground ?? chatBackground}
                     bubble={activeBubble}
@@ -786,7 +790,9 @@ export function ChatApp() {
               onChatBackgroundChange={setChatBackground}
               bubbleStyle={bubbleStyle}
               onBubbleStyleChange={setBubbleStyle}
-              onChanged={fetchProviders}
+              onChanged={async () => {
+                await Promise.all([fetchProviders(), fetchTtsSettings()]);
+              }}
             />
           )}
         </div>
@@ -819,7 +825,8 @@ export function ChatApp() {
           character={profileDetail}
           providerLabel={profileProviderLabel}
           bubbleFallback={bubbleStyle}
-          hasHdKey={ttsSummary.hasKey}
+          ttsProvider={ttsSummary.provider}
+          hasHdKey={ttsSummary.hasActiveKey}
           voiceSettings={voice}
           onClose={() => setShowProfile(false)}
           onEdit={() => {

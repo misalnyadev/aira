@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
-import type { CharacterVoiceConfig } from "@/lib/hdVoice";
+import type { CharacterVoiceConfig, HdTtsProvider } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
@@ -18,6 +18,7 @@ export function CharacterProfileModal({
   character,
   providerLabel,
   bubbleFallback,
+  ttsProvider,
   hasHdKey,
   voiceSettings,
   onClose,
@@ -33,6 +34,7 @@ export function CharacterProfileModal({
   character: CharacterDetail;
   providerLabel: string;
   bubbleFallback: BubbleStyle;
+  ttsProvider: HdTtsProvider;
   hasHdKey: boolean;
   voiceSettings: VoiceSettings;
   onClose: () => void;
@@ -153,8 +155,9 @@ export function CharacterProfileModal({
               Suara karakter
             </h4>
             <CharacterVoiceSection
-              key={`${character.id}|${character.voiceConfig?.mode ?? "inherit"}|${character.voiceConfig?.customVoiceId ?? ""}`}
+              key={`${character.id}|${ttsProvider}|${character.voiceConfig?.mode ?? "inherit"}|${character.voiceConfig?.customVoiceId ?? ""}`}
               value={character.voiceConfig}
+              provider={ttsProvider}
               hasHdKey={hasHdKey}
               voiceSettings={voiceSettings}
               sampleGreeting={character.greeting}

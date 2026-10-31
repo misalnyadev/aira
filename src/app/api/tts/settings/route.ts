@@ -1,22 +1,36 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { apiProviders, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import {
+  cleanStyleText,
   cleanVoiceId,
   DEFAULT_TTS_ACCOUNT_SUMMARY,
+  normalizeGeminiModelId,
   normalizeHdModelId,
+  normalizeHdProvider,
   normalizeTtsConfig,
   parseTtsConfig,
   toTtsAccountSummary,
 } from "@/lib/hdVoice";
-import { mergePatchedBackupKeys } from "@/lib/providerPool";
+import { mergePatchedBackupKeys, parseBackupKeys } from "@/lib/providerPool";
 
 export const dynamic = "force-dynamic";
 
 const UNAUTHORIZED = { error: "Kamu belum masuk. Muat ulang halaman lalu masuk lagi." };
+
+async function checkSharedGeminiKey(userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ apiKey: apiProviders.apiKey, backupKeys: apiProviders.backupKeys })
+    .from(apiProviders)
+    .where(and(eq(apiProviders.userId, userId), eq(apiProviders.type, "gemini")));
+
+  return rows.some(
+    (r) => Boolean(r.apiKey?.trim()) || parseBackupKeys(r.backupKeys, r.apiKey).length > 0
+  );
+}
 
 export async function GET() {
   await ensureDb();
@@ -24,17 +38,28 @@ export async function GET() {
   const user = await requireUser();
   if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
-  const [row] = await db
-    .select({ ttsConfig: users.ttsConfig })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
+  const [[row], hasSharedGeminiKey] = await Promise.all([
+    db
+      .select({ ttsConfig: users.ttsConfig })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+    checkSharedGeminiKey(user.id),
+  ]);
 
   if (!row) {
-    return NextResponse.json({ tts: DEFAULT_TTS_ACCOUNT_SUMMARY });
+    return NextResponse.json({
+      tts: {
+        ...DEFAULT_TTS_ACCOUNT_SUMMARY,
+        hasSharedGeminiKey,
+        hasActiveKey: hasSharedGeminiKey,
+      },
+    });
   }
 
-  return NextResponse.json({ tts: toTtsAccountSummary(parseTtsConfig(row.ttsConfig)) });
+  return NextResponse.json({
+    tts: toTtsAccountSummary(parseTtsConfig(row.ttsConfig), { hasSharedGeminiKey }),
+  });
 }
 
 export async function PATCH(req: Request) {
@@ -49,6 +74,18 @@ export async function PATCH(req: Request) {
   }
 
   const patch = body as {
+    provider?: unknown;
+    // Gemini
+    geminiApiKey?: string;
+    clearGeminiApiKey?: boolean;
+    geminiBackupKeys?: unknown;
+    keepGeminiBackupIndexes?: unknown;
+    newGeminiBackupKeys?: unknown;
+    geminiModelId?: unknown;
+    geminiFemaleVoice?: unknown;
+    geminiMaleVoice?: unknown;
+    geminiStyle?: unknown;
+    // ElevenLabs
     apiKey?: string;
     clearApiKey?: boolean;
     backupKeys?: unknown;
@@ -61,6 +98,18 @@ export async function PATCH(req: Request) {
     similarityBoost?: unknown;
   };
 
+  if (patch.geminiFemaleVoice !== undefined && !cleanVoiceId(patch.geminiFemaleVoice)) {
+    return NextResponse.json(
+      { error: "Nama suara Gemini Perempuan tidak valid." },
+      { status: 400 }
+    );
+  }
+  if (patch.geminiMaleVoice !== undefined && !cleanVoiceId(patch.geminiMaleVoice)) {
+    return NextResponse.json(
+      { error: "Nama suara Gemini Laki-laki tidak valid." },
+      { status: 400 }
+    );
+  }
   if (patch.femaleVoiceId !== undefined && !cleanVoiceId(patch.femaleVoiceId)) {
     return NextResponse.json(
       { error: "Voice ID Perempuan tidak valid. Pastikan hanya huruf/angka tanpa spasi." },
@@ -74,14 +123,36 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const [row] = await db
-    .select({ ttsConfig: users.ttsConfig })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
+  const [[row], hasSharedGeminiKey] = await Promise.all([
+    db
+      .select({ ttsConfig: users.ttsConfig })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+    checkSharedGeminiKey(user.id),
+  ]);
 
   const current = parseTtsConfig(row?.ttsConfig);
 
+  // Kunci Gemini khusus suara
+  let nextGeminiPrimary = current.geminiApiKey;
+  if (patch.clearGeminiApiKey) {
+    nextGeminiPrimary = "";
+  } else if (typeof patch.geminiApiKey === "string" && patch.geminiApiKey.trim()) {
+    nextGeminiPrimary = patch.geminiApiKey.trim();
+  }
+
+  const nextGeminiBackups = mergePatchedBackupKeys(
+    current.geminiBackupKeys,
+    {
+      backupKeys: patch.geminiBackupKeys,
+      keepBackupIndexes: patch.keepGeminiBackupIndexes,
+      newBackupKeys: patch.newGeminiBackupKeys,
+    },
+    nextGeminiPrimary
+  );
+
+  // Kunci ElevenLabs
   let nextPrimary = current.apiKey;
   if (patch.clearApiKey) {
     nextPrimary = "";
@@ -100,6 +171,23 @@ export async function PATCH(req: Request) {
   );
 
   const merged = normalizeTtsConfig({
+    provider: patch.provider !== undefined ? normalizeHdProvider(patch.provider) : current.provider,
+    geminiApiKey: nextGeminiPrimary,
+    geminiBackupKeys: nextGeminiBackups,
+    geminiModelId:
+      patch.geminiModelId !== undefined
+        ? normalizeGeminiModelId(patch.geminiModelId)
+        : current.geminiModelId,
+    geminiFemaleVoice:
+      patch.geminiFemaleVoice !== undefined
+        ? cleanVoiceId(patch.geminiFemaleVoice, current.geminiFemaleVoice)
+        : current.geminiFemaleVoice,
+    geminiMaleVoice:
+      patch.geminiMaleVoice !== undefined
+        ? cleanVoiceId(patch.geminiMaleVoice, current.geminiMaleVoice)
+        : current.geminiMaleVoice,
+    geminiStyle:
+      patch.geminiStyle !== undefined ? cleanStyleText(patch.geminiStyle) : current.geminiStyle,
     apiKey: nextPrimary,
     backupKeys: nextBackups,
     modelId: patch.modelId !== undefined ? normalizeHdModelId(patch.modelId) : current.modelId,
@@ -121,5 +209,5 @@ export async function PATCH(req: Request) {
     .set({ ttsConfig: JSON.stringify(merged) })
     .where(eq(users.id, user.id));
 
-  return NextResponse.json({ tts: toTtsAccountSummary(merged) });
+  return NextResponse.json({ tts: toTtsAccountSummary(merged, { hasSharedGeminiKey }) });
 }

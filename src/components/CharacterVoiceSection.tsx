@@ -3,21 +3,37 @@
 import { useState } from "react";
 import {
   cleanVoiceId,
+  GEMINI_FEMALE_PRESETS,
+  GEMINI_MALE_PRESETS,
   type CharacterVoiceConfig,
   type CharacterVoiceMode,
+  type HdTtsProvider,
 } from "@/lib/hdVoice";
-import { VOICE_TEST_TEXT, speak, stopSpeaking, useIsSpeaking, type VoiceSettings } from "@/lib/voice";
+import {
+  VOICE_TEST_TEXT,
+  speak,
+  stopSpeaking,
+  useIsSpeaking,
+  type VoiceSettings,
+} from "@/lib/voice";
 
 const OPTIONS: { id: CharacterVoiceMode; label: string; hint: string }[] = [
   { id: "inherit", label: "Ikut bawaan", hint: "Mengikuti pilihan mesin di menu Suara" },
   { id: "device", label: "Perangkat", hint: "Suara lokal iPhone/browser (gratis tanpa kuota)" },
-  { id: "hd_female", label: "HD Perempuan", hint: "Memakai slot Suara HD Perempuan (ElevenLabs)" },
-  { id: "hd_male", label: "HD Laki-laki", hint: "Memakai slot Suara HD Laki-laki (ElevenLabs)" },
-  { id: "hd_custom", label: "Voice ID Khusus", hint: "Pakai kode Voice ID ElevenLabs tersendiri" },
+  { id: "hd_female", label: "HD Perempuan", hint: "Memakai Slot 1 Perempuan dari menu Suara" },
+  { id: "hd_male", label: "HD Laki-laki", hint: "Memakai Slot 2 Laki-laki dari menu Suara" },
+  {
+    id: "hd_custom",
+    label: "Suara Khusus",
+    hint: "Pilih suara tersendiri khusus karakter ini",
+  },
 ];
+
+const ALL_GEMINI_PRESETS = [...GEMINI_FEMALE_PRESETS, ...GEMINI_MALE_PRESETS];
 
 export function CharacterVoiceSection({
   value,
+  provider,
   hasHdKey,
   voiceSettings,
   sampleGreeting,
@@ -25,6 +41,7 @@ export function CharacterVoiceSection({
   onNotice,
 }: {
   value: CharacterVoiceConfig | null;
+  provider: HdTtsProvider;
   hasHdKey: boolean;
   voiceSettings: VoiceSettings;
   sampleGreeting?: string;
@@ -55,14 +72,20 @@ export function CharacterVoiceSection({
     onChange({ mode });
   }
 
+  function handlePickPreset(id: string) {
+    stopSpeaking();
+    setCustomId(id);
+    onChange({ mode: "hd_custom", customVoiceId: id });
+  }
+
   function handleSaveCustom() {
     const cleaned = cleanVoiceId(customId);
     if (!cleaned) {
-      onNotice?.("Masukkan kode Voice ID ElevenLabs yang valid (tanpa spasi).");
+      onNotice?.("Masukkan nama atau kode suara yang valid (tanpa spasi).");
       return;
     }
     onChange({ mode: "hd_custom", customVoiceId: cleaned });
-    onNotice?.("Voice ID khusus karakter disimpan.");
+    onNotice?.("Suara khusus karakter disimpan.");
   }
 
   function handleTestCustom() {
@@ -72,11 +95,15 @@ export function CharacterVoiceSection({
     }
     const cleaned = cleanVoiceId(customId);
     if (!cleaned) {
-      onNotice?.("Masukkan kode Voice ID terlebih dulu.");
+      onNotice?.("Pilih atau masukkan suara terlebih dulu.");
       return;
     }
     if (!hasHdKey) {
-      onNotice?.("Isi API key ElevenLabs dulu di menu Suara.");
+      onNotice?.(
+        provider === "gemini"
+          ? "Tambahkan API key Gemini dulu di Setelan atau menu Suara."
+          : "Isi API key ElevenLabs dulu di menu Suara."
+      );
       return;
     }
     const sample = sampleGreeting?.trim() || VOICE_TEST_TEXT;
@@ -118,19 +145,45 @@ export function CharacterVoiceSection({
 
       {needsHdWarning && (
         <p className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
-          API key ElevenLabs belum diisi di menu <b>Suara</b>. Selama belum diisi, karakter ini
-          otomatis memakai suara perangkat.
+          API key Suara HD belum tersedia. Tambahkan di menu <b>Setelan</b> (untuk Gemini) atau menu{" "}
+          <b>Suara</b>. Selama belum ada, karakter otomatis memakai suara perangkat.
         </p>
       )}
 
       {activeMode === "hd_custom" && (
         <div className="space-y-2 pt-1">
+          {provider === "gemini" && (
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_GEMINI_PRESETS.map((p) => {
+                const selected = customId.trim() === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handlePickPreset(p.id)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                      selected
+                        ? "border-ink bg-ink text-surface"
+                        : "border-line bg-surface text-ink-soft hover:text-ink"
+                    }`}
+                  >
+                    {p.label} · {p.hint}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex gap-1.5">
             <input
               type="text"
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
-              placeholder="Tempel Voice ID ElevenLabs..."
+              placeholder={
+                provider === "gemini"
+                  ? "Nama suara Gemini (mis. Kore, Aoede, Puck)..."
+                  : "Tempel Voice ID ElevenLabs..."
+              }
               className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
             />
             <button
