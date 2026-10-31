@@ -132,7 +132,7 @@ export function Composer({
   return (
     <div
       className={`composer-bar px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5 ${
-        transparent ? "bg-transparent" : "bg-header"
+        transparent ? "bg-transparent" : "bottom-bar"
       }`}
     >
       <div className="mx-auto w-full max-w-3xl">
@@ -211,10 +211,8 @@ export function Composer({
               autoComplete="off"
               enterKeyHint="send"
               aria-label="Tulis pesan"
-              className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
-                transparent
-                  ? "bg-surface/75 ring-1 ring-line/70 backdrop-blur-md"
-                  : "bg-surface ring-1 ring-line"
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/75 px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
+                transparent ? "backdrop-blur-md" : ""
               } ${multiline ? "rounded-2xl" : "rounded-full"}`}
             />
             {dictation.supported && (
@@ -237,10 +235,8 @@ export function Composer({
           <button
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
-            className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
-              transparent
-                ? "bg-surface/75 ring-1 ring-line/70 backdrop-blur-md hover:bg-surface/90"
-                : "bg-surface ring-1 ring-line hover:bg-surface-2"
+            className={`mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink ring-1 ring-line/70 transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 ${
+              transparent ? "backdrop-blur-md" : ""
             }`}
             title="Kirim"
             aria-label="Kirim pesan"
