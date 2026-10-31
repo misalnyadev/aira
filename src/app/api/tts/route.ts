@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, users } from "@/db/schema";
+import { apiProviders, ttsClips, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import {
@@ -13,9 +13,12 @@ import {
   sampleRateFromMime,
   speakableHdText,
   supportsLanguageCode,
+  ttsClipHash,
+  type HdTtsProvider,
   type TtsAccountConfig,
 } from "@/lib/hdVoice";
 import { buildKeyAttempts, parseBackupKeys, promoteKeyAtIndex } from "@/lib/providerPool";
+import { getR2Object, isR2Configured, putR2Object } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -25,6 +28,10 @@ const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1/text-to-speech";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const ELEVEN_TIMEOUT_MS = 15_000;
 const GEMINI_TIMEOUT_MS = 25_000;
+
+type SynthResult =
+  | { ok: true; bytes: Uint8Array; mimeType: string; ext: "wav" | "mp3" }
+  | { ok: false; error: string; status: number };
 
 function friendlyElevenLabsError(status: number, rawBody: string): string {
   const lower = rawBody.toLowerCase();
@@ -66,14 +73,12 @@ function friendlyGeminiTtsError(status: number, rawBody: string): string {
   return `Gemini TTS mengembalikan kendala (HTTP ${status}).`;
 }
 
-async function synthesizeGemini(
+async function synthesizeGeminiBytes(
   userId: string,
   config: TtsAccountConfig,
   cleanedText: string,
-  slot: "female" | "male" | "custom" | undefined,
-  customVoiceId: unknown
-): Promise<Response> {
-  // 1. Susun antrean API key: key khusus suara lebih dulu, lalu key provider Gemini di Setelan.
+  voiceName: string
+): Promise<SynthResult> {
   const dedicatedKeys = buildKeyAttempts(
     "gemini",
     config.geminiApiKey,
@@ -99,24 +104,12 @@ async function synthesizeGemini(
 
   const allKeys = [...new Set([...dedicatedKeys, ...sharedKeys])].slice(0, 8);
   if (allKeys.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "API key Gemini belum ada. Tambahkan provider Gemini di menu Setelan, atau isi key Gemini di menu Suara.",
-      },
-      { status: 400 }
-    );
-  }
-
-  let voiceName = config.geminiFemaleVoice;
-  if (slot === "male") {
-    voiceName = config.geminiMaleVoice;
-  } else if (slot === "custom") {
-    const custom = cleanVoiceId(customVoiceId, "");
-    if (!custom) {
-      return NextResponse.json({ error: "Nama suara khusus tidak valid." }, { status: 400 });
-    }
-    voiceName = custom;
+    return {
+      ok: false,
+      error:
+        "API key Gemini belum ada. Tambahkan provider Gemini di menu Setelan, atau isi key Gemini di menu Suara.",
+      status: 400,
+    };
   }
 
   const styleText = config.geminiStyle.trim();
@@ -170,7 +163,6 @@ async function synthesizeGemini(
           lastStatus = res.status === 429 ? 429 : res.status;
           lastError = friendlyGeminiTtsError(res.status, errBody);
 
-          // Bila model terbaru belum terbuka di key ini (404), coba model 2.5 pada key yang sama.
           if (res.status === 404 && mIdx < modelsToTry.length - 1) {
             continue;
           }
@@ -202,7 +194,6 @@ async function synthesizeGemini(
           (raw[0] === 0x52 && raw[1] === 0x49 && raw[2] === 0x46 && raw[3] === 0x46);
         const wav = alreadyWav ? raw : pcmToWav(raw, sampleRateFromMime(mime));
 
-        // Promosikan key cadangan khusus suara bila menang.
         if (keyIdx > 0 && keyIdx < dedicatedKeys.length) {
           const promoted = promoteKeyAtIndex(
             config.geminiApiKey,
@@ -223,13 +214,7 @@ async function synthesizeGemini(
           }
         }
 
-        return new Response(Buffer.from(wav), {
-          status: 200,
-          headers: {
-            "Content-Type": "audio/wav",
-            "Cache-Control": "no-store",
-          },
-        });
+        return { ok: true, bytes: wav, mimeType: "audio/wav", ext: "wav" };
       } catch {
         lastStatus = 504;
         lastError = "Koneksi ke Gemini TTS melewati batas waktu.";
@@ -241,33 +226,22 @@ async function synthesizeGemini(
     if (!shouldTryNextKey) break;
   }
 
-  return NextResponse.json({ error: lastError }, { status: lastStatus });
+  return { ok: false, error: lastError, status: lastStatus };
 }
 
-async function synthesizeElevenLabs(
+async function synthesizeElevenLabsBytes(
   userId: string,
   config: TtsAccountConfig,
   cleanedText: string,
-  slot: "female" | "male" | "custom" | undefined,
-  customVoiceId: unknown
-): Promise<Response> {
+  voiceId: string
+): Promise<SynthResult> {
   const attempts = buildKeyAttempts("elevenlabs", config.apiKey, config.backupKeys);
   if (attempts.length === 0) {
-    return NextResponse.json(
-      { error: "API key ElevenLabs belum diisi di menu Suara." },
-      { status: 400 }
-    );
-  }
-
-  let voiceId = config.femaleVoiceId;
-  if (slot === "male") {
-    voiceId = config.maleVoiceId;
-  } else if (slot === "custom") {
-    const custom = cleanVoiceId(customVoiceId, "");
-    if (!custom) {
-      return NextResponse.json({ error: "Voice ID khusus tidak valid." }, { status: 400 });
-    }
-    voiceId = custom;
+    return {
+      ok: false,
+      error: "API key ElevenLabs belum diisi di menu Suara.",
+      status: 400,
+    };
   }
 
   const payload: Record<string, unknown> = {
@@ -301,7 +275,7 @@ async function synthesizeElevenLabs(
       });
 
       if (res.ok) {
-        const audio = await res.arrayBuffer();
+        const audio = new Uint8Array(await res.arrayBuffer());
         if (idx > 0) {
           const promoted = promoteKeyAtIndex(config.apiKey, config.backupKeys, idx);
           if (promoted) {
@@ -317,13 +291,7 @@ async function synthesizeElevenLabs(
               .catch(() => undefined);
           }
         }
-        return new Response(audio, {
-          status: 200,
-          headers: {
-            "Content-Type": "audio/mpeg",
-            "Cache-Control": "no-store",
-          },
-        });
+        return { ok: true, bytes: audio, mimeType: "audio/mpeg", ext: "mp3" };
       }
 
       const errBody = await res.text().catch(() => "");
@@ -341,7 +309,7 @@ async function synthesizeElevenLabs(
     }
   }
 
-  return NextResponse.json({ error: lastError }, { status: lastStatus });
+  return { ok: false, error: lastError, status: lastStatus };
 }
 
 export async function POST(req: Request) {
@@ -355,9 +323,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Permintaan suara tidak valid." }, { status: 400 });
   }
 
-  const { text, slot, customVoiceId } = body as {
+  const { text, slot, provider, customVoiceId } = body as {
     text?: unknown;
     slot?: "female" | "male" | "custom";
+    provider?: unknown;
     customVoiceId?: unknown;
   };
 
@@ -377,8 +346,117 @@ export async function POST(req: Request) {
     .limit(1);
 
   const config = parseTtsConfig(row?.ttsConfig);
-  if (config.provider === "elevenlabs") {
-    return synthesizeElevenLabs(user.id, config, cleanedText, slot, customVoiceId);
+  const effectiveProvider: HdTtsProvider =
+    provider === "gemini" || provider === "elevenlabs" ? provider : config.provider;
+
+  let voice = "";
+  let styleForHash = "";
+  if (effectiveProvider === "gemini") {
+    styleForHash = config.geminiStyle;
+    if (slot === "male") {
+      voice = config.geminiMaleVoice;
+    } else if (slot === "custom") {
+      voice = cleanVoiceId(customVoiceId, "");
+    } else {
+      voice = config.geminiFemaleVoice;
+    }
+  } else {
+    if (slot === "male") {
+      voice = config.maleVoiceId;
+    } else if (slot === "custom") {
+      voice = cleanVoiceId(customVoiceId, "");
+    } else {
+      voice = config.femaleVoiceId;
+    }
   }
-  return synthesizeGemini(user.id, config, cleanedText, slot, customVoiceId);
+
+  if (!voice) {
+    return NextResponse.json({ error: "Suara khusus tidak valid." }, { status: 400 });
+  }
+
+  const clipHash = ttsClipHash({
+    provider: effectiveProvider,
+    voice,
+    style: styleForHash,
+    text: cleanedText,
+  });
+
+  // 1. Cek Bank Rekaman di Cloudflare R2 lebih dulu (jalan walau tanpa API key!).
+  if (isR2Configured()) {
+    const [existing] = await db
+      .select()
+      .from(ttsClips)
+      .where(and(eq(ttsClips.userId, user.id), eq(ttsClips.clipHash, clipHash)))
+      .limit(1);
+
+    if (existing) {
+      const fromR2 = await getR2Object(existing.r2Key);
+      if (fromR2) {
+        return new Response(fromR2.body, {
+          status: 200,
+          headers: {
+            "Content-Type": existing.mimeType || fromR2.contentType,
+            "X-Tts-Source": "r2",
+            "X-Tts-Hash": clipHash,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      // Objek sudah tidak ada di R2 — bersihkan catatan yatim lalu buat ulang.
+      await db
+        .delete(ttsClips)
+        .where(eq(ttsClips.id, existing.id))
+        .catch(() => undefined);
+    }
+  }
+
+  // 2. Belum ada di R2 -> buat lewat API Gemini / ElevenLabs.
+  const result =
+    effectiveProvider === "elevenlabs"
+      ? await synthesizeElevenLabsBytes(user.id, config, cleanedText, voice)
+      : await synthesizeGeminiBytes(user.id, config, cleanedText, voice);
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
+  }
+
+  // 3. Simpan hasil ke Cloudflare R2 + indeks akun agar langsung bisa dipakai di PC & HP.
+  if (isR2Configured()) {
+    const r2Key = `tts/${user.id}/${clipHash}.${result.ext}`;
+    const stored = await putR2Object(r2Key, result.bytes, result.mimeType);
+    if (stored) {
+      await db
+        .insert(ttsClips)
+        .values({
+          userId: user.id,
+          clipHash,
+          r2Key,
+          provider: effectiveProvider,
+          voice,
+          text: cleanedText,
+          mimeType: result.mimeType,
+          bytes: result.bytes.byteLength,
+        })
+        .onConflictDoUpdate({
+          target: [ttsClips.userId, ttsClips.clipHash],
+          set: {
+            r2Key,
+            mimeType: result.mimeType,
+            bytes: result.bytes.byteLength,
+            createdAt: new Date(),
+          },
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  return new Response(Buffer.from(result.bytes), {
+    status: 200,
+    headers: {
+      "Content-Type": result.mimeType,
+      "X-Tts-Source": "api",
+      "X-Tts-Hash": clipHash,
+      "Cache-Control": "no-store",
+    },
+  });
 }

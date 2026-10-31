@@ -229,7 +229,7 @@ function hdCacheKey(
   target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
   cleanedText: string
 ): string {
-  return `${cacheEpoch}|${target.slot}|${target.customVoiceId ?? ""}|${cleanedText}`;
+  return `${cacheEpoch}|${target.customProvider ?? ""}|${target.slot}|${target.customVoiceId ?? ""}|${cleanedText}`;
 }
 
 function storeCachedBlob(key: string, blob: Blob) {
@@ -277,6 +277,7 @@ async function fetchHdBlob(
       body: JSON.stringify({
         text: cleaned,
         slot: target.slot,
+        provider: target.customProvider,
         customVoiceId: target.customVoiceId,
       }),
     });
