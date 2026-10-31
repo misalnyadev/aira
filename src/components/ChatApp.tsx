@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
 import {
   DEFAULT_BUBBLE_STYLE,
@@ -13,6 +13,13 @@ import {
 } from "@/lib/chatBackground";
 import { compressImageFile } from "@/lib/compressImage";
 import { isDictating } from "@/lib/dictation";
+import {
+  DEFAULT_TTS_ACCOUNT_SUMMARY,
+  resolveVoiceTarget,
+  type CharacterVoiceConfig,
+  type TtsAccountSummary,
+  type VoiceEngineChoice,
+} from "@/lib/hdVoice";
 import { useKeyboardPan } from "@/lib/keyboardPan";
 import { MAX_CHARACTERS } from "@/lib/limits";
 import { useSafeTop } from "@/lib/safeTop";
@@ -20,6 +27,7 @@ import { useScrollGuard } from "@/lib/scrollGuard";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
 import {
   loadVoiceSettings,
+  prefetchSpeech,
   speak,
   stopSpeaking,
   useIsSpeaking,
@@ -71,6 +79,7 @@ export function ChatApp() {
   const [autoFallback, setAutoFallback] = useState(true);
   const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
   const [bubbleStyle, setBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
+  const [ttsSummary, setTtsSummary] = useState<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
   const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -92,6 +101,7 @@ export function ChatApp() {
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
   const bubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
+  const ttsSummaryRef = useRef<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -104,6 +114,17 @@ export function ChatApp() {
   useEffect(() => {
     bubbleStyleRef.current = bubbleStyle;
   }, [bubbleStyle]);
+
+  useEffect(() => {
+    ttsSummaryRef.current = ttsSummary;
+  }, [ttsSummary]);
+
+  function voiceTargetFor(characterId: string | null, engineChoice: VoiceEngineChoice) {
+    const charObj = characterId
+      ? charactersRef.current.find((c) => c.id === characterId)
+      : undefined;
+    return resolveVoiceTarget(charObj?.voiceConfig, engineChoice, ttsSummaryRef.current.hasKey);
+  }
 
   /**
    * Balasan karakter dibacakan bila suara otomatis hidup ATAU bila tulisan chat
@@ -171,14 +192,48 @@ export function ChatApp() {
     if (data.profile) setProfile(data.profile);
   }, [api]);
 
+  const fetchTtsSettings = useCallback(async () => {
+    const res = await api("/api/tts/settings");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.tts) setTtsSummary(data.tts);
+  }, [api]);
+
+  const handleSaveTts = useCallback(
+    async (patch: Record<string, unknown>): Promise<TtsAccountSummary | null> => {
+      try {
+        const res = await api("/api/tts/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showToast(data.error || "Gagal menyimpan pengaturan Suara HD.");
+          return null;
+        }
+        if (data.tts) {
+          setTtsSummary(data.tts);
+          return data.tts as TtsAccountSummary;
+        }
+        return null;
+      } catch {
+        showToast("Koneksi gagal saat menyimpan Suara HD.");
+        return null;
+      }
+    },
+    [api, showToast]
+  );
+
   useEffect(() => {
     Promise.all([
       fetchCharacters(),
       fetchProviders(),
       fetchProfile(),
       fetchAppearance(),
+      fetchTtsSettings(),
     ]).finally(() => setLoaded(true));
-  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance]);
+  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance, fetchTtsSettings]);
 
   const fetchMessages = useCallback(
     async (characterId: string) => {
@@ -202,6 +257,30 @@ export function ChatApp() {
     setActiveId(id);
     setMobileShowChat(true);
     if (!messagesMap[id]) fetchMessages(id);
+  }
+
+  async function deliverAssistantBubbles(target: string, bubbles: ChatMessage[]) {
+    for (let i = 0; i < bubbles.length; i++) {
+      setTypingFor(target);
+      const plannedVoice = loadVoiceSettings(user.id);
+      if (shouldSpeakReply(target, plannedVoice.enabled)) {
+        prefetchSpeech(bubbles[i].content, voiceTargetFor(target, plannedVoice.engine));
+      }
+      await sleep(typingDelayFor(bubbles[i].content));
+      setMessagesMap((prev) => ({
+        ...prev,
+        [target]: [...(prev[target] ?? []), bubbles[i]],
+      }));
+      const currentVoice = loadVoiceSettings(user.id);
+      if (shouldSpeakReply(target, currentVoice.enabled)) {
+        speak(bubbles[i].content, currentVoice, {
+          append: i > 0,
+          target: voiceTargetFor(target, currentVoice.engine),
+          onFallback: (reason) => showToast(`${reason} Beralih ke suara perangkat.`),
+        });
+      }
+      if (i < bubbles.length - 1) await sleep(350);
+    }
   }
 
   async function handleSend(text: string, imageFile: File | null) {
@@ -272,20 +351,7 @@ export function ChatApp() {
         void fetchProviders();
       }
 
-      const bubbles: ChatMessage[] = data.assistantMessages ?? [];
-      for (let i = 0; i < bubbles.length; i++) {
-        setTypingFor(target);
-        await sleep(typingDelayFor(bubbles[i].content));
-        setMessagesMap((prev) => ({
-          ...prev,
-          [target]: [...(prev[target] ?? []), bubbles[i]],
-        }));
-        const currentVoice = loadVoiceSettings(user.id);
-        if (shouldSpeakReply(target, currentVoice.enabled)) {
-          speak(bubbles[i].content, currentVoice, { append: i > 0 });
-        }
-        if (i < bubbles.length - 1) await sleep(350);
-      }
+      await deliverAssistantBubbles(target, data.assistantMessages ?? []);
       setTypingFor(null);
       fetchCharacters();
     } catch {
@@ -337,7 +403,13 @@ export function ChatApp() {
   }
 
   function handleSpeakMessage(text: string) {
-    if (!speak(text, voice)) {
+    const resolved = voiceTargetFor(activeId, voice.engine);
+    if (
+      !speak(text, voice, {
+        target: resolved,
+        onFallback: (reason) => showToast(`${reason} Beralih ke suara perangkat.`),
+      })
+    ) {
       showToast("Pesan ini tidak bisa dibacakan di browser ini.");
     }
   }
@@ -374,20 +446,7 @@ export function ChatApp() {
         [target]: (prev[target] ?? []).filter((m) => !removed.includes(m.id)),
       }));
 
-      const bubbles: ChatMessage[] = data.assistantMessages ?? [];
-      for (let i = 0; i < bubbles.length; i++) {
-        setTypingFor(target);
-        await sleep(typingDelayFor(bubbles[i].content));
-        setMessagesMap((prev) => ({
-          ...prev,
-          [target]: [...(prev[target] ?? []), bubbles[i]],
-        }));
-        const currentVoice = loadVoiceSettings(user.id);
-        if (shouldSpeakReply(target, currentVoice.enabled)) {
-          speak(bubbles[i].content, currentVoice, { append: i > 0 });
-        }
-        if (i < bubbles.length - 1) await sleep(350);
-      }
+      await deliverAssistantBubbles(target, data.assistantMessages ?? []);
       setTypingFor(null);
       fetchCharacters();
     } catch {
@@ -497,6 +556,23 @@ export function ChatApp() {
     }
   }
 
+  async function handleCharacterVoice(id: string, next: CharacterVoiceConfig | null) {
+    setCharacters((prev) => prev.map((c) => (c.id === id ? { ...c, voiceConfig: next } : c)));
+    setProfileDetail((cur) => (cur && cur.id === id ? { ...cur, voiceConfig: next } : cur));
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voiceConfig: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan pilihan suara karakter.");
+      fetchCharacters();
+    }
+  }
+
   const profileProviderLabel = (() => {
     if (!profileDetail) return "";
     const chosen = profileDetail.providerId
@@ -515,6 +591,13 @@ export function ChatApp() {
   );
   const composerVisible = !isHiddenMode || composerRevealed;
   const callCharacter = call ? (characters.find((c) => c.id === call.characterId) ?? null) : null;
+  const callVoiceTarget = useMemo(
+    () =>
+      callCharacter
+        ? resolveVoiceTarget(callCharacter.voiceConfig, voice.engine, ttsSummary.hasKey)
+        : undefined,
+    [callCharacter, voice.engine, ttsSummary.hasKey]
+  );
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
   const showMobileTabBar = !(view === "chats" && mobileShowChat);
@@ -582,7 +665,7 @@ export function ChatApp() {
                     messages={activeMessages}
                     isTyping={typingFor === activeId}
                     isSpeaking={isSpeaking}
-                    canSpeak={speechSupported}
+                    canSpeak={speechSupported || ttsSummary.hasKey}
                     voiceEnabled={voice.enabled}
                     background={activeCharacter.chatBackground ?? chatBackground}
                     bubble={activeBubble}
@@ -664,7 +747,15 @@ export function ChatApp() {
             </>
           )}
 
-          {view === "voice" && <VoiceView settings={voice} onChange={setVoice} />}
+          {view === "voice" && (
+            <VoiceView
+              settings={voice}
+              onChange={setVoice}
+              ttsSummary={ttsSummary}
+              onSaveTts={handleSaveTts}
+              onNotice={showToast}
+            />
+          )}
 
           {view === "characters" && (
             <CharactersView
@@ -728,6 +819,8 @@ export function ChatApp() {
           character={profileDetail}
           providerLabel={profileProviderLabel}
           bubbleFallback={bubbleStyle}
+          hasHdKey={ttsSummary.hasKey}
+          voiceSettings={voice}
           onClose={() => setShowProfile(false)}
           onEdit={() => {
             setEditDetail(profileDetail);
@@ -737,7 +830,9 @@ export function ChatApp() {
           onDelete={() => handleDeleteCharacter(profileDetail.id)}
           onBackgroundChange={(next) => handleCharacterBackground(profileDetail.id, next)}
           onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
+          onVoiceChange={(next) => handleCharacterVoice(profileDetail.id, next)}
           onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
+          onNotice={showToast}
         />
       )}
 
@@ -746,6 +841,7 @@ export function ChatApp() {
           character={callCharacter}
           mode={call.mode}
           voice={voice}
+          voiceTarget={callVoiceTarget}
           onClose={() => setCall(null)}
         />
       )}

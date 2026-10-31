@@ -3,9 +3,16 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { CharacterSummary } from "@/types/chat";
+import type { ResolvedVoiceTarget } from "@/lib/hdVoice";
 import { ensureMediaUrl, useMediaUrl } from "@/lib/mediaClient";
 import { resetStatusBarColor, setStatusBarColor } from "@/lib/theme";
-import { speak, stopSpeaking, useIsSpeaking, type VoiceSettings } from "@/lib/voice";
+import {
+  prefetchSpeech,
+  speak,
+  stopSpeaking,
+  useIsSpeaking,
+  type VoiceSettings,
+} from "@/lib/voice";
 import { Avatar } from "./Avatar";
 import { ChatVideoBackground } from "./ChatVideo";
 import { CallEndIcon, SpeakerIcon, SpeakerOffIcon } from "./icons";
@@ -41,11 +48,13 @@ export function CallOverlay({
   character,
   mode,
   voice,
+  voiceTarget,
   onClose,
 }: {
   character: CharacterSummary;
   mode: "video" | "audio";
   voice: VoiceSettings;
+  voiceTarget?: ResolvedVoiceTarget;
   onClose: () => void;
 }) {
   const isClient = useIsClient();
@@ -106,14 +115,17 @@ export function CallOverlay({
   }, [videoKey, mode]);
 
   useEffect(() => {
+    if (voiceCall && !hasRecording) {
+      prefetchSpeech(greeting, voiceTarget);
+    }
     const timer = window.setTimeout(() => {
       setConnected(true);
       if (voiceCall && !hasRecording) {
-        speak(greeting, voice);
+        speak(greeting, voice, { target: voiceTarget });
       }
     }, CONNECT_DELAY);
     return () => window.clearTimeout(timer);
-  }, [greeting, voice, hasRecording, voiceCall]);
+  }, [greeting, voice, voiceTarget, hasRecording, voiceCall]);
 
   useEffect(() => {
     const el = audioRef.current;
