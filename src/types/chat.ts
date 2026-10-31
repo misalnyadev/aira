@@ -37,6 +37,8 @@ export type CharacterSummary = {
   media: CharacterMedia | null;
   /** Pilihan suara khusus karakter; `null` berarti ikut mesin bawaan akun. */
   voiceConfig: CharacterVoiceConfig | null;
+  /** Apakah ingatan jangka panjang & kesadaran waktu aktif pada karakter ini. */
+  memoryEnabled: boolean;
   preview: string;
   updatedAt: string;
 };
@@ -56,6 +58,9 @@ export type CharacterDetail = {
   bubbleStyle: BubbleStyle | null;
   media: CharacterMedia | null;
   voiceConfig: CharacterVoiceConfig | null;
+  memoryEnabled: boolean;
+  memorySummary: string;
+  memoryUpdatedAt: string | null;
 };
 
 export type ChatMessage = {

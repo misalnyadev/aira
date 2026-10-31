@@ -6,11 +6,14 @@ import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import {
   NO_PROVIDER_ERROR,
+  buildMemoryExtrasForTurn,
   generateBubbles,
   loadUserChatSettings,
   pickProviderCandidates,
+  refreshCharacterMemory,
   toChatTurns,
 } from "@/lib/chatEngine";
+import { toTimeAwareChatTurns } from "@/lib/characterMemory";
 import { ensureDb } from "@/lib/dbReady";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
@@ -84,16 +87,29 @@ export async function POST(req: Request) {
   // `ORDER BY created_at DESC` mengambil pesan terbaru lebih dulu; balik ke urutan
   // kronologis (awal -> terbaru) supaya model membaca jalannya cerita dengan benar.
   const chronologicalHistory = [...historyRows].reverse();
+  const cleanUserText = content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : "");
 
   try {
+    const memoryExtras = await buildMemoryExtrasForTurn({
+      character,
+      chronologicalHistory,
+      excludeMessageId: userMessage.id,
+      userText: cleanUserText,
+    });
+
+    const historyTurns = character.memoryEnabled
+      ? toTimeAwareChatTurns(chronologicalHistory, userMessage.id)
+      : toChatTurns(chronologicalHistory, userMessage.id);
+
     const result = await generateBubbles({
       userId: user.id,
       character,
       candidates,
-      userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
+      userText: cleanUserText,
       image,
-      history: toChatTurns(chronologicalHistory, userMessage.id),
+      history: historyTurns,
       userProfile: profile,
+      memoryExtras,
     });
 
     const assistantMessages = [];
@@ -109,6 +125,15 @@ export async function POST(req: Request) {
         })
         .returning();
       assistantMessages.push(row);
+    }
+
+    if (character.memoryEnabled) {
+      await refreshCharacterMemory({
+        userId: user.id,
+        character,
+        candidates,
+        forceAll: false,
+      }).catch(() => undefined);
     }
 
     return NextResponse.json({

@@ -6,11 +6,13 @@ import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
 import {
   NO_PROVIDER_ERROR,
+  buildMemoryExtrasForTurn,
   generateBubbles,
   loadUserChatSettings,
   pickProviderCandidates,
   toChatTurns,
 } from "@/lib/chatEngine";
+import { toTimeAwareChatTurns } from "@/lib/characterMemory";
 import { ensureDb } from "@/lib/dbReady";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { staleAssistantIds } from "@/lib/messageRules";
@@ -73,16 +75,29 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
   const chronologicalPrior = all
     .filter((m) => m.createdAt.getTime() < lastUser.createdAt.getTime() && m.id !== lastUser.id)
     .reverse();
+  const cleanUserText = lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : "");
 
   try {
+    const memoryExtras = await buildMemoryExtrasForTurn({
+      character,
+      chronologicalHistory: chronologicalPrior,
+      excludeMessageId: lastUser.id,
+      userText: cleanUserText,
+    });
+
+    const historyTurns = character.memoryEnabled
+      ? toTimeAwareChatTurns(chronologicalPrior, lastUser.id)
+      : toChatTurns(chronologicalPrior, lastUser.id);
+
     const result = await generateBubbles({
       userId: user.id,
       character,
       candidates,
-      userText: lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : ""),
+      userText: cleanUserText,
       image,
-      history: toChatTurns(chronologicalPrior, lastUser.id),
+      history: historyTurns,
       userProfile: profile,
+      memoryExtras,
     });
 
     const assistantMessages = [];
