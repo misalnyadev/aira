@@ -2,11 +2,14 @@
 
 import { useMemo, useRef, useState } from "react";
 import type { ProviderSummary, ProviderType } from "@/types/chat";
-import { sortModels, type ModelOption } from "@/lib/ai/models";
+import {
+  pickDynamicRecommendedModels,
+  sortModels,
+  type ModelOption,
+} from "@/lib/ai/models";
 import {
   PROVIDER_META,
   PROVIDER_ORDER,
-  RECOMMENDED_MODELS,
 } from "@/lib/ai/providerDefaults";
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
 import { readClipboardText } from "@/lib/clipboard";
@@ -74,18 +77,30 @@ export function SettingsView({
   const [bubbleBusy, setBubbleBusy] = useState(false);
   const [bubbleError, setBubbleError] = useState<string | null>(null);
 
-  // Pemilih model hidup dari API key provider
+  // Pemilih & detektor otomatis model hidup dari API key provider
   const [models, setModels] = useState<ModelOption[] | null>(null);
+  const [liveRecommended, setLiveRecommended] = useState<string[]>([]);
+  const [autoModelNotice, setAutoModelNotice] = useState<string | null>(null);
   const [modelsBusy, setModelsBusy] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [showModels, setShowModels] = useState(false);
   const [modelQuery, setModelQuery] = useState("");
+  const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detectSeqRef = useRef(0);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useKeepFieldVisible(scrollAreaRef, true);
 
   const meta = PROVIDER_META[type] ?? PROVIDER_META.groq;
-  const recommended = useMemo(() => RECOMMENDED_MODELS[type] ?? [], [type]);
+  const recommended = useMemo(
+    () =>
+      liveRecommended.length > 0
+        ? liveRecommended
+        : models
+          ? pickDynamicRecommendedModels(models, type)
+          : [],
+    [liveRecommended, models, type]
+  );
 
   const sortedModels = useMemo(
     () => (models ? sortModels(models, recommended) : []),
@@ -102,10 +117,148 @@ export function SettingsView({
   }, [sortedModels, modelQuery]);
 
   function clearModelPicker() {
+    if (detectTimerRef.current) {
+      clearTimeout(detectTimerRef.current);
+      detectTimerRef.current = null;
+    }
+    detectSeqRef.current += 1;
     setModels(null);
+    setLiveRecommended([]);
+    setAutoModelNotice(null);
     setShowModels(false);
     setModelsError(null);
     setModelQuery("");
+    setModelsBusy(false);
+  }
+
+  async function detectAvailableModels(opts: {
+    providerId?: string;
+    targetType: ProviderType;
+    primaryKey: string;
+    backups: string[];
+    customBaseUrl: string;
+    currentModel: string;
+    openDropdown?: boolean;
+    silentIfMissingKey?: boolean;
+  }) {
+    const cleanedBackups = opts.backups.map((k) => k.trim()).filter(Boolean);
+    const cleanPrimary = opts.primaryKey.trim();
+    const hasStoredKey = Boolean(
+      opts.providerId && editing && editing.id === opts.providerId && editing.type === opts.targetType
+        ? editing.hasKey || editing.backupCount > 0
+        : opts.providerId
+    );
+
+    if (
+      opts.targetType !== "custom" &&
+      !cleanPrimary &&
+      cleanedBackups.length === 0 &&
+      !hasStoredKey
+    ) {
+      if (!opts.silentIfMissingKey) {
+        const targetMeta = PROVIDER_META[opts.targetType] ?? PROVIDER_META.groq;
+        setModels(null);
+        setModelsError(`Isi API key ${targetMeta.name} dulu.`);
+        if (opts.openDropdown) setShowModels(true);
+      }
+      return;
+    }
+
+    if (opts.targetType === "custom" && !opts.customBaseUrl.trim() && !hasStoredKey) {
+      if (!opts.silentIfMissingKey) {
+        setModels(null);
+        setModelsError("Isi Base URL dulu.");
+        if (opts.openDropdown) setShowModels(true);
+      }
+      return;
+    }
+
+    const seq = ++detectSeqRef.current;
+    setModelsBusy(true);
+    setModelsError(null);
+
+    try {
+      const res = await fetch("/api/providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId: opts.providerId,
+          type: opts.targetType,
+          apiKey: cleanPrimary,
+          backupKeys: cleanedBackups,
+          baseUrl: opts.targetType === "custom" ? opts.customBaseUrl.trim() : null,
+          currentModel: opts.currentModel.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (seq !== detectSeqRef.current) return;
+
+      if (!res.ok || !data.ok) {
+        setModels(null);
+        setLiveRecommended([]);
+        setModelsError(data.error || "Gagal mendeteksi model.");
+        if (opts.openDropdown) setShowModels(true);
+        return;
+      }
+
+      const fetchedModels = (data.models ?? []) as ModelOption[];
+      const dynRecs = Array.isArray(data.recommended)
+        ? (data.recommended as string[])
+        : pickDynamicRecommendedModels(fetchedModels, opts.targetType);
+      const best = typeof data.bestModel === "string" ? data.bestModel : dynRecs[0] ?? "";
+
+      setModels(fetchedModels);
+      setLiveRecommended(dynRecs);
+
+      if (opts.openDropdown) {
+        setShowModels(true);
+        setModelQuery("");
+      }
+
+      // Isi otomatis bila kosong, atau ganti otomatis bila model lama sudah dipensiunkan!
+      const trimmedCurrent = opts.currentModel.trim();
+      if (!trimmedCurrent && best) {
+        setModel(best);
+        setAutoModelNotice(null);
+      } else if (trimmedCurrent && data.currentAvailable === false && best) {
+        setModel(best);
+        setAutoModelNotice(
+          `Model "${trimmedCurrent}" sudah tidak tersedia di key ini — diganti otomatis ke "${best}".`
+        );
+      } else {
+        setAutoModelNotice(null);
+      }
+    } catch {
+      if (seq !== detectSeqRef.current) return;
+      setModels(null);
+      setLiveRecommended([]);
+      setModelsError("Koneksi gagal saat mendeteksi model.");
+      if (opts.openDropdown) setShowModels(true);
+    } finally {
+      if (seq === detectSeqRef.current) {
+        setModelsBusy(false);
+      }
+    }
+  }
+
+  function scheduleAutoDetect(nextPrimaryKey: string, nextBackups: string[]) {
+    if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
+    const clean = nextPrimaryKey.trim();
+    const hasAnyNew = clean.length >= 12 || nextBackups.some((b) => b.trim().length >= 12);
+    if (!hasAnyNew && !(editing && editing.type === type)) return;
+
+    detectTimerRef.current = setTimeout(() => {
+      void detectAvailableModels({
+        providerId: editing?.id,
+        targetType: type,
+        primaryKey: nextPrimaryKey,
+        backups: nextBackups,
+        customBaseUrl: baseUrl,
+        currentModel: model,
+        openDropdown: false,
+        silentIfMissingKey: true,
+      });
+    }, 550);
   }
 
   function resetForm() {
@@ -137,6 +290,7 @@ export function SettingsView({
   }
 
   function startEdit(p: ProviderSummary) {
+    clearModelPicker();
     setFormOpen(true);
     setEditing(p);
     setType(p.type);
@@ -148,7 +302,19 @@ export function SettingsView({
     setModel(p.model);
     setIsDefault(p.isDefault);
     setError(null);
-    clearModelPicker();
+
+    if (p.hasKey || p.backupCount > 0 || p.type === "custom") {
+      void detectAvailableModels({
+        providerId: p.id,
+        targetType: p.type,
+        primaryKey: "",
+        backups: [],
+        customBaseUrl: p.baseUrl ?? "",
+        currentModel: p.model,
+        openDropdown: false,
+        silentIfMissingKey: true,
+      });
+    }
   }
 
   function chooseType(next: ProviderType) {
@@ -161,57 +327,31 @@ export function SettingsView({
     }
     setType(next);
     clearModelPicker();
+    if (apiKey.trim().length >= 12) {
+      void detectAvailableModels({
+        providerId: undefined,
+        targetType: next,
+        primaryKey: apiKey,
+        backups: backupKeys,
+        customBaseUrl: next === "custom" ? baseUrl : "",
+        currentModel: "",
+        openDropdown: false,
+        silentIfMissingKey: true,
+      });
+    }
   }
 
   async function loadModels() {
-    const cleanedBackups = backupKeys.map((k) => k.trim()).filter(Boolean);
-    const hasStoredKey = Boolean(
-      editing && editing.type === type && (editing.hasKey || editing.backupCount > 0)
-    );
-
-    if (
-      type !== "custom" &&
-      !apiKey.trim() &&
-      cleanedBackups.length === 0 &&
-      !hasStoredKey
-    ) {
-      setModels(null);
-      setModelsError(`Isi API key ${meta.name} dulu.`);
-      setShowModels(true);
-      return;
-    }
-
-    setModelsBusy(true);
-    setModelsError(null);
-    try {
-      const res = await fetch("/api/providers/models", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerId: editing?.id,
-          type,
-          apiKey: apiKey.trim(),
-          backupKeys: cleanedBackups,
-          baseUrl: type === "custom" ? baseUrl.trim() : null,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        setModels(null);
-        setModelsError(data.error || "Gagal memuat daftar model.");
-        setShowModels(true);
-        return;
-      }
-      setModels(data.models as ModelOption[]);
-      setShowModels(true);
-      setModelQuery("");
-    } catch {
-      setModels(null);
-      setModelsError("Koneksi gagal saat memuat model.");
-      setShowModels(true);
-    } finally {
-      setModelsBusy(false);
-    }
+    await detectAvailableModels({
+      providerId: editing?.id,
+      targetType: type,
+      primaryKey: apiKey,
+      backups: backupKeys,
+      customBaseUrl: baseUrl,
+      currentModel: model,
+      openDropdown: true,
+      silentIfMissingKey: false,
+    });
   }
 
   function addBackupSlot() {
@@ -222,7 +362,9 @@ export function SettingsView({
 
   function updateBackupSlot(index: number, value: string) {
     setBackupTouched(true);
-    setBackupKeys((list) => list.map((item, i) => (i === index ? value : item)));
+    const next = backupKeys.map((item, i) => (i === index ? value : item));
+    setBackupKeys(next);
+    scheduleAutoDetect(apiKey, next);
   }
 
   function removeBackupSlot(index: number) {
@@ -243,6 +385,7 @@ export function SettingsView({
     }
     setError(null);
     setApiKey(pasted);
+    scheduleAutoDetect(pasted, backupKeys);
   }
 
   async function pasteBackupKey(index: number) {
@@ -332,13 +475,17 @@ export function SettingsView({
         data.ok && data.usedKeyNumber > 1
           ? ` · key ke-${data.usedKeyNumber} dari ${data.totalKeys}`
           : "";
+      const healedNote =
+        data.ok && data.healedFrom && data.provider?.model
+          ? ` · model otomatis diperbarui ke ${data.provider.model}`
+          : "";
       setTests((prev) => ({
         ...prev,
         [p.id]: data.ok
-          ? { status: "ok", message: `Terhubung${usedKeyNote}` }
+          ? { status: "ok", message: `Terhubung${usedKeyNote}${healedNote}` }
           : { status: "fail", message: data.error || "Gagal terhubung." },
       }));
-      if (data.ok && data.promoted) {
+      if (data.ok && (data.promoted || data.healedFrom)) {
         await onChanged();
       }
     } catch {
@@ -711,7 +858,11 @@ export function SettingsView({
 
                 <input
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setApiKey(val);
+                    scheduleAutoDetect(val, backupKeys);
+                  }}
                   placeholder={
                     editing
                       ? `Key utama baru (kosongkan untuk tetap pakai ${editing.maskedKey})`
@@ -791,14 +942,23 @@ export function SettingsView({
 
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted">Model</span>
+                  <span className="text-xs font-medium text-muted">
+                    Model
+                    {models ? ` (${models.length} tersedia)` : ""}
+                  </span>
                   <button
                     type="button"
                     onClick={() => (showModels ? setShowModels(false) : void loadModels())}
                     disabled={modelsBusy}
                     className="flex items-center gap-1 text-xs font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
                   >
-                    {modelsBusy ? "Memuat..." : showModels ? "Tutup" : "Pilih model"}
+                    {modelsBusy
+                      ? "Mendeteksi..."
+                      : showModels
+                        ? "Tutup daftar"
+                        : models
+                          ? "Semua model"
+                          : "Deteksi model"}
                     <ChevronDownIcon
                       className={`h-3.5 w-3.5 transition ${showModels ? "rotate-180" : ""}`}
                     />
@@ -807,10 +967,29 @@ export function SettingsView({
 
                 <input
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={`Model (default: ${meta.defaultModel || "wajib diisi"})`}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    setAutoModelNotice(null);
+                  }}
+                  placeholder={
+                    modelsBusy
+                      ? "Mendeteksi model yang tersedia dari API key..."
+                      : `Otomatis pilih yang tersedia (mis. ${meta.defaultModel || "isi nama model"})`
+                  }
                   className={FIELD}
                 />
+
+                {autoModelNotice && (
+                  <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                    {autoModelNotice}
+                  </p>
+                )}
+
+                {!showModels && modelsError && (
+                  <p className="mt-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+                    {modelsError}
+                  </p>
+                )}
 
                 {showModels ? (
                   <div className="mt-2 overflow-hidden rounded-xl border border-line bg-surface">
@@ -818,7 +997,7 @@ export function SettingsView({
                       <input
                         value={modelQuery}
                         onChange={(e) => setModelQuery(e.target.value)}
-                        placeholder="Cari model"
+                        placeholder="Cari model yang tersedia..."
                         className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-base text-ink outline-none placeholder:text-muted sm:text-sm"
                       />
                       <button
@@ -837,7 +1016,7 @@ export function SettingsView({
                         {modelsError}
                       </p>
                     ) : sortedModels.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-muted">Memuat...</p>
+                      <p className="px-3 py-3 text-xs text-muted">Mendeteksi model aktif...</p>
                     ) : (
                       <div className="max-h-64 overflow-y-auto">
                         {visibleModels.length === 0 && (
@@ -852,6 +1031,7 @@ export function SettingsView({
                               key={m.id}
                               onClick={() => {
                                 setModel(m.id);
+                                setAutoModelNotice(null);
                                 setShowModels(false);
                               }}
                               className={`flex w-full items-center gap-2 px-3 py-2 text-left transition ${
@@ -868,7 +1048,7 @@ export function SettingsView({
                               </span>
                               {isRecommended && (
                                 <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
-                                  disarankan
+                                  tersedia & disarankan
                                 </span>
                               )}
                               {active && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
@@ -878,16 +1058,22 @@ export function SettingsView({
                       </div>
                     )}
                   </div>
-                ) : (
-                  recommended.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                ) : recommended.length > 0 ? (
+                  <div className="mt-2">
+                    <p className="mb-1 text-[11px] text-muted">
+                      ✓ Terdeteksi aktif di API key ini:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
                       {recommended.map((m) => {
                         const active = model === m;
                         return (
                           <button
                             type="button"
                             key={m}
-                            onClick={() => setModel(m)}
+                            onClick={() => {
+                              setModel(m);
+                              setAutoModelNotice(null);
+                            }}
                             className={`rounded-full px-2.5 py-1 text-xs transition ${
                               active
                                 ? "bg-brand font-semibold text-brand-ink"
@@ -899,6 +1085,14 @@ export function SettingsView({
                         );
                       })}
                     </div>
+                  </div>
+                ) : (
+                  !modelsBusy &&
+                  !modelsError && (
+                    <p className="mt-1.5 text-[11px] text-muted">
+                      Tempel API key di atas untuk mendeteksi model yang aktif saat ini secara
+                      otomatis.
+                    </p>
                   )
                 )}
               </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, providerTypeValues, users, type ProviderType } from "@/db/schema";
+import { resolveValidProviderModel } from "@/lib/ai/models";
 import { PROVIDER_META } from "@/lib/ai/providerDefaults";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
@@ -70,11 +71,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const finalModel = model?.trim() || meta.defaultModel;
-  if (!finalModel) {
-    return NextResponse.json({ error: "Model wajib diisi." }, { status: 400 });
-  }
-
   let primaryKey = apiKey?.trim() || "";
   let cleanedBackups = cleanBackupKeys(backupKeys, primaryKey);
   if (!primaryKey && cleanedBackups.length > 0) {
@@ -84,6 +80,18 @@ export async function POST(req: Request) {
 
   if (providerType !== "custom" && !primaryKey) {
     return NextResponse.json({ error: "API key wajib diisi." }, { status: 400 });
+  }
+
+  const resolvedBase = baseUrl?.trim() || meta.baseUrl || null;
+  const { model: finalModel, autoReplacedFrom } = await resolveValidProviderModel({
+    type: providerType,
+    keys: [primaryKey, ...cleanedBackups],
+    baseUrl: resolvedBase,
+    requestedModel: model,
+  });
+
+  if (!finalModel) {
+    return NextResponse.json({ error: "Model wajib diisi." }, { status: 400 });
   }
 
   if (isDefault) {
@@ -102,13 +110,16 @@ export async function POST(req: Request) {
       label: label?.trim() || meta.name,
       apiKey: primaryKey,
       backupKeys: JSON.stringify(cleanedBackups),
-      baseUrl: baseUrl?.trim() || meta.baseUrl || null,
+      baseUrl: resolvedBase,
       model: finalModel,
       isDefault: Boolean(isDefault),
     })
     .returning();
 
-  return NextResponse.json({ provider: serializeProviderRow(row) }, { status: 201 });
+  return NextResponse.json(
+    { provider: serializeProviderRow(row), autoReplacedFrom },
+    { status: 201 }
+  );
 }
 
 /** Simpan preferensi auto-fallback antar provider milik akun ini. */

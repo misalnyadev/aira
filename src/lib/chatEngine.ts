@@ -19,6 +19,7 @@ import {
   findMetaBreak,
   stripMetaSentences,
 } from "@/lib/ai/immersion";
+import { listProviderModels, pickBestAvailableModel } from "@/lib/ai/models";
 import {
   buildMemorySummarizerPrompt,
   describeTimeAwareness,
@@ -256,8 +257,53 @@ export type GenerateBubblesResult = {
   keyRotated: boolean;
 };
 
+async function healDeadModelForCandidate({
+  userId,
+  character,
+  candidate,
+  deadModel,
+  keys,
+}: {
+  userId: string;
+  character: Character;
+  candidate: Provider;
+  deadModel: string;
+  keys: string[];
+}): Promise<string | null> {
+  try {
+    const { models } = await listProviderModels(
+      candidate.type as ProviderType,
+      keys,
+      candidate.baseUrl,
+      4_500
+    );
+    const replacement = pickBestAvailableModel(models, candidate.type as ProviderType, null);
+    if (!replacement || replacement === deadModel) return null;
+
+    if (candidate.model === deadModel) {
+      await db
+        .update(apiProviders)
+        .set({ model: replacement, updatedAt: new Date() })
+        .where(and(eq(apiProviders.id, candidate.id), eq(apiProviders.userId, userId)))
+        .catch(() => undefined);
+    }
+    if (character.model?.trim() === deadModel) {
+      await db
+        .update(characters)
+        .set({ model: null, updatedAt: new Date() })
+        .where(and(eq(characters.id, character.id), eq(characters.userId, userId)))
+        .catch(() => undefined);
+    }
+
+    return replacement;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Hasilkan balasan karakter dengan rotasi key cadangan + auto-fallback antar provider.
+ * Hasilkan balasan karakter dengan rotasi key cadangan + auto-fallback antar provider
+ * + penyembuhan otomatis bila model lama di database sudah dipensiunkan (404).
  */
 export async function generateBubbles({
   userId,
@@ -285,7 +331,7 @@ export async function generateBubbles({
 
   for (let pIdx = 0; pIdx < candidates.length; pIdx++) {
     const candidate = candidates[pIdx];
-    const model = resolveCandidateModel(character, candidate, pIdx === 0, Boolean(image));
+    let activeModel = resolveCandidateModel(character, candidate, pIdx === 0, Boolean(image));
     const backups = parseBackupKeys(candidate.backupKeys, candidate.apiKey);
     const attempts = buildKeyAttempts(candidate.type, candidate.apiKey, backups);
 
@@ -298,13 +344,14 @@ export async function generateBubbles({
     }
 
     let providerLastErr: unknown = null;
+    let triedModelHeal = false;
 
     for (let kIdx = 0; kIdx < attempts.length; kIdx++) {
       try {
         const bubbles = await askWithImmersionGuard({
           providerType: candidate.type as ProviderType,
           apiKey: attempts[kIdx],
-          model,
+          model: activeModel,
           baseUrl: candidate.baseUrl,
           systemPrompt,
           history,
@@ -334,6 +381,32 @@ export async function generateBubbles({
           keyRotated: kIdx > 0,
         };
       } catch (err) {
+        if (
+          !triedModelHeal &&
+          err instanceof AiProviderError &&
+          err.status === 404 &&
+          Date.now() - startedAt <= TIME_BUDGET_MS
+        ) {
+          triedModelHeal = true;
+          const healed = await healDeadModelForCandidate({
+            userId,
+            character,
+            candidate,
+            deadModel: activeModel,
+            keys: attempts.slice(kIdx),
+          });
+          if (healed) {
+            activeModel = resolveCandidateModel(
+              { ...character, model: null },
+              { ...candidate, model: healed },
+              pIdx === 0,
+              Boolean(image)
+            );
+            kIdx -= 1; // ulangi pada key yang sama dengan model yang baru terdeteksi aktif
+            continue;
+          }
+        }
+
         providerLastErr = err;
         lastError = err;
 
@@ -351,12 +424,14 @@ export async function generateBubbles({
 }
 
 async function runTextWithCandidates({
+  userId,
   candidates,
   character,
   systemPrompt,
   userText,
   budgetMs = 15_000,
 }: {
+  userId: string;
   candidates: Provider[];
   character: Character;
   systemPrompt: string;
@@ -368,17 +443,18 @@ async function runTextWithCandidates({
 
   for (let pIdx = 0; pIdx < candidates.length; pIdx++) {
     const candidate = candidates[pIdx];
-    const model = resolveCandidateModel(character, candidate, pIdx === 0);
+    let activeModel = resolveCandidateModel(character, candidate, pIdx === 0);
     const backups = parseBackupKeys(candidate.backupKeys, candidate.apiKey);
     const attempts = buildKeyAttempts(candidate.type, candidate.apiKey, backups);
     if (!attempts.length) continue;
 
     let providerErr: unknown = null;
+    let triedModelHeal = false;
     for (let kIdx = 0; kIdx < attempts.length; kIdx++) {
       try {
         return await generateCharacterReply(candidate.type as ProviderType, {
           apiKey: attempts[kIdx],
-          model,
+          model: activeModel,
           baseUrl: candidate.baseUrl,
           systemPrompt,
           history: [],
@@ -386,6 +462,26 @@ async function runTextWithCandidates({
           image: null,
         });
       } catch (err) {
+        if (
+          !triedModelHeal &&
+          err instanceof AiProviderError &&
+          err.status === 404 &&
+          Date.now() - startedAt <= budgetMs
+        ) {
+          triedModelHeal = true;
+          const healed = await healDeadModelForCandidate({
+            userId,
+            character,
+            candidate,
+            deadModel: activeModel,
+            keys: attempts.slice(kIdx),
+          });
+          if (healed) {
+            activeModel = healed;
+            kIdx -= 1;
+            continue;
+          }
+        }
         providerErr = err;
         lastError = err;
         if (Date.now() - startedAt > budgetMs || kIdx >= attempts.length - 1 || !isKeyRotatableError(err)) {
@@ -508,6 +604,7 @@ export async function refreshCharacterMemory({
   });
 
   const rawSummary = await runTextWithCandidates({
+    userId,
     candidates,
     character,
     systemPrompt,

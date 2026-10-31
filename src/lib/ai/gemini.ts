@@ -19,7 +19,7 @@ function describeGeminiError(status: number, raw: string): {
   }
   if (status === 404) {
     return {
-      message: `Model Gemini tidak ditemukan. Coba model seperti gemini-2.5-flash. (${raw.slice(0, 160)})`,
+      message: `Model Gemini tidak tersedia atau sudah dipensiunkan. Buka Setelan untuk mendeteksi model aktif terbaru seperti gemini-3.5-flash-lite. (${raw.slice(0, 160)})`,
       retryable: false,
     };
   }
@@ -51,7 +51,7 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     });
   }
   if (!model) {
-    throw new AiProviderError("Model Gemini belum diisi (contoh: gemini-2.5-flash).", {
+    throw new AiProviderError("Model Gemini belum diisi (contoh: gemini-3.5-flash-lite).", {
       retryable: false,
     });
   }
@@ -84,17 +84,18 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     model
   )}:generateContent`;
 
-  const generationConfig: Record<string, unknown> = {
+  const baseGenConfig: Record<string, unknown> = {
     temperature: 1.05,
     topP: 0.95,
     maxOutputTokens: 1024,
   };
-  // Gemini 2.5 Flash menyalakan "thinking" secara bawaan; matikan supaya balasan chat cepat.
-  if (/^gemini-2\.5-flash/i.test(model)) {
-    generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  }
+  // Seri Gemini Flash modern menyalakan "thinking" bawaan; matikan supaya balasan chat cepat.
+  const disableThinking = /^gemini-(?:2\.5|[3-9](?:\.\d+)?)-flash/i.test(model);
 
-  const sendRequest = (withGoogleSearch: boolean) => {
+  const sendRequest = (withGoogleSearch: boolean, withNoThinking: boolean) => {
+    const generationConfig: Record<string, unknown> = withNoThinking
+      ? { ...baseGenConfig, thinkingConfig: { thinkingBudget: 0 } }
+      : { ...baseGenConfig };
     const payload: Record<string, unknown> = {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
@@ -119,10 +120,10 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     });
   };
 
-  let res = await sendRequest(Boolean(enableWebSearch));
-  // Jika varian model Gemini tidak mendukung tool `google_search` (400), ulangi mulus tanpa tool.
-  if (!res.ok && res.status === 400 && enableWebSearch) {
-    res = await sendRequest(false);
+  let res = await sendRequest(Boolean(enableWebSearch), disableThinking);
+  // Jika varian model menolak `google_search` atau `thinkingConfig` (400), ulangi mulus dengan payload dasar.
+  if (!res.ok && res.status === 400 && (enableWebSearch || disableThinking)) {
+    res = await sendRequest(false, false);
   }
 
   if (!res.ok) {
