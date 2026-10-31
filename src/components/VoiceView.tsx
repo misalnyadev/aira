@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { readClipboardText } from "@/lib/clipboard";
+import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import {
   cleanVoiceId,
   FEMALE_VOICE_PRESETS,
@@ -33,7 +35,7 @@ import {
 } from "@/lib/voice";
 import { Switch } from "./Switch";
 import { VoiceBankCard } from "./VoiceBankCard";
-import { CheckIcon, PlusIcon, SpeakerIcon, TrashIcon, XIcon } from "./icons";
+import { CheckIcon, ChevronDownIcon, PlusIcon, SpeakerIcon, TrashIcon, XIcon } from "./icons";
 
 function Slider({
   label,
@@ -120,6 +122,23 @@ function HdVoiceCard({
   const [saving, setSaving] = useState(false);
   const [testingSlot, setTestingSlot] = useState<"female" | "male" | null>(null);
   const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [showHdKeys, setShowHdKeys] = useState(false);
+  const [geminiKeyOpen, setGeminiKeyOpen] = useState(
+    () => !ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
+  );
+
+  async function pasteInto(setter: (val: string) => void, onFilled?: () => void) {
+    const pasted = await readClipboardText();
+    if (!pasted) {
+      setFeedback({
+        kind: "err",
+        text: "Clipboard kosong atau belum diizinkan. Salin API key dulu lalu coba lagi.",
+      });
+      return;
+    }
+    setter(pasted);
+    onFilled?.();
+  }
 
   const totalGeminiBackupSlots = keptGeminiBackups.length + newGeminiBackups.length;
   const canAddGeminiBackup = totalGeminiBackupSlots < MAX_BACKUP_KEYS;
@@ -363,130 +382,179 @@ function HdVoiceCard({
       {provider === "gemini" ? (
         <>
           {/* API Key Gemini (otomatis ikut Setelan bila sudah ada) */}
-          <details
-            open={!ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey}
-            className="rounded-xl border border-line bg-surface-2/60 p-3"
-          >
-            <summary className="cursor-pointer text-xs font-semibold text-ink">
-              {ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
-                ? "Otomatis memakai API key Gemini dari Setelan (ketuk untuk key terpisah)"
-                : "API Key Gemini Suara"}
-            </summary>
-
-            <div className="mt-2.5 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] text-muted">
-                  {ttsSummary.hasSharedGeminiKey
-                    ? "Opsional: isi jika ingin memisahkan kuota suara dari kuota chat."
-                    : "Buat key gratis di Google AI Studio:"}
-                </span>
-                <a
-                  href="https://aistudio.google.com/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0 text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
-                >
-                  Ambil key ↗
-                </a>
-              </div>
-
-              {ttsSummary.hasGeminiKey && !clearGeminiPrimary && (
-                <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs">
-                  <span className="truncate font-mono text-[11px] text-ink-soft">
-                    Key khusus suara: {ttsSummary.maskedGeminiKey}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setClearGeminiPrimary(true)}
-                    className="ml-2 shrink-0 text-[11px] font-medium text-rose-500 hover:underline"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              )}
-
-              <input
-                type="password"
-                value={geminiApiKey}
-                onChange={(e) => {
-                  setGeminiApiKey(e.target.value);
-                  if (e.target.value.trim()) setClearGeminiPrimary(false);
-                }}
-                placeholder={
-                  ttsSummary.hasGeminiKey && !clearGeminiPrimary
-                    ? "Biarkan kosong jika tidak ingin mengganti key..."
-                    : "AIza... (kosongkan untuk ikut key Gemini di Setelan)"
-                }
-                autoComplete="off"
-                className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+          <div className="rounded-xl border border-line bg-surface-2/60 p-3">
+            <button
+              type="button"
+              onClick={() => setGeminiKeyOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold text-ink"
+            >
+              <span>
+                {ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
+                  ? "Otomatis memakai API key Gemini dari Setelan (ketuk untuk key terpisah)"
+                  : "API Key Gemini Suara"}
+              </span>
+              <ChevronDownIcon
+                className={`h-4 w-4 shrink-0 text-muted transition ${geminiKeyOpen ? "rotate-180" : ""}`}
               />
+            </button>
 
-              {keptGeminiBackups.length > 0 && (
-                <div className="space-y-1 pt-1">
-                  <span className="block text-[11px] font-medium text-muted">
-                    Key cadangan suara Gemini:
+            {geminiKeyOpen && (
+              <div className="mt-2.5 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-muted">
+                    {ttsSummary.hasSharedGeminiKey
+                      ? "Opsional: isi jika ingin memisahkan kuota suara dari kuota chat."
+                      : "Buat key gratis di Google AI Studio:"}
                   </span>
-                  {keptGeminiBackups.map((origIdx, pos) => (
-                    <div
-                      key={origIdx}
-                      className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs"
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void pasteInto(setGeminiApiKey, () => setClearGeminiPrimary(false))
+                      }
+                      className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
                     >
-                      <span className="truncate font-mono text-[11px] text-ink-soft">
-                        #{pos + 1} · {ttsSummary.maskedGeminiBackupKeys[origIdx]}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setKeptGeminiBackups((prev) => prev.filter((i) => i !== origIdx))
-                        }
-                        aria-label="Hapus key cadangan Gemini"
-                        className="rounded p-0.5 text-muted hover:text-rose-500"
-                      >
-                        <TrashIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                      Tempel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowHdKeys((v) => !v)}
+                      className="text-[11px] font-medium text-ink-soft hover:text-ink"
+                    >
+                      {showHdKeys ? "Sembunyikan" : "Tampilkan"}
+                    </button>
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
+                    >
+                      Ambil key ↗
+                    </a>
+                  </div>
                 </div>
-              )}
 
-              {newGeminiBackups.map((val, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <input
-                    type="password"
-                    value={val}
-                    onChange={(e) =>
-                      setNewGeminiBackups((prev) =>
-                        prev.map((v, i) => (i === idx ? e.target.value : v))
-                      )
-                    }
-                    placeholder={`Key Gemini cadangan #${keptGeminiBackups.length + idx + 1}...`}
-                    autoComplete="off"
-                    className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
-                  />
+                {ttsSummary.hasGeminiKey && !clearGeminiPrimary && (
+                  <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs">
+                    <span className="truncate font-mono text-[11px] text-ink-soft">
+                      Key khusus suara: {ttsSummary.maskedGeminiKey}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setClearGeminiPrimary(true)}
+                      className="ml-2 shrink-0 text-[11px] font-medium text-rose-500 hover:underline"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                )}
+
+                <input
+                  type="text"
+                  value={geminiApiKey}
+                  onChange={(e) => {
+                    setGeminiApiKey(e.target.value);
+                    if (e.target.value.trim()) setClearGeminiPrimary(false);
+                  }}
+                  placeholder={
+                    ttsSummary.hasGeminiKey && !clearGeminiPrimary
+                      ? "Biarkan kosong jika tidak ingin mengganti key..."
+                      : "AIza... (kosongkan untuk ikut key Gemini di Setelan)"
+                  }
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  className={`w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
+                />
+
+                {keptGeminiBackups.length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <span className="block text-[11px] font-medium text-muted">
+                      Key cadangan suara Gemini:
+                    </span>
+                    {keptGeminiBackups.map((origIdx, pos) => (
+                      <div
+                        key={origIdx}
+                        className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs"
+                      >
+                        <span className="truncate font-mono text-[11px] text-ink-soft">
+                          #{pos + 1} · {ttsSummary.maskedGeminiBackupKeys[origIdx]}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setKeptGeminiBackups((prev) => prev.filter((i) => i !== origIdx))
+                          }
+                          aria-label="Hapus key cadangan Gemini"
+                          className="rounded p-0.5 text-muted hover:text-rose-500"
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {newGeminiBackups.map((val, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={val}
+                      onChange={(e) =>
+                        setNewGeminiBackups((prev) =>
+                          prev.map((v, i) => (i === idx ? e.target.value : v))
+                        )
+                      }
+                      placeholder={`Key Gemini cadangan #${keptGeminiBackups.length + idx + 1}...`}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-1p-ignore="true"
+                      data-lpignore="true"
+                      className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void pasteInto((pasted) =>
+                          setNewGeminiBackups((prev) =>
+                            prev.map((v, i) => (i === idx ? pasted : v))
+                          )
+                        )
+                      }
+                      className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
+                    >
+                      Tempel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewGeminiBackups((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      aria-label="Batal tambah key cadangan"
+                      className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+
+                {canAddGeminiBackup && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setNewGeminiBackups((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    aria-label="Batal tambah key cadangan"
-                    className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink"
+                    onClick={() => setNewGeminiBackups((prev) => [...prev, ""])}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-ink"
                   >
-                    <XIcon className="h-4 w-4" />
+                    <PlusIcon className="h-3.5 w-3.5" /> Tambah key Gemini cadangan
                   </button>
-                </div>
-              ))}
-
-              {canAddGeminiBackup && (
-                <button
-                  type="button"
-                  onClick={() => setNewGeminiBackups((prev) => [...prev, ""])}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-ink"
-                >
-                  <PlusIcon className="h-3.5 w-3.5" /> Tambah key Gemini cadangan
-                </button>
-              )}
-            </div>
-          </details>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Model Gemini TTS */}
           <div className="space-y-1.5">
@@ -604,16 +672,32 @@ function HdVoiceCard({
         <>
           {/* API Key & Cadangan ElevenLabs */}
           <div className="space-y-2 rounded-xl border border-line bg-surface-2/60 p-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-semibold text-ink">API Key ElevenLabs</label>
-              <a
-                href="https://elevenlabs.io/app/settings/api-keys"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
-              >
-                Ambil key gratis ↗
-              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void pasteInto(setApiKey, () => setClearPrimary(false))}
+                  className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
+                >
+                  Tempel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowHdKeys((v) => !v)}
+                  className="text-[11px] font-medium text-ink-soft hover:text-ink"
+                >
+                  {showHdKeys ? "Sembunyikan" : "Tampilkan"}
+                </button>
+                <a
+                  href="https://elevenlabs.io/app/settings/api-keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
+                >
+                  Ambil key gratis ↗
+                </a>
+              </div>
             </div>
 
             {ttsSummary.hasKey && !clearPrimary && (
@@ -632,7 +716,7 @@ function HdVoiceCard({
             )}
 
             <input
-              type="password"
+              type="text"
               value={apiKey}
               onChange={(e) => {
                 setApiKey(e.target.value);
@@ -644,7 +728,12 @@ function HdVoiceCard({
                   : "Tempel xi-api-key ElevenLabs..."
               }
               autoComplete="off"
-              className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-1p-ignore="true"
+              data-lpignore="true"
+              className={`w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
             />
 
             {keptBackupIndexes.length > 0 && (
@@ -678,15 +767,31 @@ function HdVoiceCard({
             {newBackups.map((val, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
                 <input
-                  type="password"
+                  type="text"
                   value={val}
                   onChange={(e) =>
                     setNewBackups((prev) => prev.map((v, i) => (i === idx ? e.target.value : v)))
                   }
                   placeholder={`API key cadangan #${keptBackupIndexes.length + idx + 1}...`}
                   autoComplete="off"
-                  className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    void pasteInto((pasted) =>
+                      setNewBackups((prev) => prev.map((v, i) => (i === idx ? pasted : v)))
+                    )
+                  }
+                  className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
+                >
+                  Tempel
+                </button>
                 <button
                   type="button"
                   onClick={() => setNewBackups((prev) => prev.filter((_, i) => i !== idx))}
@@ -897,6 +1002,8 @@ export function VoiceView({
   const supported = useSpeechSupported();
   const voices = useVoices();
   const isSpeaking = useIsSpeaking();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  useKeepFieldVisible(scrollAreaRef, true);
 
   // Hentikan contoh suara saat berpindah ke tab lain.
   useEffect(() => () => stopSpeaking(), []);
@@ -946,7 +1053,10 @@ export function VoiceView({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+0.75rem)]">
+      <div
+        ref={scrollAreaRef}
+        className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+4rem)]"
+      >
         <div className="mx-auto w-full max-w-2xl space-y-5">
           {/* Aktifkan */}
           <div className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3">

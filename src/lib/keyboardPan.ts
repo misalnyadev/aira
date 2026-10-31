@@ -7,6 +7,8 @@ const MIN_GAP = 4;
 const MAX_CORRECTION = 140;
 const SAFE_MARGIN = 12;
 const KEYBOARD_MIN = 120;
+/** Abaikan goyangan mikro 1-2 px saat callout Paste / bar saran kata iOS muncul. */
+const JITTER_PX = 2;
 
 /**
  * Menetralkan geseran halaman oleh iOS saat keyboard muncul agar header chat
@@ -22,6 +24,7 @@ export function useKeyboardPan() {
     const threshold = standalone ? 1 : 24;
 
     let frame = 0;
+    let settledFrames = 0;
     let baseHeight = Math.max(window.innerHeight, Math.round(vv.height));
     let lastTop = -1;
     let lastHeight = -1;
@@ -43,6 +46,7 @@ export function useKeyboardPan() {
         window.cancelAnimationFrame(frame);
         frame = 0;
       }
+      settledFrames = 0;
       window.clearTimeout(settleTimer);
       window.clearInterval(watchTimer);
       settleTimer = 0;
@@ -55,6 +59,7 @@ export function useKeyboardPan() {
       }
       root.classList.remove(CLASS);
       root.style.removeProperty("--vv-top");
+      root.style.removeProperty("--vv-transform");
       root.style.removeProperty("--vv-height");
       root.style.removeProperty("--kb-gap");
     };
@@ -93,20 +98,21 @@ export function useKeyboardPan() {
     const scheduleMeasures = () => {
       window.clearTimeout(settleTimer);
       window.clearInterval(watchTimer);
-      [320, 700, 1100].forEach((delay) => {
-        window.setTimeout(() => {
-          if (root.classList.contains(CLASS)) measureGap();
-        }, delay);
-      });
+      if (!document.querySelector(".composer-bar")) return;
+
+      settleTimer = window.setTimeout(() => {
+        if (root.classList.contains(CLASS)) measureGap();
+      }, 320);
+
       let ticks = 0;
       watchTimer = window.setInterval(() => {
-        if (!root.classList.contains(CLASS)) {
+        if (!root.classList.contains(CLASS) || !document.querySelector(".composer-bar")) {
           window.clearInterval(watchTimer);
           return;
         }
         measureGap();
-        if (++ticks >= 8) window.clearInterval(watchTimer);
-      }, 250);
+        if (++ticks >= 6) window.clearInterval(watchTimer);
+      }, 280);
     };
 
     const tick = () => {
@@ -124,19 +130,35 @@ export function useKeyboardPan() {
 
       const top = Math.round(vv.offsetTop);
       const height = Math.round(vv.height);
-      if (top !== lastTop || height !== lastHeight) {
+      const alreadyActive = root.classList.contains(CLASS);
+      const topChanged = !alreadyActive || Math.abs(top - lastTop) > JITTER_PX;
+      const heightChanged = !alreadyActive || Math.abs(height - lastHeight) > JITTER_PX;
+
+      if (topChanged || heightChanged) {
+        settledFrames = 0;
         lastTop = top;
         lastHeight = height;
         root.classList.add(CLASS);
         root.style.setProperty("--vv-top", `${top}px`);
+        root.style.setProperty(
+          "--vv-transform",
+          top > 0 ? `translate3d(0, ${top}px, 0)` : "none"
+        );
         root.style.setProperty("--vv-height", `${height}px`);
         scheduleMeasures();
+      } else {
+        settledFrames += 1;
       }
 
-      frame = window.requestAnimationFrame(tick);
+      // Berhenti memutar rAF setelah animasi keyboard selesai dan tenang;
+      // event `resize`/`scroll` pada visualViewport akan membangunkan lagi bila perlu.
+      if (settledFrames < 5) {
+        frame = window.requestAnimationFrame(tick);
+      }
     };
 
     const start = () => {
+      settledFrames = 0;
       if (!frame) frame = window.requestAnimationFrame(tick);
     };
 

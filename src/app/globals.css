@@ -179,8 +179,7 @@ html.ios-standalone .app-shell {
 
 html.kb-panned .app-shell {
   height: calc(var(--vv-height, 100vh) + var(--kb-gap, 0px));
-  transform: translate3d(0, var(--vv-top, 0px), 0);
-  will-change: transform;
+  transform: var(--vv-transform, none);
 }
 
 /* Saat keyboard naik, garis Home Indicator tertutup keyboard */
@@ -202,6 +201,18 @@ textarea,
 select {
   min-width: 0;
   max-width: 100%;
+  touch-action: manipulation;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Samarkan API key tanpa type="password" agar tidak memicu popup Kata Sandi iCloud di iPhone */
+.masked-key {
+  -webkit-text-security: disc;
 }
 
 /* Di layar HP teks dinaikkan satu tingkat lagi agar mudah dibaca (chat = 16px). */
@@ -596,9 +607,10 @@ body {
   --tabbar-space: calc(4.75rem + max(0px, env(safe-area-inset-bottom, 0px) - 0.7rem));
 }
 
-/* Kapsul nav disembunyikan saat keyboard aktif supaya tidak menutupi field */
+/* Kapsul nav disembunyikan saat keyboard aktif; muncul kembali dengan jeda kecil
+   supaya kedipan fokus saat popup Tempel iOS muncul tidak menangkap ketukan nyasar */
 .mobile-tabbar {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity 0.18s ease 0.25s, transform 0.18s ease 0.25s;
 }
 
 @media (max-width: 767px) {
@@ -606,5 +618,6 @@ body {
     opacity: 0;
     transform: translateY(0.75rem);
     pointer-events: none;
+    transition-delay: 0s;
   }
 }
