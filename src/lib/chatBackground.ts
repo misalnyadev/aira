@@ -198,3 +198,17 @@ export function parseChatBackground(json: string | null | undefined): ChatBackgr
     return DEFAULT_CHAT_BACKGROUND;
   }
 }
+
+/** Baca latar khusus karakter; `null` berarti mengikuti latar bawaan akun. */
+export function parseOptionalChatBackground(
+  json: string | null | undefined
+): ChatBackground | null {
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== "object") return null;
+    return normalizeChatBackground(parsed);
+  } catch {
+    return null;
+  }
+}

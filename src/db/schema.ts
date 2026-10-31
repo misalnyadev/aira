@@ -40,6 +40,12 @@ export const users = pgTable("users", {
    * Disimpan di akun supaya ikut ke semua perangkat.
    */
   chatBackground: text("chat_background").notNull().default('{"kind":"default"}'),
+  /** Gaya gelembung pesan bawaan akun (tembus pandang & warna per sisi). */
+  bubbleStyle: text("bubble_style")
+    .notNull()
+    .default(
+      '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null}'
+    ),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -98,6 +104,10 @@ export const characters = pgTable("characters", {
     onDelete: "set null",
   }),
   model: text("model"),
+  /** Latar chat khusus karakter (JSON); `null` = ikut latar bawaan akun. */
+  chatBackground: text("chat_background"),
+  /** Gaya gelembung khusus karakter (JSON); `null` = ikut gelembung bawaan akun. */
+  bubbleStyle: text("bubble_style"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

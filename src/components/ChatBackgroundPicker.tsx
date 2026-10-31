@@ -17,22 +17,28 @@ import { CameraIcon } from "./icons";
 const ring = "border-ink ring-2 ring-ink/25";
 const idle = "border-line hover:border-ink/40";
 
-/**
- * Pemilih latar area chat: bawaan, warna, gambar sendiri, atau animasi.
- *
- * Gambar diunggah lewat `/api/upload` (bukan data URL) supaya kuota database
- * tidak habis oleh satu wallpaper — unggahan pertama akan mengecilkan gambar
- * di browser sebelum dikirim.
- */
-export function ChatBackgroundPicker({
-  value,
-  onChange,
-  disabled = false,
-}: {
+type AccountPickerProps = {
+  allowInherit?: false;
   value: ChatBackground;
   onChange: (next: ChatBackground) => void;
   disabled?: boolean;
-}) {
+};
+
+type CharacterPickerProps = {
+  allowInherit: true;
+  value: ChatBackground | null;
+  onChange: (next: ChatBackground | null) => void;
+  disabled?: boolean;
+};
+
+/**
+ * Pemilih latar area chat: bawaan, warna, gambar sendiri, atau animasi.
+ *
+ * Di Profil Karakter (`allowInherit`), `value === null` berarti mengikuti
+ * latar bawaan akun dari Setelan.
+ */
+export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPickerProps) {
+  const { disabled = false } = props;
   const imageRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +46,19 @@ export function ChatBackgroundPicker({
   const [dimDraft, setDimDraft] = useState<number | null>(null);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
 
-  const isImage = value.kind === "image";
+  const inherited = props.allowInherit && props.value === null;
+  const current: ChatBackground = props.value ?? { kind: "default" };
+  const isImage = !inherited && current.kind === "image";
   const dimPercent =
-    dimDraft ?? Math.round((value.kind === "image" ? value.dim : 0.25) * 100);
+    dimDraft ?? Math.round((current.kind === "image" ? current.dim : 0.25) * 100);
+
+  function selectBackground(next: ChatBackground) {
+    if (props.allowInherit) {
+      props.onChange(next);
+    } else {
+      props.onChange(next);
+    }
+  }
 
   async function handleImage(file: File) {
     setError(null);
@@ -59,7 +75,7 @@ export function ChatBackgroundPicker({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Gagal mengunggah gambar.");
       setDimDraft(null);
-      onChange({ kind: "image", imageUrl: data.url, dim: 0.25 });
+      selectBackground({ kind: "image", imageUrl: data.url, dim: 0.25 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memakai gambar itu.");
     } finally {
@@ -69,9 +85,9 @@ export function ChatBackgroundPicker({
   }
 
   function commitDim(percent: number) {
-    if (value.kind !== "image") return;
+    if (current.kind !== "image") return;
     setDimDraft(null);
-    onChange({ kind: "image", imageUrl: value.imageUrl, dim: percent / 100 });
+    selectBackground({ kind: "image", imageUrl: current.imageUrl, dim: percent / 100 });
   }
 
   return (
@@ -79,13 +95,27 @@ export function ChatBackgroundPicker({
       <div>
         <p className="mb-1.5 text-[12px] font-medium text-muted">Warna &amp; gambar</p>
         <div className="flex flex-wrap items-center gap-2">
+          {props.allowInherit && (
+            <button
+              type="button"
+              onClick={() => props.onChange(null)}
+              title="Ikut setelan"
+              aria-pressed={inherited}
+              className={`flex h-10 items-center rounded-full border px-3 text-xs font-medium transition ${
+                inherited ? `${ring} text-ink` : `${idle} bg-surface-2 text-ink-soft`
+              }`}
+            >
+              Ikut setelan
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => onChange({ kind: "default" })}
-            aria-pressed={value.kind === "default"}
+            onClick={() => selectBackground({ kind: "default" })}
+            aria-pressed={!inherited && current.kind === "default"}
             title="Bawaan"
             className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-full border transition ${
-              value.kind === "default" ? ring : idle
+              !inherited && current.kind === "default" ? ring : idle
             }`}
             style={{
               backgroundColor: isDark ? "#0b0b0d" : "#f7f8fa",
@@ -98,12 +128,12 @@ export function ChatBackgroundPicker({
           </button>
 
           {CHAT_COLOR_PRESETS.map((preset) => {
-            const active = value.kind === "preset" && value.id === preset.id;
+            const active = !inherited && current.kind === "preset" && current.id === preset.id;
             return (
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => onChange({ kind: "preset", id: preset.id })}
+                onClick={() => selectBackground({ kind: "preset", id: preset.id })}
                 aria-pressed={active}
                 title={preset.label}
                 className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-full border transition ${
@@ -125,9 +155,9 @@ export function ChatBackgroundPicker({
               isImage ? ring : `${idle} bg-surface-2 text-ink-soft hover:text-ink`
             }`}
             style={
-              isImage
+              isImage && current.kind === "image"
                 ? {
-                    backgroundImage: `url("${value.imageUrl}")`,
+                    backgroundImage: `url("${current.imageUrl}")`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }
@@ -144,12 +174,12 @@ export function ChatBackgroundPicker({
         <p className="mb-1.5 text-[12px] font-medium text-muted">Animasi</p>
         <div className="flex flex-wrap items-center gap-2">
           {CHAT_ANIMATED_PRESETS.map((preset) => {
-            const active = value.kind === "animated" && value.id === preset.id;
+            const active = !inherited && current.kind === "animated" && current.id === preset.id;
             return (
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => onChange({ kind: "animated", id: preset.id })}
+                onClick={() => selectBackground({ kind: "animated", id: preset.id })}
                 aria-pressed={active}
                 title={`${preset.label} · ${preset.hint}`}
                 className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-full border transition ${
@@ -190,7 +220,9 @@ export function ChatBackgroundPicker({
             <span className="text-xs font-medium text-ink-soft">Redup gambar · {dimPercent}%</span>
             <button
               type="button"
-              onClick={() => onChange({ kind: "default" })}
+              onClick={() =>
+                props.allowInherit ? props.onChange(null) : props.onChange({ kind: "default" })
+              }
               className="text-xs font-medium text-ink-soft transition hover:text-ink"
             >
               Hapus gambar
@@ -204,6 +236,7 @@ export function ChatBackgroundPicker({
             value={dimPercent}
             onChange={(e) => setDimDraft(Number(e.target.value))}
             onPointerUp={(e) => commitDim(Number(e.currentTarget.value))}
+            onTouchEnd={(e) => commitDim(Number(e.currentTarget.value))}
             onKeyUp={(e) => commitDim(Number(e.currentTarget.value))}
             onBlur={(e) => commitDim(Number(e.currentTarget.value))}
             aria-label="Tingkat peredupan gambar"
@@ -212,11 +245,13 @@ export function ChatBackgroundPicker({
         </div>
       )}
 
-      {value.kind === "preset" && <p className="text-xs text-muted">{getPreset(value.id).label}</p>}
+      {!inherited && current.kind === "preset" && (
+        <p className="text-xs text-muted">{getPreset(current.id).label}</p>
+      )}
 
-      {value.kind === "animated" && (
+      {!inherited && current.kind === "animated" && (
         <p className="text-xs text-muted">
-          {getAnimatedPreset(value.id).label} · {getAnimatedPreset(value.id).hint}
+          {getAnimatedPreset(current.id).label} · {getAnimatedPreset(current.id).hint}
         </p>
       )}
     </div>

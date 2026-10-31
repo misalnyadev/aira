@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
+import {
+  DEFAULT_BUBBLE_STYLE,
+  bubbleInk,
+  bubblePaint,
+  type BubbleStyle,
+} from "@/lib/bubbleStyle";
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { Avatar } from "./Avatar";
@@ -39,15 +45,18 @@ function dayLabel(iso: string): string {
 
 function Ticks({ pending }: { pending?: boolean }) {
   if (pending) {
-    return <CheckIcon className="h-3.5 w-3.5 text-ink-soft/60" />;
+    return <CheckIcon className="h-3.5 w-3.5 opacity-60" />;
   }
-  return <DoubleCheckIcon className="h-3.5 w-3.5 text-ink-soft/80" />;
+  return <DoubleCheckIcon className="h-3.5 w-3.5 opacity-85" />;
 }
 
-function TypingBubble() {
+function TypingBubble({ bubble }: { bubble: BubbleStyle }) {
   return (
     <div className="flex justify-start">
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-bubble-in px-4 py-3 shadow-sm">
+      <div
+        className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-bubble-in px-4 py-3 shadow-sm"
+        style={bubblePaint(bubble, "in")}
+      >
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
@@ -64,6 +73,7 @@ export function ChatWindow({
   canSpeak,
   voiceEnabled,
   background,
+  bubble,
   onBack,
   onOpenProfile,
   onOpenVoice,
@@ -82,6 +92,8 @@ export function ChatWindow({
   voiceEnabled: boolean;
   /** Latar area chat pilihan pengguna; `default` memakai pola bawaan tema. */
   background?: ChatBackground;
+  /** Gaya gelembung pesan (khusus karakter atau bawaan akun). */
+  bubble?: BubbleStyle;
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
@@ -92,6 +104,7 @@ export function ChatWindow({
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
 }) {
+  const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
@@ -252,6 +265,7 @@ export function ChatWindow({
                       ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
                       : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
                   } ${m.pending ? "opacity-60" : ""}`}
+                  style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
                 >
                   {m.imageUrl && (
                     <img
@@ -265,8 +279,22 @@ export function ChatWindow({
                       className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
                     />
                   )}
-                  {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
-                  <span className="float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[11px] text-ink-soft/80">
+                  {m.content && (
+                    <p
+                      className="whitespace-pre-wrap break-words"
+                      style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
+                    >
+                      {m.content}
+                    </p>
+                  )}
+                  <span
+                    className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[11px] ${
+                      (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
+                        ? "opacity-75"
+                        : "text-ink-soft/80"
+                    }`}
+                    style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
+                  >
                     {formatTime(m.createdAt)}
                     {m.role === "user" && <Ticks pending={m.pending} />}
                   </span>
@@ -286,7 +314,7 @@ export function ChatWindow({
             </div>
           ))}
 
-          {isTyping && <TypingBubble />}
+          {isTyping && <TypingBubble bubble={bubbleStyle} />}
         </div>
       </div>
 

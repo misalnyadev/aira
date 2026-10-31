@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
 import {
+  DEFAULT_BUBBLE_STYLE,
+  type BubbleStyle,
+} from "@/lib/bubbleStyle";
+import {
   DEFAULT_CHAT_BACKGROUND,
   type ChatBackground,
 } from "@/lib/chatBackground";
@@ -63,6 +67,7 @@ export function ChatApp() {
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
   const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
+  const [bubbleStyle, setBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -127,6 +132,7 @@ export function ChatApp() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.chatBackground) setChatBackground(data.chatBackground);
+    if (data.bubbleStyle) setBubbleStyle(data.bubbleStyle);
   }, [api]);
 
   const fetchProfile = useCallback(async () => {
@@ -393,6 +399,68 @@ export function ChatApp() {
     fetchCharacters();
   }
 
+  async function handleClearChat(id: string) {
+    if (!confirm("Hapus seluruh riwayat chat dengan karakter ini?")) return;
+    stopSpeaking();
+    const res = await api(`/api/characters/${id}/messages`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || "Gagal menghapus riwayat chat.");
+      return;
+    }
+    setMessagesMap((prev) => ({ ...prev, [id]: data.messages ?? [] }));
+    setShowProfile(false);
+    fetchCharacters();
+  }
+
+  async function handleCharacterBackground(id: string, next: ChatBackground | null) {
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, chatBackground: next } : c))
+    );
+    setProfileDetail((cur) => (cur && cur.id === id ? { ...cur, chatBackground: next } : cur));
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatBackground: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan latar karakter.");
+      fetchCharacters();
+    }
+  }
+
+  async function handleCharacterBubble(id: string, next: BubbleStyle | null) {
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, bubbleStyle: next } : c))
+    );
+    setProfileDetail((cur) => (cur && cur.id === id ? { ...cur, bubbleStyle: next } : cur));
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bubbleStyle: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan gelembung karakter.");
+      fetchCharacters();
+    }
+  }
+
+  const profileProviderLabel = (() => {
+    if (!profileDetail) return "";
+    const chosen = profileDetail.providerId
+      ? providers.find((p) => p.id === profileDetail.providerId)
+      : providers.find((p) => p.isDefault) ?? providers[0];
+    if (!chosen) return "Belum ada provider";
+    const modelName = profileDetail.model || chosen.model;
+    return `${chosen.label} · ${modelName}`;
+  })();
+
   const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
@@ -438,7 +506,8 @@ export function ChatApp() {
                       isSpeaking={isSpeaking}
                       canSpeak={speechSupported}
                       voiceEnabled={voice.enabled}
-                      background={chatBackground}
+                      background={activeCharacter.chatBackground ?? chatBackground}
+                      bubble={activeCharacter.bubbleStyle ?? bubbleStyle}
                       onBack={() => {
                         stopSpeaking();
                         setMobileShowChat(false);
@@ -529,6 +598,8 @@ export function ChatApp() {
               onAutoFallbackChange={setAutoFallback}
               chatBackground={chatBackground}
               onChatBackgroundChange={setChatBackground}
+              bubbleStyle={bubbleStyle}
+              onBubbleStyleChange={setBubbleStyle}
               onChanged={fetchProviders}
             />
           )}
@@ -560,12 +631,17 @@ export function ChatApp() {
       {showProfile && profileDetail && (
         <CharacterProfileModal
           character={profileDetail}
+          providerLabel={profileProviderLabel}
+          bubbleFallback={bubbleStyle}
           onClose={() => setShowProfile(false)}
           onEdit={() => {
             setEditDetail(profileDetail);
             setShowProfile(false);
           }}
+          onClearChat={() => handleClearChat(profileDetail.id)}
           onDelete={() => handleDeleteCharacter(profileDetail.id)}
+          onBackgroundChange={(next) => handleCharacterBackground(profileDetail.id, next)}
+          onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
         />
       )}
 

@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { BubbleStyle } from "@/lib/bubbleStyle";
+import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
-import { TrashIcon, XIcon } from "./icons";
+import { BubbleStyleControls } from "./BubbleStyleControls";
+import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
+import { PencilIcon, TrashIcon, XIcon } from "./icons";
 
 export function CharacterProfileModal({
   character,
+  providerLabel,
+  bubbleFallback,
   onClose,
   onEdit,
+  onClearChat,
   onDelete,
+  onBackgroundChange,
+  onBubbleChange,
 }: {
   character: CharacterDetail;
+  providerLabel: string;
+  bubbleFallback: BubbleStyle;
   onClose: () => void;
   onEdit: () => void;
+  onClearChat: () => void;
   onDelete: () => void;
+  onBackgroundChange: (next: ChatBackground | null) => void;
+  onBubbleChange: (next: BubbleStyle | null) => void;
 }) {
   const [showBible, setShowBible] = useState(false);
   const hasBible = Boolean(character.bible?.trim());
@@ -37,7 +51,7 @@ export function CharacterProfileModal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Profil Karakter"
+        aria-label={`Profil ${character.name}`}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h2 className="font-display text-lg font-bold text-ink">Profil Karakter</h2>
@@ -51,17 +65,22 @@ export function CharacterProfileModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 text-center">
             <Avatar name={character.name} src={character.avatarUrl} size={104} ring />
             <h3 className="mt-2 font-display text-xl font-bold text-ink">{character.name}</h3>
             {character.shortBio && <p className="text-sm text-ink-soft">{character.shortBio}</p>}
+            {providerLabel && (
+              <span className="rounded-full bg-surface-2 px-3 py-1 text-[12px] font-medium text-ink-soft">
+                {providerLabel}
+              </span>
+            )}
           </div>
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
               Tentang karakter
             </h4>
-            <p className="whitespace-pre-wrap rounded-2xl bg-surface-2 p-3.5 text-sm leading-relaxed text-ink">
+            <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-3.5 text-sm leading-relaxed text-ink">
               {character.personality}
             </p>
           </div>
@@ -91,20 +110,50 @@ export function CharacterProfileModal({
             </div>
           )}
 
-          <div className="mt-6 flex gap-2">
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Latar chat
+            </h4>
+            <ChatBackgroundPicker
+              allowInherit
+              value={character.chatBackground}
+              onChange={onBackgroundChange}
+            />
+          </div>
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Gelembung pesan
+            </h4>
+            <BubbleStyleControls
+              allowInherit
+              value={character.bubbleStyle}
+              fallback={bubbleFallback}
+              onChange={onBubbleChange}
+            />
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-2">
             <button
               onClick={onEdit}
-              className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98]"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98]"
             >
-              Edit Karakter
+              <PencilIcon className="h-4 w-4" /> Edit Karakter
             </button>
             <button
-              onClick={onDelete}
-              className="flex items-center gap-1.5 rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10"
+              onClick={onClearChat}
+              className="rounded-xl border border-line py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink active:scale-[0.98]"
             >
-              <TrashIcon className="h-4 w-4" /> Hapus
+              Hapus Riwayat Chat
             </button>
           </div>
+
+          <button
+            onClick={onDelete}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-line py-2.5 text-sm font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10"
+          >
+            <TrashIcon className="h-4 w-4" /> Hapus Karakter
+          </button>
         </div>
       </div>
     </div>

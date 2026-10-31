@@ -32,3 +32,35 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
 
   return NextResponse.json({ messages: rows });
 }
+
+/** Hapus seluruh riwayat chat karakter ini, lalu tanam ulang pesan pembuka bila ada. */
+export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+  await ensureDb();
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+  const owned = await findOwnedCharacter(id, user.id);
+  if (!owned) {
+    return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
+  }
+
+  await db.delete(messages).where(eq(messages.characterId, id));
+
+  let rows: (typeof messages.$inferSelect)[] = [];
+  if (owned.greeting.trim()) {
+    rows = await db
+      .insert(messages)
+      .values({
+        characterId: id,
+        role: "assistant",
+        content: owned.greeting.trim(),
+      })
+      .returning();
+  }
+
+  return NextResponse.json({ messages: rows });
+}

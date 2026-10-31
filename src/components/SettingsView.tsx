@@ -9,8 +9,10 @@ import {
 } from "@/lib/ai/providerDefaults";
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
+import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { ChatBackground } from "@/lib/chatBackground";
 import { useAuth } from "./AuthGate";
+import { BubbleStyleControls } from "./BubbleStyleControls";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { Switch } from "./Switch";
 import { ThemeSegmented } from "./ThemeToggle";
@@ -33,6 +35,8 @@ export function SettingsView({
   onAutoFallbackChange,
   chatBackground,
   onChatBackgroundChange,
+  bubbleStyle,
+  onBubbleStyleChange,
   onChanged,
 }: {
   providers: ProviderSummary[];
@@ -40,6 +44,8 @@ export function SettingsView({
   onAutoFallbackChange: (next: boolean) => void;
   chatBackground: ChatBackground;
   onChatBackgroundChange: (next: ChatBackground) => void;
+  bubbleStyle: BubbleStyle;
+  onBubbleStyleChange: (next: BubbleStyle) => void;
   onChanged: () => Promise<void>;
 }) {
   const { user, signOut } = useAuth();
@@ -61,6 +67,8 @@ export function SettingsView({
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [bgBusy, setBgBusy] = useState(false);
   const [bgError, setBgError] = useState<string | null>(null);
+  const [bubbleBusy, setBubbleBusy] = useState(false);
+  const [bubbleError, setBubbleError] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useKeepFieldVisible(scrollAreaRef, true);
@@ -255,6 +263,30 @@ export function SettingsView({
     }
   }
 
+  async function handleBubbleStyleChange(next: BubbleStyle) {
+    const previous = bubbleStyle;
+    setBubbleError(null);
+    onBubbleStyleChange(next);
+    setBubbleBusy(true);
+    try {
+      const res = await fetch("/api/appearance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bubbleStyle: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan gaya gelembung.");
+      if (data.bubbleStyle) onBubbleStyleChange(data.bubbleStyle);
+    } catch (err) {
+      onBubbleStyleChange(previous);
+      setBubbleError(
+        err instanceof Error ? err.message : "Gagal menyimpan gaya gelembung."
+      );
+    } finally {
+      setBubbleBusy(false);
+    }
+  }
+
   async function handleToggleAutoFallback(next: boolean) {
     const previous = autoFallback;
     onAutoFallbackChange(next);
@@ -310,6 +342,28 @@ export function SettingsView({
               />
 
               {bgError && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bgError}</p>}
+            </div>
+
+            <div className="mt-3 rounded-xl border border-line px-3.5 py-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block text-sm text-ink">Gelembung pesan</span>
+                  <span className="block text-[11px] text-muted">
+                    Bawaan untuk semua karakter · tiap karakter bisa diatur sendiri di profilnya
+                  </span>
+                </div>
+                {bubbleBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
+              </div>
+
+              <BubbleStyleControls
+                value={bubbleStyle}
+                onChange={handleBubbleStyleChange}
+                disabled={bubbleBusy}
+              />
+
+              {bubbleError && (
+                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bubbleError}</p>
+              )}
             </div>
           </section>
 
