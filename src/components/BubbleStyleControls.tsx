@@ -170,7 +170,7 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
               Header & kolom ketik transparan
             </span>
             <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-              Tanpa kotak bar atas/bawah — di atas cukup foto karakter & ikon
+              Tanpa kotak bar atas/bawah — menyatu transparan dengan latar chat
             </span>
           </div>
           <Switch

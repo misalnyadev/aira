@@ -266,17 +266,28 @@ export function ChatWindow({
 
           <button
             onClick={onOpenProfile}
-            className="relative shrink-0 rounded-full ring-1 ring-line/60 shadow-xs transition active:scale-95"
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition active:opacity-75"
             aria-label={`Pengaturan ${character.name}`}
             title={`Pengaturan ${character.name}`}
           >
-            <Avatar name={character.name} src={character.avatarUrl} size={40} />
-            {(isTyping || isSpeaking) && (
-              <span className="absolute bottom-0 right-0 h-3 w-3 animate-pulse rounded-full bg-emerald-500 ring-2 ring-surface" />
-            )}
+            <div className="relative shrink-0 rounded-full ring-1 ring-line/60 shadow-xs">
+              <Avatar name={character.name} src={character.avatarUrl} size={40} />
+            </div>
+            <div className="min-w-0 [text-shadow:0_1px_8px_var(--surface)]">
+              <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+              <p
+                className={`truncate text-xs ${
+                  isTyping || isSpeaking ? "text-ink" : "text-ink-soft"
+                }`}
+              >
+                {isTyping
+                  ? "sedang mengetik..."
+                  : isSpeaking
+                    ? "sedang berbicara..."
+                    : character.shortBio || "online"}
+              </p>
+            </div>
           </button>
-
-          <div className="flex-1" />
 
           {isSpeaking && (
             <button
