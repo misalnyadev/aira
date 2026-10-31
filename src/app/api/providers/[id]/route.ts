@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, providerTypeValues, type ProviderType } from "@/db/schema";
+import { resolveValidProviderModel } from "@/lib/ai/models";
 import { PROVIDER_META } from "@/lib/ai/providerDefaults";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
@@ -116,10 +117,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       updates.baseUrl = cleanBaseUrl || PROVIDER_META[nextType]?.baseUrl || null;
     }
 
-    if (cleanModel) {
-      updates.model = cleanModel;
-    } else if (nextType !== existing.type && PROVIDER_META[nextType]?.defaultModel) {
-      updates.model = PROVIDER_META[nextType].defaultModel;
+    const desiredModel =
+      cleanModel ||
+      (nextType !== existing.type ? PROVIDER_META[nextType]?.defaultModel : existing.model);
+
+    const { model: verifiedModel, autoReplacedFrom } = await resolveValidProviderModel({
+      type: nextType,
+      keys: [finalPrimaryKey, ...nextBackups],
+      baseUrl: updates.baseUrl ?? existing.baseUrl,
+      requestedModel: desiredModel,
+    });
+
+    if (verifiedModel) {
+      updates.model = verifiedModel;
     }
 
     if (typeof isDefault === "boolean") {
@@ -134,7 +144,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
 
-    return NextResponse.json({ provider: serializeProviderRow(row) });
+    return NextResponse.json({ provider: serializeProviderRow(row), autoReplacedFrom });
   } catch (err) {
     console.error("[PATCH /api/providers/[id]]", err);
     return NextResponse.json(

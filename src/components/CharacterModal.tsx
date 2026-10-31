@@ -55,6 +55,9 @@ export function CharacterModal({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initial?.avatarUrl ?? null);
   const [providerId, setProviderId] = useState<string>(initial?.providerId ?? "");
   const [model, setModel] = useState(initial?.model ?? "");
+  const [detectedModels, setDetectedModels] = useState<string[]>([]);
+  const [detectingModels, setDetectingModels] = useState(false);
+  const [detectError, setDetectError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,45 @@ export function CharacterModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const resolvedProvider = providerId
+    ? providers.find((p) => p.id === providerId)
+    : providers.find((p) => p.isDefault) ?? providers[0];
+
+  async function detectCharacterModels() {
+    if (!resolvedProvider) {
+      setDetectError("Tambahkan provider AI di Setelan dulu.");
+      return;
+    }
+    setDetectingModels(true);
+    setDetectError(null);
+    try {
+      const res = await fetch("/api/providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId: resolvedProvider.id,
+          type: resolvedProvider.type,
+          currentModel: model.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setDetectError(data.error || "Gagal mendeteksi model.");
+        return;
+      }
+      const recs = Array.isArray(data.recommended) ? (data.recommended as string[]) : [];
+      const allIds = Array.isArray(data.models)
+        ? (data.models as { id: string }[]).map((m) => m.id)
+        : [];
+      const merged = [...new Set([...recs, ...allIds])].slice(0, 8);
+      setDetectedModels(merged);
+    } catch {
+      setDetectError("Koneksi gagal saat mendeteksi model.");
+    } finally {
+      setDetectingModels(false);
+    }
+  }
 
   async function handleAvatarPick(file: File) {
     setUploading(true);
@@ -312,7 +354,11 @@ export function CharacterModal({
               <label className="mb-1 block text-xs font-medium text-ink-soft">Provider AI</label>
               <select
                 value={providerId}
-                onChange={(e) => setProviderId(e.target.value)}
+                onChange={(e) => {
+                  setProviderId(e.target.value);
+                  setDetectedModels([]);
+                  setDetectError(null);
+                }}
                 className={FIELD}
               >
                 <option value="">Gunakan default</option>
@@ -324,17 +370,73 @@ export function CharacterModal({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
-                Model (opsional)
-              </label>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-ink-soft">
+                  Model (opsional)
+                </label>
+                {providers.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={detectingModels}
+                    onClick={() => void detectCharacterModels()}
+                    className="text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:opacity-50"
+                  >
+                    {detectingModels ? "Mendeteksi..." : "Deteksi tersedia"}
+                  </button>
+                )}
+              </div>
               <input
                 value={model ?? ""}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="override model"
+                placeholder={
+                  resolvedProvider?.model
+                    ? `Ikut provider (${resolvedProvider.model})`
+                    : "Kosongkan = ikut provider"
+                }
                 className={FIELD}
               />
             </div>
           </div>
+
+          {detectError && (
+            <p className="text-xs text-rose-600 dark:text-rose-400">{detectError}</p>
+          )}
+
+          {detectedModels.length > 0 && (
+            <div>
+              <p className="mb-1 text-[11px] text-muted">
+                Model tersedia saat ini (ketuk untuk memilih, atau kosongkan agar ikut provider):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {model.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setModel("")}
+                    className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-soft transition hover:text-ink"
+                  >
+                    Ikut provider
+                  </button>
+                )}
+                {detectedModels.map((m) => {
+                  const active = model === m;
+                  return (
+                    <button
+                      type="button"
+                      key={m}
+                      onClick={() => setModel(m)}
+                      className={`rounded-full px-2.5 py-1 text-xs transition ${
+                        active
+                          ? "bg-brand font-semibold text-brand-ink"
+                          : "bg-surface-2 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 

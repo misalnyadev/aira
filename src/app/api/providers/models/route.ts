@@ -3,7 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, providerTypeValues, type ProviderType } from "@/db/schema";
 import { toUserFacingError } from "@/lib/ai";
-import { listProviderModels } from "@/lib/ai/models";
+import {
+  listProviderModels,
+  pickBestAvailableModel,
+  pickDynamicRecommendedModels,
+} from "@/lib/ai/models";
 import { PROVIDER_META } from "@/lib/ai/providerDefaults";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
@@ -28,12 +32,13 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => null);
-  const { providerId, type, apiKey, backupKeys, baseUrl } = (body ?? {}) as {
+  const { providerId, type, apiKey, backupKeys, baseUrl, currentModel } = (body ?? {}) as {
     providerId?: unknown;
     type?: unknown;
     apiKey?: unknown;
     backupKeys?: unknown;
     baseUrl?: unknown;
+    currentModel?: unknown;
   };
 
   if (typeof type !== "string" || !providerTypeValues.includes(type as ProviderType)) {
@@ -94,9 +99,19 @@ export async function POST(req: Request) {
       keys,
       resolvedBaseUrl
     );
+    const recommended = pickDynamicRecommendedModels(models, providerType);
+    const cleanCurrent = typeof currentModel === "string" ? currentModel.trim() : "";
+    const bestModel = pickBestAvailableModel(models, providerType, cleanCurrent || null);
+    const currentAvailable = cleanCurrent
+      ? models.some((m) => m.id === cleanCurrent)
+      : true;
+
     return NextResponse.json({
       ok: true,
       models,
+      recommended,
+      bestModel,
+      currentAvailable,
       usedKeyIndex,
       usedKeyNumber: usedKeyIndex + 1,
       totalKeys: keys.length || 1,

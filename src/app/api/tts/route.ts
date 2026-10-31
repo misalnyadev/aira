@@ -113,10 +113,13 @@ async function synthesizeGeminiBytes(
   }
 
   const styleText = config.geminiStyle.trim();
-  const modelsToTry =
-    config.geminiModelId === "gemini-2.5-flash-preview-tts"
-      ? [config.geminiModelId]
-      : [config.geminiModelId, "gemini-2.5-flash-preview-tts"];
+  const modelsToTry = [
+    ...new Set([
+      config.geminiModelId,
+      "gemini-3.8-flash-tts",
+      "gemini-3.8-flash-lite-tts",
+    ]),
+  ];
 
   let lastError = "Gagal menghubungi Gemini TTS.";
   let lastStatus = 502;

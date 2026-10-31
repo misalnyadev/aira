@@ -6,7 +6,7 @@ export const PROVIDER_META: Record<
 > = {
   gemini: {
     name: "Google Gemini",
-    defaultModel: "gemini-2.5-flash",
+    defaultModel: "gemini-3.5-flash-lite",
     needsBaseUrl: false,
     keyHelpUrl: "https://aistudio.google.com/apikey",
   },
@@ -42,14 +42,22 @@ export const PROVIDER_META: Record<
 
 export const PROVIDER_ORDER: ProviderType[] = ["gemini", "groq", "openrouter", "custom"];
 
-/** Saran model cepat untuk dipilih sekali ketuk di Pengaturan. */
+/**
+ * Fallback saran awal hanya sebelum API key dideteksi secara live.
+ * Begitu API key terisi / provider diedit, UI otomatis menggantinya dengan
+ * hasil deteksi model yang benar-benar aktif di API key pengguna.
+ */
 export const RECOMMENDED_MODELS: Partial<Record<ProviderType, string[]>> = {
-  gemini: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"],
+  gemini: ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.5-pro"],
   groq: [
     "llama-3.3-70b-versatile",
     "meta-llama/llama-4-scout-17b-16e-instruct",
     "llama-3.1-8b-instant",
   ],
-  openrouter: ["openai/gpt-4o-mini", "google/gemini-2.5-flash", "deepseek/deepseek-chat-v3-0324"],
+  openrouter: [
+    "openai/gpt-4o-mini",
+    "google/gemini-3.5-flash-lite",
+    "deepseek/deepseek-chat-v3-0324",
+  ],
   grok: ["grok-4", "grok-3-mini"],
 };
