@@ -48,7 +48,7 @@ export function Composer({
   }
 
   return (
-    <div className="composer-bar border-t border-line bg-header px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-3 sm:py-2.5">
+    <div className="composer-bar bg-header px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
@@ -88,7 +88,7 @@ export function Composer({
             title="Kirim foto"
             aria-label="Lampirkan foto"
           >
-            <PlusIcon className="h-[28px] w-[28px]" />
+            <PlusIcon className="h-[30px] w-[30px]" />
           </button>
 
           <div className="relative min-w-0 flex-1">

@@ -1,0 +1,12 @@
+{
+  "name": "Aisherly — AI Chat",
+  "short_name": "Aisherly",
+  "description": "Ngobrol natural dengan karakter AI kustom",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa"
+}

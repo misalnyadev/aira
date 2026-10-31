@@ -7,6 +7,7 @@ import {
   register as apiRegister,
   type AuthUser,
 } from "@/lib/authClient";
+import { useSafeTop } from "@/lib/safeTop";
 import { ThemeQuickToggle } from "./ThemeToggle";
 
 type AuthContextValue = {
@@ -44,6 +45,8 @@ export function AuthGate({
   const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useSafeTop();
 
   const signOut = useCallback(async () => {
     await apiLogout();
@@ -87,12 +90,13 @@ export function AuthGate({
     const isRegister = mode === "register";
 
     return (
-      <div className="app-shell flex flex-col overflow-y-auto bg-app px-4 pb-10 pt-[max(1rem,var(--safe-top))]">
-        <div className="flex justify-end">
-          <ThemeQuickToggle />
-        </div>
+      <div className="app-shell flex flex-col bg-app">
+        <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,var(--safe-top))]">
+          <div className="flex justify-end">
+            <ThemeQuickToggle />
+          </div>
 
-        <div className="m-auto w-full max-w-sm py-6">
+          <div className="m-auto w-full max-w-sm py-6">
           <div className="mb-6 text-center">
             <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
               Aisherly<span className="text-muted">.</span>
@@ -177,6 +181,7 @@ export function AuthGate({
               {isRegister ? "Sudah punya akun? Masuk" : "Punya kode undangan? Daftar"}
             </button>
           </form>
+        </div>
         </div>
       </div>
     );
