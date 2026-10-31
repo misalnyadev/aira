@@ -2,7 +2,7 @@ import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 
-export type ProviderType = "gemini" | "grok" | "openrouter" | "custom";
+export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
 
 export type ProviderSummary = {
   id: string;

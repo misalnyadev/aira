@@ -21,6 +21,12 @@ export async function generateCharacterReply(
   switch (providerType) {
     case "gemini":
       return generateGeminiReply(input);
+    case "groq":
+      return generateOpenAICompatibleReply({
+        ...input,
+        baseUrl: input.baseUrl || PROVIDER_META.groq.baseUrl!,
+        providerLabel: "Groq",
+      });
     case "grok":
       return generateOpenAICompatibleReply({
         ...input,

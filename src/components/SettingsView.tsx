@@ -73,7 +73,7 @@ export function SettingsView({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useKeepFieldVisible(scrollAreaRef, true);
 
-  const meta = PROVIDER_META[type];
+  const meta = PROVIDER_META[type] ?? PROVIDER_META.groq;
   const recommended = RECOMMENDED_MODELS[type] ?? [];
 
   function resetForm() {
@@ -117,7 +117,13 @@ export function SettingsView({
   }
 
   function chooseType(next: ProviderType) {
-    if (next !== type) setModel("");
+    if (next !== type) {
+      setModel("");
+      if (next !== "custom") setBaseUrl("");
+      if (editing && label === (PROVIDER_META[type]?.name ?? "")) {
+        setLabel(PROVIDER_META[next].name);
+      }
+    }
     setType(next);
   }
 

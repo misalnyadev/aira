@@ -10,7 +10,7 @@ type OpenAIContentPart = Record<string, unknown>;
 type OpenAIMessage = { role: string; content: string | OpenAIContentPart[] };
 
 /**
- * Endpoint "chat/completions" bergaya OpenAI: xAI (Grok), OpenRouter, maupun
+ * Endpoint "chat/completions" bergaya OpenAI: Groq, OpenRouter, maupun
  * endpoint custom milik sendiri (LM Studio, Ollama, gateway lain).
  */
 export async function generateOpenAICompatibleReply(options: Options): Promise<string> {
@@ -89,6 +89,12 @@ export async function generateOpenAICompatibleReply(options: Options): Promise<s
       throw new AiProviderError(
         `${providerLabel}: kuota/limit tercapai (429). Tunggu sebentar atau pakai key cadangan.`,
         { status: 429, retryable: true }
+      );
+    }
+    if (res.status === 400 && hasImage) {
+      throw new AiProviderError(
+        `${providerLabel}: model "${model}" belum mendukung kiriman foto (coba model vision seperti llama-4-scout atau Gemini).`,
+        { status: 400, retryable: false }
       );
     }
     throw new AiProviderError(`${providerLabel} API error (${res.status}): ${detail}`, {
