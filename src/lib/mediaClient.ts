@@ -26,6 +26,7 @@ type MediaEntry = {
   url: string | null;
   status: "loading" | "ready" | "error";
   localObjectUrl: boolean;
+  streamFallback?: boolean;
   expiresAt: number;
 };
 
@@ -104,6 +105,40 @@ export function ensureMediaUrl(key: string | null | undefined): void {
       });
       emit();
     });
+}
+
+/**
+ * Alihkan pemutaran ke rute streaming satu-domain (`/api/media/stream`) bila
+ * URL langsung `*.r2.cloudflarestorage.com` gagal dimuat di browser/jaringan
+ * perangkat saat ini (mis. pemblokir pihak ketiga / DNS / CORS di laptop).
+ * Mengembalikan `true` bila dialihkan ke cadangan, `false` bila cadangan juga gagal.
+ */
+export function fallbackMediaToStream(key: string | null | undefined): boolean {
+  if (!key) return false;
+  const current = cache.get(key);
+  if (current?.localObjectUrl && current.url) {
+    URL.revokeObjectURL(current.url);
+  }
+  if (current?.streamFallback) {
+    cache.set(key, {
+      url: null,
+      status: "error",
+      localObjectUrl: false,
+      streamFallback: true,
+      expiresAt: 0,
+    });
+    emit();
+    return false;
+  }
+  cache.set(key, {
+    url: `/api/media/stream?key=${encodeURIComponent(key)}`,
+    status: "ready",
+    localObjectUrl: false,
+    streamFallback: true,
+    expiresAt: Date.now() + SIGNED_URL_TTL_MS,
+  });
+  emit();
+  return true;
 }
 
 function primeLocalBlob(key: string, blob: Blob) {
