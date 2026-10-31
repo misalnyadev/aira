@@ -82,6 +82,7 @@ export function CharacterVoiceSection({
     const sample = sampleGreeting?.trim() || VOICE_TEST_TEXT;
     speak(sample, voiceSettings, {
       target: { kind: "hd", slot: "custom", customVoiceId: cleaned },
+      allowDeviceFallback: false,
       onFallback: (reason) => onNotice?.(reason),
     });
   }

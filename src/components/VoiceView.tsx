@@ -144,6 +144,12 @@ function HdVoiceCard({
       const updated = await onSaveTts(payload);
       if (updated) {
         invalidateHdAudioCache();
+        setApiKey("");
+        setClearPrimary(false);
+        setNewBackups([]);
+        setKeptBackupIndexes(updated.maskedBackupKeys.map((_, idx) => idx));
+        setFemaleVoiceId(updated.femaleVoiceId);
+        setMaleVoiceId(updated.maleVoiceId);
         if (!silent) {
           setFeedback({ kind: "ok", text: "Pengaturan Suara HD tersimpan." });
         }
@@ -198,6 +204,7 @@ function HdVoiceCard({
 
     speak(sample, voiceSettings, {
       target: { kind: "hd", slot },
+      allowDeviceFallback: false,
       onFallback: (reason) => {
         setTestingSlot(null);
         setFeedback({ kind: "err", text: reason });
@@ -449,6 +456,11 @@ function HdVoiceCard({
       </div>
 
       {/* Pengaturan Ekspresi Lanjutan */}
+      <p className="text-[11px] leading-relaxed text-muted">
+        Selain pilihan cepat di atas, kamu bebas menempel kode <b>Voice ID</b> dari suara kreasi
+        sendiri (<i>Voice Design</i> / <i>My Voices</i>) di akun ElevenLabs.
+      </p>
+
       <details className="rounded-xl border border-line px-3 py-2.5">
         <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
           Pengaturan ekspresi suara HD
@@ -539,7 +551,6 @@ export function VoiceView({
   }
 
   const canTestDefault = supported || ttsSummary.hasKey;
-  const cardResetKey = `${ttsSummary.maskedKey}|${ttsSummary.backupCount}|${ttsSummary.modelId}|${ttsSummary.femaleVoiceId}|${ttsSummary.maleVoiceId}|${ttsSummary.stability}|${ttsSummary.similarityBoost}`;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-surface">
@@ -623,7 +634,6 @@ export function VoiceView({
 
           {/* Pengaturan ElevenLabs HD */}
           <HdVoiceCard
-            key={cardResetKey}
             ttsSummary={ttsSummary}
             voiceSettings={settings}
             onSaveTts={onSaveTts}
