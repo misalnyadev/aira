@@ -78,6 +78,14 @@ export function CharactersView({
                           📖 Bible
                         </span>
                       )}
+                      {c.memoryEnabled && (
+                        <span
+                          title="Ingatan jangka panjang & sadar waktu aktif"
+                          className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line"
+                        >
+                          🧠 Ingatan
+                        </span>
+                      )}
                     </div>
                     <p className="truncate text-xs text-ink-soft">
                       {c.shortBio || "Tanpa status singkat"}
