@@ -85,7 +85,7 @@ export function VoiceView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-surface">
-      <div className="flex items-center justify-between border-b border-line bg-header px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+      <div className="top-bar flex items-center justify-between px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <div>
           <h1 className="font-display text-xl font-bold tracking-tight text-ink">Suara</h1>
           <p className="text-xs text-ink-soft">Suara lokal perangkat, gratis tanpa kuota API</p>

@@ -91,6 +91,23 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/*
+ * Warna dasar dipegang <html>, bukan cuma <body>.
+ *
+ * Di iPhone, area di belakang status bar dan area pantul (rubber band) diambil
+ * dari latar <html>. Kalau <html> tidak diwarnai, di sana muncul pita putih saat
+ * halaman ditarik atau saat tema gelap — persis yang membuat bagian atas
+ * terlihat terpotong.
+ */
+html {
+  background-color: var(--header);
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 /* ------------------------------------------------------------------ */
 /* Jarak aman atas (poni / Dynamic Island iPhone)                      */
 /* ------------------------------------------------------------------ */
@@ -119,7 +136,9 @@ html.kb-panned .app-shell {
 }
 
 body {
-  background-color: var(--app);
+  /* Sama dengan warna header: area di balik status bar & home indicator tidak
+     pernah terlihat sebagai pita warna lain. */
+  background-color: var(--header);
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -164,6 +183,226 @@ body {
     radial-gradient(var(--wallpaper-dot-2) 1px, transparent 0);
   background-size: 26px 26px;
   background-position: 0 0, 13px 13px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bilah atas tembus pandang                                           */
+/* ------------------------------------------------------------------ */
+/*
+ * Header memakai kaca, bukan bidang pekat. Dengan begitu latar chat / wallpaper
+ * tetap terlihat sampai tepi atas layar — tidak ada garis potong di bawah
+ * status bar.
+ */
+.top-bar {
+  background-color: color-mix(in srgb, var(--header) 78%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .top-bar {
+    background-color: color-mix(in srgb, var(--header) 62%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(180%) blur(18px);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Latar animasi — nuansa "virtual background" video call, monokrom    */
+/* ------------------------------------------------------------------ */
+.chat-anim {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  --anim-1: rgba(0, 0, 0, 0.055);
+  --anim-2: rgba(0, 0, 0, 0.032);
+}
+
+.dark .chat-anim {
+  --anim-1: rgba(255, 255, 255, 0.062);
+  --anim-2: rgba(255, 255, 255, 0.034);
+}
+
+/* Dua lapisan dekorasi di belakang konten, bergerak sangat pelan. */
+.chat-anim::before,
+.chat-anim::after {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.chat-anim-bokeh::before {
+  background-image:
+    radial-gradient(circle at 22% 28%, var(--anim-1) 0 17%, transparent 18%),
+    radial-gradient(circle at 70% 64%, var(--anim-2) 0 21%, transparent 22%),
+    radial-gradient(circle at 44% 86%, var(--anim-1) 0 13%, transparent 14%);
+  filter: blur(26px);
+  animation: anim-drift-a 26s ease-in-out infinite alternate;
+}
+
+.chat-anim-bokeh::after {
+  background-image:
+    radial-gradient(circle at 82% 18%, var(--anim-2) 0 19%, transparent 20%),
+    radial-gradient(circle at 28% 72%, var(--anim-1) 0 15%, transparent 16%);
+  filter: blur(38px);
+  animation: anim-drift-b 36s ease-in-out infinite alternate;
+}
+
+@keyframes anim-drift-a {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(5%, 4%, 0) scale(1.14);
+  }
+}
+
+@keyframes anim-drift-b {
+  from {
+    transform: translate3d(4%, 5%, 0) scale(1.12);
+  }
+  to {
+    transform: translate3d(-5%, -4%, 0) scale(1);
+  }
+}
+
+.chat-anim-aurora::before {
+  background-image: linear-gradient(
+    115deg,
+    transparent 0%,
+    var(--anim-1) 26%,
+    transparent 52%,
+    var(--anim-2) 76%,
+    transparent 100%
+  );
+  filter: blur(42px);
+  animation: anim-aurora-a 30s ease-in-out infinite alternate;
+}
+
+.chat-anim-aurora::after {
+  background-image: linear-gradient(295deg, transparent 12%, var(--anim-2) 44%, transparent 72%);
+  filter: blur(60px);
+  animation: anim-aurora-b 40s ease-in-out infinite alternate;
+}
+
+/* Transform (bukan background-position) supaya dianimasikan di compositor. */
+@keyframes anim-aurora-a {
+  from {
+    transform: translate3d(-8%, -6%, 0) rotate(3deg) scale(1.12);
+  }
+  to {
+    transform: translate3d(8%, 6%, 0) rotate(-3deg) scale(1.04);
+  }
+}
+
+@keyframes anim-aurora-b {
+  from {
+    transform: translate3d(7%, 5%, 0) rotate(-2deg) scale(1.08);
+  }
+  to {
+    transform: translate3d(-7%, -5%, 0) rotate(2deg) scale(1.16);
+  }
+}
+
+.chat-anim-waves::before {
+  background-image: repeating-linear-gradient(
+    155deg,
+    var(--anim-1) 0 2px,
+    transparent 2px 46px
+  );
+  opacity: 0.6;
+  animation: anim-flow 24s linear infinite;
+}
+
+.chat-anim-waves::after {
+  background-image: repeating-linear-gradient(
+    155deg,
+    var(--anim-2) 0 1px,
+    transparent 1px 92px
+  );
+  opacity: 0.5;
+  animation: anim-flow-slow 38s linear infinite reverse;
+}
+
+@keyframes anim-flow {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-46px, -46px, 0);
+  }
+}
+
+@keyframes anim-flow-slow {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-92px, -92px, 0);
+  }
+}
+
+.chat-anim-stars::before {
+  background-image:
+    radial-gradient(circle, var(--anim-1) 1px, transparent 1.6px),
+    radial-gradient(circle, var(--anim-2) 1px, transparent 1.6px);
+  background-size:
+    94px 94px,
+    151px 151px;
+  background-position:
+    0 0,
+    37px 53px;
+  animation: anim-twinkle 9s ease-in-out infinite;
+}
+
+@keyframes anim-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.chat-anim-mist::before {
+  background-image: radial-gradient(ellipse 60% 50% at 32% 26%, var(--anim-1), transparent 70%);
+  filter: blur(50px);
+  animation: anim-mist-a 42s ease-in-out infinite alternate;
+}
+
+.chat-anim-mist::after {
+  background-image: radial-gradient(ellipse 55% 45% at 72% 74%, var(--anim-2), transparent 72%);
+  filter: blur(64px);
+  animation: anim-mist-b 54s ease-in-out infinite alternate;
+}
+
+@keyframes anim-mist-a {
+  from {
+    transform: translate3d(-6%, 2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(7%, -5%, 0) scale(1.18);
+  }
+}
+
+@keyframes anim-mist-b {
+  from {
+    transform: translate3d(6%, -3%, 0) scale(1.14);
+  }
+  to {
+    transform: translate3d(-7%, 4%, 0) scale(1);
+  }
+}
+
+/* Hormati setelan sistem "kurangi gerakan" */
+@media (prefers-reduced-motion: reduce) {
+  .chat-anim::before,
+  .chat-anim::after {
+    animation: none !important;
+  }
 }
 
 /* Pola titik halus untuk panel kosong di desktop */

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
+import {
+  DEFAULT_CHAT_BACKGROUND,
+  type ChatBackground,
+} from "@/lib/chatBackground";
 import { compressImageFile } from "@/lib/compressImage";
 import { useKeyboardPan } from "@/lib/keyboardPan";
 import { MAX_CHARACTERS } from "@/lib/limits";
@@ -58,6 +62,7 @@ export function ChatApp() {
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
+  const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
   const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -117,6 +122,13 @@ export function ChatApp() {
     if (typeof data.autoFallback === "boolean") setAutoFallback(data.autoFallback);
   }, [api]);
 
+  const fetchAppearance = useCallback(async () => {
+    const res = await api("/api/appearance");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.chatBackground) setChatBackground(data.chatBackground);
+  }, [api]);
+
   const fetchProfile = useCallback(async () => {
     const res = await api("/api/profile");
     if (!res.ok) return;
@@ -125,10 +137,13 @@ export function ChatApp() {
   }, [api]);
 
   useEffect(() => {
-    Promise.all([fetchCharacters(), fetchProviders(), fetchProfile()]).finally(() =>
-      setLoaded(true)
-    );
-  }, [fetchCharacters, fetchProviders, fetchProfile]);
+    Promise.all([
+      fetchCharacters(),
+      fetchProviders(),
+      fetchProfile(),
+      fetchAppearance(),
+    ]).finally(() => setLoaded(true));
+  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance]);
 
   const fetchMessages = useCallback(
     async (characterId: string) => {
@@ -423,6 +438,7 @@ export function ChatApp() {
                       isSpeaking={isSpeaking}
                       canSpeak={speechSupported}
                       voiceEnabled={voice.enabled}
+                      background={chatBackground}
                       onBack={() => {
                         stopSpeaking();
                         setMobileShowChat(false);
@@ -511,6 +527,8 @@ export function ChatApp() {
               providers={providers}
               autoFallback={autoFallback}
               onAutoFallbackChange={setAutoFallback}
+              chatBackground={chatBackground}
+              onChatBackgroundChange={setChatBackground}
               onChanged={fetchProviders}
             />
           )}

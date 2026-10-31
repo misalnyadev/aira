@@ -24,7 +24,7 @@ export function CharactersView({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-app">
-      <div className="flex items-center justify-between border-b border-line bg-header px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+      <div className="top-bar flex items-center justify-between px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <div>
           <h1 className="font-display text-xl font-bold tracking-tight text-ink">Karakter</h1>
           <p className="text-xs text-ink-soft">

@@ -17,12 +17,33 @@ function resolve(choice: ThemeChoice): ResolvedTheme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+const THEME_COLORS: Record<ResolvedTheme, string> = {
+  light: "#fafafa",
+  dark: "#000000",
+};
+
+/**
+ * Warnai ulang `<meta name="theme-color">` mengikuti tema yang sedang dipakai.
+ *
+ * Ini yang membuat bilah status & bilah alat Safari di iPhone ikut berwarna
+ * aplikasi. Tanpa ini, orang yang memilih tema gelap di HP bermode terang akan
+ * melihat pita terang di atas aplikasi — seperti tampilannya terpotong.
+ */
+function syncThemeColor(resolved: ResolvedTheme) {
+  if (typeof document === "undefined") return;
+  const color = THEME_COLORS[resolved];
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((el) => el.setAttribute("content", color));
+}
+
 function applyToDom(choice: ThemeChoice) {
   if (typeof document === "undefined") return;
   const resolved = resolve(choice);
   const root = document.documentElement;
   root.classList.toggle("dark", resolved === "dark");
   root.style.colorScheme = resolved;
+  syncThemeColor(resolved);
 }
 
 function init() {
@@ -87,6 +108,22 @@ function getResolvedSnapshot(): ResolvedTheme {
 }
 
 /**
+ * Pembaca tema untuk komponen yang hanya butuh nilainya di dalam render
+ * (mis. pratinjau latar), tanpa memakai hook.
+ *
+ * Dipakai bersama `useSyncExternalStore`: `subscribeTheme` mendaftarkan
+ * pendengar, `getIsDarkSnapshot` mengembalikan nilai saat ini. Snapshot harus
+ * stabil — karena itu hasilnya boolean, bukan objek baru tiap panggilan.
+ */
+export function subscribeTheme(fn: () => void) {
+  return subscribe(fn);
+}
+
+export function getIsDarkSnapshot(): boolean {
+  return getResolvedSnapshot() === "dark";
+}
+
+/**
  * Hook tema — reaktif terhadap perubahan manual & preferensi sistem.
  */
 export function useTheme() {
@@ -108,4 +145,4 @@ export function useTheme() {
  * Skrip kecil yang dipasang di <head> sebelum aplikasi tampil, supaya saat
  * pengguna memakai mode gelap halaman tidak sempat berkedip putih lebih dulu.
  */
-export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';var c=d?'#000000':'#fafafa';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){}})();`;

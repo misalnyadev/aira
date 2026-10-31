@@ -32,6 +32,15 @@ export const users = pgTable("users", {
   /** Pindah otomatis ke provider lain saat semua key provider utama kena limit/gagal. */
   autoFallback: boolean("auto_fallback").notNull().default(true),
 
+  /**
+   * Latar area chat, disimpan sebagai JSON pendek:
+   * `{"kind":"default"}`, `{"kind":"preset","id":"sand"}`,
+   * `{"kind":"animated","id":"aurora"}`, atau
+   * `{"kind":"image","imageUrl":"/uploads/..","dim":0.25}`.
+   * Disimpan di akun supaya ikut ke semua perangkat.
+   */
+  chatBackground: text("chat_background").notNull().default('{"kind":"default"}'),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
