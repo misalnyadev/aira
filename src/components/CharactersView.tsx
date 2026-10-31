@@ -3,13 +3,14 @@
 import type { CharacterSummary } from "@/types/chat";
 import { MAX_CHARACTERS } from "@/lib/limits";
 import { Avatar } from "./Avatar";
-import { ChatsIcon, PencilIcon, PlusIcon, TrashIcon } from "./icons";
+import { ChatsIcon, PencilIcon, PlusIcon, SettingsIcon, TrashIcon } from "./icons";
 
 export function CharactersView({
   characters,
   limit = MAX_CHARACTERS,
   onChat,
   onNew,
+  onProfile,
   onEdit,
   onDelete,
 }: {
@@ -17,6 +18,7 @@ export function CharactersView({
   limit?: number;
   onChat: (id: string) => void;
   onNew: () => void;
+  onProfile?: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -96,6 +98,16 @@ export function CharactersView({
                   >
                     <ChatsIcon className="h-3.5 w-3.5" /> Chat
                   </button>
+                  {onProfile && (
+                    <button
+                      onClick={() => onProfile(c.id)}
+                      aria-label={`Pengaturan tampilan ${c.name}`}
+                      title="Pengaturan tampilan & media"
+                      className="rounded-xl border border-line p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                    >
+                      <SettingsIcon className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => onEdit(c.id)}
                     aria-label={`Edit ${c.name}`}
