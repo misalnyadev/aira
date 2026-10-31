@@ -4,7 +4,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { CharacterSummary } from "@/types/chat";
 import type { ResolvedVoiceTarget } from "@/lib/hdVoice";
-import { ensureMediaUrl, useMediaUrl } from "@/lib/mediaClient";
+import {
+  ensureMediaUrl,
+  fallbackMediaToStream,
+  useMediaUrl,
+} from "@/lib/mediaClient";
 import { resetStatusBarColor, setStatusBarColor } from "@/lib/theme";
 import {
   prefetchSpeech,
@@ -171,18 +175,29 @@ export function CallOverlay({
       className="fade-in fixed inset-0 z-[80] w-full overflow-hidden bg-[#0a0a0c] text-white"
     >
       <div className="absolute inset-0 isolate overflow-hidden">
-        {video && mode === "video" && connected ? (
-          <ChatVideoBackground
-            videoKey={video.videoKey}
-            posterUrl={video.posterUrl}
-            dim={0.08}
-            talkingVideoKey={media?.callVideoKey ? undefined : media?.chatVideoKey}
-            talking={speaking}
-            sound={!muted}
-            zoom={zoom}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,#1d1d24,#0a0a0c_72%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,#1d1d24,#0a0a0c_72%)]" />
+        {video && mode === "video" && (
+          <div
+            className={`absolute inset-0 z-10 isolate transition-opacity duration-300 ${
+              connected ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <ChatVideoBackground
+              videoKey={video.videoKey}
+              posterUrl={video.posterUrl}
+              dim={0.08}
+              talkingVideoKey={media?.callVideoKey ? undefined : media?.chatVideoKey}
+              talking={speaking}
+              playing={connected}
+              restartOnPlay
+              sound={connected && !muted}
+              onSoundBlocked={() => {
+                setMuted(true);
+                setAudioBlocked(true);
+              }}
+              zoom={zoom}
+            />
+          </div>
         )}
       </div>
 
@@ -264,7 +279,15 @@ export function CallOverlay({
       </div>
 
       {audioUrl && voiceCall && (
-        <audio ref={audioRef} src={audioUrl} preload="auto" className="hidden" />
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          preload="auto"
+          onError={() => {
+            fallbackMediaToStream(audioKey);
+          }}
+          className="hidden"
+        />
       )}
     </div>
   );

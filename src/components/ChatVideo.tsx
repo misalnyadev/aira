@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { ensureMediaUrl, useMediaStatus, useMediaUrl } from "@/lib/mediaClient";
-import { usePrefersReducedMotion } from "@/lib/motion";
-import { PlayIcon, SpeakerIcon, SpeakerOffIcon } from "./icons";
+import {
+  ensureMediaUrl,
+  fallbackMediaToStream,
+  useMediaStatus,
+  useMediaUrl,
+} from "@/lib/mediaClient";
+import { SpeakerIcon, SpeakerOffIcon } from "./icons";
 
 type VideoBackgroundProps = {
   videoKey: string;
@@ -20,18 +24,49 @@ type VideoBackgroundProps = {
   restartOnPlay?: boolean;
   /** Izinkan suara asli video (aktif di layar video call). */
   sound?: boolean;
+  /** Dipanggil bila browser desktop menahan suara otomatis agar tombol suara menyesuaikan. */
+  onSoundBlocked?: () => void;
   /** Perbesaran video (1 = 100%). */
   zoom?: number;
 };
+
+function startElementPlayback(
+  el: HTMLVideoElement,
+  sound: boolean,
+  onSoundBlocked?: () => void
+) {
+  el.defaultMuted = !sound;
+  el.muted = !sound;
+  const attempt = el.play();
+  if (!attempt) return;
+  void attempt.catch((err: unknown) => {
+    // Jika hanya terpotong pergantian buffer/seek sesaat, biarkan event `canplay` melanjutkan.
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return;
+    }
+    if (sound) {
+      el.defaultMuted = true;
+      el.muted = true;
+      onSoundBlocked?.();
+      void el.play().catch(() => {});
+    }
+  });
+}
 
 function useVideoPlayback(
   ref: RefObject<HTMLVideoElement | null>,
   videoKey: string | null,
   shouldPlay: boolean,
   sound = false,
-  restartOnPlay = false
+  restartOnPlay = false,
+  onSoundBlocked?: () => void
 ): string | null {
   const url = useMediaUrl(videoKey);
+  const blockedCallbackRef = useRef(onSoundBlocked);
+
+  useEffect(() => {
+    blockedCallbackRef.current = onSoundBlocked;
+  }, [onSoundBlocked]);
 
   useEffect(() => {
     if (videoKey) ensureMediaUrl(videoKey);
@@ -42,6 +77,8 @@ function useVideoPlayback(
   useEffect(() => {
     const el = ref.current;
     if (!el || !url) return;
+    el.defaultMuted = !sound;
+    el.muted = !sound;
     if (!shouldPlay) {
       el.pause();
       wasPlaying.current = false;
@@ -55,29 +92,33 @@ function useVideoPlayback(
       }
     }
     wasPlaying.current = true;
-    el.muted = !sound;
-    void el.play().catch(() => {
-      if (sound) {
-        el.muted = true;
-        void el.play().catch(() => {});
-      }
-    });
+    startElementPlayback(el, sound, blockedCallbackRef.current);
   }, [ref, url, shouldPlay, sound, restartOnPlay]);
 
-  // Jaga-jaga di iOS: lanjutkan video bila dijeda otomatis saat TTS berbunyi.
+  // Pastikan di browser laptop/desktop video langsung berputar begitu frame siap,
+  // dan lanjutkan lagi di iOS bila sempat dijeda saat audio TTS mulai berbunyi.
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || !url) return;
 
-    function onPause() {
-      if (!shouldPlay || document.hidden) return;
-      if (el!.ended) return;
-      void el!.play().catch(() => {});
+    function resumeIfNeeded() {
+      const target = ref.current;
+      if (!target || !shouldPlay || document.hidden) return;
+      if (target.ended) return;
+      if (target.paused) {
+        startElementPlayback(target, sound, blockedCallbackRef.current);
+      }
     }
 
-    el.addEventListener("pause", onPause);
-    return () => el.removeEventListener("pause", onPause);
-  }, [ref, shouldPlay, url]);
+    el.addEventListener("loadeddata", resumeIfNeeded);
+    el.addEventListener("canplay", resumeIfNeeded);
+    el.addEventListener("pause", resumeIfNeeded);
+    return () => {
+      el.removeEventListener("loadeddata", resumeIfNeeded);
+      el.removeEventListener("canplay", resumeIfNeeded);
+      el.removeEventListener("pause", resumeIfNeeded);
+    };
+  }, [ref, shouldPlay, sound, url]);
 
   useEffect(() => {
     function onVisibilityChange() {
@@ -87,13 +128,7 @@ function useVideoPlayback(
         el.pause();
         wasPlaying.current = false;
       } else if (shouldPlay) {
-        el.muted = !sound;
-        void el.play().catch(() => {
-          if (sound) {
-            el.muted = true;
-            void el.play().catch(() => {});
-          }
-        });
+        startElementPlayback(el, sound, blockedCallbackRef.current);
       }
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -103,7 +138,12 @@ function useVideoPlayback(
   return url;
 }
 
-/** Latar penuh: video memenuhi area chat atau layar video call. */
+/**
+ * Latar penuh: video memenuhi area chat atau layar video call.
+ * Tidak dikunci oleh `prefers-reduced-motion` OS karena di laptop Windows
+ * mematikan animasi jendela sistem sering membuat `<video>` karakter & video call
+ * membeku menjadi foto poster diam.
+ */
 export function ChatVideoBackground({
   videoKey,
   posterUrl,
@@ -114,24 +154,32 @@ export function ChatVideoBackground({
   playing = true,
   restartOnPlay = false,
   sound = false,
+  onSoundBlocked,
   zoom = 1,
 }: VideoBackgroundProps) {
-  const reduced = usePrefersReducedMotion();
   const baseRef = useRef<HTMLVideoElement>(null);
   const talkRef = useRef<HTMLVideoElement>(null);
 
   const talkingStatus = useMediaStatus(talkingVideoKey ?? null);
   const talkingActive = Boolean(
-    talking && talkingVideoKey && !reduced && talkingStatus !== "missing"
+    talking && talkingVideoKey && talkingStatus !== "missing"
   );
-  const basePlay = !reduced && !talkingActive && playing;
-  const baseUrl = useVideoPlayback(baseRef, videoKey, basePlay, sound, restartOnPlay);
+  const basePlay = !talkingActive && playing;
+  const baseUrl = useVideoPlayback(
+    baseRef,
+    videoKey,
+    basePlay,
+    sound,
+    restartOnPlay,
+    onSoundBlocked
+  );
   const talkUrl = useVideoPlayback(
     talkRef,
     talkingVideoKey ?? null,
     talkingActive,
     sound,
-    restartOnPlay
+    restartOnPlay,
+    onSoundBlocked
   );
 
   return (
@@ -160,13 +208,19 @@ export function ChatVideoBackground({
             preload="auto"
             disablePictureInPicture
             tabIndex={-1}
+            onError={() => {
+              fallbackMediaToStream(videoKey);
+            }}
             className="absolute inset-0 h-full w-full object-cover"
           />
         )}
       </div>
 
       {talkingActive && (
-        <div className="fade-in absolute inset-0">
+        <div
+          className="fade-in absolute inset-0"
+          style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}
+        >
           {talkingPosterUrl && (
             <img
               src={talkingPosterUrl}
@@ -186,6 +240,9 @@ export function ChatVideoBackground({
               preload="auto"
               disablePictureInPicture
               tabIndex={-1}
+              onError={() => {
+                fallbackMediaToStream(talkingVideoKey);
+              }}
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
@@ -209,13 +266,17 @@ export function ChatVideoPanel({
   dim: number;
   name: string;
 }) {
-  const reduced = usePrefersReducedMotion();
   const baseRef = useRef<HTMLVideoElement>(null);
   const [sound, setSound] = useState(false);
-  const [forcePlay, setForcePlay] = useState(false);
 
-  const shouldPlay = !reduced || forcePlay;
-  const baseUrl = useVideoPlayback(baseRef, videoKey, shouldPlay, sound);
+  const baseUrl = useVideoPlayback(
+    baseRef,
+    videoKey,
+    true,
+    sound,
+    false,
+    () => setSound(false)
+  );
   const status = useMediaStatus(videoKey);
 
   return (
@@ -234,6 +295,9 @@ export function ChatVideoPanel({
           autoPlay
           preload="auto"
           disablePictureInPicture
+          onError={() => {
+            fallbackMediaToStream(videoKey);
+          }}
           className="absolute inset-0 h-full w-full object-cover"
         />
       )}
@@ -243,18 +307,7 @@ export function ChatVideoPanel({
       <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/55 to-transparent px-3 pb-6 pt-2">
         <span className="min-w-0 truncate text-xs font-semibold text-white/90">{name}</span>
         <div className="flex shrink-0 items-center gap-1">
-          {reduced && !forcePlay && (
-            <button
-              type="button"
-              onClick={() => setForcePlay(true)}
-              className="rounded-full bg-black/45 p-1.5 text-white/90 backdrop-blur transition hover:bg-black/65"
-              aria-label="Putar video latar"
-              title="Putar video"
-            >
-              <PlayIcon className="h-4 w-4" />
-            </button>
-          )}
-          {baseUrl && shouldPlay && (
+          {baseUrl && (
             <button
               type="button"
               onClick={() => setSound((value) => !value)}
