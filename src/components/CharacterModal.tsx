@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CharacterDetail, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
 import { parseBibleFile } from "@/lib/characterBible";
@@ -11,6 +11,9 @@ import {
 } from "@/lib/limits";
 import { Avatar } from "./Avatar";
 import { CameraIcon, XIcon } from "./icons";
+
+const FIELD =
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:py-2 sm:text-sm";
 
 const PERSONALITY_PLACEHOLDER = `Contoh:
 Nama: Kirana, 24 tahun, beauty talent di AK Talent.
@@ -27,7 +30,7 @@ PERAN / LATAR / CARA BICARA / HUBUNGAN / RAHASIA.`;
 function charCount(value: string, max: number) {
   const over = value.length > max;
   return (
-    <span className={over ? "text-rose-600" : "text-slate-400"}>
+    <span className={over ? "text-rose-500" : "text-muted"}>
       {value.length.toLocaleString("id-ID")} / {max.toLocaleString("id-ID")}
     </span>
   );
@@ -59,6 +62,14 @@ export function CharacterModal({
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleAvatarPick(file: File) {
     setUploading(true);
     try {
@@ -76,11 +87,6 @@ export function CharacterModal({
     }
   }
 
-  /**
-   * Impor bible dari berkas. Pembacaan dan pemeriksaannya memakai modul yang
-   * sama dengan server (`parseBibleFile`), jadi hasil di layar tidak mungkin
-   * berbeda dengan yang nanti diterima API.
-   */
   async function handleBibleFile(file: File) {
     setError(null);
     setImported(null);
@@ -95,8 +101,6 @@ export function CharacterModal({
 
     setBible(result.data.bible);
 
-    // JSON boleh sekalian membawa data lain; isi yang masih kosong saja,
-    // supaya tidak menimpa yang sudah diketik pengguna.
     const filled: string[] = [];
     if (result.data.name && !name.trim()) {
       setName(result.data.name);
@@ -162,13 +166,26 @@ export function CharacterModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-900">
+    <div
+      className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="pop-in flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl border border-line bg-surface shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={initial ? "Edit Karakter" : "Buat Karakter Baru"}
+      >
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+          <h2 className="font-display text-lg font-bold text-ink">
             {initial ? "Edit Karakter" : "Buat Karakter Baru"}
           </h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+          >
             <XIcon className="h-5 w-5" />
           </button>
         </div>
@@ -178,10 +195,10 @@ export function CharacterModal({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="group relative"
+              className="group relative rounded-full"
               title="Unggah foto profil"
             >
-              <Avatar name={name || "?"} src={avatarUrl} size={88} />
+              <Avatar name={name || "?"} src={avatarUrl} size={88} ring />
               <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition group-hover:bg-black/35">
                 <CameraIcon className="h-6 w-6 text-white opacity-0 transition group-hover:opacity-100" />
               </div>
@@ -194,36 +211,37 @@ export function CharacterModal({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleAvatarPick(file);
+                e.target.value = "";
               }}
             />
-            {uploading && <span className="text-xs text-slate-400">Mengunggah...</span>}
+            {uploading && <span className="text-xs text-muted">Mengunggah...</span>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Nama Karakter</label>
+            <label className="mb-1 block text-xs font-medium text-ink-soft">Nama Karakter</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Mis. Kirana"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base outline-none focus:border-emerald-400"
+              className={FIELD}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-ink-soft">
               Status singkat (tampil di bawah nama)
             </label>
             <input
               value={shortBio}
               onChange={(e) => setShortBio(e.target.value)}
               placeholder="Mis. beauty talent · AK Talent"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base outline-none focus:border-emerald-400"
+              className={FIELD}
             />
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-ink-soft">
               Kepribadian & latar belakang karakter
             </label>
             <textarea
@@ -231,20 +249,20 @@ export function CharacterModal({
               onChange={(e) => setPersonality(e.target.value)}
               placeholder={PERSONALITY_PLACEHOLDER}
               rows={5}
-              className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              className={`${FIELD} resize-none`}
             />
             <p className="mt-1 text-[11px]">{charCount(personality, MAX_PERSONALITY_CHARS)}</p>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+          <div className="rounded-2xl border border-line bg-surface-2/70 p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="text-xs font-semibold text-emerald-800">
+              <label className="text-xs font-semibold text-ink">
                 📖 Bible peran (acuan utama)
               </label>
               <button
                 type="button"
                 onClick={() => bibleFileRef.current?.click()}
-                className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
+                className="rounded-full border border-line bg-surface px-3 py-1 text-[11px] font-semibold text-ink transition hover:bg-surface-2"
               >
                 Impor berkas
               </button>
@@ -265,19 +283,19 @@ export function CharacterModal({
               onChange={(e) => setBible(e.target.value)}
               placeholder={BIBLE_PLACEHOLDER}
               rows={6}
-              className="w-full resize-none rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              className={`${FIELD} resize-none`}
             />
-            <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
-              <span className="text-slate-500">
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-muted">
                 .txt / .md / .json — kalau kosong, cukup pakai kepribadian di atas.
               </span>
               {charCount(bible, MAX_BIBLE_CHARS)}
             </div>
-            {imported && <p className="mt-1 text-[11px] font-medium text-emerald-700">{imported}</p>}
+            {imported && <p className="mt-1 text-[11px] font-medium text-ink">{imported}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-ink-soft">
               Pesan pembuka pertama (opsional)
             </label>
             <textarea
@@ -285,17 +303,17 @@ export function CharacterModal({
               onChange={(e) => setGreeting(e.target.value)}
               placeholder="Mis. eh halo, gimana hari ini?"
               rows={2}
-              className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              className={`${FIELD} resize-none`}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Provider AI</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Provider AI</label>
               <select
                 value={providerId}
                 onChange={(e) => setProviderId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                className={FIELD}
               >
                 <option value="">Gunakan default</option>
                 {providers.map((p) => (
@@ -306,22 +324,24 @@ export function CharacterModal({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Model (opsional)</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Model (opsional)
+              </label>
               <input
                 value={model ?? ""}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="override model"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                className={FIELD}
               />
             </div>
           </div>
 
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-60"
           >
             {busy ? "Menyimpan..." : initial ? "Simpan Perubahan" : "Buat Karakter"}
           </button>

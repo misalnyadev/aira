@@ -7,6 +7,8 @@ import {
   MIN_AGE,
 } from "./limits";
 
+const MAX_AVATAR_URL_CHARS = 500;
+
 /**
  * Profil lawan bicara — data milik PENGGUNA, bukan karakter.
  *
@@ -19,6 +21,7 @@ export type UserProfile = {
   age: number | null;
   occupation: string;
   about: string;
+  avatarUrl?: string | null;
 };
 
 export const EMPTY_PROFILE: UserProfile = {
@@ -27,6 +30,7 @@ export const EMPTY_PROFILE: UserProfile = {
   age: null,
   occupation: "",
   about: "",
+  avatarUrl: null,
 };
 
 /** Apakah profil ini sudah cukup berarti untuk dikirim ke model. */
@@ -56,6 +60,7 @@ export function normalizeProfile(input: {
   age?: unknown;
   occupation?: unknown;
   about?: unknown;
+  avatarUrl?: unknown;
 }): ProfileCheck {
   const str = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
@@ -90,8 +95,23 @@ export function normalizeProfile(input: {
     age = parsed;
   }
 
+  let avatarUrl: string | null = null;
+  if (input.avatarUrl !== undefined && input.avatarUrl !== null && input.avatarUrl !== "") {
+    if (typeof input.avatarUrl !== "string") {
+      return { ok: false, error: "URL foto profil tidak valid." };
+    }
+    const cleaned = input.avatarUrl.trim();
+    if (cleaned.length > MAX_AVATAR_URL_CHARS) {
+      return { ok: false, error: "URL foto profil terlalu panjang." };
+    }
+    if (cleaned && !/^(\/|https?:\/\/)/i.test(cleaned)) {
+      return { ok: false, error: "URL foto profil tidak didukung." };
+    }
+    avatarUrl = cleaned || null;
+  }
+
   return {
     ok: true,
-    profile: { displayName, nickname, age, occupation, about },
+    profile: { displayName, nickname, age, occupation, about, avatarUrl },
   };
 }

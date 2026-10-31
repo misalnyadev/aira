@@ -86,6 +86,7 @@ const DDL = [
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "age" integer`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "occupation" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "about" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatar_url" text`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "auto_fallback" boolean NOT NULL DEFAULT true`,
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,

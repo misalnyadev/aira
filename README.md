@@ -199,7 +199,7 @@ src/
 │  │  └─ health/route.ts
 │  ├─ page.tsx                      # halaman utama (ChatApp)
 │  └─ globals.css
-├─ components/                      # Sidebar, ChatWindow, Composer, modals, Avatar
+├─ components/                      # Navigasi 5 menu, ChatWindow, Composer, views & modals
 ├─ db/                              # schema.ts, index.ts (auto-SSL), seed.ts
 └─ lib/
    ├─ ai/
@@ -228,12 +228,20 @@ Aplikasi ini memakai akun email + kata sandi.
 
 **Data lama tidak hilang.** Karakter dan API key dari versi sebelum ada login otomatis jadi milik **akun pertama** yang mendaftar. Karena itu urutannya penting: daftarkan akun sendiri dulu, baru bagikan link.
 
+## Navigasi 5 menu & tema tampilan
+
+Aplikasi memakai tata letak lima menu utama (**Chat · Suara · Karakter · Profil · Setelan**) — berupa rail samping di desktop dan kapsul navigasi bawah mengambang di HP (otomatis tersembunyi saat ruang chat atau keyboard sedang terbuka).
+
+- **Tema Terang / Gelap / Sistem**: ketuk ikon matahari/bulan di header atau pilih tiga mode di **Setelan → Tampilan**.
+- **Ergonomi layar penuh iPhone**: jarak aman status bar (`--safe-top`), pengunci geseran halaman, dan perata posisi kotak ketik saat keyboard muncul.
+
 ## Profil saya
 
-Isi sekali di **Setelan → Profil Saya**, lalu semua karakter memakainya.
+Isi sekali di tab **Profil**, lalu semua karakter memakainya.
 
 | Isian | Dipakai untuk |
 |---|---|
+| Foto profil | tampil di navigasi utama dan daftar chat akunmu |
 | Nama | disebut kalau panggilan belum diisi |
 | Panggilan | cara karakter memanggilmu sehari-hari |
 | Usia | menyesuaikan cara bicara |
@@ -263,7 +271,7 @@ Menekan lama tidak langsung melakukan apa pun — muncul menu, baru kamu pilih. 
 
 Karakter bisa membacakan balasannya memakai **Web Speech API** bawaan browser perangkat — gratis, tanpa API key, dan teksnya tidak dikirim ke server mana pun.
 
-- Buka dari ikon 🔊 di daftar chat, di kanan atas ruang obrolan, atau lewat **Pengaturan → Suara**.
+- Buka langsung dari tab **Suara** di navigasi utama atau ketuk ikon 🔊 di kanan atas ruang obrolan.
 - **Bacakan balasan** (otomatis) maupun manual per gelembung lewat menu tekan lama (**Bacakan**).
 - Tersedia **5 preset** (*Natural*, *Hangat*, *Santai*, *Ceria*, *Jelas*) serta pengatur **kecepatan**, **nada**, **volume**, dan **jeda antar kalimat**.
 - Teks dibersihkan dari markdown/emoji lalu dipecah per kalimat supaya intonasi wajar dan tidak terpotong di iOS Safari.

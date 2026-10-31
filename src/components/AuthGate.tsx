@@ -7,6 +7,7 @@ import {
   register as apiRegister,
   type AuthUser,
 } from "@/lib/authClient";
+import { ThemeQuickToggle } from "./ThemeToggle";
 
 type AuthContextValue = {
   user: AuthUser;
@@ -25,6 +26,9 @@ export function useAuth(): AuthContextValue {
 }
 
 type Mode = "login" | "register";
+
+const FIELD =
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
 
 export function AuthGate({
   initialUser,
@@ -83,14 +87,17 @@ export function AuthGate({
     const isRegister = mode === "register";
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
-        <div className="w-full max-w-sm">
+      <div className="app-shell flex flex-col overflow-y-auto bg-app px-4 pb-10 pt-[max(1rem,var(--safe-top))]">
+        <div className="flex justify-end">
+          <ThemeQuickToggle />
+        </div>
+
+        <div className="m-auto w-full max-w-sm py-6">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
-              💬
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Aisherly</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+              Aisherly<span className="text-muted">.</span>
+            </h1>
+            <p className="mt-1.5 text-sm text-ink-soft">
               {isRegister
                 ? "Buat akun pakai kode undangan."
                 : "Masuk untuk melanjutkan percakapanmu."}
@@ -99,10 +106,10 @@ export function AuthGate({
 
           <form
             onSubmit={handleSubmit}
-            className="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+            className="space-y-3.5 rounded-3xl border border-line bg-surface p-5 shadow-xs sm:p-6"
           >
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Email</label>
               <input
                 type="email"
                 value={email}
@@ -110,12 +117,12 @@ export function AuthGate({
                 autoComplete="email"
                 required
                 placeholder="nama@email.com"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-400"
+                className={FIELD}
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Kata sandi</label>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Kata sandi</label>
               <input
                 type="password"
                 value={password}
@@ -123,13 +130,13 @@ export function AuthGate({
                 autoComplete={isRegister ? "new-password" : "current-password"}
                 required
                 placeholder={isRegister ? "Minimal 8 karakter, ada angkanya" : "Kata sandi"}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-400"
+                className={FIELD}
               />
             </div>
 
             {isRegister && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
+                <label className="mb-1 block text-xs font-medium text-ink-soft">
                   Kode undangan
                 </label>
                 <input
@@ -137,22 +144,24 @@ export function AuthGate({
                   onChange={(e) => setInviteCode(e.target.value)}
                   required
                   placeholder="Kode dari temanmu"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-base outline-none focus:border-emerald-400"
+                  className={FIELD}
                 />
-                <p className="mt-1 text-[11px] text-slate-400">
+                <p className="mt-1 text-[11px] text-muted">
                   Aplikasi ini hanya untuk teman, bukan pendaftaran umum.
                 </p>
               </div>
             )}
 
             {error && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>
+              <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+                {error}
+              </p>
             )}
 
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+              className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-60"
             >
               {busy ? "Memproses..." : isRegister ? "Daftar" : "Masuk"}
             </button>
@@ -163,7 +172,7 @@ export function AuthGate({
                 setMode(isRegister ? "login" : "register");
                 setError(null);
               }}
-              className="w-full py-1 text-center text-sm text-slate-500 hover:text-slate-700"
+              className="w-full py-1 text-center text-sm text-ink-soft transition hover:text-ink"
             >
               {isRegister ? "Sudah punya akun? Masuk" : "Punya kode undangan? Daftar"}
             </button>

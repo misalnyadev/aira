@@ -28,6 +28,7 @@ export async function GET() {
       age: users.age,
       occupation: users.occupation,
       about: users.about,
+      avatarUrl: users.avatarUrl,
     })
     .from(users)
     .where(eq(users.id, user.id))
@@ -44,16 +45,30 @@ export async function PATCH(req: Request) {
   if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  }
 
   const check = normalizeProfile(body);
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
 
-  const { displayName, nickname, age, occupation, about } = check.profile;
+  const { displayName, nickname, age, occupation, about, avatarUrl } = check.profile;
+  const updateSet: {
+    displayName: string;
+    nickname: string;
+    age: number | null;
+    occupation: string;
+    about: string;
+    avatarUrl?: string | null;
+  } = { displayName, nickname, age, occupation, about };
+
+  if ("avatarUrl" in body) {
+    updateSet.avatarUrl = avatarUrl ?? null;
+  }
 
   const [row] = await db
     .update(users)
-    .set({ displayName, nickname, age, occupation, about })
+    .set(updateSet)
     .where(eq(users.id, user.id))
     .returning({
       displayName: users.displayName,
@@ -61,6 +76,7 @@ export async function PATCH(req: Request) {
       age: users.age,
       occupation: users.occupation,
       about: users.about,
+      avatarUrl: users.avatarUrl,
     });
 
   return NextResponse.json({ profile: row ?? EMPTY_PROFILE });
