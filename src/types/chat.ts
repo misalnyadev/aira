@@ -25,6 +25,7 @@ export type CharacterSummary = {
   name: string;
   avatarUrl: string | null;
   shortBio: string;
+  greeting: string;
   /** Ada bible peran atau tidak — dipakai untuk menandai 📖 di daftar. */
   hasBible: boolean;
   /** Latar khusus karakter; `null` berarti ikut latar bawaan akun. */
