@@ -25,3 +25,11 @@ export const MAX_GREETING_CHARS = 1_000;
 
 /** Batas status singkat di bawah nama karakter. */
 export const MAX_SHORT_BIO_CHARS = 120;
+
+/** Batas isian profil pengguna. */
+export const MAX_DISPLAY_NAME_CHARS = 60;
+export const MAX_NICKNAME_CHARS = 30;
+export const MAX_OCCUPATION_CHARS = 80;
+export const MAX_ABOUT_CHARS = 500;
+export const MIN_AGE = 10;
+export const MAX_AGE = 120;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, messages, type ProviderType } from "@/db/schema";
+import { apiProviders, messages, users, type ProviderType } from "@/db/schema";
 import {
   AiProviderError,
   BUBBLE_DELIMITER,
@@ -124,7 +124,24 @@ export async function POST(req: Request) {
     }))
     .filter((t) => t.content);
 
-  const systemPrompt = buildSystemPrompt(character);
+  /*
+   * Profil pengguna ikut dikirim supaya karakter tahu sedang mengobrol dengan
+   * siapa. Dibaca sekali per balasan; kalau belum diisi, tidak dikirim sama
+   * sekali (tidak memboroskan token).
+   */
+  const [profileRow] = await db
+    .select({
+      displayName: users.displayName,
+      nickname: users.nickname,
+      age: users.age,
+      occupation: users.occupation,
+      about: users.about,
+    })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  const systemPrompt = buildSystemPrompt(character, profileRow ?? null);
   const model = character.model?.trim() || provider.model;
 
   try {

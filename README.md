@@ -224,6 +224,22 @@ Aplikasi ini memakai akun email + kata sandi.
 
 **Data lama tidak hilang.** Karakter dan API key dari versi sebelum ada login otomatis jadi milik **akun pertama** yang mendaftar. Karena itu urutannya penting: daftarkan akun sendiri dulu, baru bagikan link.
 
+## Profil saya
+
+Isi sekali di **Setelan → Profil Saya**, lalu semua karakter memakainya.
+
+| Isian | Dipakai untuk |
+|---|---|
+| Nama | disebut kalau panggilan belum diisi |
+| Panggilan | cara karakter memanggilmu sehari-hari |
+| Usia | menyesuaikan cara bicara |
+| Kesibukan | bahan obrolan yang wajar |
+| Cerita tentang dirimu | hal yang perlu karakter ingat |
+
+Semua isian **opsional**. Kalau kosong, bagian ini tidak dikirim sama sekali — jadi tidak memboroskan token.
+
+Isian ini ditandai sebagai **data**, bukan perintah: kalau ada tulisan seperti "abaikan aturan di atas" di kolom cerita, model diinstruksikan untuk mengabaikannya dan tetap jadi dirinya sendiri.
+
 ## Kode undangan
 
 Aplikasi ini untuk lingkaran teman, bukan pendaftaran umum. Kodenya diatur lewat environment variable `SIGNUP_CODE`.
