@@ -59,6 +59,17 @@
   --shadow-color: 0 0 0;
 }
 
+/*
+ * Skala teks: dinaikkan sedikit dari default Tailwind supaya lebih nyaman
+ * dibaca (selaras dengan WaiChat). Line-height tetap memakai rasio bawaan.
+ */
+@theme {
+  --text-xs: 0.8125rem; /* 13px */
+  --text-sm: 0.9375rem; /* 15px */
+  --text-lg: 1.1875rem; /* 19px */
+  --text-xl: 1.3125rem; /* 21px */
+}
+
 @theme inline {
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -191,6 +202,34 @@ textarea,
 select {
   min-width: 0;
   max-width: 100%;
+}
+
+/* Di layar HP teks dinaikkan satu tingkat lagi agar mudah dibaca (chat = 16px). */
+@media (max-width: 767px) {
+  :root {
+    --text-xs: 0.875rem; /* 14px */
+    --text-sm: 1rem; /* 16px */
+  }
+}
+
+/* Cincin fokus netral — hanya untuk navigasi keyboard (tombol & tautan). */
+:focus-visible:not(input):not(textarea):not(select) {
+  outline: 2px solid var(--ink-soft);
+  outline-offset: 2px;
+}
+
+/*
+ * Field isian: tidak ada efek garis/cincin tambahan saat fokus maupun diketik —
+ * cukup kursor yang berkedip. Border diam (border-line / ring-line) tidak diubah.
+ */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 body {

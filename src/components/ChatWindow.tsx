@@ -326,7 +326,7 @@ export function ChatWindow({
             <div key={m.id}>
               {divider && (
                 <div className="my-3 flex justify-center">
-                  <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[11px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
+                  <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[12px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
                     {divider}
                   </span>
                 </div>
@@ -390,7 +390,7 @@ export function ChatWindow({
                     </p>
                   )}
                   <span
-                    className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[11px] ${
+                    className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
                       (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
                         ? "opacity-75"
                         : "text-ink-soft/80"
