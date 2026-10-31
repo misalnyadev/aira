@@ -239,7 +239,7 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
       <div className="flex flex-col gap-1.5 rounded-xl border border-line px-3 py-2.5">
         {style.hideMessages ? (
           <p className="py-2 text-center text-xs text-muted">
-            Tulisan chat disembunyikan di ruang chat (bisa dinyalakan/dimatikan juga lewat ikon mata di atas tombol kirim).
+            Semua elemen ruang chat disembunyikan — sentuh layar untuk memunculkan kolom ketik & ikon mata.
           </p>
         ) : (
           <>

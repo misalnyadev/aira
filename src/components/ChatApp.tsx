@@ -85,6 +85,8 @@ export function ChatApp() {
   const [toast, setToast] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [call, setCall] = useState<{ characterId: string; mode: "video" | "audio" } | null>(null);
+  const [peekCharId, setPeekCharId] = useState<string | null>(null);
+  const [composerBusy, setComposerBusy] = useState(false);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = useRef<string | null>(null);
@@ -507,16 +509,40 @@ export function ChatApp() {
 
   const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
   const activeBubble = activeCharacter?.bubbleStyle ?? bubbleStyle;
+  const isHiddenMode = Boolean(activeBubble.hideMessages);
+  const composerRevealed = Boolean(
+    isHiddenMode && activeCharacter && peekCharId === activeCharacter.id
+  );
+  const composerVisible = !isHiddenMode || composerRevealed;
   const callCharacter = call ? (characters.find((c) => c.id === call.characterId) ?? null) : null;
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
   const showMobileTabBar = !(view === "chats" && mobileShowChat);
 
+  useEffect(() => {
+    if (!isHiddenMode || !composerRevealed || composerBusy) return;
+    const id = window.setTimeout(() => setPeekCharId(null), 8000);
+    return () => window.clearTimeout(id);
+  }, [isHiddenMode, composerRevealed, composerBusy]);
+
   function handleToggleHideChat() {
     if (!activeCharacter) return;
     const base = activeCharacter.bubbleStyle ?? bubbleStyle;
     const nextHidden = !Boolean(base.hideMessages);
+    setPeekCharId(null);
     void handleCharacterBubble(activeCharacter.id, { ...base, hideMessages: nextHidden });
+  }
+
+  function handleHiddenScreenTap() {
+    if (!activeCharacter || !isHiddenMode) return;
+    if (composerVisible) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setPeekCharId(null);
+    } else {
+      setPeekCharId(activeCharacter.id);
+    }
   }
 
   if (!loaded) {
@@ -560,6 +586,8 @@ export function ChatApp() {
                     voiceEnabled={voice.enabled}
                     background={activeCharacter.chatBackground ?? chatBackground}
                     bubble={activeBubble}
+                    composerVisible={composerVisible}
+                    onScreenTap={isHiddenMode ? handleHiddenScreenTap : undefined}
                     onBack={() => {
                       stopSpeaking();
                       setMobileShowChat(false);
@@ -581,6 +609,10 @@ export function ChatApp() {
                         onSend={handleSend}
                         disabled={typingFor === activeId}
                         transparent={Boolean(activeBubble.minimalBars || activeBubble.hideMessages)}
+                        blurOnSend={isHiddenMode}
+                        onSent={() => setPeekCharId(null)}
+                        onWake={() => setPeekCharId(activeCharacter.id)}
+                        onActivityChange={setComposerBusy}
                         onNotice={showToast}
                       />
                     }
