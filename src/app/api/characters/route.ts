@@ -7,6 +7,7 @@ import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import { parseCharacterMedia } from "@/lib/characterMedia";
 import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
+import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
   MAX_CHARACTERS,
@@ -52,6 +53,7 @@ export async function GET() {
       chatBackground: characters.chatBackground,
       bubbleStyle: characters.bubbleStyle,
       media: characters.media,
+      voiceConfig: characters.voiceConfig,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
     })
@@ -79,6 +81,7 @@ export async function GET() {
         chatBackground: parseOptionalChatBackground(row.chatBackground),
         bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
         media: parseCharacterMedia(row.media),
+        voiceConfig: parseCharacterVoice(row.voiceConfig),
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",

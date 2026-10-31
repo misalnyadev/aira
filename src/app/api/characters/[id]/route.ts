@@ -11,6 +11,7 @@ import {
 } from "@/lib/characterMedia";
 import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeCharacterVoice, parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
   MAX_GREETING_CHARS,
@@ -39,6 +40,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     chatBackground: parseOptionalChatBackground(row.chatBackground),
     bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
     media: parseCharacterMedia(row.media),
+    voiceConfig: parseCharacterVoice(row.voiceConfig),
   };
 }
 
@@ -79,6 +81,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     chatBackground,
     bubbleStyle,
     media,
+    voiceConfig,
   } = body as {
     name?: string;
     avatarUrl?: string | null;
@@ -91,6 +94,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     chatBackground?: unknown | null;
     bubbleStyle?: unknown | null;
     media?: unknown | null;
+    voiceConfig?: unknown | null;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -138,6 +142,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if ("media" in body) {
     const cleaned = media === null ? null : normalizeCharacterMedia(media, user.id);
     updates.media = cleaned ? JSON.stringify(cleaned) : null;
+  }
+  if ("voiceConfig" in body) {
+    const cleaned = voiceConfig === null ? null : normalizeCharacterVoice(voiceConfig);
+    updates.voiceConfig = cleaned ? JSON.stringify(cleaned) : null;
   }
 
   /*

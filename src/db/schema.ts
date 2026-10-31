@@ -46,6 +46,8 @@ export const users = pgTable("users", {
     .default(
       '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null}'
     ),
+  /** Pengaturan Suara HD (ElevenLabs) milik akun: API key, key cadangan, dan 2 slot suara (JSON). */
+  ttsConfig: text("tts_config").notNull().default("{}"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -110,6 +112,8 @@ export const characters = pgTable("characters", {
   bubbleStyle: text("bubble_style"),
   /** Media pribadi karakter di R2: video chat, video call, dan suara telepon (JSON). */
   media: text("media"),
+  /** Pilihan suara khusus karakter: ikut bawaan, perangkat, HD perempuan, HD laki-laki, atau custom (JSON). */
+  voiceConfig: text("voice_config"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
