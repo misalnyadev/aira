@@ -88,10 +88,33 @@ export function ChatApp() {
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = useRef<string | null>(null);
+  const charactersRef = useRef<CharacterSummary[]>([]);
+  const bubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
 
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  useEffect(() => {
+    charactersRef.current = characters;
+  }, [characters]);
+
+  useEffect(() => {
+    bubbleStyleRef.current = bubbleStyle;
+  }, [bubbleStyle]);
+
+  /**
+   * Balasan karakter dibacakan bila suara otomatis hidup ATAU bila tulisan chat
+   * sedang disembunyikan (agar obrolan tetap terdengar walau tanpa gelembung),
+   * selama pengguna tidak sedang merekam dikte mikrofon.
+   */
+  function shouldSpeakReply(targetId: string, voiceEnabled: boolean): boolean {
+    if (isDictating() || activeIdRef.current !== targetId) return false;
+    if (voiceEnabled) return true;
+    const charObj = charactersRef.current.find((c) => c.id === targetId);
+    const effective = charObj?.bubbleStyle ?? bubbleStyleRef.current;
+    return Boolean(effective.hideMessages);
+  }
 
   // Hentikan suara saat keluar dari akun atau sesi berakhir.
   useEffect(() => () => stopSpeaking(), []);
@@ -256,7 +279,7 @@ export function ChatApp() {
           [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
         const currentVoice = loadVoiceSettings(user.id);
-        if (currentVoice.enabled && !isDictating() && activeIdRef.current === target) {
+        if (shouldSpeakReply(target, currentVoice.enabled)) {
           speak(bubbles[i].content, currentVoice, { append: i > 0 });
         }
         if (i < bubbles.length - 1) await sleep(350);
@@ -358,7 +381,7 @@ export function ChatApp() {
           [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
         const currentVoice = loadVoiceSettings(user.id);
-        if (currentVoice.enabled && !isDictating() && activeIdRef.current === target) {
+        if (shouldSpeakReply(target, currentVoice.enabled)) {
           speak(bubbles[i].content, currentVoice, { append: i > 0 });
         }
         if (i < bubbles.length - 1) await sleep(350);
@@ -483,10 +506,21 @@ export function ChatApp() {
   })();
 
   const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
+  const activeBubble = activeCharacter?.bubbleStyle ?? bubbleStyle;
   const callCharacter = call ? (characters.find((c) => c.id === call.characterId) ?? null) : null;
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
   const showMobileTabBar = !(view === "chats" && mobileShowChat);
+
+  function handleToggleHideChat() {
+    if (!activeCharacter) return;
+    const base = activeCharacter.bubbleStyle ?? bubbleStyle;
+    const nextHidden = !Boolean(base.hideMessages);
+    void handleCharacterBubble(activeCharacter.id, { ...base, hideMessages: nextHidden });
+    if (nextHidden) {
+      showToast("Tulisan chat disembunyikan — ketuk ikon mata lagi untuk menampilkan.");
+    }
+  }
 
   if (!loaded) {
     return (
@@ -520,37 +554,40 @@ export function ChatApp() {
 
               <div className={`${mobileShowChat ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col md:flex`}>
                 {activeCharacter ? (
-                  <>
-                    <ChatWindow
-                      character={activeCharacter}
-                      messages={activeMessages}
-                      isTyping={typingFor === activeId}
-                      isSpeaking={isSpeaking}
-                      canSpeak={speechSupported}
-                      voiceEnabled={voice.enabled}
-                      background={activeCharacter.chatBackground ?? chatBackground}
-                      bubble={activeCharacter.bubbleStyle ?? bubbleStyle}
-                      onBack={() => {
-                        stopSpeaking();
-                        setMobileShowChat(false);
-                      }}
-                      onOpenProfile={() => openProfile(activeCharacter.id)}
-                      onOpenVoice={() => handleViewChange("voice")}
-                      onVideoCall={() => setCall({ characterId: activeCharacter.id, mode: "video" })}
-                      onAudioCall={() => setCall({ characterId: activeCharacter.id, mode: "audio" })}
-                      onImageClick={(url) => setLightbox(url)}
-                      onCopyMessage={handleCopyMessage}
-                      onSpeakMessage={handleSpeakMessage}
-                      onStopSpeaking={stopSpeaking}
-                      onDeleteMessage={handleDeleteMessage}
-                      onRegenerate={handleRegenerate}
-                    />
-                    <Composer
-                      onSend={handleSend}
-                      disabled={typingFor === activeId}
-                      onNotice={showToast}
-                    />
-                  </>
+                  <ChatWindow
+                    character={activeCharacter}
+                    messages={activeMessages}
+                    isTyping={typingFor === activeId}
+                    isSpeaking={isSpeaking}
+                    canSpeak={speechSupported}
+                    voiceEnabled={voice.enabled}
+                    background={activeCharacter.chatBackground ?? chatBackground}
+                    bubble={activeBubble}
+                    onBack={() => {
+                      stopSpeaking();
+                      setMobileShowChat(false);
+                    }}
+                    onOpenProfile={() => openProfile(activeCharacter.id)}
+                    onOpenVoice={() => handleViewChange("voice")}
+                    onToggleHideChat={handleToggleHideChat}
+                    onVideoCall={() => setCall({ characterId: activeCharacter.id, mode: "video" })}
+                    onAudioCall={() => setCall({ characterId: activeCharacter.id, mode: "audio" })}
+                    onImageClick={(url) => setLightbox(url)}
+                    onCopyMessage={handleCopyMessage}
+                    onSpeakMessage={handleSpeakMessage}
+                    onStopSpeaking={stopSpeaking}
+                    onDeleteMessage={handleDeleteMessage}
+                    onRegenerate={handleRegenerate}
+                    composer={
+                      <Composer
+                        key={activeCharacter.id}
+                        onSend={handleSend}
+                        disabled={typingFor === activeId}
+                        transparent={Boolean(activeBubble.hideMessages)}
+                        onNotice={showToast}
+                      />
+                    }
+                  />
                 ) : (
                   <div className="dot-grid relative flex h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-app px-5 py-10 text-center">
                     <div className="fade-in w-full max-w-md">

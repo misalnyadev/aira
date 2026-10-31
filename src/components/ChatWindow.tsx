@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
 import {
@@ -17,6 +24,8 @@ import {
   BackIcon,
   CheckIcon,
   DoubleCheckIcon,
+  EyeIcon,
+  EyeOffIcon,
   PhoneCallIcon,
   SpeakerIcon,
   SpeakerOffIcon,
@@ -81,9 +90,11 @@ export function ChatWindow({
   voiceEnabled,
   background,
   bubble,
+  composer,
   onBack,
   onOpenProfile,
   onOpenVoice,
+  onToggleHideChat,
   onVideoCall,
   onAudioCall,
   onImageClick,
@@ -103,9 +114,12 @@ export function ChatWindow({
   background?: ChatBackground;
   /** Gaya gelembung pesan (khusus karakter atau bawaan akun). */
   bubble?: BubbleStyle;
+  /** Kolom ketik di bagian bawah ruang chat (menyatu di atas latar/video penuh). */
+  composer?: ReactNode;
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
+  onToggleHideChat?: () => void;
   onVideoCall?: () => void;
   onAudioCall?: () => void;
   onImageClick: (url: string) => void;
@@ -116,6 +130,7 @@ export function ChatWindow({
   onRegenerate: () => void;
 }) {
   const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
+  const hideMessages = Boolean(bubbleStyle.hideMessages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
@@ -124,7 +139,9 @@ export function ChatWindow({
   const chatVideo = chatMedia?.chatVideoKey
     ? { videoKey: chatMedia.chatVideoKey, posterUrl: chatMedia.chatVideoPosterUrl }
     : null;
-  const chatVideoFull = Boolean(chatVideo && (chatMedia?.chatVideoLayout ?? "tile") === "full");
+  const chatVideoFull = Boolean(
+    chatVideo && ((chatMedia?.chatVideoLayout ?? "tile") === "full" || hideMessages)
+  );
 
   const [reading, setReading] = useState(false);
   const readTimer = useRef(0);
@@ -170,10 +187,10 @@ export function ChatWindow({
     useMessageActions();
 
   useEffect(() => {
-    if (atBottom && scrollRef.current) {
+    if (!hideMessages && atBottom && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping, atBottom]);
+  }, [messages, isTyping, atBottom, hideMessages]);
 
   const lastAssistant = lastAssistantId(messages);
   const openMessage = messages.find((m) => m.id === openFor) ?? null;
@@ -218,7 +235,7 @@ export function ChatWindow({
         <ChatVideoBackground
           videoKey={chatVideo.videoKey}
           posterUrl={chatVideo.posterUrl}
-          dim={0.12}
+          dim={hideMessages ? 0.06 : 0.12}
           playing={videoPlaying}
           restartOnPlay
         />
@@ -276,6 +293,22 @@ export function ChatWindow({
           )}
         </button>
 
+        {onToggleHideChat && (
+          <button
+            onClick={onToggleHideChat}
+            aria-pressed={hideMessages}
+            className={`shrink-0 rounded-full p-2 transition active:opacity-60 ${
+              hideMessages
+                ? "bg-surface-2 text-ink ring-1 ring-line"
+                : "text-ink-soft hover:bg-surface-2 hover:text-ink"
+            }`}
+            aria-label={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
+            title={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
+          >
+            {hideMessages ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+          </button>
+        )}
+
         {onVideoCall && (
           <button
             onClick={onVideoCall}
@@ -299,7 +332,7 @@ export function ChatWindow({
         )}
       </div>
 
-      {chatVideo && !chatVideoFull && (
+      {!hideMessages && chatVideo && !chatVideoFull && (
         <div className="px-3 pt-3 sm:px-4">
           <div className="mx-auto w-full max-w-lg">
             <ChatVideoPanel
@@ -312,115 +345,121 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
-        }}
-        className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
-      >
-        <div className="mx-auto w-full max-w-3xl">
-          {items.map(({ message: m, divider }) => (
-            <div key={m.id}>
-              {divider && (
-                <div className="my-3 flex justify-center">
-                  <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[12px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
-                    {divider}
-                  </span>
-                </div>
-              )}
-
-              <div
-                className={`group mb-1.5 flex items-end gap-1 ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {m.role === "user" && !m.pending && (
-                  <button
-                    type="button"
-                    onClick={() => setOpenFor(m.id)}
-                    aria-label="Menu pesan"
-                    className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
-                  >
-                    <span className="px-1 text-xs leading-none">•••</span>
-                  </button>
+      {/* Messages — disembunyikan bila mode ngobrol langsung aktif */}
+      {hideMessages ? (
+        <div className="min-h-0 flex-1" aria-hidden="true" />
+      ) : (
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+          }}
+          className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
+        >
+          <div className="mx-auto w-full max-w-3xl">
+            {items.map(({ message: m, divider }) => (
+              <div key={m.id}>
+                {divider && (
+                  <div className="my-3 flex justify-center">
+                    <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[12px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
+                      {divider}
+                    </span>
+                  </div>
                 )}
 
                 <div
-                  onTouchStart={() => startLongPress(m.id)}
-                  onTouchEnd={cancelLongPress}
-                  onTouchMove={cancelLongPress}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setOpenFor(m.id);
-                  }}
-                  onClick={(e) => {
-                    if (consumeLongPress()) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
-                  className={`bubble-in relative max-w-[85%] cursor-default rounded-2xl px-3 py-2 text-sm shadow-xs max-md:select-none sm:max-w-[75%] ${
-                    m.role === "user"
-                      ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
-                      : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
-                  } ${m.pending ? "opacity-60" : ""}`}
-                  style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
+                  className={`group mb-1.5 flex items-end gap-1 ${
+                    m.role === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
-                  {m.imageUrl && (
-                    <img
-                      src={m.imageUrl}
-                      alt="lampiran foto"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (consumeLongPress()) return;
-                        onImageClick(m.imageUrl!);
-                      }}
-                      className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
-                    />
+                  {m.role === "user" && !m.pending && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenFor(m.id)}
+                      aria-label="Menu pesan"
+                      className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                    >
+                      <span className="px-1 text-xs leading-none">•••</span>
+                    </button>
                   )}
-                  {m.content && (
-                    <p
-                      className="whitespace-pre-wrap break-words"
+
+                  <div
+                    onTouchStart={() => startLongPress(m.id)}
+                    onTouchEnd={cancelLongPress}
+                    onTouchMove={cancelLongPress}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setOpenFor(m.id);
+                    }}
+                    onClick={(e) => {
+                      if (consumeLongPress()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                    className={`bubble-in relative max-w-[85%] cursor-default rounded-2xl px-3 py-2 text-sm shadow-xs max-md:select-none sm:max-w-[75%] ${
+                      m.role === "user"
+                        ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
+                        : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
+                    } ${m.pending ? "opacity-60" : ""}`}
+                    style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
+                  >
+                    {m.imageUrl && (
+                      <img
+                        src={m.imageUrl}
+                        alt="lampiran foto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (consumeLongPress()) return;
+                          onImageClick(m.imageUrl!);
+                        }}
+                        className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
+                      />
+                    )}
+                    {m.content && (
+                      <p
+                        className="whitespace-pre-wrap break-words"
+                        style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
+                      >
+                        {m.content}
+                      </p>
+                    )}
+                    <span
+                      className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
+                        (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
+                          ? "opacity-75"
+                          : "text-ink-soft/80"
+                      }`}
                       style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
                     >
-                      {m.content}
-                    </p>
+                      {formatTime(m.createdAt)}
+                      {m.role === "user" && <Ticks pending={m.pending} />}
+                    </span>
+                  </div>
+
+                  {m.role === "assistant" && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenFor(m.id)}
+                      aria-label="Menu pesan"
+                      className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                    >
+                      <span className="px-1 text-xs leading-none">•••</span>
+                    </button>
                   )}
-                  <span
-                    className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
-                      (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
-                        ? "opacity-75"
-                        : "text-ink-soft/80"
-                    }`}
-                    style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
-                  >
-                    {formatTime(m.createdAt)}
-                    {m.role === "user" && <Ticks pending={m.pending} />}
-                  </span>
                 </div>
-
-                {m.role === "assistant" && (
-                  <button
-                    type="button"
-                    onClick={() => setOpenFor(m.id)}
-                    aria-label="Menu pesan"
-                    className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
-                  >
-                    <span className="px-1 text-xs leading-none">•••</span>
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
 
-          {isTyping && <TypingBubble bubble={bubbleStyle} />}
+            {isTyping && <TypingBubble bubble={bubbleStyle} />}
+          </div>
         </div>
-      </div>
+      )}
 
-      {openMessage && (
+      {composer && <div className="z-10 shrink-0">{composer}</div>}
+
+      {!hideMessages && openMessage && (
         <MessageActionSheet
           actions={actionsFor(openMessage)}
           onClose={() => setOpenFor(null)}
