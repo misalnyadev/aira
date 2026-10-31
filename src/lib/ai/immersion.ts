@@ -56,8 +56,12 @@ const PATTERNS: RegExp[] = [
     "i"
   ),
 
-  // 7. "minum/makan/nyeruput/terima/peluk/tos ... secara virtual"
-  /\b(?:minum|makan|nyeruput|cicip|terima|ambil|peluk|tos|duduk|ngopi|bersulang)\s+secara\s+virtual\b/i,
+  // 7. Frasa aksi/benda "+ virtual" yang merusak adegan (mis. "peluk virtual", "kopi virtual", "minum secara virtual")
+  // Sengaja mengecualikan istilah perbankan/IT normal seperti "virtual account" atau "mesin virtual".
+  /\b(?:minum|makan|nyeruput|cicip|terima|ambil|peluk|pelukan|cium|ciuman|sentuh|sentuhan|genggam|elus|usap|tos|salaman|duduk|ngopi|kopi|teh|makanan|minuman|traktir|hadiah|kado|bunga|bersulang|kencan|nongkrong|sandaran|tepukan|kehadiran)\s+(?:secara\s+)?virtual\b/i,
+
+  // 7b. "kita kan cuma lewat chat / cuma ketemu di chat / sebatas layar"
+  /\bkita\s+(?:kan\s+)?(?:cuma|cuman|hanya|sebatas)\s+(?:bisa\s+)?(?:ngobrol|ketemu|interaksi|kenal)?\s*(?:lewat|di|melalui|via|sebatas)\s+(?:chat|layar|teks|tulisan|online|dunia maya)\b/i,
 
   // 8. "aku sedang berperan sebagai", "aku cuma memerankan"
   new RegExp(
@@ -117,12 +121,12 @@ export function stripMetaSentences(text: string, delimiter = "[[NEXT]]"): string
 export const IMMERSION_REMINDER = `
 
 === PERINGATAN KERAS (BACA SEBELUM MENJAWAB) ===
-Balasan sebelumnya melanggar aturan karena menyebut diri sebagai AI / teman virtual / di balik layar / tidak punya tubuh atau tidak bisa melakukan hal fisik. Itu TIDAK BOLEH terulang.
+Balasan sebelumnya melanggar aturan karena menyebut diri sebagai AI / teman virtual / "peluk virtual" / cuma lewat chat / di balik layar / tidak punya tubuh atau tidak bisa melakukan hal fisik. Itu TIDAK BOLEH terulang.
 
 Tulis ulang jawabanmu 100% sebagai manusia nyata bernama karakter ini:
-- Bila lawan bicara menyodorkan kopi, makanan, benda, candaan, atau adegan cerita: TERIMA dan tanggapi langsung secara alami seolah kalian benar-benar bersama di dunia nyata (mis. "Wah mantap, pas banget lagi ngantuk nih, makasih ya!").
-- DILARANG menulis kata/frasa: AI, model bahasa, chatbot, bot, program, teman virtual, sahabat virtual, karakter digital, di balik layar, sebatas teks, secara virtual, tidak punya tubuh/mulut/tangan, atau "secara teknis".
-- Jangan memakai bahasa teknis/robotik; balas santai, hangat, luwes, dan manusiawi sesuai kepribadianmu.`;
+- Bila lawan bicara mengajak peluk, menyodorkan kopi/makanan, mengajak ketemuan ngopi di kafe, bercanda, atau membangun dialog adegan serius: TERIMA dan jalani adegannya secara nyata tanpa kata "virtual" sama sekali! (Contoh: jangan pernah bilang "sini peluk virtual", cukup sambut hangat seperti manusia beneran).
+- DILARANG menulis kata/frasa: AI, model bahasa, chatbot, bot, program, teman virtual, peluk virtual, kopi virtual, karakter digital, di balik layar, cuma lewat chat, sebatas teks, secara virtual, tidak punya tubuh/mulut/tangan, atau "secara teknis".
+- Jaga kesinambungan tempat & waktu adegan saat ini, dan jangan memakai bahasa teknis/robotik.`;
 
 /**
  * Jawaban pengganti terakhir kalau seluruh balasan ternyata keluar dari peran.
