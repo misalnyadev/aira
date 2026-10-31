@@ -12,6 +12,7 @@ import {
   type ChatBackground,
 } from "@/lib/chatBackground";
 import { compressImageFile } from "@/lib/compressImage";
+import { isDictating } from "@/lib/dictation";
 import { useKeyboardPan } from "@/lib/keyboardPan";
 import { MAX_CHARACTERS } from "@/lib/limits";
 import { useSafeTop } from "@/lib/safeTop";
@@ -255,7 +256,7 @@ export function ChatApp() {
           [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
         const currentVoice = loadVoiceSettings(user.id);
-        if (currentVoice.enabled && activeIdRef.current === target) {
+        if (currentVoice.enabled && !isDictating() && activeIdRef.current === target) {
           speak(bubbles[i].content, currentVoice, { append: i > 0 });
         }
         if (i < bubbles.length - 1) await sleep(350);
@@ -357,7 +358,7 @@ export function ChatApp() {
           [target]: [...(prev[target] ?? []), bubbles[i]],
         }));
         const currentVoice = loadVoiceSettings(user.id);
-        if (currentVoice.enabled && activeIdRef.current === target) {
+        if (currentVoice.enabled && !isDictating() && activeIdRef.current === target) {
           speak(bubbles[i].content, currentVoice, { append: i > 0 });
         }
         if (i < bubbles.length - 1) await sleep(350);
@@ -544,7 +545,11 @@ export function ChatApp() {
                       onDeleteMessage={handleDeleteMessage}
                       onRegenerate={handleRegenerate}
                     />
-                    <Composer onSend={handleSend} disabled={typingFor === activeId} />
+                    <Composer
+                      onSend={handleSend}
+                      disabled={typingFor === activeId}
+                      onNotice={showToast}
+                    />
                   </>
                 ) : (
                   <div className="dot-grid relative flex h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-app px-5 py-10 text-center">
