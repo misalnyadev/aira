@@ -3,11 +3,12 @@
 import { useState } from "react";
 import {
   cleanVoiceId,
+  FEMALE_VOICE_PRESETS,
   GEMINI_FEMALE_PRESETS,
   GEMINI_MALE_PRESETS,
+  MALE_VOICE_PRESETS,
   type CharacterVoiceConfig,
-  type CharacterVoiceMode,
-  type HdTtsProvider,
+  type TtsAccountSummary,
 } from "@/lib/hdVoice";
 import {
   VOICE_TEST_TEXT,
@@ -17,65 +18,113 @@ import {
   type VoiceSettings,
 } from "@/lib/voice";
 
-const OPTIONS: { id: CharacterVoiceMode; label: string; hint: string }[] = [
+type UiVoiceChoice =
+  | "inherit"
+  | "device"
+  | "hd_female"
+  | "hd_male"
+  | "gemini_custom"
+  | "eleven_custom";
+
+const OPTIONS: { id: UiVoiceChoice; label: string; hint: string }[] = [
   { id: "inherit", label: "Ikut bawaan", hint: "Mengikuti pilihan mesin di menu Suara" },
   { id: "device", label: "Perangkat", hint: "Suara lokal iPhone/browser (gratis tanpa kuota)" },
   { id: "hd_female", label: "HD Perempuan", hint: "Memakai Slot 1 Perempuan dari menu Suara" },
   { id: "hd_male", label: "HD Laki-laki", hint: "Memakai Slot 2 Laki-laki dari menu Suara" },
   {
-    id: "hd_custom",
-    label: "Suara Khusus",
-    hint: "Pilih suara tersendiri khusus karakter ini",
+    id: "gemini_custom",
+    label: "Gemini Khusus",
+    hint: "Pilih suara Gemini tersendiri untuk karakter ini",
+  },
+  {
+    id: "eleven_custom",
+    label: "ElevenLabs Khusus",
+    hint: "Pilih suara atau Voice ID ElevenLabs tersendiri untuk karakter ini",
   },
 ];
 
 const ALL_GEMINI_PRESETS = [...GEMINI_FEMALE_PRESETS, ...GEMINI_MALE_PRESETS];
+const ALL_ELEVEN_PRESETS = [...FEMALE_VOICE_PRESETS, ...MALE_VOICE_PRESETS];
+
+function deriveInitialChoice(
+  value: CharacterVoiceConfig | null,
+  accountProvider: "gemini" | "elevenlabs"
+): UiVoiceChoice {
+  if (!value || value.mode === "inherit") return "inherit";
+  if (value.mode === "device") return "device";
+  if (value.mode === "hd_female") return "hd_female";
+  if (value.mode === "hd_male") return "hd_male";
+  const prov = value.customProvider ?? accountProvider;
+  return prov === "elevenlabs" ? "eleven_custom" : "gemini_custom";
+}
 
 export function CharacterVoiceSection({
   value,
-  provider,
-  hasHdKey,
+  ttsSummary,
   voiceSettings,
   sampleGreeting,
   onChange,
   onNotice,
 }: {
   value: CharacterVoiceConfig | null;
-  provider: HdTtsProvider;
-  hasHdKey: boolean;
+  ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
   sampleGreeting?: string;
   onChange: (next: CharacterVoiceConfig | null) => void;
   onNotice?: (msg: string) => void;
 }) {
-  const savedMode: CharacterVoiceMode = value?.mode ?? "inherit";
-  const [draftMode, setDraftMode] = useState<CharacterVoiceMode>(savedMode);
+  const initialChoice = deriveInitialChoice(value, ttsSummary.provider);
+  const [choice, setChoice] = useState<UiVoiceChoice>(initialChoice);
   const [customId, setCustomId] = useState<string>(value?.customVoiceId ?? "");
   const isSpeaking = useIsSpeaking();
 
-  const activeMode = draftMode === "hd_custom" ? "hd_custom" : savedMode;
+  const geminiHasKey = ttsSummary.hasGeminiKey || ttsSummary.hasSharedGeminiKey;
+  const elevenHasKey = ttsSummary.hasKey;
 
-  function selectMode(mode: CharacterVoiceMode) {
+  function selectChoice(next: UiVoiceChoice) {
     stopSpeaking();
-    setDraftMode(mode);
-    if (mode === "inherit") {
+    setChoice(next);
+
+    if (next === "inherit") {
       onChange(null);
       return;
     }
-    if (mode === "hd_custom") {
-      const cleaned = cleanVoiceId(customId);
-      if (cleaned) {
-        onChange({ mode: "hd_custom", customVoiceId: cleaned });
-      }
+    if (next === "device" || next === "hd_female" || next === "hd_male") {
+      onChange({ mode: next });
       return;
     }
-    onChange({ mode });
+
+    const targetProv = next === "eleven_custom" ? "elevenlabs" : "gemini";
+    const defaultPick =
+      targetProv === "gemini" ? ALL_GEMINI_PRESETS[0].id : ALL_ELEVEN_PRESETS[0].id;
+    const currentClean = cleanVoiceId(customId);
+
+    // Bila berpindah antar Gemini <-> ElevenLabs, ganti ke contoh bawaan penyedia baru bila ID lama dari penyedia seberang.
+    const looksLikeGemini = ALL_GEMINI_PRESETS.some((p) => p.id === currentClean);
+    const nextVoiceId =
+      !currentClean ||
+      (targetProv === "elevenlabs" && looksLikeGemini) ||
+      (targetProv === "gemini" && currentClean.length >= 16)
+        ? defaultPick
+        : currentClean;
+
+    setCustomId(nextVoiceId);
+    onChange({
+      mode: "hd_custom",
+      customProvider: targetProv,
+      customVoiceId: nextVoiceId,
+    });
   }
 
   function handlePickPreset(id: string) {
     stopSpeaking();
+    const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
     setCustomId(id);
-    onChange({ mode: "hd_custom", customVoiceId: id });
+    onChange({
+      mode: "hd_custom",
+      customProvider: targetProv,
+      customVoiceId: id,
+    });
   }
 
   function handleSaveCustom() {
@@ -84,7 +133,12 @@ export function CharacterVoiceSection({
       onNotice?.("Masukkan nama atau kode suara yang valid (tanpa spasi).");
       return;
     }
-    onChange({ mode: "hd_custom", customVoiceId: cleaned });
+    const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
+    onChange({
+      mode: "hd_custom",
+      customProvider: targetProv,
+      customVoiceId: cleaned,
+    });
     onNotice?.("Suara khusus karakter disimpan.");
   }
 
@@ -98,37 +152,46 @@ export function CharacterVoiceSection({
       onNotice?.("Pilih atau masukkan suara terlebih dulu.");
       return;
     }
-    if (!hasHdKey) {
-      onNotice?.(
-        provider === "gemini"
-          ? "Tambahkan API key Gemini dulu di Setelan atau menu Suara."
-          : "Isi API key ElevenLabs dulu di menu Suara."
-      );
-      return;
-    }
+    const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
     const sample = sampleGreeting?.trim() || VOICE_TEST_TEXT;
     speak(sample, voiceSettings, {
-      target: { kind: "hd", slot: "custom", customVoiceId: cleaned },
+      target: {
+        kind: "hd",
+        slot: "custom",
+        customProvider: targetProv,
+        customVoiceId: cleaned,
+      },
       allowDeviceFallback: false,
       onFallback: (reason) => onNotice?.(reason),
     });
   }
 
-  const activeHint = OPTIONS.find((o) => o.id === activeMode)?.hint ?? "";
-  const needsHdWarning =
-    !hasHdKey &&
-    (activeMode === "hd_female" || activeMode === "hd_male" || activeMode === "hd_custom");
+  const activeHint = OPTIONS.find((o) => o.id === choice)?.hint ?? "";
+  const missingKeyNote = (() => {
+    if (choice === "gemini_custom" && !geminiHasKey) {
+      return "API key Gemini belum ada. Rekaman lama di R2/lokal tetap berbunyi; kalimat baru memakai suara perangkat sampai key diisi.";
+    }
+    if (choice === "eleven_custom" && !elevenHasKey) {
+      return "API key ElevenLabs belum ada. Rekaman lama di R2/lokal tetap berbunyi; kalimat baru memakai suara perangkat sampai key diisi.";
+    }
+    if ((choice === "hd_female" || choice === "hd_male") && !ttsSummary.hasActiveKey) {
+      return "API key penyedia utama belum ada. Rekaman lama di R2/lokal tetap berbunyi; kalimat baru memakai suara perangkat.";
+    }
+    return null;
+  })();
+
+  const presetsToShow = choice === "eleven_custom" ? ALL_ELEVEN_PRESETS : ALL_GEMINI_PRESETS;
 
   return (
     <div className="space-y-2.5 rounded-2xl border border-line bg-surface-2/60 p-3.5">
       <div className="flex flex-wrap gap-1.5">
         {OPTIONS.map((opt) => {
-          const active = activeMode === opt.id;
+          const active = choice === opt.id;
           return (
             <button
               key={opt.id}
               type="button"
-              onClick={() => selectMode(opt.id)}
+              onClick={() => selectChoice(opt.id)}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 active
                   ? "border-ink bg-ink text-surface"
@@ -143,36 +206,33 @@ export function CharacterVoiceSection({
 
       <p className="text-[11px] leading-relaxed text-muted">{activeHint}</p>
 
-      {needsHdWarning && (
+      {missingKeyNote && (
         <p className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
-          API key Suara HD belum tersedia. Tambahkan di menu <b>Setelan</b> (untuk Gemini) atau menu{" "}
-          <b>Suara</b>. Selama belum ada, karakter otomatis memakai suara perangkat.
+          {missingKeyNote}
         </p>
       )}
 
-      {activeMode === "hd_custom" && (
+      {(choice === "gemini_custom" || choice === "eleven_custom") && (
         <div className="space-y-2 pt-1">
-          {provider === "gemini" && (
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_GEMINI_PRESETS.map((p) => {
-                const selected = customId.trim() === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handlePickPreset(p.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      selected
-                        ? "border-ink bg-ink text-surface"
-                        : "border-line bg-surface text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {p.label} · {p.hint}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-1.5">
+            {presetsToShow.map((p) => {
+              const selected = customId.trim() === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handlePickPreset(p.id)}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    selected
+                      ? "border-ink bg-ink text-surface"
+                      : "border-line bg-surface text-ink-soft hover:text-ink"
+                  }`}
+                >
+                  {p.label} · {p.hint}
+                </button>
+              );
+            })}
+          </div>
 
           <div className="flex gap-1.5">
             <input
@@ -180,7 +240,7 @@ export function CharacterVoiceSection({
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
               placeholder={
-                provider === "gemini"
+                choice === "gemini_custom"
                   ? "Nama suara Gemini (mis. Kore, Aoede, Puck)..."
                   : "Tempel Voice ID ElevenLabs..."
               }

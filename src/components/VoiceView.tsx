@@ -32,6 +32,7 @@ import {
   type VoiceSettings,
 } from "@/lib/voice";
 import { Switch } from "./Switch";
+import { VoiceBankCard } from "./VoiceBankCard";
 import { CheckIcon, PlusIcon, SpeakerIcon, TrashIcon, XIcon } from "./icons";
 
 function Slider({
@@ -879,12 +880,14 @@ function HdVoiceCard({
 }
 
 export function VoiceView({
+  userId,
   settings,
   onChange,
   ttsSummary,
   onSaveTts,
   onNotice,
 }: {
+  userId: string;
   settings: VoiceSettings;
   onChange: (next: VoiceSettings) => void;
   ttsSummary: TtsAccountSummary;
@@ -993,9 +996,9 @@ export function VoiceView({
             </div>
             {settings.engine !== "device" && !ttsSummary.hasActiveKey && (
               <p className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs leading-relaxed text-ink-soft">
-                Tambahkan API key pada kartu Suara HD di bawah (atau di Setelan untuk Gemini) agar
-                suara HD aktif. Selama belum ada key, balasan tetap dibacakan memakai suara
-                perangkat.
+                Rekaman yang sudah ada di Bank R2 / lokal tetap berbunyi dengan Suara HD tanpa API
+                key. Untuk merekam kalimat baru, isi API key di kartu Suara HD di bawah (atau di
+                Setelan untuk Gemini) — bila kosong, kalimat baru otomatis memakai suara perangkat.
               </p>
             )}
           </section>
@@ -1006,6 +1009,13 @@ export function VoiceView({
             voiceSettings={settings}
             onSaveTts={onSaveTts}
             onNotice={onNotice}
+          />
+
+          {/* Bank Rekaman Suara (Sinkron PC & HP via R2 + Cache Lokal) */}
+          <VoiceBankCard
+            userId={userId}
+            volume={settings.volume}
+            hasActiveKey={ttsSummary.hasActiveKey}
           />
 
           {/* Bagian Suara Lokal Perangkat */}
