@@ -307,6 +307,11 @@ body {
     -webkit-backdrop-filter: saturate(180%) blur(18px);
     backdrop-filter: saturate(180%) blur(18px);
   }
+
+  .dark .bottom-bar {
+    background-color: color-mix(in srgb, var(--header) 48%, transparent);
+    border-top-color: color-mix(in srgb, var(--line) 38%, transparent);
+  }
 }
 
 /* ------------------------------------------------------------------ */

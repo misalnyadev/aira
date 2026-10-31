@@ -212,7 +212,7 @@ export function Composer({
               enterKeyHint="send"
               aria-label="Tulis pesan"
               className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/75 px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
-                transparent ? "backdrop-blur-md" : ""
+                transparent ? "backdrop-blur-md" : "dark:bg-surface/40 dark:ring-line/40"
               } ${multiline ? "rounded-2xl" : "rounded-full"}`}
             />
             {dictation.supported && (
@@ -236,7 +236,9 @@ export function Composer({
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
             className={`mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink ring-1 ring-line/70 transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 ${
-              transparent ? "backdrop-blur-md" : ""
+              transparent
+                ? "backdrop-blur-md"
+                : "dark:bg-surface/40 dark:ring-line/40 dark:hover:bg-surface/60"
             }`}
             title="Kirim"
             aria-label="Kirim pesan"
