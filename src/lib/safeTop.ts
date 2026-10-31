@@ -69,8 +69,15 @@ function readInsetTop(): number {
 
 export function resolveSafeTop(): number {
   const measured = readInsetTop();
-  if (!isAppMode()) return Math.max(measured, 0);
-  return Math.max(measured, deviceStatusBarHeight());
+
+  // Kalau browser sudah melaporkan jarak aman yang wajar, percayai itu.
+  // Angka tabel hanya dipakai saat env() terbaca 0 — jangan menambah jarak
+  // di atas jarak yang sudah ada, karena hasilnya pita kosong di bawah
+  // status bar.
+  if (measured > 0) return measured;
+
+  if (!isAppMode()) return 0;
+  return deviceStatusBarHeight();
 }
 
 export function useSafeTop() {

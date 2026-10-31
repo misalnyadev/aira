@@ -9,7 +9,9 @@ import {
 } from "@/lib/ai/providerDefaults";
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
+import type { ChatBackground } from "@/lib/chatBackground";
 import { useAuth } from "./AuthGate";
+import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { Switch } from "./Switch";
 import { ThemeSegmented } from "./ThemeToggle";
 import {
@@ -29,11 +31,15 @@ export function SettingsView({
   providers,
   autoFallback,
   onAutoFallbackChange,
+  chatBackground,
+  onChatBackgroundChange,
   onChanged,
 }: {
   providers: ProviderSummary[];
   autoFallback: boolean;
   onAutoFallbackChange: (next: boolean) => void;
+  chatBackground: ChatBackground;
+  onChatBackgroundChange: (next: ChatBackground) => void;
   onChanged: () => Promise<void>;
 }) {
   const { user, signOut } = useAuth();
@@ -53,6 +59,8 @@ export function SettingsView({
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestState>>({});
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useKeepFieldVisible(scrollAreaRef, true);
@@ -220,6 +228,33 @@ export function SettingsView({
     }
   }
 
+  /**
+   * Simpan latar chat ke akun. Tampilan langsung berubah (optimistis); kalau
+   * server menolak, pilihan dikembalikan ke nilai sebelumnya supaya layar
+   * tidak berbohong.
+   */
+  async function handleBackgroundChange(next: ChatBackground) {
+    const previous = chatBackground;
+    setBgError(null);
+    onChatBackgroundChange(next);
+    setBgBusy(true);
+    try {
+      const res = await fetch("/api/appearance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatBackground: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan latar.");
+      if (data.chatBackground) onChatBackgroundChange(data.chatBackground);
+    } catch (err) {
+      onChatBackgroundChange(previous);
+      setBgError(err instanceof Error ? err.message : "Gagal menyimpan latar.");
+    } finally {
+      setBgBusy(false);
+    }
+  }
+
   async function handleToggleAutoFallback(next: boolean) {
     const previous = autoFallback;
     onAutoFallbackChange(next);
@@ -240,7 +275,7 @@ export function SettingsView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-surface">
-      <div className="border-b border-line bg-header px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+      <div className="top-bar px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <h1 className="font-display text-xl font-bold tracking-tight text-ink">Setelan</h1>
         <p className="text-xs text-ink-soft">Tema tampilan, provider AI, dan akunmu</p>
       </div>
@@ -256,6 +291,26 @@ export function SettingsView({
               Tampilan
             </h2>
             <ThemeSegmented />
+
+            <div className="mt-4 rounded-xl border border-line px-3.5 py-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block text-sm text-ink">Latar chat</span>
+                  <span className="block text-[11px] text-muted">
+                    Tersimpan di akun, ikut ke semua perangkat
+                  </span>
+                </div>
+                {bgBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
+              </div>
+
+              <ChatBackgroundPicker
+                value={chatBackground}
+                onChange={handleBackgroundChange}
+                disabled={bgBusy}
+              />
+
+              {bgError && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bgError}</p>}
+            </div>
           </section>
 
           {/* Provider tersimpan */}

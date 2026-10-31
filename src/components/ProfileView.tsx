@@ -101,7 +101,7 @@ export function ProfileView({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-app">
-      <div className="border-b border-line bg-header px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+      <div className="top-bar px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <h1 className="font-display text-xl font-bold tracking-tight text-ink">Profil saya</h1>
         <p className="text-xs text-ink-soft">
           Karakter membaca ini supaya tahu mereka sedang ngobrol sama siapa.

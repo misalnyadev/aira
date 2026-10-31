@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
+import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
+import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { Avatar } from "./Avatar";
 import {
   BackIcon,
@@ -61,6 +63,7 @@ export function ChatWindow({
   isSpeaking,
   canSpeak,
   voiceEnabled,
+  background,
   onBack,
   onOpenProfile,
   onOpenVoice,
@@ -77,6 +80,8 @@ export function ChatWindow({
   isSpeaking: boolean;
   canSpeak: boolean;
   voiceEnabled: boolean;
+  /** Latar area chat pilihan pengguna; `default` memakai pola bawaan tema. */
+  background?: ChatBackground;
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
@@ -89,6 +94,8 @@ export function ChatWindow({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
+  const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
+  const backdrop = chatBackgroundProps(background, isDark);
   const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
     useMessageActions();
 
@@ -133,9 +140,12 @@ export function ChatWindow({
   }
 
   return (
-    <div className="chat-wallpaper flex h-full min-h-0 flex-1 flex-col">
-      {/* Header */}
-      <div className="z-10 flex items-center gap-2 border-b border-line bg-header px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+    <div
+      className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
+      style={backdrop.style}
+    >
+      {/* Header — kaca, supaya latar chat tetap terlihat sampai status bar */}
+      <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
         <button
           onClick={onBack}
           className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
