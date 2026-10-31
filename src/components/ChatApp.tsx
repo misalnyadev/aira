@@ -517,9 +517,6 @@ export function ChatApp() {
     const base = activeCharacter.bubbleStyle ?? bubbleStyle;
     const nextHidden = !Boolean(base.hideMessages);
     void handleCharacterBubble(activeCharacter.id, { ...base, hideMessages: nextHidden });
-    if (nextHidden) {
-      showToast("Tulisan chat disembunyikan — ketuk ikon mata lagi untuk menampilkan.");
-    }
   }
 
   if (!loaded) {
