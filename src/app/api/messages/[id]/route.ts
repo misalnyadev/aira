@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { removeStoredImage } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,7 +24,11 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
 
   const [owned] = await db
-    .select({ messageId: messages.id, characterId: messages.characterId })
+    .select({
+      messageId: messages.id,
+      characterId: messages.characterId,
+      imageUrl: messages.imageUrl,
+    })
     .from(messages)
     .innerJoin(characters, eq(characters.id, messages.characterId))
     .where(and(eq(messages.id, id), eq(characters.userId, user.id)))
@@ -34,6 +39,9 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   await db.delete(messages).where(eq(messages.id, id));
+  if (owned.imageUrl) {
+    await removeStoredImage(owned.imageUrl, user.id);
+  }
 
   return NextResponse.json({ ok: true, characterId: owned.characterId });
 }

@@ -156,22 +156,34 @@ export function orderProviderCandidates<T extends MinimalProvider>(
   return ordered.slice(0, Math.max(1, maxProviders));
 }
 
+const GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const GROQ_VISION_CAPABLE_RE = /llama-4-(scout|maverick)|vision|llava/i;
+
 /**
  * Pilih nama model untuk kandidat provider saat ini.
  * Override model di karakter hanya dipakai pada provider utamanya — kalau sudah
  * jatuh ke provider cadangan lain, pakai model bawaan provider cadangan itu
  * supaya model Gemini tidak nyasar dikirim ke Grok/OpenRouter.
+ *
+ * Bila pengguna mengirim foto (`hasImage`) ke Groq yang sedang memakai model
+ * teks-saja (mis. `llama-3.3-70b-versatile`), otomatis alihkan ke model vision Groq.
  */
 export function resolveCandidateModel(
   character: { providerId: string | null; model: string | null },
-  candidate: { id: string; model: string },
-  isPrimary: boolean
+  candidate: { id: string; model: string; type?: string },
+  isPrimary: boolean,
+  hasImage = false
 ): string {
   const customModel = character.model?.trim() ?? "";
-  if (customModel && (isPrimary || character.providerId === candidate.id)) {
-    return customModel;
+  const picked =
+    customModel && (isPrimary || character.providerId === candidate.id)
+      ? customModel
+      : candidate.model;
+
+  if (hasImage && candidate.type === "groq" && !GROQ_VISION_CAPABLE_RE.test(picked)) {
+    return GROQ_VISION_MODEL;
   }
-  return candidate.model;
+  return picked;
 }
 
 export function serializeProviderRow(row: {

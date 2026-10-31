@@ -253,7 +253,7 @@ export async function generateBubbles({
 
   for (let pIdx = 0; pIdx < candidates.length; pIdx++) {
     const candidate = candidates[pIdx];
-    const model = resolveCandidateModel(character, candidate, pIdx === 0);
+    const model = resolveCandidateModel(character, candidate, pIdx === 0, Boolean(image));
     const backups = parseBackupKeys(candidate.backupKeys, candidate.apiKey);
     const attempts = buildKeyAttempts(candidate.type, candidate.apiKey, backups);
 
