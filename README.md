@@ -1,4 +1,4 @@
-# Persona — Chat Karakter AI Privat (Style WhatsApp)
+# Aisherly — Chat Karakter AI Privat (Style WhatsApp)
 
 Aplikasi chat privat untuk **latihan pendalaman karakter/peran**. Karakter terasa seperti manusia sungguhan: punya kepribadian & emosi, gaya chat natural (beberapa bubble pendek seperti orang beneran ngetik), bisa melihat foto yang kamu kirim, dan **tidak pernah** membahas hal teknis atau mengakui dirinya AI.
 
@@ -15,7 +15,7 @@ Aplikasi chat privat untuk **latihan pendalaman karakter/peran**. Karakter teras
 | 3 | Import repo di **Vercel** + tempel `DATABASE_URL` → Deploy | 5 menit |
 | 4 | Buka link Vercel → ⚙️ Pengaturan → isi API key Gemini/Grok/OpenRouter | 2 menit |
 
-Tabel database dibuat **otomatis** saat aplikasi pertama kali dibuka — tidak perlu menjalankan perintah migrasi apa pun. Karakter contoh juga otomatis muncul.
+Tabel database dibuat **otomatis** saat aplikasi pertama kali dibuka — tidak perlu menjalankan perintah migrasi apa pun. Setiap akun baru langsung mendapat **satu karakter awal** sebagai contoh.
 
 ---
 
@@ -37,7 +37,7 @@ Tabel database dibuat **otomatis** saat aplikasi pertama kali dibuka — tidak p
 
 ### Opsi A: tanpa install git sama sekali (paling ringan untuk laptop lambat)
 
-1. Buka https://github.com/new → nama repo mis. `persona` → **Create repository**.
+1. Buka https://github.com/new → nama repo mis. `aisherly` → **Create repository**.
 2. Klik **"uploading an existing file"** → drag & drop seluruh isi folder project ini.
    ⚠️ **Jangan** ikut mengunggah: folder `node_modules`, folder `.next`, dan file `.env`.
 3. Klik **Commit changes**.
@@ -50,9 +50,9 @@ cd folder-project
 git init
 git add .
 git status          # pastikan .env, node_modules, .next TIDAK ter-list
-git commit -m "feat: Persona - private character chat app"
+git commit -m "feat: Aisherly - private character chat app"
 git branch -M main
-git remote add origin https://github.com/USERNAME/persona.git
+git remote add origin https://github.com/USERNAME/aisherly.git
 git push -u origin main
 ```
 
@@ -63,7 +63,7 @@ git push -u origin main
 ## Langkah 3 — Deploy ke Vercel
 
 1. Buka https://vercel.com/signup → **Continue with GitHub** (paling praktis).
-2. Dashboard → **Add New… → Project** → pilih repo `persona` → **Import**.
+2. Dashboard → **Add New… → Project** → pilih repo `aisherly` → **Import**.
 3. Framework otomatis terdeteksi **Next.js** — biarkan apa adanya.
 4. Buka bagian **Environment Variables**, tambahkan:
 
@@ -74,7 +74,7 @@ git push -u origin main
 5. Klik **Deploy** → tunggu 1–2 menit → **Continue to Dashboard**.
 6. Link aplikasi kamu ada di bagian atas, bentuknya:
    ```
-   https://persona-xxxx.vercel.app
+   https://aisherly-xxxx.vercel.app
    ```
 
 Selesai. Buka link itu → klik ⚙️ **Pengaturan** → tambah API key (lihat Langkah 4).
@@ -109,7 +109,7 @@ API key disimpan di database Neon milikmu sendiri — tidak dikirim ke pihak lai
 
 Karena sudah online di Vercel, HP **tidak perlu** satu WiFi dengan laptop:
 
-1. Buka `https://persona-xxxx.vercel.app` di browser HP (Chrome/Safari).
+1. Buka `https://aisherly-xxxx.vercel.app` di browser HP (Chrome/Safari).
 2. Menu browser → **"Add to Home screen"** / **"Tambahkan ke layar utama"**.
 3. Muncul ikon seperti aplikasi biasa — buka kapan saja, chat tersimpan di cloud.
 
@@ -205,7 +205,7 @@ src/
    │  ├─ providerDefaults.ts
    │  └─ index.ts
    ├─ dbReady.ts                    # buat tabel otomatis (deploy tanpa migrasi manual)
-   ├─ seedDemo.ts                   # auto-seed 3 karakter contoh
+   ├─ seedDemo.ts                   # karakter awal (Kirana) untuk akun baru
    ├─ compressImage.ts              # kompresi gambar di browser sebelum upload
    └─ uploads.ts                    # simpan/baca gambar: disk ATAU database
 .github/workflows/ci.yml            # type-check + build otomatis tiap push
@@ -213,10 +213,91 @@ src/
 
 ---
 
+## Akun & login
+
+Aplikasi ini memakai akun email + kata sandi.
+
+- Kata sandi disimpan sebagai hash **scrypt** dengan salt berbeda tiap orang — kata sandi aslinya tidak pernah tersimpan.
+- Sesi disimpan di cookie **HttpOnly** (tidak bisa dibaca JavaScript) dan berlaku 30 hari.
+- **Karakter, riwayat chat, API key, dan lampiran terpisah per akun.** Akun lain tidak bisa melihat maupun mengubahnya, walaupun tahu ID-nya.
+- Saat masuk dengan email yang tidak terdaftar, pemeriksaan tetap dijalankan terhadap hash umpan supaya lama responsnya tidak membocorkan email mana yang punya akun.
+
+**Data lama tidak hilang.** Karakter dan API key dari versi sebelum ada login otomatis jadi milik **akun pertama** yang mendaftar. Karena itu urutannya penting: daftarkan akun sendiri dulu, baru bagikan link.
+
+## Kode undangan
+
+Aplikasi ini untuk lingkaran teman, bukan pendaftaran umum. Kodenya diatur lewat environment variable `SIGNUP_CODE`.
+
+| `SIGNUP_CODE` | Akibat |
+|---|---|
+| diisi | hanya yang tahu kode bisa mendaftar |
+| kosong / lupa dipasang | **pendaftaran ditutup** untuk semua orang |
+
+Sengaja "gagal tertutup": kalau variabelnya lupa dipasang, yang terjadi adalah tidak bisa daftar — bukan siapa pun boleh daftar. Kode diperiksa paling awal, sebelum menyentuh database, jadi tidak bisa dipakai menebak email terdaftar. Perbandingannya lewat digest SHA-256 (bukan `==`) dan mengabaikan spasi di ujung serta huruf besar/kecil.
+
+Ganti kode kapan saja di Vercel → Settings → Environment Variables, lalu **Redeploy**.
+
+## Batas 10 karakter
+
+Maksimal **10 karakter per akun**, dijaga dua lapis:
+
+- Di tampilan: penghitung `n/10` di header, tombol **+** mati saat penuh.
+- Di server: `POST /api/characters` menolak karakter ke-11 dengan status 409.
+
+Angka batasnya ada di satu tempat, `src/lib/limits.ts`. Kalau nanti perlu diubah, cukup di situ — UI dan API ikut menyesuaikan.
+
+## Bible peran
+
+Setiap karakter bisa punya **bible** — naskah lengkap tentang siapa dia, diimpor dari berkas.
+
+**Format bebas**, tidak ada struktur wajib:
+
+- `.txt` / `.md` → seluruh isi berkas dianggap bible.
+- `.json` → diambil dari kunci `bible` (atau `naskah` / `content`), dan boleh sekalian membawa `name`, `personality`, `greeting`, `shortBio`.
+
+Batasnya **24.000 karakter** per karakter (± 6.000–8.000 token). Karakter yang punya bible ditandai 📖 di daftar dan isinya bisa dibaca ulang di Profil Karakter.
+
+Isi yang paling berpengaruh ke konsistensi, berurutan:
+
+1. **Cara bicara** — panjang kalimat, sapaan, emoji
+2. **Yang tidak pernah dibicarakan** — mencegah keluar jalur
+3. **Rahasia + kapan boleh dibuka** — ini yang membuat dia terasa punya peran
+4. Latar belakang, hubungan dengan lawan bicara
+
+Bible disisipkan **sebelum** ringkasan profil dengan label "SUMBER KEBENARAN UTAMA", plus aturan: kalau bible berbeda dengan ringkasan, ikuti bible.
+
+> Bible dikirim di **setiap** pesan, jadi panjangnya berpengaruh langsung ke biaya dan kecepatan. Kalau mulai terasa berat, pisahkan menjadi "inti" (selalu dikirim) dan "adegan" (dipakai saat perlu).
+
+## Karakter tidak boleh keluar dari peran
+
+Karakter harus terasa seperti talent sungguhan, bukan chatbot. Dijaga dua lapis:
+
+**1. Aturan di prompt**
+
+- Daftar frasa terlarang ditulis eksplisit ("Sebagai AI…", "aku kan cuma program", "ini cuma role-play", "aku sedang berperan…", "aku bukan manusia").
+- Kalau ditanya "kamu AI ya?", karakter menjawab seperti manusia: bingung, ketawa, balik bertanya — tanpa mengiyakan dan tanpa menyebut kata AI.
+- Dilarang menolak sesuatu karena keterbatasan program; penolakan harus beralasan manusiawi.
+- Sebelum mengirim, model diminta memeriksa sendiri apakah ada kata AI/model/bot/virtual/fiksi/peran dalam balasannya.
+
+**2. Penyaring di server** (`src/lib/ai/immersion.ts`)
+
+| Kejadian | Yang dilakukan |
+|---|---|
+| Balasan bersih | langsung dikirim |
+| Terdeteksi pengakuan diri | diminta ulang **sekali** dengan imbauan keras |
+| Masih terdeteksi | kalimat yang melanggar dibuang, sisanya tetap dikirim |
+| Semua kalimat melanggar | diganti satu kata netral |
+
+Biaya tambahan hanya keluar saat kasus ini benar-benar terjadi, dan yang tersimpan di riwayat selalu versi yang sudah bersih.
+
+Polanya sengaja dipersempit ke **pengakuan diri**, bukan kata "AI" secara umum — karakter talent tetap boleh membicarakan AI sebagai topik, dan kalimat seperti "Aku nggak punya perasaan sama kamu" tidak ikut terbuang.
+
+---
+
 ## Cara pakai
 
 1. Buka link aplikasi → ⚙️ **Pengaturan** → tambah API key → centang default.
-2. Pilih karakter contoh (Alya, Bima, Nenek Wulan) atau tap **+** untuk membuat sendiri:
+2. Pilih karakter yang ada, atau tap **+** untuk membuat sendiri (maksimal 10 karakter per akun):
    upload **foto profil**, isi **nama**, **status singkat**, **kepribadian & latar belakang** (makin detail makin nyata), **pesan pembuka**, dan opsional provider/model khusus.
 3. Chat seperti biasa. Tap 📎 untuk mengirim foto — karakter merespons seperti benar-benar melihat fotonya.
 4. Tap nama karakter di header chat untuk melihat profil, mengedit, atau menghapus karakter.

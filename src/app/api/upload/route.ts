@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { saveUploadedFile } from "@/lib/uploads";
 
@@ -9,6 +10,11 @@ const MAX_SIZE = 6 * 1024 * 1024; // 6MB (gambar sudah dikompresi di browser)
 
 export async function POST(req: Request) {
   await ensureDb();
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
 
   const formData = await req.formData();
   const file = formData.get("file");
@@ -29,7 +35,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const url = await saveUploadedFile(file);
+    const url = await saveUploadedFile(file, user.id);
     return NextResponse.json({ url });
   } catch (err) {
     return NextResponse.json(

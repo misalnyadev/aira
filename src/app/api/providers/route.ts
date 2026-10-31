@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, providerTypeValues, type ProviderType } from "@/db/schema";
 import { PROVIDER_META } from "@/lib/ai/providerDefaults";
+import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 
 export const dynamic = "force-dynamic";
@@ -29,12 +30,28 @@ function serialize(row: typeof apiProviders.$inferSelect) {
 
 export async function GET() {
   await ensureDb();
-  const rows = await db.select().from(apiProviders).orderBy(apiProviders.createdAt);
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
+
+  const rows = await db
+    .select()
+    .from(apiProviders)
+    .where(eq(apiProviders.userId, user.id))
+    .orderBy(apiProviders.createdAt);
+
   return NextResponse.json({ providers: rows.map(serialize) });
 }
 
 export async function POST(req: Request) {
   await ensureDb();
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
@@ -67,12 +84,17 @@ export async function POST(req: Request) {
   }
 
   if (isDefault) {
-    await db.update(apiProviders).set({ isDefault: false }).where(eq(apiProviders.isDefault, true));
+    // Hanya default milik sendiri yang dilepas, punya orang lain tidak disentuh.
+    await db
+      .update(apiProviders)
+      .set({ isDefault: false })
+      .where(and(eq(apiProviders.isDefault, true), eq(apiProviders.userId, user.id)));
   }
 
   const [row] = await db
     .insert(apiProviders)
     .values({
+      userId: user.id,
       type: providerType,
       label: label?.trim() || meta.name,
       apiKey: apiKey?.trim() || "",

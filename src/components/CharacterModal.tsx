@@ -3,16 +3,35 @@
 import { useRef, useState } from "react";
 import type { CharacterDetail, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
+import { parseBibleFile } from "@/lib/characterBible";
+import {
+  MAX_BIBLE_CHARS,
+  MAX_PERSONALITY_CHARS,
+  MAX_SHORT_BIO_CHARS,
+} from "@/lib/limits";
 import { Avatar } from "./Avatar";
 import { CameraIcon, XIcon } from "./icons";
 
 const PERSONALITY_PLACEHOLDER = `Contoh:
-Nama: Alya, 25 tahun, teman dekat yang hangat dan perhatian.
-Latar belakang: Sahabat sejak kuliah, sekarang kerja di agensi kreatif.
-Kepribadian: Ceria, perhatian, agak posesif kalau cemburu, suka bercanda tapi bisa serius kalau lawan bicara sedang sedih.
-Gaya bicara: Santai, banyak pakai emoji, suka ngirim pesan beruntun pendek-pendek.
-Hubungan dengan lawan bicara: Dekat dan saling percaya, kadang menggoda.
-Konteks adegan: Latihan dialog untuk scene drama romantis — percakapan sehari-hari lewat chat.`;
+Nama: Kirana, 24 tahun, beauty talent di AK Talent.
+Latar belakang: Asli Bogor, kos di Jakarta, sering syuting skincare.
+Kepribadian: Ceria di depan kamera, aslinya overthinking, gampang gugup.
+Gaya bicara: Kalimat pendek, beberapa pesan beruntun, kadang "wkwk".
+Hubungan dengan lawan bicara: Teman dekat yang dia percaya.`;
+
+const BIBLE_PLACEHOLDER = `Tempel naskah bible di sini, atau klik "Impor berkas".
+
+Bebas formatnya. Yang paling berpengaruh biasanya:
+PERAN / LATAR / CARA BICARA / HUBUNGAN / RAHASIA.`;
+
+function charCount(value: string, max: number) {
+  const over = value.length > max;
+  return (
+    <span className={over ? "text-rose-600" : "text-slate-400"}>
+      {value.length.toLocaleString("id-ID")} / {max.toLocaleString("id-ID")}
+    </span>
+  );
+}
 
 export function CharacterModal({
   initial,
@@ -28,6 +47,7 @@ export function CharacterModal({
   const [name, setName] = useState(initial?.name ?? "");
   const [shortBio, setShortBio] = useState(initial?.shortBio ?? "");
   const [personality, setPersonality] = useState(initial?.personality ?? "");
+  const [bible, setBible] = useState(initial?.bible ?? "");
   const [greeting, setGreeting] = useState(initial?.greeting ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initial?.avatarUrl ?? null);
   const [providerId, setProviderId] = useState<string>(initial?.providerId ?? "");
@@ -35,7 +55,9 @@ export function CharacterModal({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imported, setImported] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const bibleFileRef = useRef<HTMLInputElement>(null);
 
   async function handleAvatarPick(file: File) {
     setUploading(true);
@@ -54,11 +76,62 @@ export function CharacterModal({
     }
   }
 
+  /**
+   * Impor bible dari berkas. Pembacaan dan pemeriksaannya memakai modul yang
+   * sama dengan server (`parseBibleFile`), jadi hasil di layar tidak mungkin
+   * berbeda dengan yang nanti diterima API.
+   */
+  async function handleBibleFile(file: File) {
+    setError(null);
+    setImported(null);
+
+    const text = await file.text();
+    const result = parseBibleFile(file.name, text);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setBible(result.data.bible);
+
+    // JSON boleh sekalian membawa data lain; isi yang masih kosong saja,
+    // supaya tidak menimpa yang sudah diketik pengguna.
+    const filled: string[] = [];
+    if (result.data.name && !name.trim()) {
+      setName(result.data.name);
+      filled.push("nama");
+    }
+    if (result.data.personality && !personality.trim()) {
+      setPersonality(result.data.personality);
+      filled.push("kepribadian");
+    }
+    if (result.data.greeting && !greeting.trim()) {
+      setGreeting(result.data.greeting);
+      filled.push("pesan pembuka");
+    }
+    if (result.data.shortBio && !shortBio.trim()) {
+      setShortBio(result.data.shortBio);
+      filled.push("status");
+    }
+
+    setImported(
+      filled.length
+        ? `Bible diimpor. Sekalian terisi: ${filled.join(", ")}.`
+        : "Bible diimpor."
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!name.trim()) return setError("Nama karakter wajib diisi.");
     if (!personality.trim()) return setError("Deskripsi kepribadian wajib diisi.");
+    if (bible.length > MAX_BIBLE_CHARS) {
+      return setError(
+        `Bible terlalu panjang: ${bible.length.toLocaleString("id-ID")} dari maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.`
+      );
+    }
 
     setBusy(true);
     try {
@@ -66,6 +139,7 @@ export function CharacterModal({
         name,
         shortBio,
         personality,
+        bible,
         greeting,
         avatarUrl,
         providerId: providerId || null,
@@ -130,8 +204,8 @@ export function CharacterModal({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Mis. Alya Rahmadhani"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              placeholder="Mis. Kirana"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base outline-none focus:border-emerald-400"
             />
           </div>
 
@@ -142,9 +216,10 @@ export function CharacterModal({
             <input
               value={shortBio}
               onChange={(e) => setShortBio(e.target.value)}
-              placeholder="Mis. sedang syuting di Bandung 🎬"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+              placeholder="Mis. beauty talent · AK Talent"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-base outline-none focus:border-emerald-400"
             />
+            <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
           </div>
 
           <div>
@@ -155,12 +230,50 @@ export function CharacterModal({
               value={personality}
               onChange={(e) => setPersonality(e.target.value)}
               placeholder={PERSONALITY_PLACEHOLDER}
-              rows={7}
+              rows={5}
               className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
-              Makin detail & spesifik, makin konsisten dan nyata karakter ini saat diajak chat.
-            </p>
+            <p className="mt-1 text-[11px]">{charCount(personality, MAX_PERSONALITY_CHARS)}</p>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="text-xs font-semibold text-emerald-800">
+                📖 Bible peran (acuan utama)
+              </label>
+              <button
+                type="button"
+                onClick={() => bibleFileRef.current?.click()}
+                className="rounded-full border border-emerald-300 bg-white px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                Impor berkas
+              </button>
+              <input
+                ref={bibleFileRef}
+                type="file"
+                accept=".txt,.md,.markdown,.json,text/plain,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleBibleFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            <textarea
+              value={bible}
+              onChange={(e) => setBible(e.target.value)}
+              placeholder={BIBLE_PLACEHOLDER}
+              rows={6}
+              className="w-full resize-none rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+            />
+            <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-slate-500">
+                .txt / .md / .json — kalau kosong, cukup pakai kepribadian di atas.
+              </span>
+              {charCount(bible, MAX_BIBLE_CHARS)}
+            </div>
+            {imported && <p className="mt-1 text-[11px] font-medium text-emerald-700">{imported}</p>}
           </div>
 
           <div>
@@ -170,7 +283,7 @@ export function CharacterModal({
             <textarea
               value={greeting}
               onChange={(e) => setGreeting(e.target.value)}
-              placeholder="Mis. Heyy udah lama ga chat, kangen tau 😄"
+              placeholder="Mis. eh halo, gimana hari ini?"
               rows={2}
               className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
             />

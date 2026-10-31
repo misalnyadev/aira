@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders } from "@/db/schema";
+import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+
+export const dynamic = "force-dynamic";
+
+const UNAUTHORIZED = { error: "Kamu belum masuk." };
+const NOT_FOUND = { error: "Provider tidak ditemukan." };
 
 function maskKey(key: string): string {
   if (!key) return "";
@@ -26,6 +32,10 @@ function serialize(row: typeof apiProviders.$inferSelect) {
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   await ensureDb();
+
+  const user = await requireUser();
+  if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const { id } = await context.params;
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
@@ -38,13 +48,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     isDefault?: boolean;
   };
 
-  const [existing] = await db.select().from(apiProviders).where(eq(apiProviders.id, id));
-  if (!existing) {
-    return NextResponse.json({ error: "Provider tidak ditemukan." }, { status: 404 });
-  }
+  const [existing] = await db
+    .select()
+    .from(apiProviders)
+    .where(and(eq(apiProviders.id, id), eq(apiProviders.userId, user.id)))
+    .limit(1);
+
+  if (!existing) return NextResponse.json(NOT_FOUND, { status: 404 });
 
   if (isDefault) {
-    await db.update(apiProviders).set({ isDefault: false }).where(eq(apiProviders.isDefault, true));
+    await db
+      .update(apiProviders)
+      .set({ isDefault: false })
+      .where(and(eq(apiProviders.isDefault, true), eq(apiProviders.userId, user.id)));
   }
 
   const updates: Partial<typeof apiProviders.$inferInsert> = { updatedAt: new Date() };
@@ -57,15 +73,28 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const [row] = await db
     .update(apiProviders)
     .set(updates)
-    .where(eq(apiProviders.id, id))
+    .where(and(eq(apiProviders.id, id), eq(apiProviders.userId, user.id)))
     .returning();
+
+  if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
 
   return NextResponse.json({ provider: serialize(row) });
 }
 
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   await ensureDb();
+
+  const user = await requireUser();
+  if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const { id } = await context.params;
-  await db.delete(apiProviders).where(eq(apiProviders.id, id));
+
+  const [row] = await db
+    .delete(apiProviders)
+    .where(and(eq(apiProviders.id, id), eq(apiProviders.userId, user.id)))
+    .returning({ id: apiProviders.id });
+
+  if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
+
   return NextResponse.json({ ok: true });
 }

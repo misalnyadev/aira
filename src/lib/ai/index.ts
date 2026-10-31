@@ -28,7 +28,7 @@ export async function generateCharacterReply(
         providerLabel: "OpenRouter",
         extraHeaders: {
           "HTTP-Referer": "http://localhost",
-          "X-Title": "Persona Chat",
+          "X-Title": "Aisherly",
         },
       });
     case "custom": {

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
+import { MAX_CHARACTERS } from "@/lib/limits";
+import { useAuth } from "./AuthGate";
 import { Sidebar } from "./Sidebar";
 import { ChatWindow } from "./ChatWindow";
 import { Composer } from "./Composer";
@@ -22,8 +24,11 @@ function typingDelayFor(text: string) {
 }
 
 export function ChatApp() {
+  const { expire } = useAuth();
+
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
@@ -46,27 +51,48 @@ export function ChatApp() {
     toastTimer.current = setTimeout(() => setToast(null), 4500);
   }, []);
 
+  /**
+   * Semua permintaan lewat sini supaya 401 ditangani di satu tempat.
+   * Kalau sesi sudah berakhir, layar masuk ditampilkan lagi — bukan diam-diam
+   * gagal dengan daftar kosong yang membingungkan.
+   */
+  const api = useCallback(
+    async (input: string, init?: RequestInit) => {
+      const res = await fetch(input, init);
+      if (res.status === 401) expire();
+      return res;
+    },
+    [expire]
+  );
+
   const fetchCharacters = useCallback(async () => {
-    const res = await fetch("/api/characters");
+    const res = await api("/api/characters");
+    if (!res.ok) return;
     const data = await res.json();
     setCharacters(data.characters ?? []);
-  }, []);
+    if (typeof data.limit === "number") setLimit(data.limit);
+  }, [api]);
 
   const fetchProviders = useCallback(async () => {
-    const res = await fetch("/api/providers");
+    const res = await api("/api/providers");
+    if (!res.ok) return;
     const data = await res.json();
     setProviders(data.providers ?? []);
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     Promise.all([fetchCharacters(), fetchProviders()]).finally(() => setLoaded(true));
   }, [fetchCharacters, fetchProviders]);
 
-  const fetchMessages = useCallback(async (characterId: string) => {
-    const res = await fetch(`/api/characters/${characterId}/messages`);
-    const data = await res.json();
-    setMessagesMap((prev) => ({ ...prev, [characterId]: data.messages ?? [] }));
-  }, []);
+  const fetchMessages = useCallback(
+    async (characterId: string) => {
+      const res = await api(`/api/characters/${characterId}/messages`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setMessagesMap((prev) => ({ ...prev, [characterId]: data.messages ?? [] }));
+    },
+    [api]
+  );
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -82,7 +108,7 @@ export function ChatApp() {
       const compressed = await compressImageFile(imageFile);
       const fd = new FormData();
       fd.append("file", compressed);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await api("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {
         showToast(data.error || "Gagal mengunggah gambar.");
@@ -111,7 +137,7 @@ export function ChatApp() {
     setTypingFor(activeId);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await api("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId: activeId, content: text, imageUrl }),
@@ -150,7 +176,7 @@ export function ChatApp() {
   }
 
   async function openProfile(id: string) {
-    const res = await fetch(`/api/characters/${id}`);
+    const res = await api(`/api/characters/${id}`);
     const data = await res.json();
     if (res.ok) {
       setProfileDetail(data.character);
@@ -160,7 +186,7 @@ export function ChatApp() {
 
   async function handleDeleteCharacter(id: string) {
     if (!confirm("Hapus karakter ini beserta seluruh riwayat chat?")) return;
-    await fetch(`/api/characters/${id}`, { method: "DELETE" });
+    await api(`/api/characters/${id}`, { method: "DELETE" });
     setShowProfile(false);
     setEditDetail(null);
     if (activeId === id) {
@@ -177,7 +203,7 @@ export function ChatApp() {
   if (!loaded) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-400">
-        Memuat Persona...
+        Memuat Aisherly...
       </div>
     );
   }
@@ -192,6 +218,7 @@ export function ChatApp() {
           onNewCharacter={() => setShowCreate(true)}
           onOpenSettings={() => setShowSettings(true)}
           hasProviders={hasProviders}
+          limit={limit}
         />
       </div>
 
@@ -213,10 +240,10 @@ export function ChatApp() {
             <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-4xl">
               💬
             </div>
-            <h2 className="text-xl font-semibold text-slate-800">Persona — Chat Karakter Pribadi</h2>
+            <h2 className="text-xl font-semibold text-slate-800">Aisherly</h2>
             <p className="mt-2 max-w-sm text-sm text-slate-500">
-              Pilih karakter di sebelah kiri untuk mulai ngobrol, atau buat karaktermu sendiri untuk
-              latihan pendalaman peran.
+              Pilih karakter di sebelah kiri untuk mulai ngobrol, atau buat karaktermu sendiri lalu
+              impor bible perannya.
             </p>
             {!hasProviders && (
               <button

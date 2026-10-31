@@ -7,6 +7,19 @@ import { db } from "@/db";
  * (cukup set DATABASE_URL di Environment Variables lalu deploy).
  */
 const DDL = [
+  sql`CREATE TABLE IF NOT EXISTS "users" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "email" text NOT NULL UNIQUE,
+    "password_hash" text NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE TABLE IF NOT EXISTS "sessions" (
+    "id" text PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "expires_at" timestamp with time zone NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions" ("user_id")`,
   sql`CREATE TABLE IF NOT EXISTS "api_providers" (
     "id" uuid PRIMARY KEY NOT NULL,
     "type" text NOT NULL,
@@ -61,6 +74,15 @@ const DDL = [
   sql`CREATE INDEX IF NOT EXISTS "messages_character_id_idx" ON "messages" ("character_id")`,
   sql`CREATE INDEX IF NOT EXISTS "messages_created_at_idx" ON "messages" ("created_at")`,
   sql`CREATE INDEX IF NOT EXISTS "characters_provider_id_idx" ON "characters" ("provider_id")`,
+
+  // ---- Penyesuaian untuk database yang sudah terlanjur ada ----
+  // Semua memakai IF NOT EXISTS / DEFAULT supaya aman dijalankan berulang.
+  sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bible" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
+  sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
+  sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,
 ];
 
 let readyPromise: Promise<void> | null = null;

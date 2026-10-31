@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { TrashIcon, XIcon } from "./icons";
@@ -15,6 +16,9 @@ export function CharacterProfileModal({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [showBible, setShowBible] = useState(false);
+  const hasBible = Boolean(character.bible?.trim());
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl">
@@ -39,6 +43,31 @@ export function CharacterProfileModal({
               {character.personality}
             </p>
           </div>
+
+          {hasBible && (
+            <div className="mt-5">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                  📖 Bible peran
+                </h4>
+                <button
+                  onClick={() => setShowBible((v) => !v)}
+                  className="text-[11px] font-medium text-slate-500 underline decoration-dotted"
+                >
+                  {showBible ? "Sembunyikan" : "Lihat isi"}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {character.bible.trim().length.toLocaleString("id-ID")} karakter · dipakai sebagai
+                acuan utama setiap balasan.
+              </p>
+              {showBible && (
+                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-xl bg-emerald-50/60 p-3 text-xs leading-relaxed text-slate-700">
+                  {character.bible}
+                </pre>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 flex gap-2">
             <button
