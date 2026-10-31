@@ -81,6 +81,11 @@ const DDL = [
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bible" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "display_name" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nickname" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "age" integer`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "occupation" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "about" text NOT NULL DEFAULT ''`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
   sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,
 ];

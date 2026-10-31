@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { BackIcon } from "./icons";
+import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
+import { lastAssistantId, messageActionsFor } from "@/lib/messageRules";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -29,6 +31,9 @@ export function ChatWindow({
   onBack,
   onOpenProfile,
   onImageClick,
+  onCopyMessage,
+  onDeleteMessage,
+  onRegenerate,
 }: {
   character: CharacterSummary;
   messages: ChatMessage[];
@@ -36,15 +41,40 @@ export function ChatWindow({
   onBack: () => void;
   onOpenProfile: () => void;
   onImageClick: (url: string) => void;
+  onCopyMessage: (text: string) => void;
+  onDeleteMessage: (id: string) => void;
+  onRegenerate: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
+  const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
+    useMessageActions();
 
   useEffect(() => {
     if (atBottom && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping, atBottom]);
+
+  const lastAssistant = lastAssistantId(messages);
+  const openMessage = messages.find((m) => m.id === openFor) ?? null;
+
+  function actionsFor(message: ChatMessage): MessageAction[] {
+    const labels = messageActionsFor(message, {
+      isLastAssistant: message.id === lastAssistant,
+      isTyping,
+    });
+
+    return labels.map((label): MessageAction => {
+      if (label === "Salin teks") {
+        return { label, onClick: () => onCopyMessage(message.content) };
+      }
+      if (label === "Ulangi balasan") {
+        return { label, onClick: onRegenerate };
+      }
+      return { label, danger: true, onClick: () => onDeleteMessage(message.id) };
+    });
+  }
 
   return (
     <div className="flex h-full flex-1 flex-col bg-[#efeae2]">
@@ -81,7 +111,20 @@ export function ChatWindow({
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`relative max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+              onTouchStart={() => startLongPress(m.id)}
+              onTouchEnd={cancelLongPress}
+              onTouchMove={cancelLongPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setOpenFor(m.id);
+              }}
+              onClick={(e) => {
+                if (consumeLongPress()) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              className={`relative max-w-[78%] cursor-default select-none rounded-2xl px-3 py-2 text-sm shadow-sm ${
                 m.role === "user"
                   ? "rounded-br-sm bg-[#d9fdd3] text-slate-800"
                   : "rounded-bl-sm bg-white text-slate-800"
@@ -91,7 +134,10 @@ export function ChatWindow({
                 <img
                   src={m.imageUrl}
                   alt="lampiran"
-                  onClick={() => onImageClick(m.imageUrl!)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onImageClick(m.imageUrl!);
+                  }}
                   className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover"
                 />
               )}
@@ -104,6 +150,13 @@ export function ChatWindow({
         ))}
         {isTyping && <TypingBubble />}
       </div>
+
+      {openMessage && (
+        <MessageActionSheet
+          actions={actionsFor(openMessage)}
+          onClose={() => setOpenFor(null)}
+        />
+      )}
     </div>
   );
 }

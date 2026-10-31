@@ -15,6 +15,18 @@ export const users = pgTable("users", {
     .$defaultFn(() => crypto.randomUUID()),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+
+  /*
+   * Profil pengguna — dibaca karakter sebelum membalas, supaya mereka tahu
+   * sedang mengobrol dengan siapa dan memanggil dengan benar.
+   * Semua opsional: akun tetap bisa dipakai walau profil belum diisi.
+   */
+  displayName: text("display_name").notNull().default(""),
+  nickname: text("nickname").notNull().default(""),
+  age: integer("age"),
+  occupation: text("occupation").notNull().default(""),
+  about: text("about").notNull().default(""),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
