@@ -293,22 +293,6 @@ export function ChatWindow({
           )}
         </button>
 
-        {onToggleHideChat && (
-          <button
-            onClick={onToggleHideChat}
-            aria-pressed={hideMessages}
-            className={`shrink-0 rounded-full p-2 transition active:opacity-60 ${
-              hideMessages
-                ? "bg-surface-2 text-ink ring-1 ring-line"
-                : "text-ink-soft hover:bg-surface-2 hover:text-ink"
-            }`}
-            aria-label={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
-            title={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
-          >
-            {hideMessages ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-          </button>
-        )}
-
         {onVideoCall && (
           <button
             onClick={onVideoCall}
@@ -345,117 +329,144 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* Messages — disembunyikan bila mode ngobrol langsung aktif */}
-      {hideMessages ? (
-        <div className="min-h-0 flex-1" aria-hidden="true" />
-      ) : (
-        <div
-          ref={scrollRef}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
-          }}
-          className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
-        >
-          <div className="mx-auto w-full max-w-3xl">
-            {items.map(({ message: m, divider }) => (
-              <div key={m.id}>
-                {divider && (
-                  <div className="my-3 flex justify-center">
-                    <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[12px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
-                      {divider}
-                    </span>
-                  </div>
-                )}
-
-                <div
-                  className={`group mb-1.5 flex items-end gap-1 ${
-                    m.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {m.role === "user" && !m.pending && (
-                    <button
-                      type="button"
-                      onClick={() => setOpenFor(m.id)}
-                      aria-label="Menu pesan"
-                      className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
-                    >
-                      <span className="px-1 text-xs leading-none">•••</span>
-                    </button>
+      {/* Area chat + tombol mengambang sembunyikan chat di atas tombol kirim */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {hideMessages ? (
+          <div className="min-h-0 flex-1" aria-hidden="true" />
+        ) : (
+          <div
+            ref={scrollRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+            }}
+            className={`flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
+              onToggleHideChat ? "pb-12 sm:pb-12" : ""
+            }`}
+          >
+            <div className="mx-auto w-full max-w-3xl">
+              {items.map(({ message: m, divider }) => (
+                <div key={m.id}>
+                  {divider && (
+                    <div className="my-3 flex justify-center">
+                      <span className="rounded-lg bg-surface/85 px-2.5 py-1 text-[12px] font-medium text-ink-soft shadow-xs ring-1 ring-line/60 backdrop-blur">
+                        {divider}
+                      </span>
+                    </div>
                   )}
 
                   <div
-                    onTouchStart={() => startLongPress(m.id)}
-                    onTouchEnd={cancelLongPress}
-                    onTouchMove={cancelLongPress}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setOpenFor(m.id);
-                    }}
-                    onClick={(e) => {
-                      if (consumeLongPress()) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
-                    className={`bubble-in relative max-w-[85%] cursor-default rounded-2xl px-3 py-2 text-sm shadow-xs max-md:select-none sm:max-w-[75%] ${
-                      m.role === "user"
-                        ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
-                        : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
-                    } ${m.pending ? "opacity-60" : ""}`}
-                    style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
+                    className={`group mb-1.5 flex items-end gap-1 ${
+                      m.role === "user" ? "justify-end" : "justify-start"
+                    }`}
                   >
-                    {m.imageUrl && (
-                      <img
-                        src={m.imageUrl}
-                        alt="lampiran foto"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (consumeLongPress()) return;
-                          onImageClick(m.imageUrl!);
-                        }}
-                        className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
-                      />
+                    {m.role === "user" && !m.pending && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenFor(m.id)}
+                        aria-label="Menu pesan"
+                        className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                      >
+                        <span className="px-1 text-xs leading-none">•••</span>
+                      </button>
                     )}
-                    {m.content && (
-                      <p
-                        className="whitespace-pre-wrap break-words"
+
+                    <div
+                      onTouchStart={() => startLongPress(m.id)}
+                      onTouchEnd={cancelLongPress}
+                      onTouchMove={cancelLongPress}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setOpenFor(m.id);
+                      }}
+                      onClick={(e) => {
+                        if (consumeLongPress()) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }
+                      }}
+                      className={`bubble-in relative max-w-[85%] cursor-default rounded-2xl px-3 py-2 text-sm shadow-xs max-md:select-none sm:max-w-[75%] ${
+                        m.role === "user"
+                          ? "rounded-br-sm bg-bubble-out text-bubble-out-ink"
+                          : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"
+                      } ${m.pending ? "opacity-60" : ""}`}
+                      style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
+                    >
+                      {m.imageUrl && (
+                        <img
+                          src={m.imageUrl}
+                          alt="lampiran foto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (consumeLongPress()) return;
+                            onImageClick(m.imageUrl!);
+                          }}
+                          className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
+                        />
+                      )}
+                      {m.content && (
+                        <p
+                          className="whitespace-pre-wrap break-words"
+                          style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
+                        >
+                          {m.content}
+                        </p>
+                      )}
+                      <span
+                        className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
+                          (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
+                            ? "opacity-75"
+                            : "text-ink-soft/80"
+                        }`}
                         style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
                       >
-                        {m.content}
-                      </p>
+                        {formatTime(m.createdAt)}
+                        {m.role === "user" && <Ticks pending={m.pending} />}
+                      </span>
+                    </div>
+
+                    {m.role === "assistant" && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenFor(m.id)}
+                        aria-label="Menu pesan"
+                        className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
+                      >
+                        <span className="px-1 text-xs leading-none">•••</span>
+                      </button>
                     )}
-                    <span
-                      className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
-                        (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
-                          ? "opacity-75"
-                          : "text-ink-soft/80"
-                      }`}
-                      style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
-                    >
-                      {formatTime(m.createdAt)}
-                      {m.role === "user" && <Ticks pending={m.pending} />}
-                    </span>
                   </div>
-
-                  {m.role === "assistant" && (
-                    <button
-                      type="button"
-                      onClick={() => setOpenFor(m.id)}
-                      aria-label="Menu pesan"
-                      className="mb-1 hidden rounded-full p-1 text-muted opacity-0 transition hover:bg-surface-2 hover:text-ink group-hover:opacity-100 md:inline-flex"
-                    >
-                      <span className="px-1 text-xs leading-none">•••</span>
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {isTyping && <TypingBubble bubble={bubbleStyle} />}
+              {isTyping && <TypingBubble bubble={bubbleStyle} />}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {onToggleHideChat && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-2.5 sm:px-3">
+            <div className="mx-auto flex w-full max-w-3xl justify-end">
+              <div className="flex w-10 justify-center">
+                <button
+                  type="button"
+                  onClick={onToggleHideChat}
+                  aria-pressed={hideMessages}
+                  aria-label={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
+                  title={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
+                  className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-surface/45 text-ink/70 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 hover:text-ink active:scale-95 active:opacity-70"
+                >
+                  {hideMessages ? (
+                    <EyeOffIcon className="h-[18px] w-[18px]" />
+                  ) : (
+                    <EyeIcon className="h-[18px] w-[18px]" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {composer && <div className="z-10 shrink-0">{composer}</div>}
 
