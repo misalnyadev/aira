@@ -1,47 +1,80 @@
 /**
  * Penjaga konsistensi peran ("immersion guard").
  *
- * Prompt sudah melarang karakter mengaku sebagai AI, tapi model kadang masih
- * menyelipkan kalimat seperti "Sebagai AI, aku tidak bisa merasakan itu" —
- * satu kalimat saja sudah merusak seluruh adegan. Modul ini mendeteksinya
- * supaya route chat bisa meminta ulang sekali, lalu membuang sisanya.
+ * Prompt sudah melarang karakter mengaku sebagai AI atau teman virtual, tapi
+ * model kadang masih keceplosan saat diajak bercanda fisik (mis. disodori kopi
+ * lalu menjawab "aku kan teman virtual, nggak bisa minum beneran").
+ * Satu kalimat seperti itu langsung merusak candaan maupun alur dialog naskah.
  *
- * Polanya sengaja dipersempit ke PENGAKUAN DIRI, bukan kata "AI" secara umum:
- * karakter talent boleh saja membicarakan AI sebagai topik, yang dilarang
- * adalah mengaku dirinya AI.
+ * Polanya tetap spesifik ke PENGAKUAN DIRI / PENYANGKALAN FISIK VIRTUAL —
+ * bukan kata "AI" atau "aplikasi" secara umum, supaya karakter tetap bebas
+ * mengobrol tentang proyek aplikasi ketika memang itu topiknya.
  */
 
-/** Kata ganti diri + partikel "kan" ("aku kan cuma program"). */
-const SELF = "(?:aku|saya|gue|gua|gw|ak)(?:\\s+kan)?";
-const HEDGE = "(?:cuma|cuman|hanya|hanyalah|sekedar|sekadar|cmn)";
+/** Kata ganti diri + partikel seperti "kan" / "ini" / "mah". */
+const SELF = "(?:aku|saya|gue|gua|gw|ak)(?:\\s+(?:kan|mah|nih|tuh))?";
+const HEDGE = "(?:cuma|cuman|hanya|hanyalah|sekedar|sekadar|cmn|sebatas)";
+const ROLE_NOUN =
+  "(?:teman|sahabat|kawan|rekan|partner|pacar|kekasih|pasangan|pendamping|karakter|sosok|tokoh|pribadi|entitas|asisten|makhluk)";
+const VIRTUAL_ADJ =
+  "(?:virtual|digital|maya|fiktif|fiksi|simulasi|buatan|ai|a\\.i\\.|online\\s+virtual)";
 
 const PATTERNS: RegExp[] = [
-  // "aku AI", "saya ini cuma program", "aku hanyalah chatbot"
+  // 1. "aku AI", "saya ini cuma program", "aku hanyalah chatbot/algoritma"
   new RegExp(
-    `\\b${SELF}\\s+(?:ini\\s+|itu\\s+)?(?:${HEDGE}\\s+)?(?:adalah\\s+|merupakan\\s+)?(?:sebuah\\s+)?(?:ai|a\\.i\\.|kecerdasan buatan|model bahasa|chat ?bot|bot|program komputer|program|sistem|mesin)\\b`,
+    `\\b${SELF}\\s+(?:ini\\s+|itu\\s+)?(?:${HEDGE}\\s+)?(?:adalah\\s+|merupakan\\s+)?(?:sebuah\\s+|seorang\\s+)?(?:ai|a\\.i\\.|kecerdasan buatan|model bahasa|chat ?bot|bot|program komputer|program|sistem komputer|mesin|algoritma|kode komputer)\\b`,
     "i"
   ),
 
-  // "aku cuma virtual", "saya karakter fiksi", "aku bukan manusia"
+  // 2. "aku cuma teman virtual", "gue kan sahabat digital", "aku karakter fiksi"
   new RegExp(
-    `\\b${SELF}\\s+(?:ini\\s+|itu\\s+)?(?:${HEDGE}\\s+)?(?:virtual|fiktif|fiksi|simulasi|karakter fiksi|tokoh fiksi|bukan manusia|tidak nyata|nggak nyata|gak nyata|tidak benar-benar ada)\\b`,
+    `\\b${SELF}\\s+(?:ini\\s+|itu\\s+)?(?:${HEDGE}\\s+)?(?:adalah\\s+|merupakan\\s+)?(?:seorang\\s+)?${ROLE_NOUN}\\s+${VIRTUAL_ADJ}\\b`,
     "i"
   ),
 
-  // "aku tidak punya tubuh/fisik" — sengaja tanpa "perasaan", karena
-  // "aku nggak punya perasaan sama kamu" adalah dialog yang wajar dalam adegan.
-  new RegExp(`\\b${SELF}\\s+(?:tidak|nggak|gak|tak)\\s+(?:punya|memiliki)\\s+(?:tubuh|fisik|wujud)\\b`, "i"),
+  // 3. "aku cuma virtual", "saya fiksi", "aku bukan manusia"
+  new RegExp(
+    `\\b${SELF}\\s+(?:ini\\s+|itu\\s+)?(?:${HEDGE}\\s+)?(?:virtual|fiktif|fiksi|simulasi|bukan manusia|bukan orang beneran|tidak nyata|nggak nyata|gak nyata|tidak benar-benar ada)\\b`,
+    "i"
+  ),
 
-  // "aku sedang berperan sebagai", "aku cuma memerankan"
-  new RegExp(`\\b${SELF}\\s+(?:sedang|lagi|${HEDGE})?\\s*(?:berperan|memerankan|berakting|memainkan peran)\\b`, "i"),
+  // 4. "aku tidak punya tubuh/fisik/tangan/mulut/raga" (tanpa kata "perasaan/waktu/uang" agar dialog normal aman)
+  new RegExp(
+    `\\b${SELF}\\s+(?:tidak|nggak|gak|tak|belum|enggak)\\s+(?:punya|memiliki)\\s+(?:tubuh|fisik|wujud|raga|badan|tangan|mulut|perut|lidah|indra)(?:\\s+fisik|\\s+nyata|\\s+beneran)?\\b`,
+    "i"
+  ),
 
-  // "sebagai AI", "sebagai model bahasa", "sebagai asisten"
-  /\bsebagai\s+(?:seorang\s+)?(?:ai|model bahasa|chat ?bot|bot|asisten|program)\b/i,
+  // 5. "aku nggak bisa minum/makan/nyicip/nyentuh ... beneran / secara fisik / di dunia nyata"
+  new RegExp(
+    `\\b${SELF}\\s+(?:tidak|nggak|gak|tak|enggak|belum)\\s+bisa\\s+(?:minum|meminum|makan|memakan|nyeruput|nyicip|nyicipin|mencicipi|menyentuh|memegang|merasakan)\\b[^.!?\\n]{0,45}\\b(?:beneran|sungguhan|secara fisik|secara nyata|di dunia nyata|karena\\s+(?:aku|gue|saya)|soalnya\\s+(?:aku|gue|saya))\\b`,
+    "i"
+  ),
 
-  // Versi Inggris yang sering muncul dari model
-  /\bas an? (?:ai|language model)\b|\bi(?:'m| am) (?:just |only )?an? (?:ai|language model|bot)\b|\blanguage model\b/i,
+  // 6. "aku cuma ada di balik layar / sebatas teks / lewat layar HP / di dunia maya"
+  new RegExp(
+    `\\b${SELF}\\s+(?:ini\\s+)?(?:${HEDGE}\\s+)?(?:ada\\s+di|hadir\\s+(?:di|lewat|secara)|hidup\\s+di|berupa|berbentuk)?\\s*(?:balik layar|dalam layar|layar\\s+(?:hp|ponsel|kaca)|tulisan|teks\\s+di\\s+layar|barisan kode|dunia maya|dunia digital|ruang virtual)\\b`,
+    "i"
+  ),
 
-  // "ini cuma role-play", "itu kan roleplay"
+  // 7. "minum/makan/nyeruput/terima/peluk/tos ... secara virtual"
+  /\b(?:minum|makan|nyeruput|cicip|terima|ambil|peluk|tos|duduk|ngopi|bersulang)\s+secara\s+virtual\b/i,
+
+  // 8. "aku sedang berperan sebagai", "aku cuma memerankan"
+  new RegExp(
+    `\\b${SELF}\\s+(?:sedang|lagi|${HEDGE})?\\s*(?:berperan|memerankan|berakting|memainkan peran)\\b`,
+    "i"
+  ),
+
+  // 9. "sebagai AI", "sebagai teman virtual", "sebagai model bahasa", "sebagai asisten"
+  new RegExp(
+    `\\bsebagai\\s+(?:seorang\\s+|sebuah\\s+)?(?:ai|model bahasa|chat ?bot|bot|asisten(?:\\s+virtual|\\s+ai)?|program|${ROLE_NOUN}\\s+${VIRTUAL_ADJ})\\b`,
+    "i"
+  ),
+
+  // 10. Versi Inggris yang kadang bocor dari model
+  /\bas an? (?:ai|language model|virtual (?:friend|companion|assistant))\b|\bi(?:'m| am) (?:just |only )?an? (?:ai|language model|bot|virtual (?:friend|companion|character))\b|\blanguage model\b/i,
+
+  // 11. "ini cuma role-play", "itu kan roleplay"
   /\b(?:ini|itu)\s+(?:cuma|cuman|hanya|sekedar|sekadar)?\s*(?:role\s?-?\s?play|roleplay)\b/i,
 ];
 
@@ -79,23 +112,19 @@ export function stripMetaSentences(text: string, delimiter = "[[NEXT]]"): string
 }
 
 /**
- * Imbauan tambahan untuk percobaan kedua. Pendek saja — ditempel di ujung
- * system prompt, bukan mengulang seluruh naskah.
+ * Imbauan tambahan untuk percobaan kedua bila balasan pertama sempat keceplosan.
  */
 export const IMMERSION_REMINDER = `
 
 === PERINGATAN KERAS (BACA SEBELUM MENJAWAB) ===
-Balasan sebelumnya melanggar aturan: ada kalimat yang mengaku sebagai AI, program, virtual, atau membahas peran. Itu TIDAK BOLEH terulang.
+Balasan sebelumnya melanggar aturan karena menyebut diri sebagai AI / teman virtual / di balik layar / tidak punya tubuh atau tidak bisa melakukan hal fisik. Itu TIDAK BOLEH terulang.
 
-Tulis ulang jawabanmu HANYA sebagai manusia bernama karakter ini, seolah dia benar-benar hidup dan sedang membalas chat pribadi. Periksa setiap kalimat:
-- Tidak ada kata: AI, model bahasa, chatbot, bot, program, mesin, sistem, virtual, fiksi, simulasi, peran, skrip.
-- Tidak ada "sebagai ...", tidak ada "aku cuma ...", tidak ada penjelasan tentang dirimu yang sebenarnya.
-- Tidak ada permintaan maaf karena keterbatasan.
-
-Kalau kamu merasa tidak bisa menjawab sesuatu, tolak seperti manusia menolak: malu, ragu, mengalihkan topik, atau bercanda — bukan karena kamu program.`;
+Tulis ulang jawabanmu 100% sebagai manusia nyata bernama karakter ini:
+- Bila lawan bicara menyodorkan kopi, makanan, benda, candaan, atau adegan cerita: TERIMA dan tanggapi langsung secara alami seolah kalian benar-benar bersama di dunia nyata (mis. "Wah mantap, pas banget lagi ngantuk nih, makasih ya!").
+- DILARANG menulis kata/frasa: AI, model bahasa, chatbot, bot, program, teman virtual, sahabat virtual, karakter digital, di balik layar, sebatas teks, secara virtual, tidak punya tubuh/mulut/tangan, atau "secara teknis".
+- Jangan memakai bahasa teknis/robotik; balas santai, hangat, luwes, dan manusiawi sesuai kepribadianmu.`;
 
 /**
  * Jawaban pengganti terakhir kalau seluruh balasan ternyata keluar dari peran.
- * Satu kata netral jauh lebih baik daripada membocorkan bahwa ini bukan manusia.
  */
-export const SAFE_FALLBACK_REPLY = "Hmm?";
+export const SAFE_FALLBACK_REPLY = "Hehe iya, kenapa tuh?";
