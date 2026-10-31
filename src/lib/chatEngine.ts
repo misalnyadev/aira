@@ -36,6 +36,7 @@ import {
   resolveCandidateModel,
 } from "@/lib/providerPool";
 import type { UserProfile } from "@/lib/userProfile";
+import { buildSceneContinuityAnchor } from "@/lib/sceneTracker";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
 
 /**
@@ -324,7 +325,16 @@ export async function generateBubbles({
   userProfile: UserProfile | null;
   memoryExtras?: MemoryPromptContext;
 }): Promise<GenerateBubblesResult> {
-  const systemPrompt = buildSystemPrompt(character, userProfile, memoryExtras);
+  const sceneAnchor = buildSceneContinuityAnchor(history, userText);
+  const mergedExtras: MemoryPromptContext | undefined =
+    memoryExtras || sceneAnchor
+      ? {
+          ...memoryExtras,
+          ...(sceneAnchor ? { sceneAnchor } : {}),
+        }
+      : undefined;
+
+  const systemPrompt = buildSystemPrompt(character, userProfile, mergedExtras);
   const primaryLabel = candidates[0]?.label ?? "";
   const startedAt = Date.now();
   let lastError: unknown = null;
