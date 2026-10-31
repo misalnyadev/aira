@@ -128,6 +128,8 @@ export function presignR2Url(
 const SAFE_MEDIA_KEY_RE =
   /^media\/([0-9a-f-]{36})\/([0-9a-f-]{36})\/(chatVideo|callVideo|callAudio)-[0-9a-f-]{36}\.[a-z0-9]{2,5}$/;
 
+const SAFE_TTS_KEY_RE = /^tts\/([0-9a-f-]{36})\/[a-z0-9_-]{6,64}\.(wav|mp3)$/;
+
 /**
  * Pastikan kunci objek R2 benar-benar berada di bawah folder milik pengguna ini.
  * Mencegah pengguna membaca atau menghapus media milik akun lain.
@@ -137,6 +139,55 @@ export function isOwnedMediaKey(key: string, userId: string): boolean {
   const match = SAFE_MEDIA_KEY_RE.exec(key);
   if (!match) return false;
   return match[1] === userId;
+}
+
+export function isOwnedTtsKey(key: string, userId: string): boolean {
+  if (!key || key.length > 260) return false;
+  const match = SAFE_TTS_KEY_RE.exec(key);
+  if (!match) return false;
+  return match[1] === userId;
+}
+
+/** Simpan berkas biner langsung ke Cloudflare R2 dari sisi server. */
+export async function putR2Object(
+  key: string,
+  data: Uint8Array,
+  contentType: string
+): Promise<boolean> {
+  if (!isR2Configured()) return false;
+  try {
+    const url = presignR2Url({ method: "PUT", key, expiresInSeconds: 120 });
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: Buffer.from(data),
+      signal: AbortSignal.timeout(8_000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Ambil berkas biner dari Cloudflare R2 (mengembalikan `null` bila 404/gagal). */
+export async function getR2Object(
+  key: string
+): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+  if (!isR2Configured()) return null;
+  try {
+    const url = presignR2Url({ method: "GET", key, expiresInSeconds: 120 });
+    const res = await fetch(url, {
+      method: "GET",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return null;
+    const body = await res.arrayBuffer();
+    if (!body.byteLength) return null;
+    const contentType = res.headers.get("content-type") || "application/octet-stream";
+    return { body, contentType };
+  } catch {
+    return null;
+  }
 }
 
 /** Hapus satu objek dari Cloudflare R2 (aman bila objek sudah tidak ada). */

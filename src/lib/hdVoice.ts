@@ -21,6 +21,8 @@ export type CharacterVoiceMode =
 
 export type CharacterVoiceConfig = {
   mode: CharacterVoiceMode;
+  /** Penyedia khusus untuk `hd_custom` (`gemini` atau `elevenlabs`); kosong = ikut penyedia akun. */
+  customProvider?: HdTtsProvider;
   customVoiceId?: string;
 };
 
@@ -393,7 +395,13 @@ export function normalizeCharacterVoice(input: unknown): CharacterVoiceConfig | 
   if (modeRaw === "hd_custom") {
     const customVoiceId = cleanVoiceId(raw.customVoiceId, "");
     if (!customVoiceId) return null;
-    return { mode: "hd_custom", customVoiceId };
+    const customProvider =
+      raw.customProvider === "gemini" || raw.customProvider === "elevenlabs"
+        ? raw.customProvider
+        : undefined;
+    return customProvider
+      ? { mode: "hd_custom", customProvider, customVoiceId }
+      : { mode: "hd_custom", customVoiceId };
   }
   return { mode: modeRaw };
 }
@@ -409,20 +417,29 @@ export function parseCharacterVoice(json: string | null | undefined): CharacterV
 
 export type ResolvedVoiceTarget =
   | { kind: "device" }
-  | { kind: "hd"; slot: "female" | "male" | "custom"; customVoiceId?: string };
+  | {
+      kind: "hd";
+      slot: "female" | "male" | "custom";
+      customProvider?: HdTtsProvider;
+      customVoiceId?: string;
+    };
 
 /**
- * Tentukan mesin suara akhir yang dipakai untuk satu karakter.
- * Bila penyedia Suara HD yang aktif belum punya API key, otomatis kembali ke
- * `device` supaya karakter tidak pernah bisu.
+ * Tentukan target mesin suara untuk satu karakter.
+ *
+ * Sengaja tetap mengembalikan `{ kind: "hd", ... }` walau API key sedang kosong
+ * agar rekaman yang sudah pernah tersimpan di perangkat (IndexedDB) maupun di
+ * Cloudflare R2 tetap bisa diputar lokal tanpa API key; bila klip belum ada di
+ * cache dan API gagal, pemutar akan otomatis jatuh ke suara perangkat.
  */
 export function resolveVoiceTarget(
   characterVoice: CharacterVoiceConfig | null | undefined,
   accountEngine: VoiceEngineChoice,
-  hasActiveHdKey: boolean
+  _hasActiveHdKey = true
 ): ResolvedVoiceTarget {
+  void _hasActiveHdKey;
   const effectiveMode: CharacterVoiceMode = characterVoice?.mode ?? accountEngine;
-  if (effectiveMode === "device" || effectiveMode === "inherit" || !hasActiveHdKey) {
+  if (effectiveMode === "device" || effectiveMode === "inherit") {
     return { kind: "device" };
   }
   if (effectiveMode === "hd_female") {
@@ -432,7 +449,12 @@ export function resolveVoiceTarget(
     return { kind: "hd", slot: "male" };
   }
   if (effectiveMode === "hd_custom" && characterVoice?.customVoiceId) {
-    return { kind: "hd", slot: "custom", customVoiceId: characterVoice.customVoiceId };
+    return {
+      kind: "hd",
+      slot: "custom",
+      customProvider: characterVoice.customProvider,
+      customVoiceId: characterVoice.customVoiceId,
+    };
   }
   return { kind: "device" };
 }
@@ -505,3 +527,123 @@ export function sampleRateFromMime(mimeType: string | undefined): number {
   const match = mimeType?.match(/rate=(\d+)/i);
   return match ? Number(match[1]) : 24_000;
 }
+
+/* ------------------------------------------------------------------ */
+/* Pemecahan klausa & kunci cache deterministik (IndexedDB + R2)       */
+/* ------------------------------------------------------------------ */
+
+const MIN_CLAUSE_CHARS = 12;
+const MAX_CLAUSE_CHARS = 190;
+
+/**
+ * Pecah teks balasan menjadi klausa/kalimat alami (12–190 huruf):
+ * - Utamakan batas akhir kalimat (`.`, `!`, `?`, `…`, baris baru) supaya setiap
+ *   kalimat pendek seperti "Aku kangen kamu." berdiri utuh dan mudah kena cache
+ *   di R2 maupun IndexedDB lintas percakapan.
+ * - Kalimat yang terlalu panjang baru dipecah di tanda baca jeda (`,`, `;`, `:`)
+ *   lalu di batas kata agar intonasi tetap mulus.
+ */
+export function splitTtsClauses(input: string): string[] {
+  const clean = speakableHdText(input);
+  if (!clean) return [];
+
+  const sentences = clean
+    .split(/(?<=[.!?…])\s+|\n+/u)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const subParts: string[] = [];
+  for (const sentence of sentences) {
+    if (sentence.length <= MAX_CLAUSE_CHARS) {
+      subParts.push(sentence);
+      continue;
+    }
+    const byComma = sentence
+      .split(/(?<=[,;:])\s+/u)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    subParts.push(...byComma);
+  }
+
+  const merged: string[] = [];
+  let buffer = "";
+  for (const part of subParts) {
+    const next = buffer ? `${buffer} ${part}` : part;
+    if (next.length > MAX_CLAUSE_CHARS && buffer) {
+      merged.push(buffer);
+      buffer = part;
+    } else if (buffer && buffer.length < MIN_CLAUSE_CHARS) {
+      buffer = next;
+    } else {
+      if (buffer) merged.push(buffer);
+      buffer = part;
+    }
+  }
+  if (buffer) merged.push(buffer);
+
+  const safe: string[] = [];
+  for (const part of merged) {
+    if (part.length <= MAX_CLAUSE_CHARS) {
+      safe.push(part);
+      continue;
+    }
+    let current = "";
+    for (const word of part.split(" ")) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length > MAX_CLAUSE_CHARS && current) {
+        safe.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) safe.push(current);
+  }
+  return safe;
+}
+
+/**
+ * Hitung hash deterministik pendek (identik di Browser maupun Node Server)
+ * sebagai kunci klip di IndexedDB lokal dan Cloudflare R2 (`tts/{userId}/{hash}`).
+ *
+ * Sengaja tidak menyertakan versi minor model agar rekaman lama (mis. dari Kore)
+ * tetap terpakai walau pengguna berganti model atau menghapus API key.
+ */
+export function ttsClipHash(params: {
+  provider: HdTtsProvider;
+  voice: string;
+  style?: string;
+  text: string;
+}): string {
+  const normStyle =
+    params.provider === "gemini" ? (params.style ?? "").trim().toLowerCase() : "";
+  const normText = params.text.trim().replace(/\s+/g, " ").toLowerCase();
+  const payload = `${params.provider}|${params.voice.trim()}|${normStyle}|${normText}`;
+
+  let h1 = 0x811c9dc5;
+  let h2 = 5381;
+  for (let i = 0; i < payload.length; i++) {
+    const c = payload.charCodeAt(i);
+    h1 ^= c;
+    h1 = Math.imul(h1, 0x01000193) >>> 0;
+    h2 = (Math.imul(h2, 33) ^ c) >>> 0;
+  }
+  return `${h1.toString(36)}_${h2.toString(36)}_${normText.length.toString(36)}`;
+}
+
+/** 12 frasa obrolan sehari-hari untuk disiapkan lebih dulu ke Bank Rekaman. */
+export const COMMON_VOICE_PHRASES = [
+  "Hai!",
+  "Halo.",
+  "Iya.",
+  "Hmm...",
+  "Hehe.",
+  "Apa kabar?",
+  "Kamu lagi apa?",
+  "Aku kangen kamu.",
+  "Nanti aku kabari lagi ya.",
+  "Maaf ya.",
+  "Makasih.",
+  "Sampai nanti.",
+];
+

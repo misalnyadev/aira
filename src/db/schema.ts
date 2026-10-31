@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const providerTypeValues = ["gemini", "groq", "openrouter", "custom", "grok"] as const;
 export type ProviderType = (typeof providerTypeValues)[number];
@@ -149,3 +149,29 @@ export const attachments = pgTable("attachments", {
   bytes: integer("bytes").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Indeks ringan rekaman Suara HD yang tersimpan di Cloudflare R2 (`tts/{userId}/...`).
+ * Berkas audionya berada di R2, sedangkan tabel ini hanya mencatat metadata kecil
+ * agar Bank Rekaman tersinkron di PC & HP dan bisa langsung diputar tanpa API key.
+ */
+export const ttsClips = pgTable(
+  "tts_clips",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clipHash: text("clip_hash").notNull(),
+    r2Key: text("r2_key").notNull(),
+    provider: text("provider").notNull(), // 'gemini' | 'elevenlabs'
+    voice: text("voice").notNull(),
+    text: text("text").notNull(),
+    mimeType: text("mime_type").notNull().default("audio/wav"),
+    bytes: integer("bytes").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("tts_clips_user_hash_idx").on(table.userId, table.clipHash)]
+);

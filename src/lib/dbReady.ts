@@ -98,6 +98,20 @@ const DDL = [
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
   sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "tts_clips" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "clip_hash" text NOT NULL,
+    "r2_key" text NOT NULL,
+    "provider" text NOT NULL,
+    "voice" text NOT NULL,
+    "text" text NOT NULL,
+    "mime_type" text DEFAULT 'audio/wav' NOT NULL,
+    "bytes" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "tts_clips_user_hash_idx" ON "tts_clips" ("user_id", "clip_hash")`,
+  sql`CREATE INDEX IF NOT EXISTS "tts_clips_user_created_idx" ON "tts_clips" ("user_id", "created_at" DESC)`,
 ];
 
 let readyPromise: Promise<void> | null = null;
