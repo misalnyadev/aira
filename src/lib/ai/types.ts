@@ -18,12 +18,18 @@ export class AiProviderError extends Error {
   status?: number;
   /** true = layak dicoba ulang dengan key cadangan di provider yang sama. */
   retryable?: boolean;
+  /** true = layak dicoba ke provider cadangan lain walau key yang sama tidak perlu diulang. */
+  providerFallback?: boolean;
 
-  constructor(message: string, options?: { status?: number; retryable?: boolean }) {
+  constructor(
+    message: string,
+    options?: { status?: number; retryable?: boolean; providerFallback?: boolean }
+  ) {
     super(message);
     this.name = "AiProviderError";
     this.status = options?.status;
     this.retryable = options?.retryable;
+    this.providerFallback = options?.providerFallback;
   }
 }
 
@@ -50,8 +56,9 @@ export function isKeyRotatableError(err: unknown): boolean {
 /** Apakah kegagalan ini layak dialihkan ke provider cadangan lain saat auto-fallback menyala. */
 export function isProviderFallbackError(err: unknown): boolean {
   if (isKeyRotatableError(err)) return true;
-  if (err instanceof AiProviderError && err.status !== undefined) {
-    return PROVIDER_FALLBACK_STATUS.has(err.status);
+  if (err instanceof AiProviderError) {
+    if (err.providerFallback) return true;
+    if (err.status !== undefined) return PROVIDER_FALLBACK_STATUS.has(err.status);
   }
   return false;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { characters } from "@/db/schema";
+import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { normalizeBubbleStyle, parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
 import { deleteR2Object } from "@/lib/r2";
+import { removeStoredImages } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -203,9 +204,18 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   if (!owned) return NextResponse.json(NOT_FOUND, { status: 404 });
 
   const mediaKeys = collectMediaKeys(parseCharacterMedia(owned.media));
+  const msgImages = await db
+    .select({ imageUrl: messages.imageUrl })
+    .from(messages)
+    .where(eq(messages.characterId, id));
+
   await db.delete(characters).where(eq(characters.id, id));
   if (mediaKeys.length > 0) {
     await Promise.allSettled(mediaKeys.map((key) => deleteR2Object(key)));
   }
+  await removeStoredImages(
+    [owned.avatarUrl, ...msgImages.map((m) => m.imageUrl)],
+    user.id
+  );
   return NextResponse.json({ ok: true });
 }

@@ -94,7 +94,7 @@ export async function generateOpenAICompatibleReply(options: Options): Promise<s
     if (res.status === 400 && hasImage) {
       throw new AiProviderError(
         `${providerLabel}: model "${model}" belum mendukung kiriman foto (coba model vision seperti llama-4-scout atau Gemini).`,
-        { status: 400, retryable: false }
+        { status: 400, retryable: false, providerFallback: true }
       );
     }
     throw new AiProviderError(`${providerLabel} API error (${res.status}): ${detail}`, {

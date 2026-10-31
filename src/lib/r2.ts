@@ -130,6 +130,9 @@ const SAFE_MEDIA_KEY_RE =
 
 const SAFE_TTS_KEY_RE = /^tts\/([0-9a-f-]{36})\/[a-z0-9_-]{6,64}\.(wav|mp3)$/;
 
+const SAFE_IMAGE_FILE_RE = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
+const SAFE_IMAGE_KEY_RE = /^images\/([0-9a-f-]{36})\/([0-9a-f-]{36}\.(jpg|png|webp|gif))$/;
+
 /**
  * Pastikan kunci objek R2 benar-benar berada di bawah folder milik pengguna ini.
  * Mencegah pengguna membaca atau menghapus media milik akun lain.
@@ -146,6 +149,26 @@ export function isOwnedTtsKey(key: string, userId: string): boolean {
   const match = SAFE_TTS_KEY_RE.exec(key);
   if (!match) return false;
   return match[1] === userId;
+}
+
+export function isOwnedImageKey(key: string, userId: string): boolean {
+  if (!key || key.length > 260) return false;
+  const match = SAFE_IMAGE_KEY_RE.exec(key);
+  if (!match) return false;
+  return match[1] === userId;
+}
+
+/** Validasi ID lampiran berawalan `r2-` dan kembalikan nama berkas amannya. */
+export function parseR2AttachmentId(id: string): string | null {
+  if (!id || !id.startsWith("r2-")) return null;
+  const filePart = id.slice(3).toLowerCase();
+  return SAFE_IMAGE_FILE_RE.test(filePart) ? filePart : null;
+}
+
+export function buildR2ImageKey(userId: string, filePart: string): string | null {
+  if (!userId || !SAFE_IMAGE_FILE_RE.test(filePart)) return null;
+  const key = `images/${userId}/${filePart}`;
+  return isOwnedImageKey(key, userId) ? key : null;
 }
 
 /** Simpan berkas biner langsung ke Cloudflare R2 dari sisi server. */

@@ -5,6 +5,7 @@ import { messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { findOwnedCharacter } from "@/lib/owned";
+import { removeStoredImages } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,16 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
   }
 
+  const oldImages = await db
+    .select({ imageUrl: messages.imageUrl })
+    .from(messages)
+    .where(eq(messages.characterId, id));
+
   await db.delete(messages).where(eq(messages.characterId, id));
+  await removeStoredImages(
+    oldImages.map((r) => r.imageUrl),
+    user.id
+  );
 
   let rows: (typeof messages.$inferSelect)[] = [];
   if (owned.greeting.trim()) {
