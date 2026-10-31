@@ -73,7 +73,12 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
   }
   if (currentParts.length === 0) currentParts.push({ text: "(tidak ada pesan)" });
 
-  contents.push({ role: "user", parts: currentParts as { text: string }[] });
+  const lastContent = contents[contents.length - 1];
+  if (lastContent && lastContent.role === "user") {
+    lastContent.parts.push(...(currentParts as { text: string }[]));
+  } else {
+    contents.push({ role: "user", parts: currentParts as { text: string }[] });
+  }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model

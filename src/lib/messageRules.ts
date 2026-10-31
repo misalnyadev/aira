@@ -10,6 +10,7 @@ export type MinimalMessage = {
   role: "user" | "assistant" | string;
   content: string;
   imageUrl?: string | null;
+  createdAt?: Date | string | number | null;
 };
 
 /** Balasan asisten paling akhir — satu-satunya yang boleh diulang. */
@@ -46,15 +47,63 @@ export function messageActionsFor(
   return actions;
 }
 
-/** Ubah baris pesan jadi riwayat siap kirim ke model. */
+function toEpochMs(value: MinimalMessage["createdAt"]): number | null {
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string" && value) {
+    const ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  return null;
+}
+
+/**
+ * Ubah baris pesan jadi riwayat siap kirim ke model:
+ * 1) Pastikan urutan selalu kronologis dari LAMA ke BARU (mencegah alur mundur
+ *    bila baris diambil memakai `ORDER BY created_at DESC`).
+ * 2) Gabungkan gelembung berurutan dari pengirim yang sama menjadi satu giliran
+ *    utuh (`[[NEXT]]` untuk asisten) agar giliran `user` ↔ `assistant` selalu
+ *    bergantian rapi dan hemat konteks.
+ */
 export function toChatTurns(rows: MinimalMessage[], excludeId?: string) {
-  return rows
+  const indexed = rows
     .filter((m) => m.id !== excludeId)
-    .map((m) => ({
-      role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
-      content: m.content || (m.imageUrl ? "[mengirim foto]" : ""),
-    }))
-    .filter((t) => t.content);
+    .map((m, idx) => ({ m, idx, time: toEpochMs(m.createdAt) }));
+
+  const hasTimestamps = indexed.some((item) => item.time !== null);
+  if (hasTimestamps) {
+    indexed.sort((a, b) => {
+      if (a.time !== null && b.time !== null && a.time !== b.time) {
+        return a.time - b.time;
+      }
+      return a.idx - b.idx;
+    });
+  }
+
+  const turns: { role: "user" | "assistant"; content: string }[] = [];
+
+  for (const { m } of indexed) {
+    const role: "user" | "assistant" = m.role === "assistant" ? "assistant" : "user";
+    const content = (m.content || (m.imageUrl ? "[mengirim foto]" : "")).trim();
+    if (!content) continue;
+
+    const prev = turns[turns.length - 1];
+    if (prev && prev.role === role) {
+      prev.content =
+        role === "assistant"
+          ? `${prev.content}\n[[NEXT]]\n${content}`
+          : `${prev.content}\n${content}`;
+    } else {
+      turns.push({ role, content });
+    }
+  }
+
+  return turns;
 }
 
 /**

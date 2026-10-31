@@ -12,6 +12,7 @@ import {
   toChatTurns,
 } from "@/lib/chatEngine";
 import { ensureDb } from "@/lib/dbReady";
+import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
 
@@ -78,7 +79,11 @@ export async function POST(req: Request) {
     .from(messages)
     .where(eq(messages.characterId, characterId))
     .orderBy(desc(messages.createdAt))
-    .limit(21);
+    .limit(MAX_HISTORY_MESSAGES + 1);
+
+  // `ORDER BY created_at DESC` mengambil pesan terbaru lebih dulu; balik ke urutan
+  // kronologis (awal -> terbaru) supaya model membaca jalannya cerita dengan benar.
+  const chronologicalHistory = [...historyRows].reverse();
 
   try {
     const result = await generateBubbles({
@@ -87,15 +92,21 @@ export async function POST(req: Request) {
       candidates,
       userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
       image,
-      history: toChatTurns(historyRows, userMessage.id),
+      history: toChatTurns(chronologicalHistory, userMessage.id),
       userProfile: profile,
     });
 
     const assistantMessages = [];
-    for (const bubble of result.bubbles) {
+    const baseTime = Date.now();
+    for (let i = 0; i < result.bubbles.length; i++) {
       const [row] = await db
         .insert(messages)
-        .values({ characterId, role: "assistant", content: bubble })
+        .values({
+          characterId,
+          role: "assistant",
+          content: result.bubbles[i],
+          createdAt: new Date(baseTime + i),
+        })
         .returning();
       assistantMessages.push(row);
     }

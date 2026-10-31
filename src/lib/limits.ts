@@ -38,3 +38,10 @@ export const MAX_AGE = 120;
 export const MAX_BACKUP_KEYS = 5;
 export const MAX_KEY_ATTEMPTS = 4;
 export const MAX_PROVIDER_FALLBACKS = 3;
+
+/**
+ * Jumlah baris gelembung pesan terbaru yang diikutkan sebagai konteks ingatan percakapan.
+ * Karena 1 balasan karakter bisa terdiri dari 2–4 gelembung, angka 80 menjaga sekitar
+ * 25–35 tanya-jawab utuh tetap diingat tanpa memberatkan kuota token.
+ */
+export const MAX_HISTORY_MESSAGES = 80;
