@@ -3,6 +3,8 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import {
   MAX_BIBLE_CHARS,
@@ -45,6 +47,8 @@ export async function GET() {
       avatarUrl: characters.avatarUrl,
       shortBio: characters.shortBio,
       bible: characters.bible,
+      chatBackground: characters.chatBackground,
+      bubbleStyle: characters.bubbleStyle,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
     })
@@ -68,6 +72,8 @@ export async function GET() {
         avatarUrl: row.avatarUrl,
         shortBio: row.shortBio,
         hasBible: Boolean(row.bible?.trim()),
+        chatBackground: parseOptionalChatBackground(row.chatBackground),
+        bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",

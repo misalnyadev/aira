@@ -1,3 +1,6 @@
+import type { BubbleStyle } from "@/lib/bubbleStyle";
+import type { ChatBackground } from "@/lib/chatBackground";
+
 export type ProviderType = "gemini" | "grok" | "openrouter" | "custom";
 
 export type ProviderSummary = {
@@ -23,6 +26,10 @@ export type CharacterSummary = {
   shortBio: string;
   /** Ada bible peran atau tidak — dipakai untuk menandai 📖 di daftar. */
   hasBible: boolean;
+  /** Latar khusus karakter; `null` berarti ikut latar bawaan akun. */
+  chatBackground: ChatBackground | null;
+  /** Gaya gelembung khusus karakter; `null` berarti ikut gelembung bawaan akun. */
+  bubbleStyle: BubbleStyle | null;
   preview: string;
   updatedAt: string;
 };
@@ -38,6 +45,8 @@ export type CharacterDetail = {
   greeting: string;
   providerId: string | null;
   model: string | null;
+  chatBackground: ChatBackground | null;
+  bubbleStyle: BubbleStyle | null;
 };
 
 export type ChatMessage = {

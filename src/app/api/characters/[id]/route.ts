@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { normalizeBubbleStyle, parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import {
   MAX_BIBLE_CHARS,
@@ -17,6 +19,22 @@ export const dynamic = "force-dynamic";
 const UNAUTHORIZED = { error: "Kamu belum masuk. Muat ulang halaman lalu masuk lagi." };
 const NOT_FOUND = { error: "Karakter tidak ditemukan." };
 
+function serializeDetail(row: typeof characters.$inferSelect) {
+  return {
+    id: row.id,
+    name: row.name,
+    avatarUrl: row.avatarUrl,
+    shortBio: row.shortBio,
+    personality: row.personality,
+    bible: row.bible,
+    greeting: row.greeting,
+    providerId: row.providerId,
+    model: row.model,
+    chatBackground: parseOptionalChatBackground(row.chatBackground),
+    bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
+  };
+}
+
 export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
   await ensureDb();
 
@@ -27,7 +45,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   const row = await findOwnedCharacter(id, user.id);
   if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
 
-  return NextResponse.json({ character: row });
+  return NextResponse.json({ character: serializeDetail(row) });
 }
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -38,9 +56,22 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const { id } = await context.params;
   const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
+  }
 
-  const { name, avatarUrl, shortBio, personality, greeting, bible, providerId, model } = body as {
+  const {
+    name,
+    avatarUrl,
+    shortBio,
+    personality,
+    greeting,
+    bible,
+    providerId,
+    model,
+    chatBackground,
+    bubbleStyle,
+  } = body as {
     name?: string;
     avatarUrl?: string | null;
     shortBio?: string;
@@ -49,6 +80,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     bible?: string;
     providerId?: string | null;
     model?: string | null;
+    chatBackground?: unknown | null;
+    bubbleStyle?: unknown | null;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -85,6 +118,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (bible !== undefined) updates.bible = bible.trim();
   if (providerId !== undefined) updates.providerId = providerId || null;
   if (model !== undefined) updates.model = model?.trim() || null;
+  if ("chatBackground" in body) {
+    updates.chatBackground =
+      chatBackground === null ? null : JSON.stringify(normalizeChatBackground(chatBackground));
+  }
+  if ("bubbleStyle" in body) {
+    updates.bubbleStyle =
+      bubbleStyle === null ? null : JSON.stringify(normalizeBubbleStyle(bubbleStyle));
+  }
 
   /*
    * Kepemilikan diperiksa DI DALAM klausa WHERE, bukan setelah UPDATE.
@@ -99,7 +140,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
 
-  return NextResponse.json({ character: row });
+  return NextResponse.json({ character: serializeDetail(row) });
 }
 
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
