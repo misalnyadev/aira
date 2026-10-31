@@ -122,6 +122,8 @@ export const characters = pgTable("characters", {
   memoryThroughAt: timestamp("memory_through_at", { withTimezone: true }),
   /** Kapan `memory_summary` terakhir kali diperbarui. */
   memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
+  /** Aktifkan akses browsing internet & pembaca link URL pada karakter ini. */
+  browsingEnabled: boolean("browsing_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -95,6 +95,7 @@ export async function POST(req: Request) {
       chronologicalHistory,
       excludeMessageId: userMessage.id,
       userText: cleanUserText,
+      primaryProviderType: candidates[0]?.type,
     });
 
     const historyTurns = character.memoryEnabled

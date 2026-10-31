@@ -12,6 +12,10 @@ export type MemoryPromptContext = {
   memorySummary?: string;
   /** Kutipan asli obrolan lama ber-tanggal yang cocok dengan pertanyaan saat ini. */
   recalledArchive?: string;
+  /** Hasil pembacaan link URL atau pencarian internet saat fitur browsing karakter aktif. */
+  webContext?: string;
+  /** Apakah pencarian internet aktif pada giliran ini (mis. Google Search Gemini). */
+  webSearchActive?: boolean;
 };
 
 /**
@@ -76,6 +80,18 @@ ${extras.recalledArchive.trim()}
 
 (Gunakan detail percakapan lama ber-tanggal di atas bila relevan agar jawaban dan pengingatmu akurat.)
 === AKHIR ARSIP TERKAIT ===`);
+  }
+
+  if (extras.webContext?.trim() || extras.webSearchActive) {
+    const webBody = extras.webContext?.trim()
+      ? `${extras.webContext.trim()}\n\n`
+      : "";
+    blocks.push(`=== HASIL BROWSING & BACA LINK INTERNET SAAT INI ===
+${webBody}Cara memakainya:
+- Kamu baru saja membuka link / mengecek informasi di internet lewat HP atau laptopmu sendiri seperti teman manusia biasa.
+- Bahas isi aplikasi, website, artikel, atau temuan internet tersebut secara alami sesuai kepribadianmu — berikan masukan ide, evaluasi, atau saran perencanaan yang konkret dan membantu tanpa gaya bahasa laporan kaku.
+- Jangan menempel daftar URL mentah panjang kecuali dia memang meminta link sumbernya.
+=== AKHIR HASIL BROWSING ===`);
   }
 
   return blocks.length ? `\n${blocks.join("\n\n")}\n` : "";

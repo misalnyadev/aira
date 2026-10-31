@@ -83,6 +83,7 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       chronologicalHistory: chronologicalPrior,
       excludeMessageId: lastUser.id,
       userText: cleanUserText,
+      primaryProviderType: candidates[0]?.type,
     });
 
     const historyTurns = character.memoryEnabled
