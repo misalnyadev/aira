@@ -27,6 +27,9 @@ export const users = pgTable("users", {
   occupation: text("occupation").notNull().default(""),
   about: text("about").notNull().default(""),
 
+  /** Pindah otomatis ke provider lain saat semua key provider utama kena limit/gagal. */
+  autoFallback: boolean("auto_fallback").notNull().default(true),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -54,6 +57,8 @@ export const apiProviders = pgTable("api_providers", {
   type: text("type").notNull(), // gemini | grok | openrouter | custom
   label: text("label").notNull(),
   apiKey: text("api_key").notNull().default(""),
+  /** JSON array string API key cadangan (dicoba berurutan saat key utama kena limit). */
+  backupKeys: text("backup_keys").notNull().default("[]"),
   baseUrl: text("base_url"),
   model: text("model").notNull(),
   isDefault: boolean("is_default").notNull().default(false),

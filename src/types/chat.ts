@@ -9,6 +9,10 @@ export type ProviderSummary = {
   isDefault: boolean;
   hasKey: boolean;
   maskedKey: string;
+  /** Banyaknya key cadangan tersimpan (di luar key utama). */
+  backupCount: number;
+  /** Daftar samaran key cadangan untuk ditampilkan saat edit. */
+  maskedBackupKeys: string[];
   createdAt: string;
 };
 

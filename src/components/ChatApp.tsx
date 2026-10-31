@@ -44,6 +44,7 @@ export function ChatApp() {
 
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [autoFallback, setAutoFallback] = useState(true);
   const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -103,6 +104,7 @@ export function ChatApp() {
     if (!res.ok) return;
     const data = await res.json();
     setProviders(data.providers ?? []);
+    if (typeof data.autoFallback === "boolean") setAutoFallback(data.autoFallback);
   }, [api]);
 
   useEffect(() => {
@@ -183,6 +185,15 @@ export function ChatApp() {
         setTypingFor(null);
         showToast(data.error || "Gagal mendapatkan balasan. Cek Pengaturan API key.");
         return;
+      }
+
+      if (data.fallbackUsed && data.providerLabel) {
+        showToast(
+          `Auto-fallback: memakai ${data.providerLabel} karena ${data.primaryLabel || "provider utama"} kena limit.`
+        );
+      }
+      if (data.keyRotated) {
+        void fetchProviders();
       }
 
       const bubbles: ChatMessage[] = data.assistantMessages ?? [];
@@ -275,6 +286,15 @@ export function ChatApp() {
         return;
       }
 
+      if (data.fallbackUsed && data.providerLabel) {
+        showToast(
+          `Auto-fallback: memakai ${data.providerLabel} karena ${data.primaryLabel || "provider utama"} kena limit.`
+        );
+      }
+      if (data.keyRotated) {
+        void fetchProviders();
+      }
+
       const removed: string[] = data.removedIds ?? [];
       setMessagesMap((prev) => ({
         ...prev,
@@ -300,6 +320,19 @@ export function ChatApp() {
     } catch {
       setTypingFor(null);
       showToast("Koneksi gagal. Coba lagi.");
+    }
+  }
+
+  async function handleToggleAutoFallback(next: boolean) {
+    setAutoFallback(next);
+    const res = await api("/api/providers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoFallback: next }),
+    });
+    if (!res.ok) {
+      setAutoFallback(!next);
+      showToast("Gagal menyimpan pengaturan fallback.");
     }
   }
 
@@ -403,6 +436,8 @@ export function ChatApp() {
       {showSettings && (
         <SettingsModal
           providers={providers}
+          autoFallback={autoFallback}
+          onToggleAutoFallback={handleToggleAutoFallback}
           onClose={() => setShowSettings(false)}
           onRefresh={fetchProviders}
           onOpenVoice={() => {

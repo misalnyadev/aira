@@ -33,3 +33,10 @@ export const PROVIDER_META: Record<
 };
 
 export const PROVIDER_ORDER: ProviderType[] = ["gemini", "grok", "openrouter", "custom"];
+
+/** Saran model cepat untuk dipilih sekali ketuk di Pengaturan. */
+export const RECOMMENDED_MODELS: Partial<Record<ProviderType, string[]>> = {
+  gemini: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"],
+  grok: ["grok-4", "grok-3-mini"],
+  openrouter: ["openai/gpt-4o-mini", "google/gemini-2.5-flash", "deepseek/deepseek-chat-v3-0324"],
+};

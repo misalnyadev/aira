@@ -99,7 +99,11 @@ Buka link Vercel kamu → klik ikon ⚙️ di sidebar → pilih provider → **S
 | OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-4o-mini` | https://openrouter.ai/keys |
 | Custom (endpoint OpenAI-compatible) | isi manual | isi manual | — |
 
-API key disimpan di database Neon milikmu sendiri — tidak dikirim ke pihak lain selain provider yang kamu pilih saat chat berlangsung.
+API key disimpan di database Neon milikmu sendiri — tidak dikirim ke pihak lain selain provider yang kamu pilih saat chat berlangsung, dan tidak pernah dikirim balik dalam bentuk terbaca ke browser.
+
+- **Key cadangan per provider** (maks. 5 cadangan): kalau key utama kena limit `429` / mati, server otomatis mencoba key cadangan berikutnya lalu menaikkan key yang sehat menjadi key utama.
+- **Auto-fallback antar provider**: kalau semua key di satu provider gagal, percakapan otomatis dialihkan ke provider lain milikmu (bisa dimatikan di Pengaturan).
+- **Tes koneksi (⚡)**: uji API key + model langsung dari Pengaturan sebelum dipakai mengobrol.
 
 > **Rekomendasi:** mulai dari **Gemini `gemini-2.5-flash`** — gratis, cepat, vision bagus (bisa melihat foto), dan paling cocok untuk karakter yang ekspresif.
 

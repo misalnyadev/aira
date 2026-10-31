@@ -33,3 +33,8 @@ export const MAX_OCCUPATION_CHARS = 80;
 export const MAX_ABOUT_CHARS = 500;
 export const MIN_AGE = 10;
 export const MAX_AGE = 120;
+
+/** Batas multi API key & auto-fallback (menjaga fungsi serverless tidak kehabisan waktu). */
+export const MAX_BACKUP_KEYS = 5;
+export const MAX_KEY_ATTEMPTS = 4;
+export const MAX_PROVIDER_FALLBACKS = 3;
