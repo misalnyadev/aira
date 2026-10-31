@@ -580,7 +580,7 @@ export function ChatApp() {
                         key={activeCharacter.id}
                         onSend={handleSend}
                         disabled={typingFor === activeId}
-                        transparent={Boolean(activeBubble.hideMessages)}
+                        transparent={Boolean(activeBubble.minimalBars || activeBubble.hideMessages)}
                         onNotice={showToast}
                       />
                     }
@@ -640,6 +640,7 @@ export function ChatApp() {
               limit={limit}
               onChat={handleSelect}
               onNew={() => setShowCreate(true)}
+              onProfile={openProfile}
               onEdit={openEdit}
               onDelete={handleDeleteCharacter}
             />

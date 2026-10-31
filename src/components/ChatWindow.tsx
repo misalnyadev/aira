@@ -131,6 +131,7 @@ export function ChatWindow({
 }) {
   const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
   const hideMessages = Boolean(bubbleStyle.hideMessages);
+  const minimalBars = Boolean(bubbleStyle.minimalBars);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
@@ -241,80 +242,151 @@ export function ChatWindow({
         />
       )}
 
-      {/* Header — kaca, supaya latar chat tetap terlihat sampai status bar */}
-      <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
-        <button
-          onClick={onBack}
-          className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
-          aria-label="Kembali ke daftar chat"
-        >
-          <BackIcon className="h-[30px] w-[30px]" />
-        </button>
-
-        <button
-          onClick={onOpenProfile}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
-          title="Lihat profil karakter"
-        >
-          <Avatar name={character.name} src={character.avatarUrl} size={40} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
-            <p className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}>
-              {isTyping
-                ? "sedang mengetik..."
-                : isSpeaking
-                  ? "sedang berbicara..."
-                  : character.shortBio || "online"}
-            </p>
-          </div>
-        </button>
-
-        {isSpeaking && (
+      {/* Header — kaca standar, atau transparan penuh (foto karakter + ikon saja) bila minimalBars aktif */}
+      {minimalBars ? (
+        <div className="z-10 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
           <button
-            onClick={onStopSpeaking}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink ring-1 ring-line transition hover:bg-line/60"
-            title="Hentikan suara"
-            aria-label="Hentikan suara"
+            onClick={onBack}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
+            aria-label="Kembali ke daftar chat"
           >
-            <SpeakerOffIcon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Hentikan</span>
+            <BackIcon className="h-6 w-6" />
           </button>
-        )}
 
-        <button
-          onClick={onOpenVoice}
-          className="relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex"
-          title="Pengaturan Suara"
-          aria-label="Pengaturan Suara"
-        >
-          <SpeakerIcon className="h-5 w-5" />
-          {voiceEnabled && (
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
+          <button
+            onClick={onOpenProfile}
+            className="relative shrink-0 rounded-full ring-1 ring-line/60 shadow-xs transition active:scale-95"
+            aria-label={`Pengaturan ${character.name}`}
+            title={`Pengaturan ${character.name}`}
+          >
+            <Avatar name={character.name} src={character.avatarUrl} size={40} />
+            {(isTyping || isSpeaking) && (
+              <span className="absolute bottom-0 right-0 h-3 w-3 animate-pulse rounded-full bg-emerald-500 ring-2 ring-surface" />
+            )}
+          </button>
+
+          <div className="flex-1" />
+
+          {isSpeaking && (
+            <button
+              onClick={onStopSpeaking}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              title="Hentikan suara"
+              aria-label="Hentikan suara"
+            >
+              <SpeakerOffIcon className="h-4.5 w-4.5" />
+            </button>
           )}
-        </button>
 
-        {onVideoCall && (
           <button
-            onClick={onVideoCall}
-            className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
-            aria-label={`Video call dengan ${character.name}`}
-            title="Video call"
+            onClick={onOpenVoice}
+            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 sm:grid"
+            title="Pengaturan Suara"
+            aria-label="Pengaturan Suara"
           >
-            <VideoCallIcon className="h-8 w-8" />
+            <SpeakerIcon className="h-5 w-5" />
+            {voiceEnabled && (
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-ink" />
+            )}
           </button>
-        )}
 
-        {onAudioCall && (
+          {onVideoCall && (
+            <button
+              onClick={onVideoCall}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              aria-label={`Video call dengan ${character.name}`}
+              title="Video call"
+            >
+              <VideoCallIcon className="h-7 w-7" />
+            </button>
+          )}
+
+          {onAudioCall && (
+            <button
+              onClick={onAudioCall}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 active:scale-95 active:opacity-70"
+              aria-label={`Panggilan suara dengan ${character.name}`}
+              title="Panggilan suara"
+            >
+              <PhoneCallIcon className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
           <button
-            onClick={onAudioCall}
-            className="shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
-            aria-label={`Panggilan suara dengan ${character.name}`}
-            title="Panggilan suara"
+            onClick={onBack}
+            className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
+            aria-label="Kembali ke daftar chat"
           >
-            <PhoneCallIcon className="h-6 w-6" />
+            <BackIcon className="h-[30px] w-[30px]" />
           </button>
-        )}
-      </div>
+
+          <button
+            onClick={onOpenProfile}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            title="Lihat profil karakter"
+          >
+            <Avatar name={character.name} src={character.avatarUrl} size={40} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+              <p className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}>
+                {isTyping
+                  ? "sedang mengetik..."
+                  : isSpeaking
+                    ? "sedang berbicara..."
+                    : character.shortBio || "online"}
+              </p>
+            </div>
+          </button>
+
+          {isSpeaking && (
+            <button
+              onClick={onStopSpeaking}
+              className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink ring-1 ring-line transition hover:bg-line/60"
+              title="Hentikan suara"
+              aria-label="Hentikan suara"
+            >
+              <SpeakerOffIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Hentikan</span>
+            </button>
+          )}
+
+          <button
+            onClick={onOpenVoice}
+            className="relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex"
+            title="Pengaturan Suara"
+            aria-label="Pengaturan Suara"
+          >
+            <SpeakerIcon className="h-5 w-5" />
+            {voiceEnabled && (
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
+            )}
+          </button>
+
+          {onVideoCall && (
+            <button
+              onClick={onVideoCall}
+              className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
+              aria-label={`Video call dengan ${character.name}`}
+              title="Video call"
+            >
+              <VideoCallIcon className="h-8 w-8" />
+            </button>
+          )}
+
+          {onAudioCall && (
+            <button
+              onClick={onAudioCall}
+              className="shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
+              aria-label={`Panggilan suara dengan ${character.name}`}
+              title="Panggilan suara"
+            >
+              <PhoneCallIcon className="h-6 w-6" />
+            </button>
+          )}
+        </div>
+      )}
 
       {!hideMessages && chatVideo && !chatVideoFull && (
         <div className="px-3 pt-3 sm:px-4">
@@ -342,6 +414,10 @@ export function ChatWindow({
             }}
             className={`flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
               onToggleHideChat ? "pb-12 sm:pb-12" : ""
+            } ${
+              minimalBars
+                ? "[-webkit-mask-image:linear-gradient(to_bottom,transparent,black_16px)] [mask-image:linear-gradient(to_bottom,transparent,black_16px)]"
+                : ""
             }`}
           >
             <div className="mx-auto w-full max-w-3xl">

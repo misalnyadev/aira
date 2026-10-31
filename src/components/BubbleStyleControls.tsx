@@ -163,7 +163,26 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
 
   return (
     <div className={`space-y-3 ${disabled ? "pointer-events-none opacity-50" : ""}`}>
-      <div className="rounded-xl border border-line px-3 py-2.5">
+      <div className="space-y-2.5 rounded-xl border border-line px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span className="block text-xs font-medium text-ink">
+              Header & kolom ketik transparan
+            </span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+              Tanpa kotak bar atas/bawah — di atas cukup foto karakter & ikon
+            </span>
+          </div>
+          <Switch
+            checked={Boolean(style.minimalBars)}
+            onChange={(next) => update({ minimalBars: next })}
+            label="Header & kolom ketik transparan"
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="border-t border-line" />
+
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <span className="block text-xs font-medium text-ink">Sembunyikan tulisan chat</span>

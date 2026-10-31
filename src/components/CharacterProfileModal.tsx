@@ -127,7 +127,7 @@ export function CharacterProfileModal({
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Gelembung pesan
+              Tampilan & gelembung chat
             </h4>
             <BubbleStyleControls
               allowInherit

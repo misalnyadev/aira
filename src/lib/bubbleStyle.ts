@@ -14,6 +14,8 @@ export type BubbleStyle = {
   bgColorOut: string | null;
   /** Sembunyikan gelembung pesan di ruang chat (mode ngobrol langsung berlatar bersih). */
   hideMessages?: boolean;
+  /** Header & kolom ketik transparan kaca; di atas cukup tampil foto karakter & ikon. */
+  minimalBars?: boolean;
 };
 
 /** Sisi gelembung: `in` = pesan karakter, `out` = pesan kamu. */
@@ -27,6 +29,7 @@ export const DEFAULT_BUBBLE_STYLE: BubbleStyle = {
   textColorOut: null,
   bgColorOut: null,
   hideMessages: false,
+  minimalBars: false,
 };
 
 export function isDefaultBubbleStyle(style: BubbleStyle): boolean {
@@ -34,6 +37,7 @@ export function isDefaultBubbleStyle(style: BubbleStyle): boolean {
     style.glass === DEFAULT_BUBBLE_STYLE.glass &&
     style.opacity === DEFAULT_BUBBLE_STYLE.opacity &&
     Boolean(style.hideMessages) === false &&
+    Boolean(style.minimalBars) === false &&
     style.textColorIn === null &&
     style.bgColorIn === null &&
     style.textColorOut === null &&
@@ -127,6 +131,7 @@ export function normalizeBubbleStyle(input: unknown): BubbleStyle {
     textColorOut: normalizeHex(raw.textColorOut),
     bgColorOut: normalizeHex(raw.bgColorOut),
     hideMessages: Boolean(raw.hideMessages),
+    minimalBars: Boolean(raw.minimalBars),
   };
 }
 
