@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, messages, users, type ProviderType } from "@/db/schema";
-import {
-  AiProviderError,
-  BUBBLE_DELIMITER,
-  buildSystemPrompt,
-  generateCharacterReply,
-  splitIntoBubbles,
-} from "@/lib/ai";
-import type { ChatTurn } from "@/lib/ai";
-import {
-  IMMERSION_REMINDER,
-  SAFE_FALLBACK_REPLY,
-  findMetaBreak,
-  stripMetaSentences,
-} from "@/lib/ai/immersion";
+import { messages } from "@/db/schema";
+import { AiProviderError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
+import {
+  NO_PROVIDER_ERROR,
+  generateBubbles,
+  loadUserProfile,
+  pickProvider,
+  toChatTurns,
+} from "@/lib/chatEngine";
 import { ensureDb } from "@/lib/dbReady";
 import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
@@ -59,39 +53,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
   }
 
-  // Provider juga harus milik pengguna ini — API key orang lain tidak boleh terpakai.
-  let provider: typeof apiProviders.$inferSelect | undefined;
-  if (character.providerId) {
-    [provider] = await db
-      .select()
-      .from(apiProviders)
-      .where(and(eq(apiProviders.id, character.providerId), eq(apiProviders.userId, user.id)))
-      .limit(1);
-  }
+  const provider = await pickProvider(user.id, character.providerId);
   if (!provider) {
-    [provider] = await db
-      .select()
-      .from(apiProviders)
-      .where(and(eq(apiProviders.isDefault, true), eq(apiProviders.userId, user.id)))
-      .limit(1);
-  }
-  if (!provider) {
-    [provider] = await db
-      .select()
-      .from(apiProviders)
-      .where(eq(apiProviders.userId, user.id))
-      .orderBy(apiProviders.createdAt)
-      .limit(1);
-  }
-
-  if (!provider) {
-    return NextResponse.json(
-      {
-        error:
-          "Belum ada API key yang dikonfigurasi. Buka Pengaturan (⚙️) untuk menambahkan API key Gemini, Grok, OpenRouter, atau custom.",
-      },
-      { status: 412 }
-    );
+    return NextResponse.json({ error: NO_PROVIDER_ERROR }, { status: 412 });
   }
 
   // Gambar diperiksa dulu sebelum pesan disimpan, supaya pesan yang gagal
@@ -115,70 +79,18 @@ export async function POST(req: Request) {
     .orderBy(desc(messages.createdAt))
     .limit(21);
 
-  const history: ChatTurn[] = historyRows
-    .filter((m) => m.id !== userMessage.id)
-    .reverse()
-    .map((m): ChatTurn => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content || (m.imageUrl ? "[mengirim foto]" : ""),
-    }))
-    .filter((t) => t.content);
-
-  /*
-   * Profil pengguna ikut dikirim supaya karakter tahu sedang mengobrol dengan
-   * siapa. Dibaca sekali per balasan; kalau belum diisi, tidak dikirim sama
-   * sekali (tidak memboroskan token).
-   */
-  const [profileRow] = await db
-    .select({
-      displayName: users.displayName,
-      nickname: users.nickname,
-      age: users.age,
-      occupation: users.occupation,
-      about: users.about,
-    })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
-
-  const systemPrompt = buildSystemPrompt(character, profileRow ?? null);
-  const model = character.model?.trim() || provider.model;
-
   try {
-    const ask = (extraPrompt = "") =>
-      generateCharacterReply(provider.type as ProviderType, {
-        apiKey: provider.apiKey,
-        model,
-        baseUrl: provider.baseUrl,
-        systemPrompt: systemPrompt + extraPrompt,
-        history,
-        userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
-        image,
-      });
-
-    /*
-     * Penjaga peran.
-     *
-     * Prompt sudah melarang pengakuan sebagai AI, tapi model kadang
-     * menyelipkannya. Kalau terdeteksi: minta ulang SEKALI dengan imbauan
-     * keras. Masih lolos? Kalimatnya dibuang supaya adegan tidak rusak.
-     * Biaya tambahan hanya keluar saat kasus ini benar-benar terjadi.
-     */
-    let rawReply = await ask();
-    const firstBreak = findMetaBreak(rawReply);
-    if (firstBreak) {
-      rawReply = await ask(IMMERSION_REMINDER);
-      if (findMetaBreak(rawReply)) {
-        const cleaned = stripMetaSentences(rawReply, BUBBLE_DELIMITER);
-        rawReply = cleaned || SAFE_FALLBACK_REPLY;
-      }
-    }
-
-    const bubbles = splitIntoBubbles(rawReply);
-    const toInsert = bubbles.length ? bubbles : [rawReply.trim() || "..."];
+    const bubbles = await generateBubbles({
+      character,
+      provider,
+      userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
+      image,
+      history: toChatTurns(historyRows, userMessage.id),
+      userProfile: await loadUserProfile(user.id),
+    });
 
     const assistantMessages = [];
-    for (const bubble of toInsert) {
+    for (const bubble of bubbles) {
       const [row] = await db
         .insert(messages)
         .values({ characterId, role: "assistant", content: bubble })

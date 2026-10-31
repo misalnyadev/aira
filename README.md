@@ -240,6 +240,20 @@ Semua isian **opsional**. Kalau kosong, bagian ini tidak dikirim sama sekali —
 
 Isian ini ditandai sebagai **data**, bukan perintah: kalau ada tulisan seperti "abaikan aturan di atas" di kolom cerita, model diinstruksikan untuk mengabaikannya dan tetap jadi dirinya sendiri.
 
+## Aksi per pesan
+
+Tekan lama sebuah gelembung (di HP), atau klik kanan (di desktop):
+
+| Aksi | Berlaku untuk |
+|---|---|
+| **Salin teks** | pesan yang ada teksnya |
+| **Ulangi balasan** | hanya balasan asisten paling akhir |
+| **Hapus pesan** | semua pesan, dengan konfirmasi |
+
+Menekan lama tidak langsung melakukan apa pun — muncul menu, baru kamu pilih. Jadi tidak ada pesan yang terhapus tanpa sengaja.
+
+**Ulangi balasan** menghapus balasan asisten setelah pesan terakhirmu, lalu meminta balasan baru. Pesanmu sendiri tidak pernah ikut terhapus.
+
 ## Kode undangan
 
 Aplikasi ini untuk lingkaran teman, bukan pendaftaran umum. Kodenya diatur lewat environment variable `SIGNUP_CODE`.

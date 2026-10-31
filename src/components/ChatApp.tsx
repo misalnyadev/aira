@@ -175,6 +175,90 @@ export function ChatApp() {
     }
   }
 
+  /** Salin teks pesan ke papan klip, dengan cadangan untuk browser lama. */
+  async function handleCopyMessage(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("Teks disalin.");
+    } catch {
+      // Safari lama / bukan HTTPS: pakai textarea sementara.
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      try {
+        document.execCommand("copy");
+        showToast("Teks disalin.");
+      } catch {
+        showToast("Gagal menyalin. Salin manual saja.");
+      }
+      document.body.removeChild(area);
+    }
+  }
+
+  async function handleDeleteMessage(id: string) {
+    if (!confirm("Hapus pesan ini?")) return;
+
+    const res = await api(`/api/messages/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || "Gagal menghapus pesan.");
+      return;
+    }
+
+    // Buang dari layar tanpa memuat ulang seluruh riwayat.
+    setMessagesMap((prev) => {
+      const next: Record<string, ChatMessage[]> = {};
+      for (const [key, list] of Object.entries(prev)) {
+        next[key] = list.filter((m) => m.id !== id);
+      }
+      return next;
+    });
+    fetchCharacters();
+  }
+
+  async function handleRegenerate() {
+    if (!activeId || typingFor === activeId) return;
+
+    const target = activeId;
+    setTypingFor(target);
+
+    try {
+      const res = await api(`/api/characters/${target}/regenerate`, { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTypingFor(null);
+        showToast(data.error || "Gagal mengulang balasan.");
+        return;
+      }
+
+      const removed: string[] = data.removedIds ?? [];
+      setMessagesMap((prev) => ({
+        ...prev,
+        [target]: (prev[target] ?? []).filter((m) => !removed.includes(m.id)),
+      }));
+
+      const bubbles: ChatMessage[] = data.assistantMessages ?? [];
+      for (let i = 0; i < bubbles.length; i++) {
+        setTypingFor(target);
+        await sleep(typingDelayFor(bubbles[i].content));
+        setMessagesMap((prev) => ({
+          ...prev,
+          [target]: [...(prev[target] ?? []), bubbles[i]],
+        }));
+        if (i < bubbles.length - 1) await sleep(350);
+      }
+      setTypingFor(null);
+      fetchCharacters();
+    } catch {
+      setTypingFor(null);
+      showToast("Koneksi gagal. Coba lagi.");
+    }
+  }
+
   async function openProfile(id: string) {
     const res = await api(`/api/characters/${id}`);
     const data = await res.json();
@@ -232,6 +316,9 @@ export function ChatApp() {
               onBack={() => setMobileShowChat(false)}
               onOpenProfile={() => openProfile(activeCharacter.id)}
               onImageClick={(url) => setLightbox(url)}
+              onCopyMessage={handleCopyMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onRegenerate={handleRegenerate}
             />
             <Composer onSend={handleSend} disabled={typingFor === activeId} />
           </>
