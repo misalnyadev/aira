@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
+import type { CharacterVoiceConfig } from "@/lib/hdVoice";
+import type { VoiceSettings } from "@/lib/voice";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { CharacterMediaSection } from "./CharacterMediaSection";
+import { CharacterVoiceSection } from "./CharacterVoiceSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { PencilIcon, TrashIcon, XIcon } from "./icons";
 
@@ -15,24 +18,32 @@ export function CharacterProfileModal({
   character,
   providerLabel,
   bubbleFallback,
+  hasHdKey,
+  voiceSettings,
   onClose,
   onEdit,
   onClearChat,
   onDelete,
   onBackgroundChange,
   onBubbleChange,
+  onVoiceChange,
   onMediaChange,
+  onNotice,
 }: {
   character: CharacterDetail;
   providerLabel: string;
   bubbleFallback: BubbleStyle;
+  hasHdKey: boolean;
+  voiceSettings: VoiceSettings;
   onClose: () => void;
   onEdit: () => void;
   onClearChat: () => void;
   onDelete: () => void;
   onBackgroundChange: (next: ChatBackground | null) => void;
   onBubbleChange: (next: BubbleStyle | null) => void;
+  onVoiceChange: (next: CharacterVoiceConfig | null) => void;
   onMediaChange: (next: CharacterMedia | null) => void;
+  onNotice?: (msg: string) => void;
 }) {
   const [showBible, setShowBible] = useState(false);
   const hasBible = Boolean(character.bible?.trim());
@@ -134,6 +145,21 @@ export function CharacterProfileModal({
               value={character.bubbleStyle}
               fallback={bubbleFallback}
               onChange={onBubbleChange}
+            />
+          </div>
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Suara karakter
+            </h4>
+            <CharacterVoiceSection
+              key={`${character.id}|${character.voiceConfig?.mode ?? "inherit"}|${character.voiceConfig?.customVoiceId ?? ""}`}
+              value={character.voiceConfig}
+              hasHdKey={hasHdKey}
+              voiceSettings={voiceSettings}
+              sampleGreeting={character.greeting}
+              onChange={onVoiceChange}
+              onNotice={onNotice}
             />
           </div>
 

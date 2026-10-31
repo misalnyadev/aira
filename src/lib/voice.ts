@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import {
+  speakableHdText,
+  type ResolvedVoiceTarget,
+} from "./hdVoice";
+import {
   DEFAULT_VOICE_SETTINGS,
   VOICE_PRESETS,
   VOICE_TEST_TEXT,
@@ -7,7 +11,7 @@ import {
   isPresetActive,
   normalizeVoiceSettings,
   pickVoice,
-   sortVoices,
+  sortVoices,
   speakableText,
   splitSentences,
   voiceStorageKey,
@@ -27,10 +31,11 @@ export {
 };
 
 /**
- * Suara memakai Web Speech API bawaan browser — gratis, tanpa API key, dan
- * teksnya tidak dikirim ke server mana pun. Kualitas & daftar suara mengikuti
- * perangkat (iOS Safari punya "Damayanti" untuk bahasa Indonesia; Android &
- * desktop memakai mesin TTS sistem/browser).
+ * Mesin suara hibrida Aisherly:
+ * 1. Suara Lokal Perangkat (Web Speech API) — gratis, tanpa API key.
+ * 2. Suara HD (ElevenLabs) — MP3 jernih dengan prefetch saat "sedang mengetik...",
+ *    cache memori LRU agar putar ulang 0 kredit, serta fallback otomatis ke
+ *    suara perangkat bila kuota ElevenLabs habis.
  */
 
 const subscribeNothing = () => () => {};
@@ -43,29 +48,93 @@ export function isSpeechSupported(): boolean {
   );
 }
 
+export function isAudioElementSupported(): boolean {
+  return typeof window !== "undefined" && typeof Audio !== "undefined";
+}
+
 /** Aman terhadap SSR: bernilai false di server lalu menyesuaikan di browser. */
 export function useSpeechSupported(): boolean {
   return useSyncExternalStore(subscribeNothing, isSpeechSupported, () => false);
 }
 
 /* ------------------------------------------------------------------ */
-/* Membuka mesin suara di iOS                                          */
+/* Membuka mesin suara & elemen <audio> di iOS Safari                  */
 /* ------------------------------------------------------------------ */
 
-/**
- * iOS hanya mengizinkan `speechSynthesis.speak()` PERTAMA dijalankan dari dalam
- * gestur pengguna (ketuk / klik / tombol). Setelah satu ucapan benar-benar
- * mulai, panggilan berikutnya — termasuk yang datang beberapa detik kemudian
- * sesudah balasan AI tiba — ikut diizinkan.
- *
- * Kalau auto-baca sempat terblokir karena mesin belum terbuka, bacaan itu
- * disimpan sebentar lalu diputar ulang pada sentuhan berikutnya.
- */
+/** WAV 1 sampel hening (44 byte) untuk membuka izin autoplay <audio> di iOS. */
+const SILENT_WAV_DATA_URI =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
 let speechUnlocked = false;
-let blockedSpeech: { text: string; settings: VoiceSettings; at: number } | null = null;
+let audioUnlocked = false;
+let sharedAudio: HTMLAudioElement | null = null;
+let activeAudioFinish: (() => void) | null = null;
+
+export type SpeakOptions = {
+  append?: boolean;
+  target?: ResolvedVoiceTarget;
+  onFallback?: (reason: string) => void;
+};
+
+let blockedSpeech: {
+  text: string;
+  settings: VoiceSettings;
+  target?: ResolvedVoiceTarget;
+  at: number;
+} | null = null;
 const BLOCKED_TTL_MS = 20_000;
 
+function getSharedAudio(): HTMLAudioElement | null {
+  if (!isAudioElementSupported()) return null;
+  if (!sharedAudio) {
+    const el = new Audio();
+    el.preload = "auto";
+    el.setAttribute("playsinline", "true");
+    sharedAudio = el;
+  }
+  return sharedAudio;
+}
+
+function stopSharedAudio() {
+  if (activeAudioFinish) {
+    const finish = activeAudioFinish;
+    activeAudioFinish = null;
+    finish();
+  }
+  if (sharedAudio) {
+    try {
+      sharedAudio.pause();
+    } catch {
+      // Diabaikan.
+    }
+  }
+}
+
 export function unlockSpeech() {
+  // 1. Buka izin HTMLAudioElement untuk pemutaran MP3 HD sesudah await fetch.
+  if (!audioUnlocked) {
+    const el = getSharedAudio();
+    if (el && (el.paused || el.ended) && !activeAudioFinish) {
+      try {
+        el.muted = true;
+        el.src = SILENT_WAV_DATA_URI;
+        const p = el.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            audioUnlocked = true;
+            el.pause();
+            el.muted = false;
+          }).catch(() => {
+            el.muted = false;
+          });
+        }
+      } catch {
+        el.muted = false;
+      }
+    }
+  }
+
+  // 2. Buka izin Web Speech API perangkat.
   if (!isSpeechSupported() || speechUnlocked) return;
   const synth = window.speechSynthesis;
   try {
@@ -89,16 +158,18 @@ export function unlockSpeech() {
 }
 
 export function flushBlockedSpeech(): boolean {
-  if (!blockedSpeech || !isSpeechSupported()) return false;
+  if (!blockedSpeech) return false;
   const pending = blockedSpeech;
   if (Date.now() - pending.at > BLOCKED_TTL_MS) {
     blockedSpeech = null;
     return false;
   }
-  const synth = window.speechSynthesis;
-  if (synth.speaking || synth.pending) return false;
+  if (speaking) return false;
   blockedSpeech = null;
-  return speak(pending.text, pending.settings, { append: true });
+  return speak(pending.text, pending.settings, {
+    append: true,
+    target: pending.target,
+  });
 }
 
 /**
@@ -108,7 +179,7 @@ export function flushBlockedSpeech(): boolean {
 export function useSpeechUnlock() {
   useEffect(() => {
     const onGesture = () => {
-      if (speechUnlocked) {
+      if (speechUnlocked && audioUnlocked) {
         flushBlockedSpeech();
         return;
       }
@@ -127,6 +198,7 @@ export function useSpeechUnlock() {
       }
       // Setelah lama di latar belakang, izin iOS bisa hangus lagi.
       speechUnlocked = false;
+      audioUnlocked = false;
     };
 
     document.addEventListener("touchend", onGesture, true);
@@ -140,6 +212,105 @@ export function useSpeechUnlock() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+}
+
+/* ------------------------------------------------------------------ */
+/* Cache Memori LRU & Prefetch Suara HD (ElevenLabs)                   */
+/* ------------------------------------------------------------------ */
+
+const MAX_AUDIO_CACHE = 40;
+let cacheEpoch = 0;
+const audioBlobCache = new Map<string, Blob>();
+const inflightAudio = new Map<string, Promise<Blob>>();
+
+function hdCacheKey(
+  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
+  cleanedText: string
+): string {
+  return `${cacheEpoch}|${target.slot}|${target.customVoiceId ?? ""}|${cleanedText}`;
+}
+
+function storeCachedBlob(key: string, blob: Blob) {
+  if (audioBlobCache.has(key)) {
+    audioBlobCache.delete(key);
+  }
+  audioBlobCache.set(key, blob);
+  if (audioBlobCache.size > MAX_AUDIO_CACHE) {
+    const oldest = audioBlobCache.keys().next().value;
+    if (oldest !== undefined) audioBlobCache.delete(oldest);
+  }
+}
+
+/** Bersihkan cache klip HD ketika pengguna mengganti Voice ID atau model di menu Suara. */
+export function invalidateHdAudioCache() {
+  cacheEpoch += 1;
+  audioBlobCache.clear();
+  inflightAudio.clear();
+}
+
+async function fetchHdBlob(
+  text: string,
+  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>
+): Promise<Blob> {
+  const cleaned = speakableHdText(text);
+  if (!cleaned) {
+    throw new Error("Tidak ada teks yang perlu dibacakan.");
+  }
+
+  const key = hdCacheKey(target, cleaned);
+  const hit = audioBlobCache.get(key);
+  if (hit) {
+    // Segarkan posisi LRU.
+    storeCachedBlob(key, hit);
+    return hit;
+  }
+
+  const pending = inflightAudio.get(key);
+  if (pending) return pending;
+
+  const task = (async () => {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: cleaned,
+        slot: target.slot,
+        customVoiceId: target.customVoiceId,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(
+        typeof data?.error === "string" && data.error
+          ? data.error
+          : `Gagal memuat suara HD (HTTP ${res.status}).`
+      );
+    }
+
+    const blob = await res.blob();
+    if (!blob.size) {
+      throw new Error("Data audio kosong dari server.");
+    }
+    storeCachedBlob(key, blob);
+    return blob;
+  })();
+
+  inflightAudio.set(key, task);
+  try {
+    return await task;
+  } finally {
+    inflightAudio.delete(key);
+  }
+}
+
+/**
+ * Unduh lebih awal klip MP3 selagi indikator "sedang mengetik..." tampil,
+ * sehingga begitu gelembung pesan muncul suara langsung terdengar tanpa jeda.
+ */
+export function prefetchSpeech(text: string, target?: ResolvedVoiceTarget): void {
+  if (typeof window === "undefined" || !target || target.kind !== "hd") return;
+  void fetchHdBlob(text, target).catch(() => undefined);
 }
 
 /* ------------------------------------------------------------------ */
@@ -173,7 +344,7 @@ export function useVoices(): SpeechSynthesisVoice[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Antrean pemutaran                                                   */
+/* Antrean pemutaran hibrida                                           */
 /* ------------------------------------------------------------------ */
 
 let generation = 0;
@@ -199,7 +370,7 @@ function buildUtterance(text: string, settings: VoiceSettings): SpeechSynthesisU
   return utterance;
 }
 
-function speakOne(utterance: SpeechSynthesisUtterance): Promise<void> {
+function speakOneDevice(utterance: SpeechSynthesisUtterance): Promise<void> {
   return new Promise((resolve) => {
     const synth = window.speechSynthesis;
     let started = false;
@@ -248,53 +419,176 @@ function speakOne(utterance: SpeechSynthesisUtterance): Promise<void> {
   });
 }
 
+async function playDeviceChunks(
+  cleanText: string,
+  settings: VoiceSettings,
+  currentGeneration: number
+): Promise<void> {
+  if (!isSpeechSupported()) return;
+  const chunks = splitSentences(cleanText);
+  const synth = window.speechSynthesis;
+  try {
+    synth.resume();
+  } catch {
+    // Diabaikan.
+  }
+  for (let i = 0; i < chunks.length; i++) {
+    if (currentGeneration !== generation) return;
+    await speakOneDevice(buildUtterance(chunks[i], settings));
+    if (currentGeneration !== generation) return;
+    if (i < chunks.length - 1) await sleep(Math.max(0, settings.pause ?? 150));
+  }
+}
+
+function playBlobOnSharedAudio(
+  blob: Blob,
+  settings: VoiceSettings,
+  rawTextForBlockedRetry: string,
+  target: ResolvedVoiceTarget
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const el = getSharedAudio();
+    if (!el) {
+      reject(new Error("Pemutar audio tidak tersedia di browser ini."));
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    let settled = false;
+    let safetyTimer = 0;
+
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      if (activeAudioFinish === finishOk) {
+        activeAudioFinish = null;
+      }
+      window.clearTimeout(safetyTimer);
+      el.onended = null;
+      el.onerror = null;
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    const finishOk = () => {
+      cleanup();
+      resolve();
+    };
+
+    activeAudioFinish = finishOk;
+    safetyTimer = window.setTimeout(finishOk, 90_000);
+
+    el.muted = false;
+    el.volume = Math.min(1, Math.max(0, settings.volume ?? 1));
+    el.onended = finishOk;
+    el.onerror = () => {
+      cleanup();
+      reject(new Error("Gagal memutar audio HD."));
+    };
+    el.src = objectUrl;
+
+    const playPromise = el.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise
+        .then(() => {
+          audioUnlocked = true;
+          blockedSpeech = null;
+        })
+        .catch((err: unknown) => {
+          cleanup();
+          const name = err instanceof Error ? err.name : "";
+          if (name === "NotAllowedError") {
+            blockedSpeech = {
+              text: rawTextForBlockedRetry,
+              settings,
+              target,
+              at: Date.now(),
+            };
+            // Di iOS bila ketukan belum sempat membuka <audio>, tunda ke sentuhan berikutnya
+            // tanpa dianggap error kuota ElevenLabs.
+            resolve();
+            return;
+          }
+          reject(err instanceof Error ? err : new Error("Gagal memulai audio HD."));
+        });
+    } else {
+      audioUnlocked = true;
+    }
+  });
+}
+
 /**
- * Bacakan teks.
- * - `append: true`  -> antrekan setelah bacaan yang sedang berjalan (untuk multi-bubble).
- * - `append: false` -> hentikan bacaan sebelumnya lalu mulai dari awal.
+ * Bacakan teks memakai mesin yang dipilih (`target`):
+ * - `target.kind === "hd"` -> MP3 ElevenLabs (otomatis jatuh ke suara perangkat bila gagal).
+ * - `target.kind === "device"` (default) -> Web Speech API perangkat.
+ * - `append: true` -> antrekan setelah bacaan yang sedang berjalan (untuk multi-bubble).
  */
 export function speak(
   text: string,
   settings: VoiceSettings,
-  options: { append?: boolean } = {}
+  options: SpeakOptions = {}
 ): boolean {
-  if (!isSpeechSupported()) return false;
-  const clean = speakableText(text);
+  const target: ResolvedVoiceTarget = options.target ?? { kind: "device" };
+  const useHd = target.kind === "hd" && isAudioElementSupported();
+
+  if (!useHd && !isSpeechSupported()) return false;
+
+  const clean = useHd ? speakableHdText(text) : speakableText(text);
   if (!clean) return false;
 
   setSpeakingState(true);
 
-  if (!speechUnlocked) {
-    blockedSpeech = { text, settings, at: Date.now() };
+  if (!useHd && !speechUnlocked) {
+    blockedSpeech = { text, settings, target, at: Date.now() };
   }
-
-  const chunks = splitSentences(clean);
-  const synth = window.speechSynthesis;
 
   if (!options.append) {
     generation += 1;
     pendingSpeech = 0;
-    const wasBusy = synth.speaking || synth.pending;
-    // Hindari cancel() saat diam: di iOS justru bisa membuat mesin suara "tertidur".
-    if (wasBusy) synth.cancel();
-    chain = wasBusy ? sleep(140) : Promise.resolve();
+    stopSharedAudio();
+    let wasSynthBusy = false;
+    if (isSpeechSupported()) {
+      const synth = window.speechSynthesis;
+      wasSynthBusy = synth.speaking || synth.pending;
+      // Hindari cancel() saat diam: di iOS justru bisa membuat mesin suara "tertidur".
+      if (wasSynthBusy) synth.cancel();
+    }
+    chain = wasSynthBusy ? sleep(140) : Promise.resolve();
   }
 
   pendingSpeech += 1;
   const currentGeneration = generation;
+
   chain = chain.then(async () => {
     try {
-      try {
-        synth.resume();
-      } catch {
-        // Diabaikan.
+      if (currentGeneration !== generation) return;
+
+      if (useHd && target.kind === "hd") {
+        try {
+          const blob = await fetchHdBlob(text, target);
+          if (currentGeneration !== generation) return;
+          await playBlobOnSharedAudio(blob, settings, text, target);
+          if (currentGeneration !== generation) return;
+          if (pendingSpeech > 1 && settings.pause > 0) {
+            await sleep(Math.max(0, settings.pause));
+          }
+          return;
+        } catch (err) {
+          if (currentGeneration !== generation) return;
+          const reason =
+            err instanceof Error && err.message
+              ? err.message
+              : "Suara HD sedang tidak tersedia.";
+          options.onFallback?.(reason);
+          // Jatuh mulus ke suara perangkat agar karakter tidak mendadak bisu.
+          const fallbackClean = speakableText(text);
+          if (fallbackClean && isSpeechSupported()) {
+            await playDeviceChunks(fallbackClean, settings, currentGeneration);
+          }
+          return;
+        }
       }
-      for (let i = 0; i < chunks.length; i++) {
-        if (currentGeneration !== generation) return;
-        await speakOne(buildUtterance(chunks[i], settings));
-        if (currentGeneration !== generation) return;
-        if (i < chunks.length - 1) await sleep(Math.max(0, settings.pause ?? 150));
-      }
+
+      await playDeviceChunks(clean, settings, currentGeneration);
     } finally {
       if (currentGeneration === generation) {
         pendingSpeech = Math.max(0, pendingSpeech - 1);
@@ -310,9 +604,10 @@ export function stopSpeaking() {
   pendingSpeech = 0;
   blockedSpeech = null;
   setSpeakingState(false);
-  if (!isSpeechSupported()) return;
   generation += 1;
   chain = Promise.resolve();
+  stopSharedAudio();
+  if (!isSpeechSupported()) return;
   try {
     window.speechSynthesis.cancel();
   } catch {

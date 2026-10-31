@@ -1,5 +1,7 @@
+import type { VoiceEngineChoice } from "./hdVoice";
+
 /**
- * Aturan & pengolahan teks untuk suara lokal (Web Speech API).
+ * Aturan & pengolahan teks untuk suara lokal (Web Speech API) & pilihan mesin.
  *
  * Sengaja bebas dari `window` dan React supaya seluruh perhitungannya —
  * pembersihan teks, pemecahan kalimat, pemilihan suara, dan validasi setelan —
@@ -9,6 +11,8 @@
 export type VoiceSettings = {
   /** Bacakan setiap balasan baru karakter secara otomatis. */
   enabled: boolean;
+  /** Mesin suara bawaan akun: lokal perangkat, slot HD perempuan, atau slot HD laki-laki. */
+  engine: VoiceEngineChoice;
   /** URI suara pilihan di perangkat; kosong = pilih otomatis (utamakan Indonesia). */
   voiceURI: string;
   /** Kecepatan bicara (0.6–1.5). */
@@ -23,6 +27,7 @@ export type VoiceSettings = {
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   enabled: false,
+  engine: "device",
   voiceURI: "",
   rate: 0.95,
   pitch: 1.0,
@@ -70,8 +75,12 @@ export function normalizeVoiceSettings(input: unknown): VoiceSettings {
     Math.round(clampNumber(raw.volume, DEFAULT_VOICE_SETTINGS.volume, 0.2, 1) * 100) / 100;
   const pause = Math.round(clampNumber(raw.pause, DEFAULT_VOICE_SETTINGS.pause, 0, 500));
 
+  const engine: VoiceEngineChoice =
+    raw.engine === "hd_female" || raw.engine === "hd_male" ? raw.engine : "device";
+
   return {
     enabled: Boolean(raw.enabled),
+    engine,
     voiceURI: typeof raw.voiceURI === "string" ? raw.voiceURI : "",
     rate,
     pitch,
