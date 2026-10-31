@@ -28,6 +28,7 @@ import {
 } from "@/lib/voice";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
+import { CallOverlay } from "./CallOverlay";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
 import { CharactersView } from "./CharactersView";
@@ -82,6 +83,7 @@ export function ChatApp() {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [call, setCall] = useState<{ characterId: string; mode: "video" | "audio" } | null>(null);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = useRef<string | null>(null);
@@ -480,6 +482,7 @@ export function ChatApp() {
   })();
 
   const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
+  const callCharacter = call ? (characters.find((c) => c.id === call.characterId) ?? null) : null;
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
   const showMobileTabBar = !(view === "chats" && mobileShowChat);
@@ -532,6 +535,8 @@ export function ChatApp() {
                       }}
                       onOpenProfile={() => openProfile(activeCharacter.id)}
                       onOpenVoice={() => handleViewChange("voice")}
+                      onVideoCall={() => setCall({ characterId: activeCharacter.id, mode: "video" })}
+                      onAudioCall={() => setCall({ characterId: activeCharacter.id, mode: "audio" })}
                       onImageClick={(url) => setLightbox(url)}
                       onCopyMessage={handleCopyMessage}
                       onSpeakMessage={handleSpeakMessage}
@@ -661,6 +666,15 @@ export function ChatApp() {
           onBackgroundChange={(next) => handleCharacterBackground(profileDetail.id, next)}
           onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
           onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
+        />
+      )}
+
+      {call && callCharacter && (
+        <CallOverlay
+          character={callCharacter}
+          mode={call.mode}
+          voice={voice}
+          onClose={() => setCall(null)}
         />
       )}
 

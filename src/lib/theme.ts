@@ -37,6 +37,20 @@ function syncThemeColor(resolved: ResolvedTheme) {
     .forEach((el) => el.setAttribute("content", color));
 }
 
+/** Warnai sementara area status bar (mis. saat layar panggilan penuh aktif). */
+export function setStatusBarColor(color: string) {
+  if (typeof document === "undefined") return;
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((el) => el.setAttribute("content", color));
+}
+
+/** Kembalikan warna status bar sesuai tema terang/gelap yang aktif. */
+export function resetStatusBarColor() {
+  init();
+  syncThemeColor(resolve(currentChoice));
+}
+
 function applyToDom(choice: ThemeChoice) {
   if (typeof document === "undefined") return;
   const resolved = resolve(choice);

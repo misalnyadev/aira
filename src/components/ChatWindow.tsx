@@ -17,8 +17,10 @@ import {
   BackIcon,
   CheckIcon,
   DoubleCheckIcon,
+  PhoneCallIcon,
   SpeakerIcon,
   SpeakerOffIcon,
+  VideoCallIcon,
 } from "./icons";
 import { MessageActionSheet, useMessageActions, type MessageAction } from "./MessageActions";
 
@@ -82,6 +84,8 @@ export function ChatWindow({
   onBack,
   onOpenProfile,
   onOpenVoice,
+  onVideoCall,
+  onAudioCall,
   onImageClick,
   onCopyMessage,
   onSpeakMessage,
@@ -102,6 +106,8 @@ export function ChatWindow({
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
+  onVideoCall?: () => void;
+  onAudioCall?: () => void;
   onImageClick: (url: string) => void;
   onCopyMessage: (text: string) => void;
   onSpeakMessage: (text: string) => void;
@@ -254,13 +260,13 @@ export function ChatWindow({
             aria-label="Hentikan suara"
           >
             <SpeakerOffIcon className="h-3.5 w-3.5" />
-            <span>Hentikan</span>
+            <span className="hidden sm:inline">Hentikan</span>
           </button>
         )}
 
         <button
           onClick={onOpenVoice}
-          className="relative shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+          className="relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex"
           title="Pengaturan Suara"
           aria-label="Pengaturan Suara"
         >
@@ -269,6 +275,28 @@ export function ChatWindow({
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
           )}
         </button>
+
+        {onVideoCall && (
+          <button
+            onClick={onVideoCall}
+            className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
+            aria-label={`Video call dengan ${character.name}`}
+            title="Video call"
+          >
+            <VideoCallIcon className="h-8 w-8" />
+          </button>
+        )}
+
+        {onAudioCall && (
+          <button
+            onClick={onAudioCall}
+            className="shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
+            aria-label={`Panggilan suara dengan ${character.name}`}
+            title="Panggilan suara"
+          >
+            <PhoneCallIcon className="h-6 w-6" />
+          </button>
+        )}
       </div>
 
       {chatVideo && !chatVideoFull && (
