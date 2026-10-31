@@ -35,6 +35,7 @@ import {
   resolveCandidateModel,
 } from "@/lib/providerPool";
 import type { UserProfile } from "@/lib/userProfile";
+import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
 
 /**
  * Mesin balasan bersama.
@@ -121,55 +122,83 @@ export async function buildMemoryExtrasForTurn({
   chronologicalHistory,
   excludeMessageId,
   userText,
+  primaryProviderType,
   now = new Date(),
 }: {
   character: Character;
   chronologicalHistory: (typeof messages.$inferSelect)[];
   excludeMessageId?: string;
   userText: string;
+  primaryProviderType?: string;
   now?: Date;
 }): Promise<MemoryPromptContext | undefined> {
-  if (!character.memoryEnabled) return undefined;
+  if (!character.memoryEnabled && !character.browsingEnabled) return undefined;
 
-  const priorRows = chronologicalHistory.filter((m) => m.id !== excludeMessageId);
-  const lastPrior = priorRows[priorRows.length - 1] ?? null;
-  const timeAwareness = describeTimeAwareness(now, lastPrior?.createdAt ?? null);
-
+  let timeAwareness: string | undefined;
+  let memorySummary: string | undefined;
   let recalledArchive = "";
-  const oldestInWindow = priorRows[0] ?? null;
-  const plan = extractArchiveRecallPlan(userText, now);
 
-  if (plan.shouldSearch && oldestInWindow) {
-    const olderDesc = await db
-      .select({
-        id: messages.id,
-        role: messages.role,
-        content: messages.content,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.characterId, character.id),
-          lt(messages.createdAt, oldestInWindow.createdAt)
+  if (character.memoryEnabled) {
+    const priorRows = chronologicalHistory.filter((m) => m.id !== excludeMessageId);
+    const lastPrior = priorRows[priorRows.length - 1] ?? null;
+    timeAwareness = describeTimeAwareness(now, lastPrior?.createdAt ?? null);
+    memorySummary = character.memorySummary || "";
+
+    const oldestInWindow = priorRows[0] ?? null;
+    const plan = extractArchiveRecallPlan(userText, now);
+
+    if (plan.shouldSearch && oldestInWindow) {
+      const olderDesc = await db
+        .select({
+          id: messages.id,
+          role: messages.role,
+          content: messages.content,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.characterId, character.id),
+            lt(messages.createdAt, oldestInWindow.createdAt)
+          )
         )
-      )
-      .orderBy(desc(messages.createdAt))
-      .limit(360);
+        .orderBy(desc(messages.createdAt))
+        .limit(360);
 
-    if (olderDesc.length > 0) {
-      recalledArchive = pickRelevantArchivedSnippets(
-        olderDesc.reverse(),
-        plan,
-        character.name
-      );
+      if (olderDesc.length > 0) {
+        recalledArchive = pickRelevantArchivedSnippets(
+          olderDesc.reverse(),
+          plan,
+          character.name
+        );
+      }
     }
+  }
+
+  let webContext = "";
+  let webSearchActive = false;
+
+  if (character.browsingEnabled) {
+    const browsePlan = extractWebBrowsePlan(userText);
+    if (browsePlan.urls.length > 0 || browsePlan.shouldSearch) {
+      webSearchActive = browsePlan.shouldSearch;
+      // Bila provider utama Gemini & user minta cari info umum, Gemini punya Google Search
+      // bawaan; pembacaan link URL langsung (`browsePlan.urls`) tetap diambil di server.
+      const skipServerSearch = primaryProviderType === "gemini" && browsePlan.shouldSearch;
+      webContext = await gatherWebContext(browsePlan, { skipServerSearch }).catch(() => "");
+    }
+  }
+
+  if (!timeAwareness && !memorySummary && !recalledArchive && !webContext && !webSearchActive) {
+    return undefined;
   }
 
   return {
     timeAwareness,
-    memorySummary: character.memorySummary || "",
+    memorySummary,
     recalledArchive,
+    webContext,
+    webSearchActive,
   };
 }
 
@@ -182,6 +211,7 @@ async function askWithImmersionGuard({
   history,
   userText,
   image,
+  enableWebSearch,
 }: {
   providerType: ProviderType;
   apiKey: string;
@@ -191,6 +221,7 @@ async function askWithImmersionGuard({
   history: ChatTurn[];
   userText: string;
   image: { base64: string; mimeType: string } | null;
+  enableWebSearch?: boolean;
 }): Promise<string[]> {
   const ask = (extraPrompt = "") =>
     generateCharacterReply(providerType, {
@@ -201,6 +232,7 @@ async function askWithImmersionGuard({
       history,
       userText,
       image,
+      enableWebSearch,
     });
 
   let rawReply = await ask();
@@ -278,6 +310,7 @@ export async function generateBubbles({
           history,
           userText,
           image,
+          enableWebSearch: Boolean(memoryExtras?.webSearchActive),
         });
 
         const promoted = promoteKeyAtIndex(candidate.apiKey, backups, kIdx);

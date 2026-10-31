@@ -99,6 +99,7 @@ const DDL = [
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "memory_summary" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "memory_through_at" timestamp with time zone`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "memory_updated_at" timestamp with time zone`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "browsing_enabled" boolean NOT NULL DEFAULT false`,
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
   sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,

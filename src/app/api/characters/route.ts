@@ -55,6 +55,7 @@ export async function GET() {
       media: characters.media,
       voiceConfig: characters.voiceConfig,
       memoryEnabled: characters.memoryEnabled,
+      browsingEnabled: characters.browsingEnabled,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
     })
@@ -84,6 +85,7 @@ export async function GET() {
         media: parseCharacterMedia(row.media),
         voiceConfig: parseCharacterVoice(row.voiceConfig),
         memoryEnabled: Boolean(row.memoryEnabled),
+        browsingEnabled: Boolean(row.browsingEnabled),
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",

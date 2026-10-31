@@ -46,6 +46,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     memoryEnabled: Boolean(row.memoryEnabled),
     memorySummary: row.memorySummary ?? "",
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
+    browsingEnabled: Boolean(row.browsingEnabled),
   };
 }
 
@@ -89,6 +90,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     voiceConfig,
     memoryEnabled,
     memorySummary,
+    browsingEnabled,
   } = body as {
     name?: string;
     avatarUrl?: string | null;
@@ -104,6 +106,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     voiceConfig?: unknown | null;
     memoryEnabled?: boolean;
     memorySummary?: string;
+    browsingEnabled?: boolean;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -169,6 +172,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (typeof memoryEnabled === "boolean") {
     updates.memoryEnabled = memoryEnabled;
+  }
+  if (typeof browsingEnabled === "boolean") {
+    updates.browsingEnabled = browsingEnabled;
   }
   if (typeof memorySummary === "string") {
     const trimmed = memorySummary.trim();

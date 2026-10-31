@@ -41,7 +41,7 @@ function normalizeModelName(model: string): string {
 }
 
 export async function generateGeminiReply(input: GenerateReplyInput): Promise<string> {
-  const { apiKey, systemPrompt, history, userText, image } = input;
+  const { apiKey, systemPrompt, history, userText, image, enableWebSearch } = input;
   const model = normalizeModelName(input.model);
 
   if (!apiKey) {
@@ -94,13 +94,8 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
     generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": apiKey,
-    },
-    body: JSON.stringify({
+  const sendRequest = (withGoogleSearch: boolean) => {
+    const payload: Record<string, unknown> = {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
       generationConfig,
@@ -110,8 +105,25 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
         { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
         { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
       ],
-    }),
-  });
+    };
+    if (withGoogleSearch) {
+      payload.tools = [{ google_search: {} }];
+    }
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  let res = await sendRequest(Boolean(enableWebSearch));
+  // Jika varian model Gemini tidak mendukung tool `google_search` (400), ulangi mulus tanpa tool.
+  if (!res.ok && res.status === 400 && enableWebSearch) {
+    res = await sendRequest(false);
+  }
 
   if (!res.ok) {
     const raw = await res.text().catch(() => "");
@@ -126,7 +138,7 @@ export async function generateGeminiReply(input: GenerateReplyInput): Promise<st
   const candidate = data?.candidates?.[0];
   const parts = candidate?.content?.parts as { text?: string; thought?: boolean }[] | undefined;
   const textOut = parts
-    ?.filter((p) => !p.thought)
+    ?.filter((p) => !p.thought && typeof p.text === "string")
     .map((p) => p.text ?? "")
     .join("\n")
     .trim();

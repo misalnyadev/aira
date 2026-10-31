@@ -39,6 +39,8 @@ export type CharacterSummary = {
   voiceConfig: CharacterVoiceConfig | null;
   /** Apakah ingatan jangka panjang & kesadaran waktu aktif pada karakter ini. */
   memoryEnabled: boolean;
+  /** Apakah akses browsing internet & pembaca link aktif pada karakter ini. */
+  browsingEnabled: boolean;
   preview: string;
   updatedAt: string;
 };
@@ -61,6 +63,7 @@ export type CharacterDetail = {
   memoryEnabled: boolean;
   memorySummary: string;
   memoryUpdatedAt: string | null;
+  browsingEnabled: boolean;
 };
 
 export type ChatMessage = {

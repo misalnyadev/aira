@@ -11,6 +11,8 @@ export type GenerateReplyInput = {
   history: ChatTurn[];
   userText: string;
   image?: { base64: string; mimeType: string } | null;
+  /** Izinkan model memakai pencarian internet bawaan (mis. Google Search pada Gemini). */
+  enableWebSearch?: boolean;
 };
 
 export class AiProviderError extends Error {
