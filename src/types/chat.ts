@@ -1,6 +1,7 @@
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
+import type { CharacterVoiceConfig } from "@/lib/hdVoice";
 
 export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
 
@@ -34,6 +35,8 @@ export type CharacterSummary = {
   bubbleStyle: BubbleStyle | null;
   /** Media karakter (video chat, video call, suara telepon). */
   media: CharacterMedia | null;
+  /** Pilihan suara khusus karakter; `null` berarti ikut mesin bawaan akun. */
+  voiceConfig: CharacterVoiceConfig | null;
   preview: string;
   updatedAt: string;
 };
@@ -52,6 +55,7 @@ export type CharacterDetail = {
   chatBackground: ChatBackground | null;
   bubbleStyle: BubbleStyle | null;
   media: CharacterMedia | null;
+  voiceConfig: CharacterVoiceConfig | null;
 };
 
 export type ChatMessage = {
