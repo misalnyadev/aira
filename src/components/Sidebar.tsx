@@ -20,6 +20,7 @@ export function Sidebar({
   onNewCharacter,
   onOpenSettings,
   hasProviders,
+  limit,
 }: {
   characters: CharacterSummary[];
   activeId: string | null;
@@ -27,6 +28,7 @@ export function Sidebar({
   onNewCharacter: () => void;
   onOpenSettings: () => void;
   hasProviders: boolean;
+  limit: number;
 }) {
   const [query, setQuery] = useState("");
 
@@ -35,10 +37,20 @@ export function Sidebar({
     [characters, query]
   );
 
+  const full = characters.length >= limit;
+
   return (
     <div className="flex h-full w-full flex-col border-r border-slate-200 bg-white md:w-[380px]">
       <div className="flex items-center justify-between bg-[#f0f2f5] px-4 py-3">
-        <h1 className="text-lg font-bold text-slate-900">Persona</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-lg font-bold text-slate-900">Aisherly</h1>
+          <span
+            className={`text-[11px] font-medium ${full ? "text-rose-500" : "text-slate-400"}`}
+            title={`Maksimal ${limit} karakter`}
+          >
+            {characters.length}/{limit}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={onOpenSettings}
@@ -52,8 +64,9 @@ export function Sidebar({
           </button>
           <button
             onClick={onNewCharacter}
-            className="rounded-full p-2 text-slate-600 hover:bg-slate-200"
-            title="Buat karakter baru"
+            disabled={full}
+            className="rounded-full p-2 text-slate-600 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+            title={full ? `Maksimal ${limit} karakter` : "Buat karakter baru"}
           >
             <PlusIcon className="h-5 w-5" />
           </button>
@@ -67,7 +80,7 @@ export function Sidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari karakter"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            className="w-full bg-transparent text-base outline-none placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -91,7 +104,14 @@ export function Sidebar({
             <Avatar name={c.name} src={c.avatarUrl} size={48} />
             <div className="min-w-0 flex-1 border-b border-slate-100 pb-3 pt-0.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-semibold text-slate-900">{c.name}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {c.name}
+                  {c.hasBible && (
+                    <span className="ml-1 text-[11px]" title="Punya bible peran">
+                      📖
+                    </span>
+                  )}
+                </p>
                 <span className="shrink-0 text-[11px] text-slate-400">
                   {formatListTime(c.updatedAt)}
                 </span>
@@ -100,6 +120,12 @@ export function Sidebar({
             </div>
           </button>
         ))}
+
+        {full && (
+          <p className="px-4 py-3 text-center text-[11px] text-slate-400">
+            Sudah {limit} karakter — batas maksimal. Hapus salah satu untuk menambah lagi.
+          </p>
+        )}
       </div>
     </div>
   );

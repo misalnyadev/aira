@@ -17,6 +17,8 @@ export type CharacterSummary = {
   name: string;
   avatarUrl: string | null;
   shortBio: string;
+  /** Ada bible peran atau tidak — dipakai untuk menandai 📖 di daftar. */
+  hasBible: boolean;
   preview: string;
   updatedAt: string;
 };
@@ -27,6 +29,8 @@ export type CharacterDetail = {
   avatarUrl: string | null;
   shortBio: string;
   personality: string;
+  /** Naskah bible peran; kosong kalau belum diimpor. */
+  bible: string;
   greeting: string;
   providerId: string | null;
   model: string | null;

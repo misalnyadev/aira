@@ -24,7 +24,8 @@ function extFromMime(mime: string): string {
 export async function storeImage(
   buffer: Buffer,
   mimeType: string,
-  originalName?: string
+  originalName?: string,
+  userId?: string | null
 ): Promise<string> {
   if (buffer.length > MAX_ATTACHMENT_BYTES) {
     throw new Error("Ukuran gambar terlalu besar (maksimal 6MB setelah dikompresi).");
@@ -45,6 +46,7 @@ export async function storeImage(
   const [row] = await db
     .insert(attachments)
     .values({
+      userId: userId ?? null,
       mimeType: mimeType || "image/jpeg",
       data: buffer.toString("base64"),
       bytes: buffer.length,
@@ -54,14 +56,15 @@ export async function storeImage(
   return `/api/attachments/${row.id}`;
 }
 
-export async function saveUploadedFile(file: File): Promise<string> {
+export async function saveUploadedFile(file: File, userId?: string | null): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
-  return storeImage(Buffer.from(arrayBuffer), file.type, file.name);
+  return storeImage(Buffer.from(arrayBuffer), file.type, file.name, userId);
 }
 
 /** Ambil gambar sebagai base64 untuk dikirim ke model (vision). */
 export async function readImageAsBase64(
-  url: string | null | undefined
+  url: string | null | undefined,
+  userId?: string | null
 ): Promise<{ base64: string; mimeType: string } | null> {
   if (!url) return null;
 
@@ -78,11 +81,17 @@ export async function readImageAsBase64(
       const id = url.split("/").pop();
       if (!id) return null;
       const [row] = await db
-        .select({ data: attachments.data, mimeType: attachments.mimeType })
+        .select({ data: attachments.data, mimeType: attachments.mimeType, userId: attachments.userId })
         .from(attachments)
         .where(eq(attachments.id, id))
         .limit(1);
-      return row ? { base64: row.data, mimeType: row.mimeType } : null;
+
+      // Gambar hanya boleh dibaca pemiliknya. Tanpa ini, ID lampiran orang
+      // lain bisa dipakai untuk mengirim gambar mereka ke model.
+      if (!row) return null;
+      if (userId && row.userId && row.userId !== userId) return null;
+
+      return { base64: row.data, mimeType: row.mimeType };
     }
 
     // c) File di disk (mode lokal).

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ProviderSummary, ProviderType } from "@/types/chat";
+import { useAuth } from "./AuthGate";
 import { CheckIcon, TrashIcon, XIcon } from "./icons";
 
 const PROVIDER_LABELS: Record<ProviderType, string> = {
@@ -42,6 +43,7 @@ export function SettingsModal({
   const [isDefault, setIsDefault] = useState(providers.length === 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, signOut } = useAuth();
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -244,6 +246,24 @@ export function SettingsModal({
               {busy ? "Menyimpan..." : "Simpan Provider"}
             </button>
           </form>
+
+          <div className="mt-5 border-t border-slate-200 pt-4">
+            <h3 className="text-sm font-semibold text-slate-800">Akun</h3>
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-sm text-slate-700">{user.email}</p>
+                <p className="text-[11px] text-slate-400">
+                  Karakter & API key di akun ini terpisah dari akun lain.
+                </p>
+              </div>
+              <button
+                onClick={() => void signOut()}
+                className="shrink-0 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white"
+              >
+                Keluar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

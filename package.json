@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-postgresql-template",
+  "name": "aisherly",
   "private": true,
   "scripts": {
     "dev": "next dev",

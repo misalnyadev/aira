@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Persona — Chat Karakter Pribadi",
+  title: "Aisherly — Chat Karakter Pribadi",
   description: "Aplikasi chat privat untuk latihan pendalaman karakter dan peran.",
 };
 

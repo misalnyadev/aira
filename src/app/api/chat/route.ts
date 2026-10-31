@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, characters, messages, type ProviderType } from "@/db/schema";
+import { apiProviders, messages, type ProviderType } from "@/db/schema";
 import {
   AiProviderError,
+  BUBBLE_DELIMITER,
   buildSystemPrompt,
   generateCharacterReply,
   splitIntoBubbles,
 } from "@/lib/ai";
 import type { ChatTurn } from "@/lib/ai";
+import {
+  IMMERSION_REMINDER,
+  SAFE_FALLBACK_REPLY,
+  findMetaBreak,
+  stripMetaSentences,
+} from "@/lib/ai/immersion";
+import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +32,11 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   await ensureDb();
+
+  const user = await requireUser();
+  if (!user) {
+    return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
@@ -40,20 +54,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pesan tidak boleh kosong." }, { status: 400 });
   }
 
-  const [character] = await db.select().from(characters).where(eq(characters.id, characterId));
+  const character = await findOwnedCharacter(characterId, user.id);
   if (!character) {
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
   }
 
+  // Provider juga harus milik pengguna ini — API key orang lain tidak boleh terpakai.
   let provider: typeof apiProviders.$inferSelect | undefined;
   if (character.providerId) {
-    [provider] = await db.select().from(apiProviders).where(eq(apiProviders.id, character.providerId));
+    [provider] = await db
+      .select()
+      .from(apiProviders)
+      .where(and(eq(apiProviders.id, character.providerId), eq(apiProviders.userId, user.id)))
+      .limit(1);
   }
   if (!provider) {
-    [provider] = await db.select().from(apiProviders).where(eq(apiProviders.isDefault, true));
+    [provider] = await db
+      .select()
+      .from(apiProviders)
+      .where(and(eq(apiProviders.isDefault, true), eq(apiProviders.userId, user.id)))
+      .limit(1);
   }
   if (!provider) {
-    [provider] = await db.select().from(apiProviders).orderBy(apiProviders.createdAt).limit(1);
+    [provider] = await db
+      .select()
+      .from(apiProviders)
+      .where(eq(apiProviders.userId, user.id))
+      .orderBy(apiProviders.createdAt)
+      .limit(1);
   }
 
   if (!provider) {
@@ -65,6 +93,10 @@ export async function POST(req: Request) {
       { status: 412 }
     );
   }
+
+  // Gambar diperiksa dulu sebelum pesan disimpan, supaya pesan yang gagal
+  // tidak meninggalkan riwayat setengah jadi.
+  const image = await readImageAsBase64(imageUrl, user.id);
 
   const [userMessage] = await db
     .insert(messages)
@@ -92,20 +124,38 @@ export async function POST(req: Request) {
     }))
     .filter((t) => t.content);
 
-  const image = await readImageAsBase64(imageUrl);
   const systemPrompt = buildSystemPrompt(character);
   const model = character.model?.trim() || provider.model;
 
   try {
-    const rawReply = await generateCharacterReply(provider.type as ProviderType, {
-      apiKey: provider.apiKey,
-      model,
-      baseUrl: provider.baseUrl,
-      systemPrompt,
-      history,
-      userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
-      image,
-    });
+    const ask = (extraPrompt = "") =>
+      generateCharacterReply(provider.type as ProviderType, {
+        apiKey: provider.apiKey,
+        model,
+        baseUrl: provider.baseUrl,
+        systemPrompt: systemPrompt + extraPrompt,
+        history,
+        userText: content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : ""),
+        image,
+      });
+
+    /*
+     * Penjaga peran.
+     *
+     * Prompt sudah melarang pengakuan sebagai AI, tapi model kadang
+     * menyelipkannya. Kalau terdeteksi: minta ulang SEKALI dengan imbauan
+     * keras. Masih lolos? Kalimatnya dibuang supaya adegan tidak rusak.
+     * Biaya tambahan hanya keluar saat kasus ini benar-benar terjadi.
+     */
+    let rawReply = await ask();
+    const firstBreak = findMetaBreak(rawReply);
+    if (firstBreak) {
+      rawReply = await ask(IMMERSION_REMINDER);
+      if (findMetaBreak(rawReply)) {
+        const cleaned = stripMetaSentences(rawReply, BUBBLE_DELIMITER);
+        rawReply = cleaned || SAFE_FALLBACK_REPLY;
+      }
+    }
 
     const bubbles = splitIntoBubbles(rawReply);
     const toInsert = bubbles.length ? bubbles : [rawReply.trim() || "..."];
