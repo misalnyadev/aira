@@ -9,6 +9,7 @@ import {
   RECOMMENDED_MODELS,
 } from "@/lib/ai/providerDefaults";
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
+import { readClipboardText } from "@/lib/clipboard";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { ChatBackground } from "@/lib/chatBackground";
@@ -234,6 +235,26 @@ export function SettingsView({
     setBackupKeys([]);
   }
 
+  async function pastePrimaryKey() {
+    const pasted = await readClipboardText();
+    if (!pasted) {
+      setError("Clipboard kosong atau belum diizinkan. Salin API key dulu lalu coba lagi.");
+      return;
+    }
+    setError(null);
+    setApiKey(pasted);
+  }
+
+  async function pasteBackupKey(index: number) {
+    const pasted = await readClipboardText();
+    if (!pasted) {
+      setError("Clipboard kosong atau belum diizinkan. Salin API key dulu lalu coba lagi.");
+      return;
+    }
+    setError(null);
+    updateBackupSlot(index, pasted);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -406,7 +427,7 @@ export function SettingsView({
 
       <div
         ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+0.75rem)]"
+        className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+4rem)]"
       >
         <div className="mx-auto w-full max-w-2xl space-y-6">
           {/* Tampilan */}
@@ -661,7 +682,7 @@ export function SettingsView({
               )}
 
               <div>
-                <div className="mb-1.5 flex items-center justify-between">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-muted">
                     API key
                     {backupKeys.length > 0
@@ -670,13 +691,22 @@ export function SettingsView({
                         ? ` (${(editing.hasKey ? 1 : 0) + editing.backupCount})`
                         : ""}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowKeys((v) => !v)}
-                    className="text-xs font-medium text-ink-soft transition hover:text-ink"
-                  >
-                    {showKeys ? "Sembunyikan" : "Tampilkan"}
-                  </button>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => void pastePrimaryKey()}
+                      className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                    >
+                      Tempel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeys((v) => !v)}
+                      className="text-xs font-medium text-ink-soft transition hover:text-ink"
+                    >
+                      {showKeys ? "Sembunyikan" : "Tampilkan"}
+                    </button>
+                  </div>
                 </div>
 
                 <input
@@ -689,9 +719,14 @@ export function SettingsView({
                         ? "API key (opsional)"
                         : "API key"
                   }
-                  type={showKeys ? "text" : "password"}
+                  type="text"
                   autoComplete="off"
-                  className={FIELD}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  className={`${FIELD} ${showKeys ? "" : "masked-key"}`}
                 />
 
                 {editing && !backupTouched && editing.backupCount > 0 && (
@@ -711,20 +746,32 @@ export function SettingsView({
                 )}
 
                 {backupKeys.map((key, index) => (
-                  <div key={index} className="mt-2 flex items-center gap-2">
+                  <div key={index} className="mt-2 flex items-center gap-1.5">
                     <input
                       value={key}
                       onChange={(e) => updateBackupSlot(index, e.target.value)}
                       placeholder={`Key cadangan ${index + 1}`}
-                      type={showKeys ? "text" : "password"}
+                      type="text"
                       autoComplete="off"
-                      className={`${FIELD} min-w-0 flex-1`}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-1p-ignore="true"
+                      data-lpignore="true"
+                      className={`${FIELD} min-w-0 flex-1 ${showKeys ? "" : "masked-key"}`}
                     />
+                    <button
+                      type="button"
+                      onClick={() => void pasteBackupKey(index)}
+                      className="shrink-0 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                    >
+                      Tempel
+                    </button>
                     <button
                       type="button"
                       onClick={() => removeBackupSlot(index)}
                       aria-label={`Hapus key cadangan ${index + 1}`}
-                      className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-rose-500"
+                      className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-rose-500"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>

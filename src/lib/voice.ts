@@ -191,7 +191,14 @@ export function flushBlockedSpeech(): boolean {
 
 export function useSpeechUnlock() {
   useEffect(() => {
-    const onGesture = () => {
+    const onGesture = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
       if (speechUnlocked && audioUnlocked) {
         flushBlockedSpeech();
         return;
