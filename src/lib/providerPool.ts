@@ -14,6 +14,11 @@ export function maskKey(key: string): string {
   return `${clean.slice(0, 3)}••••${clean.slice(-3)}`;
 }
 
+/** Ambil string yang sudah di-trim bila input memang bertipe string (`null` -> `undefined`). */
+export function normalizeOptionalString(val: unknown): string | undefined {
+  return typeof val === "string" ? val.trim() : undefined;
+}
+
 /** Bersihkan daftar key cadangan: buang kosong, duplikat, dan yang kembar dengan key utama. */
 export function cleanBackupKeys(input: unknown, primaryKey: string): string[] {
   if (!Array.isArray(input)) return [];

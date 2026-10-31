@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ProviderSummary, ProviderType } from "@/types/chat";
+import { sortModels, type ModelOption } from "@/lib/ai/models";
 import {
   PROVIDER_META,
   PROVIDER_ORDER,
@@ -19,8 +20,10 @@ import { ThemeSegmented } from "./ThemeToggle";
 import {
   BoltIcon,
   CheckIcon,
+  ChevronDownIcon,
   PencilIcon,
   PlusIcon,
+  RefreshIcon,
   TrashIcon,
 } from "./icons";
 
@@ -70,11 +73,39 @@ export function SettingsView({
   const [bubbleBusy, setBubbleBusy] = useState(false);
   const [bubbleError, setBubbleError] = useState<string | null>(null);
 
+  // Pemilih model hidup dari API key provider
+  const [models, setModels] = useState<ModelOption[] | null>(null);
+  const [modelsBusy, setModelsBusy] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [showModels, setShowModels] = useState(false);
+  const [modelQuery, setModelQuery] = useState("");
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   useKeepFieldVisible(scrollAreaRef, true);
 
   const meta = PROVIDER_META[type] ?? PROVIDER_META.groq;
-  const recommended = RECOMMENDED_MODELS[type] ?? [];
+  const recommended = useMemo(() => RECOMMENDED_MODELS[type] ?? [], [type]);
+
+  const sortedModels = useMemo(
+    () => (models ? sortModels(models, recommended) : []),
+    [models, recommended]
+  );
+  const visibleModels = useMemo(() => {
+    const q = modelQuery.trim().toLowerCase();
+    if (!q) return sortedModels;
+    return sortedModels.filter(
+      (m) =>
+        m.id.toLowerCase().includes(q) ||
+        (m.label ? m.label.toLowerCase().includes(q) : false)
+    );
+  }, [sortedModels, modelQuery]);
+
+  function clearModelPicker() {
+    setModels(null);
+    setShowModels(false);
+    setModelsError(null);
+    setModelQuery("");
+  }
 
   function resetForm() {
     setEditing(null);
@@ -86,6 +117,7 @@ export function SettingsView({
     setBaseUrl("");
     setModel("");
     setError(null);
+    clearModelPicker();
   }
 
   function startCreate() {
@@ -100,6 +132,7 @@ export function SettingsView({
     setModel("");
     setIsDefault(providers.length === 0);
     setError(null);
+    clearModelPicker();
   }
 
   function startEdit(p: ProviderSummary) {
@@ -114,6 +147,7 @@ export function SettingsView({
     setModel(p.model);
     setIsDefault(p.isDefault);
     setError(null);
+    clearModelPicker();
   }
 
   function chooseType(next: ProviderType) {
@@ -125,6 +159,58 @@ export function SettingsView({
       }
     }
     setType(next);
+    clearModelPicker();
+  }
+
+  async function loadModels() {
+    const cleanedBackups = backupKeys.map((k) => k.trim()).filter(Boolean);
+    const hasStoredKey = Boolean(
+      editing && editing.type === type && (editing.hasKey || editing.backupCount > 0)
+    );
+
+    if (
+      type !== "custom" &&
+      !apiKey.trim() &&
+      cleanedBackups.length === 0 &&
+      !hasStoredKey
+    ) {
+      setModels(null);
+      setModelsError(`Isi API key ${meta.name} dulu.`);
+      setShowModels(true);
+      return;
+    }
+
+    setModelsBusy(true);
+    setModelsError(null);
+    try {
+      const res = await fetch("/api/providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerId: editing?.id,
+          type,
+          apiKey: apiKey.trim(),
+          backupKeys: cleanedBackups,
+          baseUrl: type === "custom" ? baseUrl.trim() : null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setModels(null);
+        setModelsError(data.error || "Gagal memuat daftar model.");
+        setShowModels(true);
+        return;
+      }
+      setModels(data.models as ModelOption[]);
+      setShowModels(true);
+      setModelQuery("");
+    } catch {
+      setModels(null);
+      setModelsError("Koneksi gagal saat memuat model.");
+      setShowModels(true);
+    } finally {
+      setModelsBusy(false);
+    }
   }
 
   function addBackupSlot() {
@@ -171,7 +257,7 @@ export function SettingsView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Gagal memperbarui provider.");
       } else {
         const res = await fetch("/api/providers", {
@@ -187,7 +273,7 @@ export function SettingsView({
             isDefault,
           }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Gagal menyimpan provider.");
       }
 
@@ -220,7 +306,7 @@ export function SettingsView({
     setTests((prev) => ({ ...prev, [p.id]: { status: "testing" } }));
     try {
       const res = await fetch(`/api/providers/${p.id}/test`, { method: "POST" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       const usedKeyNote =
         data.ok && data.usedKeyNumber > 1
           ? ` · key ke-${data.usedKeyNumber} dari ${data.totalKeys}`
@@ -657,33 +743,116 @@ export function SettingsView({
               </div>
 
               <div>
-                <span className="mb-1.5 block text-xs font-medium text-muted">Model</span>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted">Model</span>
+                  <button
+                    type="button"
+                    onClick={() => (showModels ? setShowModels(false) : void loadModels())}
+                    disabled={modelsBusy}
+                    className="flex items-center gap-1 text-xs font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
+                  >
+                    {modelsBusy ? "Memuat..." : showModels ? "Tutup" : "Pilih model"}
+                    <ChevronDownIcon
+                      className={`h-3.5 w-3.5 transition ${showModels ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                </div>
+
                 <input
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   placeholder={`Model (default: ${meta.defaultModel || "wajib diisi"})`}
                   className={FIELD}
                 />
-                {recommended.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {recommended.map((m) => {
-                      const active = model === m;
-                      return (
-                        <button
-                          type="button"
-                          key={m}
-                          onClick={() => setModel(m)}
-                          className={`rounded-full px-2.5 py-1 text-xs transition ${
-                            active
-                              ? "bg-brand font-semibold text-brand-ink"
-                              : "bg-surface-2 text-ink-soft hover:text-ink"
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      );
-                    })}
+
+                {showModels ? (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-line bg-surface">
+                    <div className="flex items-center gap-1 border-b border-line px-2.5 py-1">
+                      <input
+                        value={modelQuery}
+                        onChange={(e) => setModelQuery(e.target.value)}
+                        placeholder="Cari model"
+                        className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void loadModels()}
+                        disabled={modelsBusy}
+                        aria-label="Muat ulang daftar model"
+                        className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 disabled:opacity-50"
+                      >
+                        <RefreshIcon className={`h-4 w-4 ${modelsBusy ? "animate-spin" : ""}`} />
+                      </button>
+                    </div>
+
+                    {modelsError ? (
+                      <p className="px-3 py-3 text-xs text-rose-600 dark:text-rose-400">
+                        {modelsError}
+                      </p>
+                    ) : sortedModels.length === 0 ? (
+                      <p className="px-3 py-3 text-xs text-muted">Memuat...</p>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        {visibleModels.length === 0 && (
+                          <p className="px-3 py-3 text-xs text-muted">Tidak ditemukan.</p>
+                        )}
+                        {visibleModels.map((m) => {
+                          const active = model === m.id;
+                          const isRecommended = recommended.includes(m.id);
+                          return (
+                            <button
+                              type="button"
+                              key={m.id}
+                              onClick={() => {
+                                setModel(m.id);
+                                setShowModels(false);
+                              }}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-left transition ${
+                                active ? "bg-ink/[0.06]" : "hover:bg-surface-2"
+                              }`}
+                            >
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm text-ink">{m.id}</span>
+                                {m.label && m.label !== m.id && (
+                                  <span className="block truncate text-[12px] text-muted">
+                                    {m.label}
+                                  </span>
+                                )}
+                              </span>
+                              {isRecommended && (
+                                <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
+                                  disarankan
+                                </span>
+                              )}
+                              {active && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  recommended.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {recommended.map((m) => {
+                        const active = model === m;
+                        return (
+                          <button
+                            type="button"
+                            key={m}
+                            onClick={() => setModel(m)}
+                            className={`rounded-full px-2.5 py-1 text-xs transition ${
+                              active
+                                ? "bg-brand font-semibold text-brand-ink"
+                                : "bg-surface-2 text-ink-soft hover:text-ink"
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )
                 )}
               </div>
 
