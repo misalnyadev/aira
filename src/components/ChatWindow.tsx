@@ -91,6 +91,8 @@ export function ChatWindow({
   background,
   bubble,
   composer,
+  composerVisible = true,
+  onScreenTap,
   onBack,
   onOpenProfile,
   onOpenVoice,
@@ -116,6 +118,10 @@ export function ChatWindow({
   bubble?: BubbleStyle;
   /** Kolom ketik di bagian bawah ruang chat (menyatu di atas latar/video penuh). */
   composer?: ReactNode;
+  /** Apakah kolom ketik sedang ditampilkan (pada mode hide muncul saat layar disentuh). */
+  composerVisible?: boolean;
+  /** Ketukan di layar bersih (dipakai pada mode hide untuk memunculkan/menyembunyikan komposer). */
+  onScreenTap?: () => void;
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
@@ -229,6 +235,7 @@ export function ChatWindow({
 
   return (
     <div
+      onClick={onScreenTap}
       className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
       style={backdrop.style}
     >
@@ -242,9 +249,13 @@ export function ChatWindow({
         />
       )}
 
-      {/* Header — kaca standar, atau transparan penuh (foto karakter + ikon saja) bila minimalBars aktif */}
+      {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
-        <div className="z-10 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+        <div
+          className={`z-10 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+            hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
+        >
           <button
             onClick={onBack}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink/85 ring-1 ring-line/50 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
@@ -313,7 +324,11 @@ export function ChatWindow({
           )}
         </div>
       ) : (
-        <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+        <div
+          className={`top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+            hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
+        >
           <button
             onClick={onBack}
             className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
@@ -521,16 +536,27 @@ export function ChatWindow({
         )}
 
         {onToggleHideChat && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 px-2.5 sm:px-3">
+          <div
+            className={`pointer-events-none absolute inset-x-0 bottom-2 z-10 px-2.5 transition-all duration-200 sm:px-3 ${
+              !hideMessages || composerVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-2 opacity-0"
+            }`}
+          >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <div className="flex w-10 justify-center">
                 <button
                   type="button"
-                  onClick={onToggleHideChat}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleHideChat();
+                  }}
                   aria-pressed={hideMessages}
                   aria-label={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
                   title={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
-                  className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-surface/45 text-ink/70 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 hover:text-ink active:scale-95 active:opacity-70"
+                  className={`${
+                    !hideMessages || composerVisible ? "pointer-events-auto" : "pointer-events-none"
+                  } grid h-9 w-9 place-items-center rounded-full bg-surface/45 text-ink/70 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 hover:text-ink active:scale-95 active:opacity-70`}
                 >
                   {hideMessages ? (
                     <EyeOffIcon className="h-[18px] w-[18px]" />
@@ -544,7 +570,18 @@ export function ChatWindow({
         )}
       </div>
 
-      {composer && <div className="z-10 shrink-0">{composer}</div>}
+      {composer && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`z-10 shrink-0 transition-all duration-200 ${
+            composerVisible
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-2 opacity-0"
+          }`}
+        >
+          {composer}
+        </div>
+      )}
 
       {!hideMessages && openMessage && (
         <MessageActionSheet

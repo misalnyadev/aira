@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDictation } from "@/lib/dictation";
 import { stopSpeaking } from "@/lib/voice";
 import { MicIcon, PlusIcon, SendIcon, XIcon } from "./icons";
@@ -9,16 +9,29 @@ export function Composer({
   onSend,
   disabled,
   transparent = false,
+  blurOnSend = false,
+  onSent,
+  onWake,
+  onActivityChange,
   onNotice,
 }: {
   onSend: (text: string, imageFile: File | null) => void;
   disabled?: boolean;
-  /** Latar transparan kaca untuk mode sembunyikan tulisan chat (video/latar terlihat penuh). */
+  /** Latar transparan kaca untuk mode sembunyikan tulisan chat / bar minimalis. */
   transparent?: boolean;
+  /** Tutup papan ketik otomatis sesudah pesan terkirim (dipakai pada mode sembunyikan chat). */
+  blurOnSend?: boolean;
+  /** Dipanggil sesudah pesan berhasil dikirim dari kolom ketik. */
+  onSent?: () => void;
+  /** Pastikan kolom ketik tetap tampil (mis. sesudah memilih foto dari galeri). */
+  onWake?: () => void;
+  /** Memberi tahu induk apakah pengguna sedang aktif mengetik/mendikte/melampirkan foto. */
+  onActivityChange?: (busy: boolean) => void;
   /** Pesan singkat untuk pengguna (mis. izin mikrofon ditolak). */
   onNotice?: (message: string) => void;
 }) {
   const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
   const [multiline, setMultiline] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -66,6 +79,11 @@ export function Composer({
   );
 
   const dictation = useDictation({ onText: handleDictation, onError: handleDictationError });
+  const busy = focused || Boolean(text.trim()) || Boolean(imageFile) || dictation.listening;
+
+  useEffect(() => {
+    onActivityChange?.(busy);
+  }, [busy, onActivityChange]);
 
   function handleMic() {
     if (dictation.listening) {
@@ -84,6 +102,7 @@ export function Composer({
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+    onWake?.();
   }
 
   function clearImage() {
@@ -105,7 +124,9 @@ export function Composer({
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       setMultiline(false);
+      if (blurOnSend) textareaRef.current.blur();
     }
+    onSent?.();
   }
 
   return (
@@ -126,7 +147,7 @@ export function Composer({
               <button
                 onClick={clearImage}
                 aria-label="Batalkan foto"
-                className="absolute -right-1.5 -top-1.5 rounded-full bg-brand p-0.5 text-brand-ink shadow"
+                className="absolute -right-1.5 -top-1.5 rounded-full bg-surface p-0.5 text-ink shadow ring-1 ring-line"
               >
                 <XIcon className="h-3 w-3" />
               </button>
@@ -172,6 +193,8 @@ export function Composer({
             <textarea
               ref={textareaRef}
               value={text}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onChange={(e) => {
                 setText(e.target.value);
                 syncSize(e.target);
@@ -214,7 +237,11 @@ export function Composer({
           <button
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
-            className="mb-0.5 shrink-0 rounded-full bg-brand p-2.5 text-brand-ink transition hover:bg-brand-strong disabled:opacity-40"
+            className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
+              transparent
+                ? "bg-surface/75 ring-1 ring-line/70 backdrop-blur-md hover:bg-surface/90"
+                : "bg-surface ring-1 ring-line hover:bg-surface-2"
+            }`}
             title="Kirim"
             aria-label="Kirim pesan"
           >
