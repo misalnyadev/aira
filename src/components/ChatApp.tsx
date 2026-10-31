@@ -30,6 +30,7 @@ import {
   prefetchSpeech,
   speak,
   stopSpeaking,
+  syncVoiceAccountContext,
   useIsSpeaking,
   useSpeechSupported,
   useSpeechUnlock,
@@ -117,7 +118,8 @@ export function ChatApp() {
 
   useEffect(() => {
     ttsSummaryRef.current = ttsSummary;
-  }, [ttsSummary]);
+    syncVoiceAccountContext(user.id, ttsSummary);
+  }, [user.id, ttsSummary]);
 
   function voiceTargetFor(characterId: string | null, engineChoice: VoiceEngineChoice) {
     const charObj = characterId
@@ -753,6 +755,7 @@ export function ChatApp() {
 
           {view === "voice" && (
             <VoiceView
+              userId={user.id}
               settings={voice}
               onChange={setVoice}
               ttsSummary={ttsSummary}
@@ -825,8 +828,7 @@ export function ChatApp() {
           character={profileDetail}
           providerLabel={profileProviderLabel}
           bubbleFallback={bubbleStyle}
-          ttsProvider={ttsSummary.provider}
-          hasHdKey={ttsSummary.hasActiveKey}
+          ttsSummary={ttsSummary}
           voiceSettings={voice}
           onClose={() => setShowProfile(false)}
           onEdit={() => {

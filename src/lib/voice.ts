@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import {
+  DEFAULT_TTS_ACCOUNT_SUMMARY,
   speakableHdText,
+  splitTtsClauses,
+  ttsClipHash,
+  type HdTtsProvider,
   type ResolvedVoiceTarget,
+  type TtsAccountSummary,
 } from "./hdVoice";
+import { getLocalTtsBlob, putLocalTtsBlob } from "./ttsCache";
 import {
   DEFAULT_VOICE_SETTINGS,
   VOICE_PRESETS,
@@ -31,14 +37,23 @@ export {
 };
 
 /**
- * Mesin suara hibrida Aisherly:
- * 1. Suara Lokal Perangkat (Web Speech API) — gratis, tanpa API key.
- * 2. Suara HD (ElevenLabs) — MP3 jernih dengan prefetch saat "sedang mengetik...",
- *    cache memori LRU agar putar ulang 0 kredit, serta fallback otomatis ke
- *    suara perangkat bila kuota ElevenLabs habis.
+ * Mesin suara hibrida 3-lapis Aisherly:
+ * 1. Lokal Perangkat (IndexedDB) — putar 0 ms tanpa internet & tanpa API key.
+ * 2. Cloud Cloudflare R2 — sinkron otomatis antara PC & iPhone tanpa API key.
+ * 3. API Suara HD (Gemini TTS / ElevenLabs) — hasil baru otomatis disimpan ke R2 & IndexedDB.
+ * 4. Fallback Suara Perangkat (Web Speech API) — cadangan instan bila belum terekam & kuota habis.
  */
 
 const subscribeNothing = () => () => {};
+
+let activeUserId = "anon";
+let activeTtsSummary: TtsAccountSummary = DEFAULT_TTS_ACCOUNT_SUMMARY;
+
+/** Sinkronkan konteks akun aktif agar kunci IndexedDB lokal cocok 1:1 dengan R2. */
+export function syncVoiceAccountContext(userId: string, summary: TtsAccountSummary) {
+  activeUserId = userId || "anon";
+  activeTtsSummary = summary;
+}
 
 export function isSpeechSupported(): boolean {
   return (
@@ -113,7 +128,7 @@ function stopSharedAudio() {
 }
 
 export function unlockSpeech() {
-  // 1. Buka izin HTMLAudioElement untuk pemutaran MP3 HD sesudah await fetch.
+  // 1. Buka izin HTMLAudioElement untuk pemutaran audio HD sesudah await.
   if (!audioUnlocked) {
     const el = getSharedAudio();
     if (el && (el.paused || el.ended) && !activeAudioFinish) {
@@ -174,10 +189,6 @@ export function flushBlockedSpeech(): boolean {
   });
 }
 
-/**
- * Pasang sekali di akar aplikasi: sentuhan pertama membuka izin suara di iOS,
- * dan kembali dari latar belakang membangunkan lagi mesin suara yang terjeda.
- */
 export function useSpeechUnlock() {
   useEffect(() => {
     const onGesture = () => {
@@ -198,7 +209,6 @@ export function useSpeechUnlock() {
           // Diabaikan.
         }
       }
-      // Setelah lama di latar belakang, izin iOS bisa hangus lagi.
       speechUnlocked = false;
       audioUnlocked = false;
     };
@@ -217,57 +227,86 @@ export function useSpeechUnlock() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Cache Memori LRU & Prefetch Suara HD (ElevenLabs)                   */
+/* Cache Memori + IndexedDB Lokal + Sinkron R2                         */
 /* ------------------------------------------------------------------ */
 
-const MAX_AUDIO_CACHE = 40;
-let cacheEpoch = 0;
+const MAX_RAM_AUDIO_CACHE = 60;
 const audioBlobCache = new Map<string, Blob>();
 const inflightAudio = new Map<string, Promise<Blob>>();
 
-function hdCacheKey(
-  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
-  cleanedText: string
-): string {
-  return `${cacheEpoch}|${target.customProvider ?? ""}|${target.slot}|${target.customVoiceId ?? ""}|${cleanedText}`;
-}
-
-function storeCachedBlob(key: string, blob: Blob) {
+function storeRamBlob(key: string, blob: Blob) {
   if (audioBlobCache.has(key)) {
     audioBlobCache.delete(key);
   }
   audioBlobCache.set(key, blob);
-  if (audioBlobCache.size > MAX_AUDIO_CACHE) {
+  if (audioBlobCache.size > MAX_RAM_AUDIO_CACHE) {
     const oldest = audioBlobCache.keys().next().value;
     if (oldest !== undefined) audioBlobCache.delete(oldest);
   }
 }
 
-/** Bersihkan cache klip HD ketika pengguna mengganti Voice ID atau model di menu Suara. */
+/** Bersihkan cache RAM sementara ketika setelan suara diubah. */
 export function invalidateHdAudioCache() {
-  cacheEpoch += 1;
   audioBlobCache.clear();
   inflightAudio.clear();
 }
 
-async function fetchHdBlob(
-  text: string,
+function resolveClientClipHash(
+  cleanedClause: string,
   target: Extract<ResolvedVoiceTarget, { kind: "hd" }>
+): string {
+  const provider: HdTtsProvider = target.customProvider ?? activeTtsSummary.provider;
+  let voice = "";
+  let style = "";
+
+  if (provider === "gemini") {
+    style = activeTtsSummary.geminiStyle;
+    if (target.slot === "male") voice = activeTtsSummary.geminiMaleVoice;
+    else if (target.slot === "custom") voice = target.customVoiceId ?? "";
+    else voice = activeTtsSummary.geminiFemaleVoice;
+  } else {
+    if (target.slot === "male") voice = activeTtsSummary.maleVoiceId;
+    else if (target.slot === "custom") voice = target.customVoiceId ?? "";
+    else voice = activeTtsSummary.femaleVoiceId;
+  }
+
+  return ttsClipHash({
+    provider,
+    voice: voice || "default",
+    style,
+    text: cleanedClause,
+  });
+}
+
+async function fetchHdClauseBlob(
+  clauseText: string,
+  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
+  options: { forceSyncR2?: boolean } = {}
 ): Promise<Blob> {
-  const cleaned = speakableHdText(text);
+  const cleaned = speakableHdText(clauseText);
   if (!cleaned) {
     throw new Error("Tidak ada teks yang perlu dibacakan.");
   }
 
-  const key = hdCacheKey(target, cleaned);
-  const hit = audioBlobCache.get(key);
-  if (hit) {
-    // Segarkan posisi LRU.
-    storeCachedBlob(key, hit);
-    return hit;
+  const clipHash = resolveClientClipHash(cleaned, target);
+  const ramKey = `${activeUserId}:${clipHash}`;
+
+  if (!options.forceSyncR2) {
+    const ramHit = audioBlobCache.get(ramKey);
+    if (ramHit) {
+      storeRamBlob(ramKey, ramHit);
+      return ramHit;
+    }
+
+    const idbHit = await getLocalTtsBlob(activeUserId, clipHash);
+    if (idbHit) {
+      storeRamBlob(ramKey, idbHit);
+      return idbHit;
+    }
   }
 
-  const pending = inflightAudio.get(key);
+  const inflightKey = options.forceSyncR2 ? `sync:${ramKey}` : ramKey;
+  const pending = inflightAudio.get(inflightKey);
   if (pending) return pending;
 
   const task = (async () => {
@@ -295,25 +334,133 @@ async function fetchHdBlob(
     if (!blob.size) {
       throw new Error("Data audio kosong dari server.");
     }
-    storeCachedBlob(key, blob);
+
+    const finalHash = res.headers.get("X-Tts-Hash") || clipHash;
+    storeRamBlob(`${activeUserId}:${finalHash}`, blob);
+    void putLocalTtsBlob(activeUserId, finalHash, blob);
     return blob;
   })();
 
-  inflightAudio.set(key, task);
+  inflightAudio.set(inflightKey, task);
   try {
     return await task;
   } finally {
-    inflightAudio.delete(key);
+    inflightAudio.delete(inflightKey);
   }
 }
 
 /**
- * Unduh lebih awal klip MP3 selagi indikator "sedang mengetik..." tampil,
+ * Unduh lebih awal klausa pembuka selagi indikator "sedang mengetik..." tampil,
  * sehingga begitu gelembung pesan muncul suara langsung terdengar tanpa jeda.
  */
 export function prefetchSpeech(text: string, target?: ResolvedVoiceTarget): void {
   if (typeof window === "undefined" || !target || target.kind !== "hd") return;
-  void fetchHdBlob(text, target).catch(() => undefined);
+  const clauses = splitTtsClauses(text).slice(0, 2);
+  for (const clause of clauses) {
+    void fetchHdClauseBlob(clause, target).catch(() => undefined);
+  }
+}
+
+export type PrewarmSummary = {
+  total: number;
+  ready: number;
+  failed: number;
+  quotaHit: boolean;
+  lastError: string | null;
+};
+
+/**
+ * Siapkan daftar frasa umum ke Cloudflare R2 + IndexedDB lokal perangkat.
+ * Memakai `forceSyncR2: true` agar frasa yang tadinya baru ada di lokal ikut
+ * dipastikan masuk ke R2 sehingga langsung tersedia di perangkat lain (PC/HP).
+ */
+export async function prewarmVoicePhrases(
+  phrases: readonly string[],
+  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
+  onProgress?: (done: number, total: number) => void
+): Promise<PrewarmSummary> {
+  const summary: PrewarmSummary = {
+    total: phrases.length,
+    ready: 0,
+    failed: 0,
+    quotaHit: false,
+    lastError: null,
+  };
+
+  for (let i = 0; i < phrases.length; i++) {
+    try {
+      await fetchHdClauseBlob(phrases[i], target, { forceSyncR2: true });
+      summary.ready += 1;
+    } catch (err) {
+      summary.failed += 1;
+      const msg = err instanceof Error ? err.message : "Gagal menyiapkan frasa.";
+      summary.lastError = msg;
+      if (/kuota|429/i.test(msg)) {
+        summary.quotaHit = true;
+        onProgress?.(i + 1, phrases.length);
+        break;
+      }
+    }
+    onProgress?.(i + 1, phrases.length);
+  }
+
+  return summary;
+}
+
+/**
+ * Putar satu rekaman dari Bank Rekaman (ambil dari IndexedDB lokal dulu; bila
+ * belum ada di perangkat ini, unduh dari R2 lalu simpan ke IndexedDB lokal).
+ */
+export async function playSavedBankClip(
+  clip: { id: string; clipHash: string },
+  volume = 1
+): Promise<boolean> {
+  stopSpeaking();
+  const currentGen = ++generation;
+  pendingSpeech = 1;
+  setSpeakingState(true);
+
+  const run = async (): Promise<boolean> => {
+    try {
+      const ramKey = `${activeUserId}:${clip.clipHash}`;
+      let blob: Blob | null = audioBlobCache.get(ramKey) ?? null;
+      if (!blob) {
+        blob = await getLocalTtsBlob(activeUserId, clip.clipHash);
+      }
+      if (!blob) {
+        const res = await fetch(`/api/tts/clips/${encodeURIComponent(clip.id)}`);
+        if (!res.ok) return false;
+        const fetched = await res.blob();
+        if (!fetched.size) return false;
+        blob = fetched;
+        void putLocalTtsBlob(activeUserId, clip.clipHash, fetched);
+      }
+      storeRamBlob(ramKey, blob);
+      if (currentGen !== generation) return false;
+
+      await playBlobOnSharedAudio(
+        blob,
+        { ...DEFAULT_VOICE_SETTINGS, volume },
+        "",
+        { kind: "device" }
+      );
+      return true;
+    } catch {
+      return false;
+    } finally {
+      if (currentGen === generation) {
+        pendingSpeech = 0;
+        setSpeakingState(false);
+      }
+    }
+  };
+
+  const p = chain.then(run, run);
+  chain = p.then(
+    () => undefined,
+    () => undefined
+  );
+  return p;
 }
 
 /* ------------------------------------------------------------------ */
@@ -389,7 +536,6 @@ function speakOneDevice(utterance: SpeechSynthesisUtterance): Promise<void> {
       resolve();
     };
 
-    // 1,2 detik belum mulai -> bangunkan mesin sekali; 4 detik -> lewati agar antrean tidak macet.
     kickTimer = window.setTimeout(() => {
       if (started) return;
       try {
@@ -500,14 +646,14 @@ function playBlobOnSharedAudio(
           cleanup();
           const name = err instanceof Error ? err.name : "";
           if (name === "NotAllowedError") {
-            blockedSpeech = {
-              text: rawTextForBlockedRetry,
-              settings,
-              target,
-              at: Date.now(),
-            };
-            // Di iOS bila ketukan belum sempat membuka <audio>, tunda ke sentuhan berikutnya
-            // tanpa dianggap error kuota ElevenLabs.
+            if (rawTextForBlockedRetry) {
+              blockedSpeech = {
+                text: rawTextForBlockedRetry,
+                settings,
+                target,
+                at: Date.now(),
+              };
+            }
             resolve();
             return;
           }
@@ -521,9 +667,8 @@ function playBlobOnSharedAudio(
 
 /**
  * Bacakan teks memakai mesin yang dipilih (`target`):
- * - `target.kind === "hd"` -> MP3 ElevenLabs (otomatis jatuh ke suara perangkat bila gagal).
+ * - `target.kind === "hd"` -> per klausa cek IndexedDB -> R2 -> API -> fallback perangkat.
  * - `target.kind === "device"` (default) -> Web Speech API perangkat.
- * - `append: true` -> antrekan setelah bacaan yang sedang berjalan (untuk multi-bubble).
  */
 export function speak(
   text: string,
@@ -552,7 +697,6 @@ export function speak(
     if (isSpeechSupported()) {
       const synth = window.speechSynthesis;
       wasSynthBusy = synth.speaking || synth.pending;
-      // Hindari cancel() saat diam: di iOS justru bisa membuat mesin suara "tertidur".
       if (wasSynthBusy) synth.cancel();
     }
     chain = wasSynthBusy ? sleep(140) : Promise.resolve();
@@ -566,32 +710,57 @@ export function speak(
       if (currentGeneration !== generation) return;
 
       if (useHd && target.kind === "hd") {
-        try {
-          const blob = await fetchHdBlob(text, target);
-          if (currentGeneration !== generation) return;
-          await playBlobOnSharedAudio(blob, settings, text, target);
-          if (currentGeneration !== generation) return;
-          if (pendingSpeech > 1 && settings.pause > 0) {
-            await sleep(Math.max(0, settings.pause));
+        const clauses = splitTtsClauses(text);
+        if (clauses.length === 0) return;
+
+        const tasks: (Promise<Blob> | null)[] = new Array(clauses.length).fill(null);
+        const ensure = (idx: number): Promise<Blob> => {
+          if (!tasks[idx]) {
+            tasks[idx] = fetchHdClauseBlob(clauses[idx], target);
+            // Redam unhandled rejection pada prefetch klausa berikutnya.
+            tasks[idx]!.catch(() => undefined);
           }
-          return;
-        } catch (err) {
+          return tasks[idx]!;
+        };
+
+        ensure(0);
+        if (clauses.length > 1) ensure(1);
+
+        let notifiedFallback = false;
+
+        for (let i = 0; i < clauses.length; i++) {
           if (currentGeneration !== generation) return;
-          const reason =
-            err instanceof Error && err.message
-              ? err.message
-              : "Suara HD sedang tidak tersedia.";
-          options.onFallback?.(reason);
-          if (options.allowDeviceFallback === false) {
-            return;
+          if (i + 2 < clauses.length) ensure(i + 2);
+
+          try {
+            const blob = await ensure(i);
+            if (currentGeneration !== generation) return;
+            await playBlobOnSharedAudio(blob, settings, text, target);
+          } catch (err) {
+            if (currentGeneration !== generation) return;
+            const reason =
+              err instanceof Error && err.message
+                ? err.message
+                : "Suara HD sedang tidak tersedia.";
+            if (!notifiedFallback) {
+              notifiedFallback = true;
+              options.onFallback?.(reason);
+            }
+            if (options.allowDeviceFallback === false) {
+              return;
+            }
+            const fallbackClause = speakableText(clauses[i]);
+            if (fallbackClause && isSpeechSupported()) {
+              await playDeviceChunks(fallbackClause, settings, currentGeneration);
+            }
           }
-          // Jatuh mulus ke suara perangkat agar karakter tidak mendadak bisu di ruang chat.
-          const fallbackClean = speakableText(text);
-          if (fallbackClean && isSpeechSupported()) {
-            await playDeviceChunks(fallbackClean, settings, currentGeneration);
+
+          if (currentGeneration !== generation) return;
+          if (i < clauses.length - 1 || pendingSpeech > 1) {
+            await sleep(Math.max(0, settings.pause ?? 140));
           }
-          return;
         }
+        return;
       }
 
       await playDeviceChunks(clean, settings, currentGeneration);
