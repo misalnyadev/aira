@@ -8,10 +8,13 @@ import { MicIcon, PlusIcon, SendIcon, XIcon } from "./icons";
 export function Composer({
   onSend,
   disabled,
+  transparent = false,
   onNotice,
 }: {
   onSend: (text: string, imageFile: File | null) => void;
   disabled?: boolean;
+  /** Latar transparan kaca untuk mode sembunyikan tulisan chat (video/latar terlihat penuh). */
+  transparent?: boolean;
   /** Pesan singkat untuk pengguna (mis. izin mikrofon ditolak). */
   onNotice?: (message: string) => void;
 }) {
@@ -106,7 +109,11 @@ export function Composer({
   }
 
   return (
-    <div className="composer-bar bg-header px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
+    <div
+      className={`composer-bar px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5 ${
+        transparent ? "bg-transparent" : "bg-header"
+      }`}
+    >
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
@@ -124,7 +131,15 @@ export function Composer({
                 <XIcon className="h-3 w-3" />
               </button>
             </div>
-            <span className="text-xs text-ink-soft">Foto siap dikirim</span>
+            <span
+              className={`text-xs ${
+                transparent
+                  ? "rounded-full bg-surface/75 px-2.5 py-1 text-ink backdrop-blur-md"
+                  : "text-ink-soft"
+              }`}
+            >
+              Foto siap dikirim
+            </span>
           </div>
         )}
 
@@ -142,11 +157,15 @@ export function Composer({
           <button
             onClick={() => fileRef.current?.click()}
             disabled={disabled}
-            className="mb-0.5 shrink-0 p-[5px] text-ink-soft transition active:opacity-50 disabled:opacity-50"
+            className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
+              transparent
+                ? "rounded-full bg-surface/75 p-1.5 text-ink ring-1 ring-line/70 backdrop-blur-md"
+                : "p-[5px] text-ink-soft"
+            }`}
             title="Kirim foto"
             aria-label="Lampirkan foto"
           >
-            <PlusIcon className="h-[30px] w-[30px]" />
+            <PlusIcon className={transparent ? "h-[26px] w-[26px]" : "h-[30px] w-[30px]"} />
           </button>
 
           <div className="relative min-w-0 w-full flex-1">
@@ -169,9 +188,11 @@ export function Composer({
               autoComplete="off"
               enterKeyHint="send"
               aria-label="Tulis pesan"
-              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
-                multiline ? "rounded-2xl" : "rounded-full"
-              }`}
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
+                transparent
+                  ? "bg-surface/75 ring-1 ring-line/70 backdrop-blur-md"
+                  : "bg-surface ring-1 ring-line"
+              } ${multiline ? "rounded-2xl" : "rounded-full"}`}
             />
             {dictation.supported && (
               <button

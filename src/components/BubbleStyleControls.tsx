@@ -165,6 +165,23 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
     <div className={`space-y-3 ${disabled ? "pointer-events-none opacity-50" : ""}`}>
       <div className="rounded-xl border border-line px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span className="block text-xs font-medium text-ink">Sembunyikan tulisan chat</span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+              Layar bersih seperti video call — chat & suara tetap berjalan
+            </span>
+          </div>
+          <Switch
+            checked={Boolean(style.hideMessages)}
+            onChange={(next) => update({ hideMessages: next })}
+            label="Sembunyikan tulisan chat"
+            disabled={disabled}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-line px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-medium text-ink">Tembus pandang</span>
           <div className="flex items-center gap-2">
             {style.glass && <span className="text-xs font-semibold text-ink-soft">{opacity}%</span>}
@@ -201,18 +218,26 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
       </div>
 
       <div className="flex flex-col gap-1.5 rounded-xl border border-line px-3 py-2.5">
-        <span
-          className="max-w-[85%] self-start rounded-2xl rounded-bl-sm bg-bubble-in px-3 py-1.5 text-sm text-bubble-in-ink shadow-xs"
-          style={{ ...bubblePaint(previewStyle, "in"), ...bubbleInk(previewStyle, "in") }}
-        >
-          Pesan dari karakter
-        </span>
-        <span
-          className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-bubble-out px-3 py-1.5 text-sm text-bubble-out-ink shadow-xs"
-          style={{ ...bubblePaint(previewStyle, "out"), ...bubbleInk(previewStyle, "out") }}
-        >
-          Pesan dari kamu
-        </span>
+        {style.hideMessages ? (
+          <p className="py-2 text-center text-xs text-muted">
+            Tulisan chat disembunyikan di ruang chat (bisa dinyalakan/dimatikan juga lewat ikon mata di atas chat).
+          </p>
+        ) : (
+          <>
+            <span
+              className="max-w-[85%] self-start rounded-2xl rounded-bl-sm bg-bubble-in px-3 py-1.5 text-sm text-bubble-in-ink shadow-xs"
+              style={{ ...bubblePaint(previewStyle, "in"), ...bubbleInk(previewStyle, "in") }}
+            >
+              Pesan dari karakter
+            </span>
+            <span
+              className="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-bubble-out px-3 py-1.5 text-sm text-bubble-out-ink shadow-xs"
+              style={{ ...bubblePaint(previewStyle, "out"), ...bubbleInk(previewStyle, "out") }}
+            >
+              Pesan dari kamu
+            </span>
+          </>
+        )}
       </div>
 
       {canReset && (
