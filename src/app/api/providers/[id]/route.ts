@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders } from "@/db/schema";
+import { apiProviders, providerTypeValues, type ProviderType } from "@/db/schema";
+import { PROVIDER_META } from "@/lib/ai/providerDefaults";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import {
@@ -25,17 +26,27 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { label, apiKey, backupKeys, keepBackupIndexes, newBackupKeys, baseUrl, model, isDefault } =
-    body as {
-      label?: string;
-      apiKey?: string;
-      backupKeys?: unknown;
-      keepBackupIndexes?: unknown;
-      newBackupKeys?: unknown;
-      baseUrl?: string;
-      model?: string;
-      isDefault?: boolean;
-    };
+  const {
+    type,
+    label,
+    apiKey,
+    backupKeys,
+    keepBackupIndexes,
+    newBackupKeys,
+    baseUrl,
+    model,
+    isDefault,
+  } = body as {
+    type?: string;
+    label?: string;
+    apiKey?: string;
+    backupKeys?: unknown;
+    keepBackupIndexes?: unknown;
+    newBackupKeys?: unknown;
+    baseUrl?: string;
+    model?: string;
+    isDefault?: boolean;
+  };
 
   const [existing] = await db
     .select()
@@ -45,11 +56,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   if (!existing) return NextResponse.json(NOT_FOUND, { status: 404 });
 
-  if (existing.type === "custom" && baseUrl !== undefined && !baseUrl.trim()) {
-    return NextResponse.json(
-      { error: "Base URL wajib diisi untuk provider custom." },
-      { status: 400 }
-    );
+  const nextType: ProviderType =
+    type && providerTypeValues.includes(type as ProviderType)
+      ? (type as ProviderType)
+      : (existing.type as ProviderType);
+
+  if (nextType === "custom") {
+    const candidateBase = baseUrl !== undefined ? baseUrl.trim() : (existing.baseUrl?.trim() ?? "");
+    if (!candidateBase) {
+      return NextResponse.json(
+        { error: "Base URL wajib diisi untuk provider custom." },
+        { status: 400 }
+      );
+    }
   }
 
   if (isDefault) {
@@ -70,11 +89,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const updates: Partial<typeof apiProviders.$inferInsert> = {
     updatedAt: new Date(),
+    type: nextType,
     apiKey: finalPrimaryKey,
     backupKeys: JSON.stringify(nextBackups),
   };
   if (label !== undefined && label.trim()) updates.label = label.trim();
-  if (baseUrl !== undefined) updates.baseUrl = baseUrl.trim() || null;
+  if (nextType === "custom") {
+    if (baseUrl !== undefined) updates.baseUrl = baseUrl.trim() || null;
+  } else {
+    updates.baseUrl =
+      baseUrl !== undefined && baseUrl.trim()
+        ? baseUrl.trim()
+        : (PROVIDER_META[nextType]?.baseUrl ?? null);
+  }
   if (model !== undefined && model.trim()) updates.model = model.trim();
   if (isDefault !== undefined) updates.isDefault = isDefault;
 

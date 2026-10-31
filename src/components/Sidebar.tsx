@@ -135,7 +135,7 @@ export function Sidebar({
         >
           <span>
             <strong className="font-semibold">Belum ada API key.</strong> Ketuk untuk menambahkan
-            Gemini, Grok, atau OpenRouter.
+            Gemini, Groq, atau OpenRouter.
           </span>
           <span className="shrink-0 font-semibold">Atur →</span>
         </button>

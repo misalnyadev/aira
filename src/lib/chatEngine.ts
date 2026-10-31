@@ -42,7 +42,7 @@ export type Character = typeof characters.$inferSelect;
 export type Provider = typeof apiProviders.$inferSelect;
 
 export const NO_PROVIDER_ERROR =
-  "Belum ada API key yang dikonfigurasi. Buka Pengaturan (⚙️) untuk menambahkan API key Gemini, Grok, OpenRouter, atau custom.";
+  "Belum ada API key yang dikonfigurasi. Buka Pengaturan (⚙️) untuk menambahkan API key Gemini, Groq, OpenRouter, atau custom.";
 
 /** Sisakan ruang dari batas 60 detik Vercel agar balasan sempat disimpan ke database. */
 const TIME_BUDGET_MS = 48_000;

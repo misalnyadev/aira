@@ -1,6 +1,6 @@
 import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const providerTypeValues = ["gemini", "grok", "openrouter", "custom"] as const;
+export const providerTypeValues = ["gemini", "groq", "openrouter", "custom", "grok"] as const;
 export type ProviderType = (typeof providerTypeValues)[number];
 
 /**
