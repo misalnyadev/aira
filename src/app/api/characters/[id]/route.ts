@@ -4,6 +4,11 @@ import { db } from "@/db";
 import { characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { normalizeBubbleStyle, parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import {
+  collectMediaKeys,
+  normalizeCharacterMedia,
+  parseCharacterMedia,
+} from "@/lib/characterMedia";
 import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import {
@@ -13,6 +18,7 @@ import {
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
+import { deleteR2Object } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +38,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     model: row.model,
     chatBackground: parseOptionalChatBackground(row.chatBackground),
     bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
+    media: parseCharacterMedia(row.media),
   };
 }
 
@@ -71,6 +78,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     model,
     chatBackground,
     bubbleStyle,
+    media,
   } = body as {
     name?: string;
     avatarUrl?: string | null;
@@ -82,6 +90,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     model?: string | null;
     chatBackground?: unknown | null;
     bubbleStyle?: unknown | null;
+    media?: unknown | null;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -126,6 +135,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     updates.bubbleStyle =
       bubbleStyle === null ? null : JSON.stringify(normalizeBubbleStyle(bubbleStyle));
   }
+  if ("media" in body) {
+    const cleaned = media === null ? null : normalizeCharacterMedia(media, user.id);
+    updates.media = cleaned ? JSON.stringify(cleaned) : null;
+  }
 
   /*
    * Kepemilikan diperiksa DI DALAM klausa WHERE, bukan setelah UPDATE.
@@ -153,6 +166,10 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const owned = await findOwnedCharacter(id, user.id);
   if (!owned) return NextResponse.json(NOT_FOUND, { status: 404 });
 
+  const mediaKeys = collectMediaKeys(parseCharacterMedia(owned.media));
   await db.delete(characters).where(eq(characters.id, id));
+  if (mediaKeys.length > 0) {
+    await Promise.allSettled(mediaKeys.map((key) => deleteR2Object(key)));
+  }
   return NextResponse.json({ ok: true });
 }

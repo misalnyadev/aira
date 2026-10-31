@@ -92,6 +92,7 @@ const DDL = [
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "bubble_style" text NOT NULL DEFAULT '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null}'`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "chat_background" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bubble_style" text`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "media" text`,
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
   sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,

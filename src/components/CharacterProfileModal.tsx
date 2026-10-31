@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
+import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
+import { CharacterMediaSection } from "./CharacterMediaSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { PencilIcon, TrashIcon, XIcon } from "./icons";
 
@@ -19,6 +21,7 @@ export function CharacterProfileModal({
   onDelete,
   onBackgroundChange,
   onBubbleChange,
+  onMediaChange,
 }: {
   character: CharacterDetail;
   providerLabel: string;
@@ -29,6 +32,7 @@ export function CharacterProfileModal({
   onDelete: () => void;
   onBackgroundChange: (next: ChatBackground | null) => void;
   onBubbleChange: (next: BubbleStyle | null) => void;
+  onMediaChange: (next: CharacterMedia | null) => void;
 }) {
   const [showBible, setShowBible] = useState(false);
   const hasBible = Boolean(character.bible?.trim());
@@ -130,6 +134,17 @@ export function CharacterProfileModal({
               value={character.bubbleStyle}
               fallback={bubbleFallback}
               onChange={onBubbleChange}
+            />
+          </div>
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Media karakter
+            </h4>
+            <CharacterMediaSection
+              characterId={character.id}
+              media={character.media}
+              onChange={onMediaChange}
             />
           </div>
 

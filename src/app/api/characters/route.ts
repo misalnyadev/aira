@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import { parseCharacterMedia } from "@/lib/characterMedia";
 import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import {
@@ -49,6 +50,7 @@ export async function GET() {
       bible: characters.bible,
       chatBackground: characters.chatBackground,
       bubbleStyle: characters.bubbleStyle,
+      media: characters.media,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
     })
@@ -74,6 +76,7 @@ export async function GET() {
         hasBible: Boolean(row.bible?.trim()),
         chatBackground: parseOptionalChatBackground(row.chatBackground),
         bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
+        media: parseCharacterMedia(row.media),
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",

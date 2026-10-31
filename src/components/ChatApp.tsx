@@ -6,6 +6,7 @@ import {
   DEFAULT_BUBBLE_STYLE,
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
+import type { CharacterMedia } from "@/lib/characterMedia";
 import {
   DEFAULT_CHAT_BACKGROUND,
   type ChatBackground,
@@ -451,6 +452,23 @@ export function ChatApp() {
     }
   }
 
+  async function handleCharacterMedia(id: string, next: CharacterMedia | null) {
+    setCharacters((prev) => prev.map((c) => (c.id === id ? { ...c, media: next } : c)));
+    setProfileDetail((cur) => (cur && cur.id === id ? { ...cur, media: next } : cur));
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ media: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan pengaturan media karakter.");
+      fetchCharacters();
+    }
+  }
+
   const profileProviderLabel = (() => {
     if (!profileDetail) return "";
     const chosen = profileDetail.providerId
@@ -642,6 +660,7 @@ export function ChatApp() {
           onDelete={() => handleDeleteCharacter(profileDetail.id)}
           onBackgroundChange={(next) => handleCharacterBackground(profileDetail.id, next)}
           onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
+          onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
         />
       )}
 
