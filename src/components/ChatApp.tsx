@@ -94,13 +94,11 @@ export function ChatApp() {
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
   const [profileDetail, setProfileDetail] = useState<CharacterDetail | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [call, setCall] = useState<{ characterId: string; mode: "video" | "audio" } | null>(null);
   const [peekCharId, setPeekCharId] = useState<string | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
 
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
   const bubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
@@ -150,10 +148,9 @@ export function ChatApp() {
   // Hentikan suara saat keluar dari akun atau sesi berakhir.
   useEffect(() => () => stopSpeaking(), []);
 
+  // Popup notifikasi mengambang dinonaktifkan agar tampilan chat & video selalu bersih.
   const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4500);
+    void msg;
   }, []);
 
   /**
@@ -987,18 +984,6 @@ export function ChatApp() {
             alt="preview"
             className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain"
           />
-        </div>
-      )}
-
-      {toast && (
-        <div
-          className={`fixed left-1/2 z-[70] max-w-[90vw] -translate-x-1/2 rounded-full bg-brand px-4 py-2 text-center text-xs font-medium text-brand-ink shadow-lg ${
-            showMobileTabBar
-              ? "bottom-[calc(var(--tabbar-space)+0.25rem)] md:bottom-6"
-              : "bottom-20 md:bottom-6"
-          }`}
-        >
-          {toast}
         </div>
       )}
     </div>
