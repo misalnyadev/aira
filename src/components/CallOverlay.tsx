@@ -329,7 +329,6 @@ export function CallOverlay({
 
       const started = speak(reply.text, voiceRef.current, {
         target: voiceTargetRef.current,
-        onFallback: (reason) => setMicHint(`${reason} Memakai suara perangkat.`),
         onEnd: (completed) => {
           if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
           if (completed) {
