@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import type { CallClipItem } from "@/lib/characterMedia";
 import {
   ensureMediaUrl,
   fallbackMediaToStream,
@@ -330,3 +331,104 @@ export function ChatVideoPanel({
     </div>
   );
 }
+
+function PreloadedCallClipLayer({
+  clip,
+  active,
+  playing,
+}: {
+  clip: CallClipItem;
+  active: boolean;
+  playing: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const url = useVideoPlayback(videoRef, clip.key, active && playing, false, true);
+
+  return (
+    <div
+      className={`absolute inset-0 transition-opacity ease-out ${
+        active
+          ? "z-10 opacity-100 duration-200"
+          : "z-0 opacity-0 delay-150 duration-200"
+      }`}
+    >
+      {clip.posterUrl && (
+        <img
+          src={clip.posterUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      {url && (
+        <video
+          ref={videoRef}
+          src={url}
+          poster={clip.posterUrl || undefined}
+          muted
+          loop
+          playsInline
+          autoPlay={active && playing}
+          preload="auto"
+          disablePictureInPicture
+          tabIndex={-1}
+          onError={() => {
+            fallbackMediaToStream(clip.key);
+          }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Panggung multi-klip khusus layar Video Call:
+ * Memuat seluruh klip ekspresi karakter di latar belakang sejak awal panggilan
+ * dan melakukan perpindahan ekspresi mulus tanpa kedip hitam & tanpa menyentuh
+ * video latar ruang chat.
+ */
+export function CallVideoStage({
+  clips,
+  activeKey,
+  playing,
+  dim = 0.12,
+  zoom = 1,
+}: {
+  clips: CallClipItem[];
+  activeKey: string | null;
+  playing: boolean;
+  dim?: number;
+  zoom?: number;
+}) {
+  const fallbackPoster = clips[0]?.posterUrl;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[#07070a]"
+    >
+      <div
+        className="absolute inset-0"
+        style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}
+      >
+        {fallbackPoster && (
+          <img
+            src={fallbackPoster}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        {clips.map((clip) => (
+          <PreloadedCallClipLayer
+            key={clip.key}
+            clip={clip}
+            active={clip.key === activeKey}
+            playing={playing}
+          />
+        ))}
+      </div>
+      <div className="absolute inset-0 z-20 bg-black" style={{ opacity: dim }} />
+    </div>
+  );
+}
+
