@@ -39,11 +39,14 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { characterId, content, imageUrl } = body as {
+  const { characterId, content, imageUrl, callMode } = body as {
     characterId?: string;
     content?: string;
     imageUrl?: string | null;
+    callMode?: "video" | "audio" | null;
   };
+  const activeCallMode =
+    callMode === "video" || callMode === "audio" ? callMode : undefined;
 
   if (!characterId) {
     return NextResponse.json({ error: "characterId wajib diisi." }, { status: 400 });
@@ -111,6 +114,7 @@ export async function POST(req: Request) {
       history: historyTurns,
       userProfile: profile,
       memoryExtras,
+      callMode: activeCallMode,
     });
 
     const assistantMessages = [];

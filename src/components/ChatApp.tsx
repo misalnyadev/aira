@@ -367,6 +367,86 @@ export function ChatApp() {
     }
   }
 
+  async function handleCallTurn(
+    characterId: string,
+    spokenText: string,
+    callMode: "video" | "audio"
+  ): Promise<string | null> {
+    const trimmed = spokenText.trim();
+    if (!trimmed) return null;
+
+    const tempId = `temp-call-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      characterId,
+      role: "user",
+      content: trimmed,
+      imageUrl: null,
+      status: "sent",
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [characterId]: [...(prev[characterId] ?? []), optimisticMsg],
+    }));
+
+    try {
+      const res = await api("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          characterId,
+          content: trimmed,
+          imageUrl: null,
+          callMode,
+        }),
+      });
+      const data = await res.json();
+
+      setMessagesMap((prev) => {
+        const list = (prev[characterId] ?? []).map((m) =>
+          m.id === tempId ? (data.userMessage ?? { ...m, pending: false }) : m
+        );
+        return { ...prev, [characterId]: list };
+      });
+
+      if (!res.ok) {
+        showToast(data.error || "Gagal mendapatkan balasan panggilan.");
+        return null;
+      }
+
+      if (data.fallbackUsed && data.providerLabel) {
+        showToast(
+          `Auto-fallback: memakai ${data.providerLabel} karena ${data.primaryLabel || "provider utama"} kena limit.`
+        );
+      }
+      if (data.keyRotated) {
+        void fetchProviders();
+      }
+
+      const replies: ChatMessage[] = data.assistantMessages ?? [];
+      if (replies.length > 0) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [characterId]: [...(prev[characterId] ?? []), ...replies],
+        }));
+      }
+      fetchCharacters();
+
+      const replyLine = replies
+        .map((m) => m.content.trim())
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      return replyLine || null;
+    } catch {
+      showToast("Koneksi terputus saat panggilan. Coba bicara lagi.");
+      return null;
+    }
+  }
+
   async function handleCopyMessage(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -878,6 +958,9 @@ export function ChatApp() {
           mode={call.mode}
           voice={voice}
           voiceTarget={callVoiceTarget}
+          onSendTurn={(spoken, callMode) =>
+            handleCallTurn(callCharacter.id, spoken, callMode)
+          }
           onClose={() => setCall(null)}
         />
       )}

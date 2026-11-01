@@ -91,6 +91,8 @@ export type SpeakOptions = {
   /** Bila `false` (mis. tombol Tes HD), jangan jatuh ke suara robot perangkat saat HD gagal. */
   allowDeviceFallback?: boolean;
   onFallback?: (reason: string) => void;
+  /** Dipanggil saat giliran ucapan selesai (`completed = true` bila tuntas tanpa dipotong). */
+  onEnd?: (completed: boolean) => void;
 };
 
 let blockedSpeech: {
@@ -772,10 +774,12 @@ export function speak(
 
       await playDeviceChunks(clean, settings, currentGeneration);
     } finally {
-      if (currentGeneration === generation) {
+      const completed = currentGeneration === generation;
+      if (completed) {
         pendingSpeech = Math.max(0, pendingSpeech - 1);
         if (pendingSpeech === 0) setSpeakingState(false);
       }
+      options.onEnd?.(completed);
     }
   });
 
