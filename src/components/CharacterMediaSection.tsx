@@ -2,7 +2,10 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import {
+  CALL_AUDIO_SLOTS,
   CALL_CLIP_SLOTS,
+  type CallAudioSlot,
+  type CallAudios,
   type CallClipSlot,
   type CallClips,
   type CharacterMedia,
@@ -14,7 +17,12 @@ import {
 } from "@/lib/mediaClient";
 import { FilmIcon, SpeakerIcon } from "./icons";
 
-type BusyTarget = "chatVideo" | "callVideo" | "callAudio" | CallClipSlot;
+type BusyTarget =
+  | "chatVideo"
+  | "callVideo"
+  | "callAudio"
+  | CallClipSlot
+  | `audio:${CallAudioSlot}`;
 
 const CALL_EXPRESSION_META: {
   slot: CallClipSlot;
@@ -57,6 +65,38 @@ const CALL_EXPRESSION_META: {
     label: "Cemberut / heran",
     hint: "Saat ngambek manja / kaget (saran 6 dtk).",
     activeHint: "Aktif saat cemberut / heran.",
+  },
+];
+
+const CALL_AUDIO_META: {
+  slot: CallAudioSlot;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    slot: "greeting",
+    label: "Sapaan angkat telepon",
+    hint: "Langsung bunyi 0 dtk saat tersambung (2–4 dtk).",
+  },
+  {
+    slot: "thinking",
+    label: "Gumam mikir ('Hmm…')",
+    hint: "Penutup jeda saat menunggu jawaban (1–2 dtk).",
+  },
+  {
+    slot: "laugh",
+    label: "Suara tawa asli",
+    hint: "Menyatu instan dengan klip Tertawa (1,5–2,5 dtk).",
+  },
+  {
+    slot: "shy",
+    label: "Suara malu / manis",
+    hint: "Menyatu instan dengan klip Malu (1–2 dtk).",
+  },
+  {
+    slot: "pout",
+    label: "Suara cemberut / heran",
+    hint: "Menyatu instan dengan klip Cemberut (1–2 dtk).",
   },
 ];
 
@@ -125,9 +165,9 @@ function MediaRow({
 
 /**
  * Media pribadi karakter di Cloudflare R2:
- * - Video saat chat (panel 16:9 di atas pesan atau latar penuh, terpisah dari video call)
- * - Video video call utama (diam/idle) + paket 6 klip ekspresi interaktif + zoom 100–200%
- * - Rekaman suara telepon (MP3 / M4A / WAV)
+ * - Video saat chat (khusus ruang chat, terpisah dari video call)
+ * - Video video call utama + paket 6 klip ekspresi interaktif + zoom 100–200%
+ * - Suara telepon + paket 5 asset audio reaksi instan tanpa jeda generate
  */
 export function CharacterMediaSection({
   characterId,
@@ -142,15 +182,21 @@ export function CharacterMediaSection({
   const callVideoRef = useRef<HTMLInputElement>(null);
   const clipInputRef = useRef<HTMLInputElement>(null);
   const callAudioRef = useRef<HTMLInputElement>(null);
+  const reactionAudioRef = useRef<HTMLInputElement>(null);
   const pendingClipSlotRef = useRef<CallClipSlot | null>(null);
+  const pendingAudioSlotRef = useRef<CallAudioSlot | null>(null);
 
   const filledClipCount = CALL_CLIP_SLOTS.filter(
     (s) => Boolean(media?.callClips?.[s]?.key)
+  ).length;
+  const filledAudioCount = CALL_AUDIO_SLOTS.filter(
+    (s) => Boolean(media?.callAudios?.[s]?.key)
   ).length;
 
   const [busy, setBusy] = useState<BusyTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showExpressions, setShowExpressions] = useState<boolean>(filledClipCount > 0);
+  const [showAudioPack, setShowAudioPack] = useState<boolean>(filledAudioCount > 0);
   /** Nilai sementara slider zoom — disimpan saat jari dilepas. */
   const [zoomDraft, setZoomDraft] = useState<number | null>(null);
   const zoom = zoomDraft ?? media?.callVideoZoom ?? 100;
@@ -160,9 +206,15 @@ export function CharacterMediaSection({
     const nextClipCount = CALL_CLIP_SLOTS.filter(
       (s) => Boolean(next.callClips?.[s]?.key)
     ).length;
+    const nextAudioCount = CALL_AUDIO_SLOTS.filter(
+      (s) => Boolean(next.callAudios?.[s]?.key)
+    ).length;
     const cleaned: CharacterMedia = { ...next };
     if (nextClipCount === 0) {
       delete cleaned.callClips;
+    }
+    if (nextAudioCount === 0) {
+      delete cleaned.callAudios;
     }
     if (!cleaned.callVideoKey && nextClipCount === 0) {
       delete cleaned.callVideoZoom;
@@ -171,7 +223,8 @@ export function CharacterMediaSection({
       !cleaned.chatVideoKey &&
       !cleaned.callVideoKey &&
       !cleaned.callClips &&
-      !cleaned.callAudioKey
+      !cleaned.callAudioKey &&
+      !cleaned.callAudios
     ) {
       onChange(null);
     } else {
@@ -269,6 +322,44 @@ export function CharacterMediaSection({
       setBusy(null);
       if (callAudioRef.current) callAudioRef.current.value = "";
     }
+  }
+
+  async function pickReactionAudio(audioSlot: CallAudioSlot, file: File) {
+    setBusy(`audio:${audioSlot}`);
+    setError(null);
+    try {
+      const uploaded = await uploadCharacterAudio(characterId, file);
+      const prevKey = media?.callAudios?.[audioSlot]?.key;
+      const nextAudios: CallAudios = {
+        ...(media?.callAudios ?? {}),
+        [audioSlot]: {
+          key: uploaded.key,
+          name: uploaded.name,
+        },
+      };
+      emitOrNull({
+        ...(media ?? {}),
+        callAudios: nextAudios,
+      });
+      if (prevKey) void removeCharacterMediaKey(prevKey);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengunggah audio reaksi.");
+    } finally {
+      setBusy(null);
+      pendingAudioSlotRef.current = null;
+      if (reactionAudioRef.current) reactionAudioRef.current.value = "";
+    }
+  }
+
+  function dropReactionAudio(audioSlot: CallAudioSlot) {
+    const prevKey = media?.callAudios?.[audioSlot]?.key;
+    const nextAudios: CallAudios = { ...(media?.callAudios ?? {}) };
+    delete nextAudios[audioSlot];
+    emitOrNull({
+      ...(media ?? {}),
+      callAudios: nextAudios,
+    });
+    if (prevKey) void removeCharacterMediaKey(prevKey);
   }
 
   function dropVideo(slot: "chatVideo" | "callVideo") {
@@ -434,12 +525,63 @@ export function CharacterMediaSection({
         </div>
       )}
 
+      {/* Paket asset audio reaksi instan (tanpa jeda generate) */}
+      <div className="rounded-xl border border-line">
+        <button
+          type="button"
+          onClick={() => setShowAudioPack((v) => !v)}
+          aria-expanded={showAudioPack}
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-ink">Paket audio reaksi panggilan</p>
+            <p className="truncate text-[12px] text-muted">
+              {filledAudioCount > 0
+                ? `${filledAudioCount} dari 5 suara instan aktif`
+                : "Opsional — sapaan, gumam mikir, tawa, malu, cemberut"}
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
+            {showAudioPack ? "Tutup" : filledAudioCount > 0 ? `${filledAudioCount}/5` : "Atur"}
+          </span>
+        </button>
+
+        {showAudioPack && (
+          <div className="space-y-1.5 border-t border-line px-2.5 py-2.5">
+            <p className="px-0.5 text-[11.5px] leading-snug text-muted">
+              Unggah WAV/MP3 pendek (mis. hasil VoxCPM2) agar suara & klip video langsung
+              menyatu 0 detik tanpa menunggu generate TTS.
+            </p>
+            {CALL_AUDIO_META.map((item) => {
+              const entry = media?.callAudios?.[item.slot];
+              return (
+                <MediaRow
+                  key={item.slot}
+                  label={item.label}
+                  hint={entry?.name ?? (entry?.key ? "Suara instan siap." : item.hint)}
+                  active={Boolean(entry?.key)}
+                  icon={<SpeakerIcon className="h-3.5 w-3.5" />}
+                  busy={busy === `audio:${item.slot}`}
+                  disabled={busy !== null}
+                  compact
+                  onPick={() => {
+                    pendingAudioSlotRef.current = item.slot;
+                    reactionAudioRef.current?.click();
+                  }}
+                  onRemove={() => dropReactionAudio(item.slot)}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <MediaRow
-        label="Suara telepon"
+        label="Suara telepon (cadangan)"
         hint={
           media?.callAudioKey
             ? (media.callAudioName ?? "Rekaman suara aktif.")
-            : "Rekaman MP3/WAV untuk panggilan telepon."
+            : "Rekaman MP3/WAV untuk sapaan panggilan."
         }
         active={Boolean(media?.callAudioKey)}
         icon={<SpeakerIcon className="h-4 w-4" />}
@@ -450,8 +592,7 @@ export function CharacterMediaSection({
       />
 
       <p className="text-[12px] leading-snug text-muted">
-        Opsional — tersimpan di akunmu dan ikut ke semua perangkat. Tanpa rekaman suara, panggilan
-        memakai suara karakter / perangkat.
+        Opsional — tersimpan di akunmu dan ikut ke semua perangkat.
       </p>
       {error && <p className="text-[12px] text-rose-600 dark:text-rose-400">{error}</p>}
 
@@ -484,6 +625,17 @@ export function CharacterMediaSection({
           const file = e.target.files?.[0];
           const slot = pendingClipSlotRef.current;
           if (file && slot) void pickExpressionClip(slot, file);
+        }}
+      />
+      <input
+        ref={reactionAudioRef}
+        type="file"
+        accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,audio/mp4,audio/aac,audio/ogg,audio/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const slot = pendingAudioSlotRef.current;
+          if (file && slot) void pickReactionAudio(slot, file);
         }}
       />
       <input

@@ -141,6 +141,54 @@ export function fallbackMediaToStream(key: string | null | undefined): boolean {
   return true;
 }
 
+const blobPreloadInFlight = new Set<string>();
+
+/**
+ * Unduh penuh klip audio kecil ke RAM (`URL.createObjectURL(blob)`) sejak layar
+ * panggilan mulai berdering agar saat diputar latensinya 0 ms dan menyatu 1:1
+ * dengan pergantian frame video ekspresi.
+ */
+export function preloadMediaBlob(key: string | null | undefined): void {
+  if (!key) return;
+  const existing = cache.get(key);
+  if (existing?.localObjectUrl && existing.url) return;
+  if (blobPreloadInFlight.has(key)) return;
+
+  ensureMediaUrl(key);
+  blobPreloadInFlight.add(key);
+
+  (async () => {
+    try {
+      let blob: Blob | null = null;
+      const ticketRes = await fetch(`/api/media?key=${encodeURIComponent(key)}`);
+      if (ticketRes.ok) {
+        const ticket = await ticketRes.json().catch(() => ({}));
+        if (typeof ticket.url === "string" && ticket.url) {
+          const directRes = await fetch(ticket.url).catch(() => null);
+          if (directRes && directRes.ok) {
+            blob = await directRes.blob();
+          }
+        }
+      }
+      if (!blob) {
+        const streamRes = await fetch(`/api/media/stream?key=${encodeURIComponent(key)}`).catch(
+          () => null
+        );
+        if (streamRes && streamRes.ok) {
+          blob = await streamRes.blob();
+        }
+      }
+      if (blob && blob.size > 0) {
+        primeLocalBlob(key, blob);
+      }
+    } catch {
+      // Tetap aman: jika gagal unduh ke RAM, pemutar tetap memakai URL streaming.
+    } finally {
+      blobPreloadInFlight.delete(key);
+    }
+  })();
+}
+
 function primeLocalBlob(key: string, blob: Blob) {
   const previous = cache.get(key);
   if (previous?.localObjectUrl && previous.url) {

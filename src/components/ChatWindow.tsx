@@ -18,6 +18,7 @@ import {
 } from "@/lib/bubbleStyle";
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
+import { useIsAudibleSpeaking } from "@/lib/voice";
 import { Avatar } from "./Avatar";
 import { ChatVideoBackground, ChatVideoPanel } from "./ChatVideo";
 import {
@@ -188,7 +189,8 @@ export function ChatWindow({
     return () => window.clearTimeout(id);
   }, [isSpeaking]);
 
-  const videoPlaying = isSpeaking || (reading && !isTyping);
+  const audibleSpeaking = useIsAudibleSpeaking();
+  const videoPlaying = audibleSpeaking || (!isSpeaking && reading && !isTyping);
 
   const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
     useMessageActions();

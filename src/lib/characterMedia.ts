@@ -4,7 +4,7 @@ import type { CallEmotion } from "./callEmotion";
  * Media pribadi karakter yang disimpan di Cloudflare R2.
  *
  * Database hanya menyimpan `key` objek R2 dan pengaturan tampilannya, bukan isi
- * file video/suara — sehingga kuota Neon tetap ringan dan video bisa di-stream.
+ * file video/suara — sehingga kuota Neon tetap ringan dan media bisa di-stream.
  */
 
 export const CALL_CLIP_SLOTS = [
@@ -25,6 +25,23 @@ export type CallClipItem = {
 
 export type CallClips = Partial<Record<CallClipSlot, CallClipItem>>;
 
+export const CALL_AUDIO_SLOTS = [
+  "greeting",
+  "thinking",
+  "laugh",
+  "shy",
+  "pout",
+] as const;
+
+export type CallAudioSlot = (typeof CALL_AUDIO_SLOTS)[number];
+
+export type CallAudioItem = {
+  key: string;
+  name?: string;
+};
+
+export type CallAudios = Partial<Record<CallAudioSlot, CallAudioItem>>;
+
 export type CharacterMedia = {
   /** Kunci objek R2 untuk klip video saat mengobrol di ruang chat. */
   chatVideoKey?: string;
@@ -40,10 +57,12 @@ export type CharacterMedia = {
   callClips?: CallClips;
   /** Perbesaran video call (100–200%) untuk memotong bingkai hitam di tepi. */
   callVideoZoom?: number;
-  /** Kunci objek R2 untuk rekaman suara panggilan telepon. */
+  /** Kunci objek R2 untuk rekaman sapaan telepon utama. */
   callAudioKey?: string;
   /** Nama file rekaman suara untuk ditampilkan di profil karakter. */
   callAudioName?: string;
+  /** Paket asset audio reaksi instan panggilan (sapaan, gumam mikir, tawa, malu, cemberut). */
+  callAudios?: CallAudios;
 };
 
 export type CallVisualPhase =
@@ -96,6 +115,29 @@ function cleanCallClips(raw: unknown, expectedUserId?: string): CallClips | unde
   return count > 0 ? cleaned : undefined;
 }
 
+function cleanCallAudios(raw: unknown, expectedUserId?: string): CallAudios | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const source = raw as Record<string, unknown>;
+  const cleaned: CallAudios = {};
+  let count = 0;
+
+  for (const slot of CALL_AUDIO_SLOTS) {
+    const entry = source[slot];
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const key = cleanMediaKey(obj.key, expectedUserId);
+    if (!key || !key.includes("/callAudio-")) continue;
+    const name =
+      typeof obj.name === "string" && obj.name.trim()
+        ? obj.name.trim().slice(0, 160)
+        : undefined;
+    cleaned[slot] = name ? { key, name } : { key };
+    count += 1;
+  }
+
+  return count > 0 ? cleaned : undefined;
+}
+
 /**
  * Bersihkan objek `CharacterMedia` dari klien atau database.
  * Mengembalikan `null` bila semua slot media kosong.
@@ -111,8 +153,9 @@ export function normalizeCharacterMedia(
   const callVideoKey = cleanMediaKey(raw.callVideoKey, expectedUserId);
   const callClips = cleanCallClips(raw.callClips, expectedUserId);
   const callAudioKey = cleanMediaKey(raw.callAudioKey, expectedUserId);
+  const callAudios = cleanCallAudios(raw.callAudios, expectedUserId);
 
-  if (!chatVideoKey && !callVideoKey && !callClips && !callAudioKey) {
+  if (!chatVideoKey && !callVideoKey && !callClips && !callAudioKey && !callAudios) {
     return null;
   }
 
@@ -150,6 +193,10 @@ export function normalizeCharacterMedia(
     }
   }
 
+  if (callAudios) {
+    result.callAudios = callAudios;
+  }
+
   return result;
 }
 
@@ -175,6 +222,12 @@ export function collectMediaKeys(media: CharacterMedia | null | undefined): stri
     }
   }
   if (media.callAudioKey) keys.add(media.callAudioKey);
+  if (media.callAudios) {
+    for (const slot of CALL_AUDIO_SLOTS) {
+      const k = media.callAudios[slot]?.key;
+      if (k) keys.add(k);
+    }
+  }
   return Array.from(keys);
 }
 
@@ -212,6 +265,36 @@ export function listUniqueCallClips(
     return [{ key: media.chatVideoKey, posterUrl: media.chatVideoPosterUrl }];
   }
   return [];
+}
+
+/** Daftar seluruh kunci audio panggilan unik untuk di-preload ke RAM saat panggilan dibuka. */
+export function listUniqueCallAudioKeys(
+  media: CharacterMedia | null | undefined
+): string[] {
+  if (!media) return [];
+  const keys = new Set<string>();
+  if (media.callAudioKey) keys.add(media.callAudioKey);
+  if (media.callAudios) {
+    for (const slot of CALL_AUDIO_SLOTS) {
+      const k = media.callAudios[slot]?.key;
+      if (k) keys.add(k);
+    }
+  }
+  return Array.from(keys);
+}
+
+/** Ambil kunci asset audio panggilan untuk momen tertentu (`greeting` jatuh ke `callAudioKey` bila ada). */
+export function resolveCallAudioAssetKey(
+  media: CharacterMedia | null | undefined,
+  slot: CallAudioSlot
+): string | null {
+  if (!media) return null;
+  const direct = media.callAudios?.[slot]?.key;
+  if (direct) return direct;
+  if (slot === "greeting" && media.callAudioKey) {
+    return media.callAudioKey;
+  }
+  return null;
 }
 
 /**

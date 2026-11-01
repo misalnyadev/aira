@@ -10,10 +10,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { CharacterSummary } from "@/types/chat";
-import type { CallEmotion } from "@/lib/callEmotion";
 import {
+  stripLeadingReactionCue,
+  type CallEmotion,
+} from "@/lib/callEmotion";
+import {
+  listUniqueCallAudioKeys,
   listUniqueCallClips,
   resolveActiveCallClip,
+  resolveCallAudioAssetKey,
+  type CallAudioSlot,
   type CallVisualPhase,
 } from "@/lib/characterMedia";
 import { useDictation } from "@/lib/dictation";
@@ -21,13 +27,17 @@ import type { ResolvedVoiceTarget } from "@/lib/hdVoice";
 import {
   ensureMediaUrl,
   fallbackMediaToStream,
-  useMediaUrl,
+  getMediaUrl,
+  preloadMediaBlob,
 } from "@/lib/mediaClient";
 import { resetStatusBarColor, setStatusBarColor } from "@/lib/theme";
 import {
+  getCueAudio,
+  prefetchSpeech,
   speak,
   stopSpeaking,
   unlockSpeech,
+  useIsAudibleSpeaking,
   useIsSpeaking,
   type VoiceSettings,
 } from "@/lib/voice";
@@ -84,14 +94,10 @@ export type CallTurnReply = {
 };
 
 /**
- * Layar panggilan suara & video call interaktif 2 arah ala WhatsApp:
- * - Pengguna bisa langsung berbicara lewat mikrofon (mode Otomatis kirim saat
- *   berhenti bicara ~1,6 detik, maupun mode Manual tekan tombol Mic/Kirim)
- *   atau mengetik singkat dari dalam layar panggilan.
- * - Setiap percakapan tersimpan ke ruang chat & ingatan karakter, dan dijawab
- *   langsung memakai Suara HD karakter (Gemini TTS / ElevenLabs / suara perangkat).
- * - Panggung video memakai paket klip khusus Video Call (diam, menyimak, mikir,
- *   bicara, ketawa, malu, cemberut) tanpa pernah melompat ke video latar ruang chat.
+ * Layar panggilan suara & video call interaktif 2 arah:
+ * - Menggabungkan 7 klip ekspresi video + 5 asset audio instan (di-preload ke RAM)
+ *   + sinkronisasi gelombang suara nyata (`useIsAudibleSpeaking`) sehingga gerak
+ *   wajah/bibir dan keluarnya suara menyatu tanpa jeda generate TTS.
  */
 export function CallOverlay({
   character,
@@ -119,6 +125,8 @@ export function CallOverlay({
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [autoMic, setAutoMic] = useState<boolean>(readInitialAutoMic);
   const [thinking, setThinking] = useState(false);
+  const [preparingSpeech, setPreparingSpeech] = useState(false);
+  const [cuePlayingSlot, setCuePlayingSlot] = useState<CallAudioSlot | null>(null);
   const [replyEmotion, setReplyEmotion] = useState<CallEmotion>("normal");
   const [silentExpressing, setSilentExpressing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
@@ -129,7 +137,7 @@ export function CallOverlay({
   const [typedDraft, setTypedDraft] = useState("");
 
   const speaking = useIsSpeaking();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audibleSpeaking = useIsAudibleSpeaking();
   const textInputRef = useRef<HTMLInputElement>(null);
 
   const mountedRef = useRef(true);
@@ -138,6 +146,7 @@ export function CallOverlay({
   const autoMicRef = useRef(autoMic);
   const thinkingRef = useRef(false);
   const showTextInputRef = useRef(false);
+  const mediaRef = useRef(character.media);
   const voiceRef = useRef(voice);
   const voiceTargetRef = useRef(voiceTarget);
   const onSendTurnRef = useRef(onSendTurn);
@@ -147,19 +156,21 @@ export function CallOverlay({
   const silenceTimerRef = useRef<number | null>(null);
   const autoListenTimerRef = useRef<number | null>(null);
   const silentExprTimerRef = useRef<number | null>(null);
+  const thinkingCueTimerRef = useRef<number | null>(null);
+  const activeCueFinishRef = useRef<(() => void) | null>(null);
   const turnSeqRef = useRef(0);
   const submitSpokenRef = useRef<() => void>(() => {});
 
   const interactive = Boolean(onSendTurn);
   const media = character.media;
   const allCallClips = useMemo(() => listUniqueCallClips(media), [media]);
+  const allCallAudioKeys = useMemo(() => listUniqueCallAudioKeys(media), [media]);
   const hasCallVideo = allCallClips.length > 0;
-
-  const audioKey = media?.callAudioKey ?? null;
-  const audioUrl = useMediaUrl(audioKey);
-  const voiceCall = mode === "audio";
-  const hasRecording = Boolean(audioKey) && voiceCall;
   const zoom = Math.min(2, Math.max(1, (media?.callVideoZoom ?? 100) / 100));
+
+  useEffect(() => {
+    mediaRef.current = media;
+  }, [media]);
 
   useEffect(() => {
     mutedRef.current = muted;
@@ -203,6 +214,119 @@ export function CallOverlay({
       silentExprTimerRef.current = null;
     }
   }, []);
+
+  const clearThinkingCueTimer = useCallback(() => {
+    if (thinkingCueTimerRef.current !== null) {
+      window.clearTimeout(thinkingCueTimerRef.current);
+      thinkingCueTimerRef.current = null;
+    }
+  }, []);
+
+  const stopCueAudio = useCallback(() => {
+    clearThinkingCueTimer();
+    if (activeCueFinishRef.current) {
+      const done = activeCueFinishRef.current;
+      activeCueFinishRef.current = null;
+      done();
+    }
+    const el = getCueAudio();
+    if (el && !el.paused) {
+      try {
+        el.pause();
+      } catch {
+        // Diabaikan.
+      }
+    }
+    setCuePlayingSlot(null);
+  }, [clearThinkingCueTimer]);
+
+  /**
+   * Putar klip asset audio pendek dari RAM (`0ms`) dan tunggu hingga selesai.
+   * Mengembalikan `true` jika berhasil diputar penuh/sebagian, `false` jika dilewati.
+   */
+  const playCueSlot = useCallback(
+    (slot: CallAudioSlot): Promise<boolean> => {
+      const key = resolveCallAudioAssetKey(mediaRef.current, slot);
+      const el = getCueAudio();
+      if (!key || !el || mutedRef.current) return Promise.resolve(false);
+
+      const initialUrl = getMediaUrl(key) ?? `/api/media/stream?key=${encodeURIComponent(key)}`;
+
+      if (activeCueFinishRef.current) {
+        const prevDone = activeCueFinishRef.current;
+        activeCueFinishRef.current = null;
+        prevDone();
+      }
+
+      return new Promise<boolean>((resolve) => {
+        let settled = false;
+        let retriedStream = false;
+        let started = false;
+
+        const finish = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(safetyId);
+          if (activeCueFinishRef.current === forceCancel) {
+            activeCueFinishRef.current = null;
+          }
+          el.onended = null;
+          el.onerror = null;
+          if (mountedRef.current) {
+            setCuePlayingSlot((curr) => (curr === slot ? null : curr));
+          }
+          resolve(ok);
+        };
+
+        const forceCancel = () => finish(started);
+        activeCueFinishRef.current = forceCancel;
+
+        const safetyId = window.setTimeout(() => finish(started), 25_000);
+
+        const tryPlayUrl = (srcUrl: string) => {
+          el.muted = mutedRef.current;
+          el.volume = Math.min(1, Math.max(0, voiceRef.current.volume ?? 1));
+          el.onended = () => finish(true);
+          el.onerror = () => {
+            if (!retriedStream && fallbackMediaToStream(key)) {
+              retriedStream = true;
+              const fallbackUrl = getMediaUrl(key);
+              if (fallbackUrl) {
+                tryPlayUrl(fallbackUrl);
+                return;
+              }
+            }
+            finish(false);
+          };
+          el.src = srcUrl;
+          const p = el.play();
+          if (p && typeof p.then === "function") {
+            p.then(() => {
+              if (settled) return;
+              started = true;
+              if (mountedRef.current) {
+                setCuePlayingSlot(slot);
+              }
+            }).catch((err: unknown) => {
+              const errName = err instanceof Error ? err.name : "";
+              if (errName === "NotAllowedError" && mountedRef.current) {
+                setAudioBlocked(true);
+              }
+              finish(false);
+            });
+          } else {
+            started = true;
+            if (mountedRef.current) {
+              setCuePlayingSlot(slot);
+            }
+          }
+        };
+
+        tryPlayUrl(initialUrl);
+      });
+    },
+    []
+  );
 
   const handleDictationText = useCallback(
     (spoken: string) => {
@@ -248,14 +372,16 @@ export function CallOverlay({
     clearAutoListenTimer();
     clearSilenceTimer();
     clearSilentExprTimer();
+    stopCueAudio();
     setSilentExpressing(false);
+    setPreparingSpeech(false);
     stopSpeaking();
     transcriptRef.current = "";
     ignoreDictationRef.current = false;
     setLiveTranscript("");
     setMicHint(null);
     dictationRef.current.start();
-  }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer]);
+  }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer, stopCueAudio]);
 
   const scheduleAutoListen = useCallback(
     (delayMs = POST_SPEECH_LISTEN_DELAY_MS) => {
@@ -285,15 +411,15 @@ export function CallOverlay({
       clearSilenceTimer();
       clearAutoListenTimer();
       clearSilentExprTimer();
+      stopCueAudio();
       setSilentExpressing(false);
+      setPreparingSpeech(false);
       ignoreDictationRef.current = true;
       transcriptRef.current = "";
       if (dictationRef.current.listening) {
         dictationRef.current.stop();
       }
       stopSpeaking();
-      const recEl = audioRef.current;
-      if (recEl && !recEl.paused) recEl.pause();
 
       const myTurn = ++turnSeqRef.current;
       setLiveTranscript("");
@@ -303,22 +429,34 @@ export function CallOverlay({
       setThinking(true);
       thinkingRef.current = true;
 
+      // Bila ada asset suara gumam mikir ("Hmm..."), bunyikan alami selagi menunggu server.
+      if (!mutedRef.current && resolveCallAudioAssetKey(mediaRef.current, "thinking")) {
+        thinkingCueTimerRef.current = window.setTimeout(() => {
+          if (mountedRef.current && turnSeqRef.current === myTurn && thinkingRef.current) {
+            void playCueSlot("thinking");
+          }
+        }, 260);
+      }
+
       const reply = await sender(clean, mode);
       if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
 
+      clearThinkingCueTimer();
       setThinking(false);
       thinkingRef.current = false;
 
       if (!reply || !reply.text) {
+        stopCueAudio();
         scheduleAutoListen(500);
         return;
       }
 
       const nextEmotion: CallEmotion = reply.emotion ?? "normal";
       setReplyEmotion(nextEmotion);
-      setLastAssistantLine(reply.text);
 
       if (mutedRef.current) {
+        stopCueAudio();
+        setLastAssistantLine(reply.text);
         setSilentExpressing(true);
         silentExprTimerRef.current = window.setTimeout(() => {
           setSilentExpressing(false);
@@ -327,10 +465,50 @@ export function CallOverlay({
         return;
       }
 
-      const started = speak(reply.text, voiceRef.current, {
+      // Cek apakah emosi ini memiliki asset audio reaksi instan (laugh / shy / pout).
+      const reactionSlot: CallAudioSlot | null =
+        nextEmotion === "laugh" || nextEmotion === "shy" || nextEmotion === "pout"
+          ? nextEmotion
+          : null;
+      const hasReactionAudio = Boolean(
+        reactionSlot && resolveCallAudioAssetKey(mediaRef.current, reactionSlot)
+      );
+
+      let spokenBody = reply.text;
+      if (hasReactionAudio && reactionSlot) {
+        stopCueAudio();
+        spokenBody = stripLeadingReactionCue(reply.text, nextEmotion);
+
+        // Prefetch audio TTS kalimat lanjutan di latar belakang selagi klip reaksi asli berbunyi!
+        if (spokenBody) {
+          prefetchSpeech(spokenBody, voiceTargetRef.current);
+        }
+
+        setLastAssistantLine(reply.text);
+        await playCueSlot(reactionSlot);
+        if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
+
+        // Bila seluruh balasan hanya berupa tawa/reaksi pendek, langsung lanjut giliran.
+        if (!spokenBody) {
+          scheduleAutoListen(POST_SPEECH_LISTEN_DELAY_MS);
+          return;
+        }
+      }
+
+      // Tahan visual tetap di ekspresi `Mikir` sampai gelombang suara TTS benar-benar keluar!
+      setPreparingSpeech(true);
+
+      const started = speak(spokenBody, voiceRef.current, {
         target: voiceTargetRef.current,
+        onStart: () => {
+          if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
+          stopCueAudio();
+          setPreparingSpeech(false);
+          setLastAssistantLine(reply.text);
+        },
         onEnd: (completed) => {
           if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
+          setPreparingSpeech(false);
           if (completed) {
             scheduleAutoListen(POST_SPEECH_LISTEN_DELAY_MS);
           }
@@ -338,6 +516,9 @@ export function CallOverlay({
       });
 
       if (!started) {
+        stopCueAudio();
+        setPreparingSpeech(false);
+        setLastAssistantLine(reply.text);
         setSilentExpressing(true);
         silentExprTimerRef.current = window.setTimeout(() => {
           setSilentExpressing(false);
@@ -349,8 +530,11 @@ export function CallOverlay({
       clearAutoListenTimer,
       clearSilenceTimer,
       clearSilentExprTimer,
+      clearThinkingCueTimer,
       mode,
+      playCueSlot,
       scheduleAutoListen,
+      stopCueAudio,
     ]
   );
 
@@ -388,45 +572,49 @@ export function CallOverlay({
       clearSilenceTimer();
       clearAutoListenTimer();
       clearSilentExprTimer();
+      stopCueAudio();
       stopSpeaking();
       resetStatusBarColor();
       document.documentElement.style.backgroundColor = previousHtml;
       document.body.style.backgroundColor = previousBody;
     };
-  }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer]);
+  }, [
+    clearAutoListenTimer,
+    clearSilenceTimer,
+    clearSilentExprTimer,
+    stopCueAudio,
+  ]);
 
+  // Preload seluruh klip video ekspresi & asset audio reaksi ke RAM sejak detik pertama berdering.
   useEffect(() => {
-    if (audioKey && voiceCall) ensureMediaUrl(audioKey);
-  }, [audioKey, voiceCall]);
-
-  // Siapkan seluruh klip ekspresi Video Call sejak detik pertama "Memanggil...".
-  useEffect(() => {
-    if (mode !== "video") return;
-    for (const clip of allCallClips) {
-      ensureMediaUrl(clip.key);
+    if (mode === "video") {
+      for (const clip of allCallClips) {
+        ensureMediaUrl(clip.key);
+      }
     }
-  }, [allCallClips, mode]);
+    for (const audioKey of allCallAudioKeys) {
+      preloadMediaBlob(audioKey);
+    }
+  }, [allCallAudioKeys, allCallClips, mode]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       connectedRef.current = true;
       setConnected(true);
-      if (interactive && !hasRecording) {
+      const greetingKey = resolveCallAudioAssetKey(mediaRef.current, "greeting");
+      if (greetingKey && !mutedRef.current) {
+        const greetTurn = ++turnSeqRef.current;
+        void playCueSlot("greeting").then(() => {
+          if (mountedRef.current && turnSeqRef.current === greetTurn && interactive) {
+            scheduleAutoListen(250);
+          }
+        });
+      } else if (interactive) {
         scheduleAutoListen(220);
       }
     }, CONNECT_DELAY);
     return () => window.clearTimeout(timer);
-  }, [hasRecording, interactive, scheduleAutoListen]);
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!connected || !audioUrl || !el || !voiceCall) return;
-    el.muted = muted;
-    void el.play().catch(() => {
-      setAudioBlocked(true);
-      if (interactive) scheduleAutoListen(300);
-    });
-  }, [connected, audioUrl, interactive, muted, scheduleAutoListen, voiceCall]);
+  }, [interactive, playCueSlot, scheduleAutoListen]);
 
   useEffect(() => {
     if (!connected) return;
@@ -450,6 +638,7 @@ export function CallOverlay({
       connected &&
       !thinking &&
       !speaking &&
+      cuePlayingSlot === null &&
       !dictation.listening &&
       !showTextInput
     ) {
@@ -478,14 +667,14 @@ export function CallOverlay({
       return;
     }
 
-    if (speaking) {
+    if (speaking || cuePlayingSlot !== null || preparingSpeech) {
       turnSeqRef.current += 1;
+      stopCueAudio();
+      setPreparingSpeech(false);
       stopSpeaking();
     }
     clearSilentExprTimer();
     setSilentExpressing(false);
-    const recEl = audioRef.current;
-    if (recEl && !recEl.paused) recEl.pause();
 
     startListeningTurn();
   }
@@ -501,7 +690,7 @@ export function CallOverlay({
       ignoreDictationRef.current = true;
       if (dictation.listening) dictation.stop();
       window.setTimeout(() => textInputRef.current?.focus(), 40);
-    } else if (connected && autoMic && !thinking && !speaking) {
+    } else if (connected && autoMic && !thinking && !speaking && cuePlayingSlot === null) {
       scheduleAutoListen(250);
     }
   }
@@ -522,14 +711,11 @@ export function CallOverlay({
     setMuted(next);
     mutedRef.current = next;
     setAudioBlocked(false);
-    const el = audioRef.current;
-    if (el) {
-      el.muted = next;
-      if (!next && voiceCall && hasRecording) {
-        void el.play().catch(() => setAudioBlocked(true));
-      }
-    }
+    const el = getCueAudio();
+    if (el) el.muted = next;
     if (next) {
+      stopCueAudio();
+      setPreparingSpeech(false);
       stopSpeaking();
     }
   }
@@ -539,34 +725,48 @@ export function CallOverlay({
     clearSilenceTimer();
     clearAutoListenTimer();
     clearSilentExprTimer();
+    stopCueAudio();
+    setPreparingSpeech(false);
     ignoreDictationRef.current = true;
     if (dictation.listening) dictation.stop();
     stopSpeaking();
-    const el = audioRef.current;
-    if (el) el.pause();
     onClose();
   }
 
-  const visualPhase: CallVisualPhase = thinking
-    ? { kind: "thinking" }
-    : speaking || silentExpressing
-      ? { kind: "speaking", emotion: replyEmotion }
-      : dictation.listening
-        ? { kind: "listening" }
-        : { kind: "idle" };
+  const activeCueEmotion: CallEmotion | null =
+    cuePlayingSlot === "greeting"
+      ? "normal"
+      : cuePlayingSlot === "laugh" ||
+          cuePlayingSlot === "shy" ||
+          cuePlayingSlot === "pout"
+        ? cuePlayingSlot
+        : null;
+
+  const visualPhase: CallVisualPhase =
+    activeCueEmotion !== null
+      ? { kind: "speaking", emotion: activeCueEmotion }
+      : audibleSpeaking || silentExpressing
+        ? { kind: "speaking", emotion: replyEmotion }
+        : thinking || preparingSpeech || cuePlayingSlot === "thinking"
+          ? { kind: "thinking" }
+          : dictation.listening
+            ? { kind: "listening" }
+            : { kind: "idle" };
 
   const activeClip = resolveActiveCallClip(media, visualPhase);
+  const voiceActiveNow = audibleSpeaking || activeCueEmotion !== null;
+  const waitingReply = thinking || preparingSpeech;
 
   const showWave =
     connected &&
     !muted &&
-    (speaking || dictation.listening || (hasRecording && mode === "audio"));
+    (voiceActiveNow || cuePlayingSlot === "thinking" || dictation.listening);
 
   const statusDetail = !connected
     ? "Memanggil..."
-    : thinking
+    : waitingReply
       ? `Tersambung · ${formatDuration(seconds)} · Menjawab...`
-      : speaking
+      : voiceActiveNow
         ? `Tersambung · ${formatDuration(seconds)} · Berbicara`
         : dictation.listening
           ? `Tersambung · ${formatDuration(seconds)} · Mendengarkan`
@@ -648,16 +848,16 @@ export function CallOverlay({
         )}
 
         <div className="mx-auto flex w-full max-w-md flex-col items-center gap-2.5">
-          {/* Kapsul teks percakapan langsung (subtitle ucapanmu & balasan karakter) */}
+          {/* Kapsul teks percakapan langsung (muncul serentak saat suara benar-benar mulai keluar) */}
           {interactive && connected && (
             <div className="w-full">
               {(liveTranscript ||
-                thinking ||
+                waitingReply ||
                 lastAssistantLine ||
                 dictation.listening ||
                 micHint) && (
                 <div className="mx-auto max-h-28 overflow-y-auto rounded-2xl bg-black/50 px-3.5 py-2 text-center text-[13.5px] leading-snug text-white/95 ring-1 ring-white/15 backdrop-blur-md">
-                  {thinking ? (
+                  {waitingReply ? (
                     <p className="text-white/85">
                       <span className="text-white/55">Kamu:</span> “{lastUserLine}”
                       <span className="mt-1 block text-[12px] text-white/65">
@@ -669,7 +869,7 @@ export function CallOverlay({
                       <span className="mr-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 align-middle" />
                       “{liveTranscript}”
                     </p>
-                  ) : speaking && lastAssistantLine ? (
+                  ) : voiceActiveNow && lastAssistantLine ? (
                     <p>{lastAssistantLine}</p>
                   ) : dictation.listening ? (
                     <p className="text-[12.5px] text-white/75">
@@ -828,21 +1028,6 @@ export function CallOverlay({
           </div>
         </div>
       </div>
-
-      {audioUrl && voiceCall && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          preload="auto"
-          onEnded={() => {
-            if (interactive) scheduleAutoListen(350);
-          }}
-          onError={() => {
-            fallbackMediaToStream(audioKey);
-          }}
-          className="hidden"
-        />
-      )}
     </div>
   );
 
