@@ -89,3 +89,38 @@ export function extractCallReplyEmotion(rawText: string): {
 
   return { cleanText, emotion };
 }
+
+const LEADING_LAUGH_CUE_RE =
+  /^(?:(?:a*h+a+(?:h+a+)+|e*h+e+(?:h+e+)+|h+i+(?:h+i+)+|(?:wk){2,}w*k*|wakaka+k*)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*)*)+/i;
+
+const LEADING_SHY_CUE_RE =
+  /^(?:(?:e+h+e+(?:h+e+)*|h+e+(?:h+e+)+|u+h+m+|e+m+m+|h+m+m+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*)*)+/i;
+
+const LEADING_POUT_CUE_RE =
+  /^(?:(?:h+m+p*h*|h+u+h+|i+s*h+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]+)+)+/i;
+
+/**
+ * Pangkas kata reaksi vokal pembuka (mis. "Hahaha, ..." saat klip audio tawa asli
+ * sudah diputar lebih dulu) agar karakter tidak terdengar ketawa/bergumam dua kali,
+ * sementara teks di ruang chat tetap utuh apa adanya.
+ */
+export function stripLeadingReactionCue(
+  text: string,
+  emotion: CallEmotion
+): string {
+  const sample = text.trim();
+  if (!sample) return "";
+
+  if (emotion === "laugh") {
+    return sample.replace(LEADING_LAUGH_CUE_RE, "").trim();
+  }
+  if (emotion === "shy") {
+    const rest = sample.replace(LEADING_SHY_CUE_RE, "").trim();
+    return rest || sample;
+  }
+  if (emotion === "pout") {
+    const rest = sample.replace(LEADING_POUT_CUE_RE, "").trim();
+    return rest || sample;
+  }
+  return sample;
+}

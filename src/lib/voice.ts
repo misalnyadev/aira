@@ -82,7 +82,9 @@ const SILENT_WAV_DATA_URI =
 
 let speechUnlocked = false;
 let audioUnlocked = false;
+let cueAudioUnlocked = false;
 let sharedAudio: HTMLAudioElement | null = null;
+let cueAudio: HTMLAudioElement | null = null;
 let activeAudioFinish: (() => void) | null = null;
 
 export type SpeakOptions = {
@@ -91,6 +93,8 @@ export type SpeakOptions = {
   /** Bila `false` (mis. tombol Tes HD), jangan jatuh ke suara robot perangkat saat HD gagal. */
   allowDeviceFallback?: boolean;
   onFallback?: (reason: string) => void;
+  /** Dipanggil tepat di milidetik pertama gelombang suara benar-benar mulai berbunyi. */
+  onStart?: () => void;
   /** Dipanggil saat giliran ucapan selesai (`completed = true` bila tuntas tanpa dipotong). */
   onEnd?: (completed: boolean) => void;
 };
@@ -112,6 +116,21 @@ function getSharedAudio(): HTMLAudioElement | null {
     sharedAudio = el;
   }
   return sharedAudio;
+}
+
+/**
+ * Elemen <audio> khusus asset reaksi panggilan (sapaan, mikir, tawa, malu, cemberut)
+ * yang ikut dibuka izin autoplay-nya di sentuhan pertama iOS Safari.
+ */
+export function getCueAudio(): HTMLAudioElement | null {
+  if (!isAudioElementSupported()) return null;
+  if (!cueAudio) {
+    const el = new Audio();
+    el.preload = "auto";
+    el.setAttribute("playsinline", "true");
+    cueAudio = el;
+  }
+  return cueAudio;
 }
 
 function stopSharedAudio() {
@@ -149,6 +168,29 @@ export function unlockSpeech() {
         }
       } catch {
         el.muted = false;
+      }
+    }
+  }
+
+  // 1b. Buka izin HTMLAudioElement kedua untuk asset reaksi panggilan instan.
+  if (!cueAudioUnlocked) {
+    const cueEl = getCueAudio();
+    if (cueEl && (cueEl.paused || cueEl.ended)) {
+      try {
+        cueEl.muted = true;
+        cueEl.src = SILENT_WAV_DATA_URI;
+        const p = cueEl.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            cueAudioUnlocked = true;
+            cueEl.pause();
+            cueEl.muted = false;
+          }).catch(() => {
+            cueEl.muted = false;
+          });
+        }
+      } catch {
+        cueEl.muted = false;
       }
     }
   }
@@ -201,7 +243,7 @@ export function useSpeechUnlock() {
       ) {
         return;
       }
-      if (speechUnlocked && audioUnlocked) {
+      if (speechUnlocked && audioUnlocked && cueAudioUnlocked) {
         flushBlockedSpeech();
         return;
       }
@@ -529,7 +571,10 @@ function buildUtterance(text: string, settings: VoiceSettings): SpeechSynthesisU
   return utterance;
 }
 
-function speakOneDevice(utterance: SpeechSynthesisUtterance): Promise<void> {
+function speakOneDevice(
+  utterance: SpeechSynthesisUtterance,
+  onPlayStart?: () => void
+): Promise<void> {
   return new Promise((resolve) => {
     const synth = window.speechSynthesis;
     let started = false;
@@ -570,6 +615,7 @@ function speakOneDevice(utterance: SpeechSynthesisUtterance): Promise<void> {
       blockedSpeech = null;
       window.clearTimeout(kickTimer);
       window.clearTimeout(giveUpTimer);
+      onPlayStart?.();
     };
     utterance.onend = finish;
     utterance.onerror = finish;
@@ -580,7 +626,8 @@ function speakOneDevice(utterance: SpeechSynthesisUtterance): Promise<void> {
 async function playDeviceChunks(
   cleanText: string,
   settings: VoiceSettings,
-  currentGeneration: number
+  currentGeneration: number,
+  onPlayStart?: () => void
 ): Promise<void> {
   if (!isSpeechSupported()) return;
   const chunks = splitSentences(cleanText);
@@ -592,7 +639,7 @@ async function playDeviceChunks(
   }
   for (let i = 0; i < chunks.length; i++) {
     if (currentGeneration !== generation) return;
-    await speakOneDevice(buildUtterance(chunks[i], settings));
+    await speakOneDevice(buildUtterance(chunks[i], settings), onPlayStart);
     if (currentGeneration !== generation) return;
     if (i < chunks.length - 1) await sleep(Math.max(0, settings.pause ?? 150));
   }
@@ -602,7 +649,8 @@ function playBlobOnSharedAudio(
   blob: Blob,
   settings: VoiceSettings,
   rawTextForBlockedRetry: string,
-  target: ResolvedVoiceTarget
+  target: ResolvedVoiceTarget,
+  onPlayStart?: () => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const el = getSharedAudio();
@@ -650,6 +698,7 @@ function playBlobOnSharedAudio(
         .then(() => {
           audioUnlocked = true;
           blockedSpeech = null;
+          onPlayStart?.();
         })
         .catch((err: unknown) => {
           cleanup();
@@ -670,6 +719,7 @@ function playBlobOnSharedAudio(
         });
     } else {
       audioUnlocked = true;
+      onPlayStart?.();
     }
   });
 }
@@ -701,6 +751,7 @@ export function speak(
   if (!options.append) {
     generation += 1;
     pendingSpeech = 0;
+    setAudibleSpeakingState(false);
     stopSharedAudio();
     let wasSynthBusy = false;
     if (isSpeechSupported()) {
@@ -713,6 +764,16 @@ export function speak(
 
   pendingSpeech += 1;
   const currentGeneration = generation;
+  let startedNotified = false;
+
+  const markAudibleStart = () => {
+    if (currentGeneration !== generation) return;
+    setAudibleSpeakingState(true);
+    if (!startedNotified) {
+      startedNotified = true;
+      options.onStart?.();
+    }
+  };
 
   chain = chain.then(async () => {
     try {
@@ -744,7 +805,7 @@ export function speak(
           try {
             const blob = await ensure(i);
             if (currentGeneration !== generation) return;
-            await playBlobOnSharedAudio(blob, settings, text, target);
+            await playBlobOnSharedAudio(blob, settings, text, target, markAudibleStart);
           } catch (err) {
             if (currentGeneration !== generation) return;
             const reason =
@@ -760,7 +821,12 @@ export function speak(
             }
             const fallbackClause = speakableText(clauses[i]);
             if (fallbackClause && isSpeechSupported()) {
-              await playDeviceChunks(fallbackClause, settings, currentGeneration);
+              await playDeviceChunks(
+                fallbackClause,
+                settings,
+                currentGeneration,
+                markAudibleStart
+              );
             }
           }
 
@@ -772,12 +838,15 @@ export function speak(
         return;
       }
 
-      await playDeviceChunks(clean, settings, currentGeneration);
+      await playDeviceChunks(clean, settings, currentGeneration, markAudibleStart);
     } finally {
       const completed = currentGeneration === generation;
       if (completed) {
         pendingSpeech = Math.max(0, pendingSpeech - 1);
-        if (pendingSpeech === 0) setSpeakingState(false);
+        if (pendingSpeech === 0) {
+          setSpeakingState(false);
+          setAudibleSpeakingState(false);
+        }
       }
       options.onEnd?.(completed);
     }
@@ -790,6 +859,7 @@ export function stopSpeaking() {
   pendingSpeech = 0;
   blockedSpeech = null;
   setSpeakingState(false);
+  setAudibleSpeakingState(false);
   generation += 1;
   chain = Promise.resolve();
   stopSharedAudio();
@@ -802,16 +872,25 @@ export function stopSpeaking() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Status "sedang berbicara"                                           */
+/* Status "sedang berbicara" & "gelombang suara sedang terdengar"      */
 /* ------------------------------------------------------------------ */
 
 let speaking = false;
 const speakingListeners = new Set<() => void>();
 
+let audibleSpeaking = false;
+const audibleListeners = new Set<() => void>();
+
 function setSpeakingState(next: boolean) {
   if (speaking === next) return;
   speaking = next;
   for (const listener of speakingListeners) listener();
+}
+
+function setAudibleSpeakingState(next: boolean) {
+  if (audibleSpeaking === next) return;
+  audibleSpeaking = next;
+  for (const listener of audibleListeners) listener();
 }
 
 export function subscribeSpeaking(listener: () => void): () => void {
@@ -821,12 +900,32 @@ export function subscribeSpeaking(listener: () => void): () => void {
   };
 }
 
+export function subscribeAudibleSpeaking(listener: () => void): () => void {
+  audibleListeners.add(listener);
+  return () => {
+    audibleListeners.delete(listener);
+  };
+}
+
 export function getSpeakingSnapshot(): boolean {
   return speaking;
 }
 
+export function getAudibleSpeakingSnapshot(): boolean {
+  return audibleSpeaking;
+}
+
 export function useIsSpeaking(): boolean {
   return useSyncExternalStore(subscribeSpeaking, getSpeakingSnapshot, () => false);
+}
+
+/** Hanya bernilai `true` tepat ketika suara benar-benar sedang keluar dari speaker (0ms sync dengan video). */
+export function useIsAudibleSpeaking(): boolean {
+  return useSyncExternalStore(
+    subscribeAudibleSpeaking,
+    getAudibleSpeakingSnapshot,
+    () => false
+  );
 }
 
 /* ------------------------------------------------------------------ */
