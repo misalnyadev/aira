@@ -18,6 +18,8 @@ export type MemoryPromptContext = {
   webSearchActive?: boolean;
   /** Jangkar kesinambungan lokasi, waktu adegan, & arahan pengguna di ekor percakapan. */
   sceneAnchor?: string;
+  /** Aktif saat giliran ini berasal dari sambungan telepon / video call 2 arah. */
+  callMode?: "video" | "audio";
 };
 
 /**
@@ -99,9 +101,32 @@ ${webBody}Cara memakainya:
   return blocks.length ? `\n${blocks.join("\n\n")}\n` : "";
 }
 
+export function buildCallModeAnchor(mode: "video" | "audio"): string {
+  const label =
+    mode === "video"
+      ? "VIDEO CALL LANGSUNG (tatap muka real-time lewat layar & suara)"
+      : "PANGGILAN TELEPON SUARA LANGSUNG";
+  const callKind = mode === "video" ? "video call" : "telepon suara";
+
+  return `=== MODE PANGGILAN AKTIF: ${label} ===
+Saat ini kalian sedang mengobrol lisan secara langsung dalam sambungan ${callKind}, BUKAN sedang mengetik chat teks!
+ATURAN WAJIB BALASAN LISAN SAAT PANGGILAN:
+- Jawablah spontan, hangat, hidup, dan ringkas seperti orang beneran lagi ngobrol di ${callKind} (cukup 1 sampai maksimal 3 kalimat lisan pendek yang enak langsung didengar telinga).
+- JANGAN memakai token pemisah "${BUBBLE_DELIMITER}", JANGAN memakai emoji, JANGAN memakai daftar poin/nomor, dan JANGAN memakai tanda bintang (*aksi*) atau format markdown apa pun karena kalimatmu langsung dibacakan dengan suaramu!
+- Jangan bilang kalian cuma chatting atau mengetik teks karena saat ini kalian sedang tersambung langsung di ${callKind}.
+=== AKHIR MODE PANGGILAN ===`;
+}
+
 function extrasAnchor(extras?: MemoryPromptContext): string {
-  if (!extras?.sceneAnchor?.trim()) return "\n";
-  return `\n${extras.sceneAnchor.trim()}\n\n`;
+  const parts: string[] = [];
+  if (extras?.sceneAnchor?.trim()) {
+    parts.push(extras.sceneAnchor.trim());
+  }
+  if (extras?.callMode === "video" || extras?.callMode === "audio") {
+    parts.push(buildCallModeAnchor(extras.callMode));
+  }
+  if (!parts.length) return "\n";
+  return `\n${parts.join("\n\n")}\n\n`;
 }
 
 /**

@@ -315,6 +315,7 @@ export async function generateBubbles({
   history,
   userProfile,
   memoryExtras,
+  callMode,
 }: {
   userId: string;
   character: Character;
@@ -324,13 +325,15 @@ export async function generateBubbles({
   history: ChatTurn[];
   userProfile: UserProfile | null;
   memoryExtras?: MemoryPromptContext;
+  callMode?: "video" | "audio";
 }): Promise<GenerateBubblesResult> {
   const sceneAnchor = buildSceneContinuityAnchor(history, userText);
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor
+    memoryExtras || sceneAnchor || callMode
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
+          ...(callMode ? { callMode } : {}),
         }
       : undefined;
 
@@ -383,8 +386,13 @@ export async function generateBubbles({
             .catch(() => undefined);
         }
 
+        const finalBubbles =
+          callMode && bubbles.length > 1
+            ? [bubbles.map((b) => b.trim()).filter(Boolean).join(" ")]
+            : bubbles;
+
         return {
-          bubbles,
+          bubbles: finalBubbles,
           fallbackUsed: pIdx > 0,
           providerLabel: candidate.label,
           primaryLabel,
