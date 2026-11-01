@@ -3,12 +3,19 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
 import type { CharacterSummary } from "@/types/chat";
+import type { CallEmotion } from "@/lib/callEmotion";
+import {
+  listUniqueCallClips,
+  resolveActiveCallClip,
+  type CallVisualPhase,
+} from "@/lib/characterMedia";
 import { useDictation } from "@/lib/dictation";
 import type { ResolvedVoiceTarget } from "@/lib/hdVoice";
 import {
@@ -25,7 +32,7 @@ import {
   type VoiceSettings,
 } from "@/lib/voice";
 import { Avatar } from "./Avatar";
-import { ChatVideoBackground } from "./ChatVideo";
+import { CallVideoStage } from "./ChatVideo";
 import {
   CallEndIcon,
   ChatsIcon,
@@ -71,14 +78,20 @@ function formatDuration(total: number) {
   return `${minutes}:${seconds}`;
 }
 
+export type CallTurnReply = {
+  text: string;
+  emotion?: CallEmotion;
+};
+
 /**
  * Layar panggilan suara & video call interaktif 2 arah ala WhatsApp:
  * - Pengguna bisa langsung berbicara lewat mikrofon (mode Otomatis kirim saat
  *   berhenti bicara ~1,6 detik, maupun mode Manual tekan tombol Mic/Kirim)
  *   atau mengetik singkat dari dalam layar panggilan.
  * - Setiap percakapan tersimpan ke ruang chat & ingatan karakter, dan dijawab
- *   langsung memakai Suara HD karakter (Gemini TTS / ElevenLabs / suara perangkat)
- *   sambil video karakter bergerak hidup (serta berpindah ke klip bicara bila tersedia).
+ *   langsung memakai Suara HD karakter (Gemini TTS / ElevenLabs / suara perangkat).
+ * - Panggung video memakai paket klip khusus Video Call (diam, menyimak, mikir,
+ *   bicara, ketawa, malu, cemberut) tanpa pernah melompat ke video latar ruang chat.
  */
 export function CallOverlay({
   character,
@@ -92,8 +105,11 @@ export function CallOverlay({
   mode: "video" | "audio";
   voice: VoiceSettings;
   voiceTarget?: ResolvedVoiceTarget;
-  /** Kirim 1 giliran ucapan panggilan ke server & kembalikan teks balasan karakter. */
-  onSendTurn?: (spokenText: string, mode: "video" | "audio") => Promise<string | null>;
+  /** Kirim 1 giliran ucapan panggilan ke server & kembalikan balasan + ekspresi karakter. */
+  onSendTurn?: (
+    spokenText: string,
+    mode: "video" | "audio"
+  ) => Promise<CallTurnReply | null>;
   onClose: () => void;
 }) {
   const isClient = useIsClient();
@@ -103,6 +119,8 @@ export function CallOverlay({
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [autoMic, setAutoMic] = useState<boolean>(readInitialAutoMic);
   const [thinking, setThinking] = useState(false);
+  const [replyEmotion, setReplyEmotion] = useState<CallEmotion>("normal");
+  const [silentExpressing, setSilentExpressing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [lastUserLine, setLastUserLine] = useState("");
   const [lastAssistantLine, setLastAssistantLine] = useState("");
@@ -128,25 +146,14 @@ export function CallOverlay({
   const ignoreDictationRef = useRef(false);
   const silenceTimerRef = useRef<number | null>(null);
   const autoListenTimerRef = useRef<number | null>(null);
+  const silentExprTimerRef = useRef<number | null>(null);
   const turnSeqRef = useRef(0);
   const submitSpokenRef = useRef<() => void>(() => {});
 
   const interactive = Boolean(onSendTurn);
   const media = character.media;
-  const video = media?.callVideoKey
-    ? { videoKey: media.callVideoKey, posterUrl: media.callVideoPosterUrl }
-    : media?.chatVideoKey
-      ? { videoKey: media.chatVideoKey, posterUrl: media.chatVideoPosterUrl }
-      : null;
-
-  // Jika karakter memiliki video call (idle) sekaligus video chat (bicara) yang berbeda,
-  // otomatis beralih ke video bicara setiap kali suara karakter sedang berbunyi.
-  const distinctTalkingVideoKey =
-    media?.callVideoKey &&
-    media?.chatVideoKey &&
-    media.chatVideoKey !== media.callVideoKey
-      ? media.chatVideoKey
-      : undefined;
+  const allCallClips = useMemo(() => listUniqueCallClips(media), [media]);
+  const hasCallVideo = allCallClips.length > 0;
 
   const audioKey = media?.callAudioKey ?? null;
   const audioUrl = useMediaUrl(audioKey);
@@ -187,6 +194,13 @@ export function CallOverlay({
     if (autoListenTimerRef.current !== null) {
       window.clearTimeout(autoListenTimerRef.current);
       autoListenTimerRef.current = null;
+    }
+  }, []);
+
+  const clearSilentExprTimer = useCallback(() => {
+    if (silentExprTimerRef.current !== null) {
+      window.clearTimeout(silentExprTimerRef.current);
+      silentExprTimerRef.current = null;
     }
   }, []);
 
@@ -233,13 +247,15 @@ export function CallOverlay({
 
     clearAutoListenTimer();
     clearSilenceTimer();
+    clearSilentExprTimer();
+    setSilentExpressing(false);
     stopSpeaking();
     transcriptRef.current = "";
     ignoreDictationRef.current = false;
     setLiveTranscript("");
     setMicHint(null);
     dictationRef.current.start();
-  }, [clearAutoListenTimer, clearSilenceTimer]);
+  }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer]);
 
   const scheduleAutoListen = useCallback(
     (delayMs = POST_SPEECH_LISTEN_DELAY_MS) => {
@@ -268,6 +284,8 @@ export function CallOverlay({
 
       clearSilenceTimer();
       clearAutoListenTimer();
+      clearSilentExprTimer();
+      setSilentExpressing(false);
       ignoreDictationRef.current = true;
       transcriptRef.current = "";
       if (dictationRef.current.listening) {
@@ -291,19 +309,25 @@ export function CallOverlay({
       setThinking(false);
       thinkingRef.current = false;
 
-      if (!reply) {
+      if (!reply || !reply.text) {
         scheduleAutoListen(500);
         return;
       }
 
-      setLastAssistantLine(reply);
+      const nextEmotion: CallEmotion = reply.emotion ?? "normal";
+      setReplyEmotion(nextEmotion);
+      setLastAssistantLine(reply.text);
 
       if (mutedRef.current) {
-        scheduleAutoListen(1200);
+        setSilentExpressing(true);
+        silentExprTimerRef.current = window.setTimeout(() => {
+          setSilentExpressing(false);
+          scheduleAutoListen(250);
+        }, 2800);
         return;
       }
 
-      const started = speak(reply, voiceRef.current, {
+      const started = speak(reply.text, voiceRef.current, {
         target: voiceTargetRef.current,
         onFallback: (reason) => setMicHint(`${reason} Memakai suara perangkat.`),
         onEnd: (completed) => {
@@ -315,10 +339,20 @@ export function CallOverlay({
       });
 
       if (!started) {
-        scheduleAutoListen(1000);
+        setSilentExpressing(true);
+        silentExprTimerRef.current = window.setTimeout(() => {
+          setSilentExpressing(false);
+          scheduleAutoListen(250);
+        }, 2400);
       }
     },
-    [clearAutoListenTimer, clearSilenceTimer, mode, scheduleAutoListen]
+    [
+      clearAutoListenTimer,
+      clearSilenceTimer,
+      clearSilentExprTimer,
+      mode,
+      scheduleAutoListen,
+    ]
   );
 
   useEffect(() => {
@@ -354,26 +388,25 @@ export function CallOverlay({
       turnSeqRef.current += 1;
       clearSilenceTimer();
       clearAutoListenTimer();
+      clearSilentExprTimer();
       stopSpeaking();
       resetStatusBarColor();
       document.documentElement.style.backgroundColor = previousHtml;
       document.body.style.backgroundColor = previousBody;
     };
-  }, [clearAutoListenTimer, clearSilenceTimer]);
+  }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer]);
 
   useEffect(() => {
     if (audioKey && voiceCall) ensureMediaUrl(audioKey);
   }, [audioKey, voiceCall]);
 
-  const videoKey = video?.videoKey ?? null;
-
-  // Siapkan URL video lebih awal saat masih "Memanggil..." supaya begitu tersambung langsung mulus.
+  // Siapkan seluruh klip ekspresi Video Call sejak detik pertama "Memanggil...".
   useEffect(() => {
-    if (videoKey && mode === "video") ensureMediaUrl(videoKey);
-    if (distinctTalkingVideoKey && mode === "video") {
-      ensureMediaUrl(distinctTalkingVideoKey);
+    if (mode !== "video") return;
+    for (const clip of allCallClips) {
+      ensureMediaUrl(clip.key);
     }
-  }, [videoKey, distinctTalkingVideoKey, mode]);
+  }, [allCallClips, mode]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -429,13 +462,11 @@ export function CallOverlay({
     unlockSpeech();
     if (!connected || thinking) return;
 
-    // Bila kolom ketik sedang terbuka, tutup dulu lalu beralih ke suara.
     if (showTextInput) {
       setShowTextInput(false);
       showTextInputRef.current = false;
     }
 
-    // Jika sedang mendengarkan dan sudah ada kalimat yang diucapkan, ketukan ini langsung mengirim!
     if (dictation.listening) {
       const spoken = transcriptRef.current.trim();
       if (spoken) {
@@ -448,11 +479,12 @@ export function CallOverlay({
       return;
     }
 
-    // Jika karakter sedang berbicara, memencet tombol Mic otomatis memotong & mendengarkan pengguna.
     if (speaking) {
       turnSeqRef.current += 1;
       stopSpeaking();
     }
+    clearSilentExprTimer();
+    setSilentExpressing(false);
     const recEl = audioRef.current;
     if (recEl && !recEl.paused) recEl.pause();
 
@@ -507,6 +539,7 @@ export function CallOverlay({
     turnSeqRef.current += 1;
     clearSilenceTimer();
     clearAutoListenTimer();
+    clearSilentExprTimer();
     ignoreDictationRef.current = true;
     if (dictation.listening) dictation.stop();
     stopSpeaking();
@@ -514,6 +547,16 @@ export function CallOverlay({
     if (el) el.pause();
     onClose();
   }
+
+  const visualPhase: CallVisualPhase = thinking
+    ? { kind: "thinking" }
+    : speaking || silentExpressing
+      ? { kind: "speaking", emotion: replyEmotion }
+      : dictation.listening
+        ? { kind: "listening" }
+        : { kind: "idle" };
+
+  const activeClip = resolveActiveCallClip(media, visualPhase);
 
   const showWave =
     connected &&
@@ -541,30 +584,17 @@ export function CallOverlay({
     >
       <div className="absolute inset-0 isolate overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,#1d1d24,#0a0a0c_72%)]" />
-        {video && mode === "video" && (
+        {hasCallVideo && mode === "video" && (
           <div
             className={`absolute inset-0 z-10 isolate transition-opacity duration-300 ${
               connected ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
           >
-            <ChatVideoBackground
-              videoKey={video.videoKey}
-              posterUrl={video.posterUrl}
-              dim={0.12}
-              talkingVideoKey={distinctTalkingVideoKey}
-              talkingPosterUrl={
-                distinctTalkingVideoKey ? media?.chatVideoPosterUrl : undefined
-              }
-              talking={speaking}
+            <CallVideoStage
+              clips={allCallClips}
+              activeKey={activeClip?.key ?? null}
               playing={connected}
-              restartOnPlay
-              sound={!interactive && connected && !muted}
-              onSoundBlocked={() => {
-                if (!interactive) {
-                  setMuted(true);
-                  setAudioBlocked(true);
-                }
-              }}
+              dim={0.12}
               zoom={zoom}
             />
           </div>
@@ -607,7 +637,7 @@ export function CallOverlay({
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center">
-            {(!video || !connected) && (
+            {(!hasCallVideo || !connected) && (
               <div className="relative">
                 {!connected && (
                   <span className="absolute inset-0 -m-5 animate-ping rounded-full border border-white/15" />
@@ -704,7 +734,7 @@ export function CallOverlay({
               type="button"
               onClick={toggleAutoMic}
               aria-pressed={autoMic}
-              className=" inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1 text-[11.5px] font-medium text-white/80 ring-1 ring-white/15 backdrop-blur-md transition hover:bg-black/60 active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1 text-[11.5px] font-medium text-white/80 ring-1 ring-white/15 backdrop-blur-md transition hover:bg-black/60 active:scale-95"
             >
               <span
                 className={`h-1.5 w-1.5 rounded-full ${

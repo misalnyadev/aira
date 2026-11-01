@@ -6,6 +6,7 @@ import {
   DEFAULT_BUBBLE_STYLE,
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
+import type { CallEmotion } from "@/lib/callEmotion";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import {
   DEFAULT_CHAT_BACKGROUND,
@@ -371,7 +372,7 @@ export function ChatApp() {
     characterId: string,
     spokenText: string,
     callMode: "video" | "audio"
-  ): Promise<string | null> {
+  ): Promise<{ text: string; emotion?: CallEmotion } | null> {
     const trimmed = spokenText.trim();
     if (!trimmed) return null;
 
@@ -440,7 +441,11 @@ export function ChatApp() {
         .filter(Boolean)
         .join(" ")
         .trim();
-      return replyLine || null;
+      if (!replyLine) return null;
+      return {
+        text: replyLine,
+        emotion: data.callEmotion as CallEmotion | undefined,
+      };
     } catch {
       showToast("Koneksi terputus saat panggilan. Coba bicara lagi.");
       return null;

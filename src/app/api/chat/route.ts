@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { messages } from "@/db/schema";
 import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
+import { extractCallReplyEmotion, type CallEmotion } from "@/lib/callEmotion";
 import {
   NO_PROVIDER_ERROR,
   buildMemoryExtrasForTurn,
@@ -117,15 +118,24 @@ export async function POST(req: Request) {
       callMode: activeCallMode,
     });
 
+    let callEmotion: CallEmotion | undefined;
+    const cleanedBubbles = activeCallMode
+      ? result.bubbles.map((raw, idx) => {
+          const parsed = extractCallReplyEmotion(raw);
+          if (idx === 0) callEmotion = parsed.emotion;
+          return parsed.cleanText;
+        })
+      : result.bubbles;
+
     const assistantMessages = [];
     const baseTime = Date.now();
-    for (let i = 0; i < result.bubbles.length; i++) {
+    for (let i = 0; i < cleanedBubbles.length; i++) {
       const [row] = await db
         .insert(messages)
         .values({
           characterId,
           role: "assistant",
-          content: result.bubbles[i],
+          content: cleanedBubbles[i],
           createdAt: new Date(baseTime + i),
         })
         .returning();
@@ -144,6 +154,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       userMessage,
       assistantMessages,
+      ...(callEmotion ? { callEmotion } : {}),
       fallbackUsed: result.fallbackUsed,
       providerLabel: result.providerLabel,
       primaryLabel: result.primaryLabel,
