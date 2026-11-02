@@ -36,6 +36,9 @@ function startElementPlayback(
   sound: boolean,
   onSoundBlocked?: () => void
 ) {
+  if (sound) {
+    el.volume = 1;
+  }
   el.defaultMuted = !sound;
   el.muted = !sound;
   const attempt = el.play();
@@ -45,7 +48,7 @@ function startElementPlayback(
     if (err instanceof DOMException && err.name === "AbortError") {
       return;
     }
-    if (sound) {
+    if (sound && err instanceof DOMException && err.name === "NotAllowedError") {
       el.defaultMuted = true;
       el.muted = true;
       onSoundBlocked?.();
@@ -337,18 +340,85 @@ function PreloadedCallClipLayer({
   active,
   playing,
   loop = true,
+  sound = false,
+  primeSound = false,
   priority = false,
+  onReady,
   onEnded,
+  onError,
 }: {
   clip: CallClipItem;
   active: boolean;
   playing: boolean;
   loop?: boolean;
+  sound?: boolean;
+  /** Buka izin suara <video> sejak ketukan tombol panggilan (sebelum tersambung). */
+  primeSound?: boolean;
   priority?: boolean;
+  onReady?: () => void;
   onEnded?: () => void;
+  onError?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const url = useVideoPlayback(videoRef, clip.key, active && playing, false, true);
+  const shouldPlay = active && playing;
+  const shouldPlayRef = useRef(shouldPlay);
+  const unlockedRef = useRef(false);
+  const readyNotifiedRef = useRef(false);
+
+  useEffect(() => {
+    shouldPlayRef.current = shouldPlay;
+  }, [shouldPlay]);
+
+  const url = useVideoPlayback(videoRef, clip.key, shouldPlay, sound, true);
+
+  // Buka izin unmuted <video> di iOS Safari selagi masih dalam user gesture klik tombol Video Call.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !url || !primeSound || shouldPlay || unlockedRef.current) return;
+    unlockedRef.current = true;
+    try {
+      el.volume = 0;
+      el.defaultMuted = false;
+      el.muted = false;
+      const p = el.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          if (!shouldPlayRef.current) {
+            el.pause();
+            el.volume = 1;
+            try {
+              el.currentTime = 0;
+            } catch {
+              // Metadata belum penuh.
+            }
+          } else {
+            el.volume = 1;
+          }
+        }).catch(() => {
+          el.volume = 1;
+        });
+      } else {
+        el.volume = 1;
+      }
+    } catch {
+      el.volume = 1;
+    }
+  }, [primeSound, shouldPlay, url]);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !url || !onReady || readyNotifiedRef.current) return;
+    if (el.readyState >= 2) {
+      readyNotifiedRef.current = true;
+      onReady();
+    }
+  }, [onReady, url]);
+
+  const fireReady = () => {
+    if (readyNotifiedRef.current) return;
+    readyNotifiedRef.current = true;
+    onReady?.();
+  };
 
   return (
     <div
@@ -370,20 +440,24 @@ function PreloadedCallClipLayer({
           ref={videoRef}
           src={url}
           poster={clip.posterUrl || undefined}
-          muted
+          muted={!sound}
           loop={loop}
           playsInline
-          autoPlay={active && playing}
+          autoPlay={shouldPlay}
           preload={active || priority ? "auto" : "metadata"}
           disablePictureInPicture
           tabIndex={-1}
+          onLoadedData={fireReady}
+          onCanPlay={fireReady}
           onEnded={() => {
             if (active && !loop) {
               onEnded?.();
             }
           }}
           onError={() => {
-            fallbackMediaToStream(clip.key);
+            if (!fallbackMediaToStream(clip.key)) {
+              onError?.();
+            }
           }}
           className="absolute inset-0 h-full w-full object-cover"
         />
@@ -394,16 +468,19 @@ function PreloadedCallClipLayer({
 
 /**
  * Panggung multi-klip khusus layar Video Call:
- * Memuat klip pembuka (1x jalan) serta klip ekspresi karakter di latar belakang
- * dan melakukan perpindahan ekspresi mulus tanpa kedip hitam & tanpa menyentuh
- * video latar ruang chat.
+ * Memuat klip pembuka (1x jalan dengan suara asli videonya) serta klip ekspresi
+ * karakter di latar belakang tanpa kedip hitam & tanpa menyentuh video ruang chat.
  */
 export function CallVideoStage({
   clips,
   activeKey,
   playing,
   nonLoopKey,
+  soundKey,
+  primeSoundKey,
+  onClipReady,
   onClipEnded,
+  onClipError,
   dim = 0.12,
   zoom = 1,
 }: {
@@ -412,7 +489,13 @@ export function CallVideoStage({
   playing: boolean;
   /** Kunci klip pembuka yang hanya diputar 1x tanpa loop. */
   nonLoopKey?: string | null;
+  /** Kunci klip yang suaranya tidak di-mute (khusus klip pembuka Video Call). */
+  soundKey?: string | null;
+  /** Kunci klip yang izin suaranya dibuka sejak awal dering panggilan. */
+  primeSoundKey?: string | null;
+  onClipReady?: (key: string) => void;
   onClipEnded?: (key: string) => void;
+  onClipError?: (key: string) => void;
   dim?: number;
   zoom?: number;
 }) {
@@ -436,6 +519,10 @@ export function CallVideoStage({
         )}
         {clips.map((clip, idx) => {
           const isOnce = Boolean(nonLoopKey && clip.key === nonLoopKey);
+          const hasSound = Boolean(soundKey && clip.key === soundKey);
+          const shouldPrimeSound = Boolean(
+            primeSoundKey && clip.key === primeSoundKey
+          );
           return (
             <PreloadedCallClipLayer
               key={clip.key}
@@ -443,8 +530,14 @@ export function CallVideoStage({
               active={clip.key === activeKey}
               playing={playing}
               loop={!isOnce}
-              priority={idx < 4}
+              sound={hasSound}
+              primeSound={shouldPrimeSound}
+              priority={idx < 4 || shouldPrimeSound}
+              onReady={
+                shouldPrimeSound ? () => onClipReady?.(clip.key) : undefined
+              }
               onEnded={isOnce ? () => onClipEnded?.(clip.key) : undefined}
+              onError={isOnce ? () => onClipError?.(clip.key) : undefined}
             />
           );
         })}

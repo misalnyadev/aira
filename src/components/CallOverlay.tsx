@@ -160,6 +160,8 @@ export function CallOverlay({
   const thinkingRef = useRef(false);
   const showTextInputRef = useRef(false);
   const lastThinkingCueAtRef = useRef(0);
+  const greetingClipReadyRef = useRef(false);
+  const greetingClipReadyWaitRef = useRef<(() => void) | null>(null);
   const greetingClipWaitRef = useRef<(() => void) | null>(null);
   const mediaRef = useRef(character.media);
   const voiceRef = useRef(voice);
@@ -239,6 +241,15 @@ export function CallOverlay({
     if (thinkingCueTimerRef.current !== null) {
       window.clearTimeout(thinkingCueTimerRef.current);
       thinkingCueTimerRef.current = null;
+    }
+  }, []);
+
+  const markGreetingClipReady = useCallback(() => {
+    greetingClipReadyRef.current = true;
+    if (greetingClipReadyWaitRef.current) {
+      const done = greetingClipReadyWaitRef.current;
+      greetingClipReadyWaitRef.current = null;
+      done();
     }
   }, []);
 
@@ -651,6 +662,7 @@ export function CallOverlay({
       clearSilenceTimer();
       clearAutoListenTimer();
       clearSilentExprTimer();
+      markGreetingClipReady();
       finishGreetingClipWait();
       stopCueAudio();
       stopSpeaking();
@@ -663,6 +675,7 @@ export function CallOverlay({
     clearSilenceTimer,
     clearSilentExprTimer,
     finishGreetingClipWait,
+    markGreetingClipReady,
     stopCueAudio,
   ]);
 
@@ -678,19 +691,76 @@ export function CallOverlay({
     }
   }, [allCallAudioKeys, allCallClips, mode]);
 
-  // Saat tersambung: putar Pembuka 1x (video 4 dtk + audio 'Ya, haloo…'), lalu lanjut ke Mendengarkan.
+  // Saat tersambung:
+  // - Video Call dengan klip Pembuka: putar video Pembuka 1x dengan suara asli videonya (tanpa suara telepon).
+  // - Telepon Suara (atau bila video Pembuka belum ada): putar audio Pembuka 1x.
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+    const hasGreetingVideo =
+      mode === "video" && Boolean(mediaRef.current?.callClips?.greeting?.key);
+
+    const ringDelay = new Promise<void>((resolve) => {
+      window.setTimeout(resolve, CONNECT_DELAY);
+    });
+
+    const videoBufferReady =
+      hasGreetingVideo && !greetingClipReadyRef.current
+        ? new Promise<void>((resolve) => {
+            const maxWait = window.setTimeout(() => {
+              if (greetingClipReadyWaitRef.current === readyDone) {
+                greetingClipReadyWaitRef.current = null;
+              }
+              resolve();
+            }, 4500);
+            const readyDone = () => {
+              window.clearTimeout(maxWait);
+              resolve();
+            };
+            greetingClipReadyWaitRef.current = readyDone;
+          })
+        : Promise.resolve();
+
+    void Promise.all([ringDelay, videoBufferReady]).then(() => {
+      if (cancelled || !mountedRef.current) return;
+
       connectedRef.current = true;
       setConnected(true);
 
-      const hasGreetingVideo =
-        mode === "video" && Boolean(mediaRef.current?.callClips?.greeting?.key);
+      if (hasGreetingVideo) {
+        const greetTurn = ++turnSeqRef.current;
+        openingGreetingRef.current = true;
+        setOpeningGreeting(true);
+
+        const playOnceWait = new Promise<void>((resolve) => {
+          const safety = window.setTimeout(() => {
+            if (greetingClipWaitRef.current === endedDone) {
+              greetingClipWaitRef.current = null;
+            }
+            resolve();
+          }, 15_000);
+          const endedDone = () => {
+            window.clearTimeout(safety);
+            resolve();
+          };
+          greetingClipWaitRef.current = endedDone;
+        });
+
+        void playOnceWait.then(() => {
+          if (!mountedRef.current || turnSeqRef.current !== greetTurn) return;
+          openingGreetingRef.current = false;
+          setOpeningGreeting(false);
+          if (interactive) {
+            scheduleAutoListen(220);
+          }
+        });
+        return;
+      }
+
       const hasGreetingAudio =
         !mutedRef.current &&
         Boolean(resolveCallAudioAssetKey(mediaRef.current, "greeting"));
 
-      if (!hasGreetingVideo && !hasGreetingAudio) {
+      if (!hasGreetingAudio) {
         if (interactive) scheduleAutoListen(200);
         return;
       }
@@ -699,27 +769,7 @@ export function CallOverlay({
       openingGreetingRef.current = true;
       setOpeningGreeting(true);
 
-      const videoWait = hasGreetingVideo
-        ? new Promise<void>((resolve) => {
-            const safety = window.setTimeout(() => {
-              if (greetingClipWaitRef.current === done) {
-                greetingClipWaitRef.current = null;
-              }
-              resolve();
-            }, 6500);
-            const done = () => {
-              window.clearTimeout(safety);
-              resolve();
-            };
-            greetingClipWaitRef.current = done;
-          })
-        : Promise.resolve();
-
-      const audioWait = hasGreetingAudio
-        ? playCueSlot("greeting").then(() => undefined)
-        : Promise.resolve();
-
-      void Promise.all([videoWait, audioWait]).then(() => {
+      void playCueSlot("greeting").then(() => {
         if (!mountedRef.current || turnSeqRef.current !== greetTurn) return;
         openingGreetingRef.current = false;
         setOpeningGreeting(false);
@@ -727,8 +777,11 @@ export function CallOverlay({
           scheduleAutoListen(220);
         }
       });
-    }, CONNECT_DELAY);
-    return () => window.clearTimeout(timer);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [interactive, mode, playCueSlot, scheduleAutoListen]);
 
   useEffect(() => {
@@ -841,6 +894,7 @@ export function CallOverlay({
     clearSilenceTimer();
     clearAutoListenTimer();
     clearSilentExprTimer();
+    markGreetingClipReady();
     finishGreetingClipWait();
     stopCueAudio();
     setPreparingSpeech(false);
@@ -853,17 +907,18 @@ export function CallOverlay({
 
   const activeCueEmotion = cueSlotToEmotion(cuePlayingSlot);
 
-  const visualPhase: CallVisualPhase = openingGreeting
-    ? { kind: "greeting" }
-    : activeCueEmotion !== null
-      ? { kind: "speaking", emotion: activeCueEmotion }
-      : audibleSpeaking || silentExpressing
-        ? { kind: "speaking", emotion: replyEmotion }
-        : thinking || preparingSpeech || cuePlayingSlot === "thinking"
-          ? { kind: "thinking" }
-          : !micMuted
-            ? { kind: "listening" }
-            : { kind: "idle" };
+  const visualPhase: CallVisualPhase =
+    openingGreeting || (!connected && Boolean(greetingClipKey))
+      ? { kind: "greeting" }
+      : activeCueEmotion !== null
+        ? { kind: "speaking", emotion: activeCueEmotion }
+        : audibleSpeaking || silentExpressing
+          ? { kind: "speaking", emotion: replyEmotion }
+          : thinking || preparingSpeech || cuePlayingSlot === "thinking"
+            ? { kind: "thinking" }
+            : !micMuted
+              ? { kind: "listening" }
+              : { kind: "idle" };
 
   const activeClip = resolveActiveCallClip(media, visualPhase);
   const voiceActiveNow = audibleSpeaking || activeCueEmotion !== null;
@@ -895,8 +950,21 @@ export function CallOverlay({
               activeKey={activeClip?.key ?? null}
               playing={connected}
               nonLoopKey={openingGreeting ? greetingClipKey : null}
+              soundKey={openingGreeting && !muted ? greetingClipKey : null}
+              primeSoundKey={greetingClipKey}
+              onClipReady={(readyKey) => {
+                if (readyKey === greetingClipKey) {
+                  markGreetingClipReady();
+                }
+              }}
               onClipEnded={(endedKey) => {
                 if (endedKey === greetingClipKey) {
+                  finishGreetingClipWait();
+                }
+              }}
+              onClipError={(errKey) => {
+                if (errKey === greetingClipKey) {
+                  markGreetingClipReady();
                   finishGreetingClipWait();
                 }
               }}

@@ -17,6 +17,7 @@ import {
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
+import { ensureMediaUrl } from "@/lib/mediaClient";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { useIsAudibleSpeaking } from "@/lib/voice";
 import { Avatar } from "./Avatar";
@@ -150,6 +151,20 @@ export function ChatWindow({
   const chatVideoFull = Boolean(
     chatVideo && ((chatMedia?.chatVideoLayout ?? "tile") === "full" || hideMessages)
   );
+
+  // Siapkan tiket URL klip utama & pembuka Video Call lebih dulu agar 0ms saat tombol ditekan.
+  useEffect(() => {
+    const greetKey = chatMedia?.callClips?.greeting?.key;
+    const listenKey = chatMedia?.callClips?.listening?.key;
+    const idleKey = chatMedia?.callVideoKey;
+    if (greetKey) ensureMediaUrl(greetKey);
+    if (listenKey) ensureMediaUrl(listenKey);
+    if (idleKey) ensureMediaUrl(idleKey);
+  }, [
+    chatMedia?.callClips?.greeting?.key,
+    chatMedia?.callClips?.listening?.key,
+    chatMedia?.callVideoKey,
+  ]);
 
   const [reading, setReading] = useState(false);
   const readTimer = useRef(0);

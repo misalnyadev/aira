@@ -74,7 +74,7 @@ export const DEFAULT_CALL_AUDIO_PACK: Record<CallAudioSlot, CallAudioPresetMeta>
     defaultText: "Ya, haloo...",
     styleHint:
       "baru mengangkat telepon dari orang dekat, nada hangat, santai, akrab, dan natural",
-    hint: "Diputar 1x di awal saat panggilan diangkat.",
+    hint: "Untuk telepon suara (atau bila video pembuka kosong).",
   },
   thinking: {
     slot: "thinking",
