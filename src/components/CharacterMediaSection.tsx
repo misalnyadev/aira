@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   CALL_AUDIO_SLOTS,
   CALL_CLIP_SLOTS,
+  DEFAULT_CALL_AUDIO_PACK,
   type CallAudioSlot,
   type CallAudios,
   type CallClipSlot,
@@ -11,18 +12,30 @@ import {
   type CharacterMedia,
 } from "@/lib/characterMedia";
 import {
+  ensureMediaUrl,
+  fallbackMediaToStream,
+  generateCharacterCallAudio,
+  getMediaUrl,
   removeCharacterMediaKey,
   uploadCharacterAudio,
   uploadCharacterVideo,
 } from "@/lib/mediaClient";
-import { FilmIcon, SpeakerIcon } from "./icons";
+import { unlockSpeech } from "@/lib/voice";
+import {
+  FilmIcon,
+  PlayIcon,
+  RefreshIcon,
+  SpeakerIcon,
+  TrashIcon,
+} from "./icons";
 
 type BusyTarget =
   | "chatVideo"
   | "callVideo"
   | "callAudio"
   | CallClipSlot
-  | `audio:${CallAudioSlot}`;
+  | `audio:${CallAudioSlot}`
+  | `gen:${CallAudioSlot}`;
 
 const CALL_EXPRESSION_META: {
   slot: CallClipSlot;
@@ -31,72 +44,76 @@ const CALL_EXPRESSION_META: {
   activeHint: string;
 }[] = [
   {
+    slot: "greeting",
+    label: "Pembuka angkat telepon (1x)",
+    hint: "Sapaan 'Ya, haloo…' di awal (saran 4 dtk).",
+    activeHint: "Diputar 1x saat panggilan diangkat.",
+  },
+  {
     slot: "listening",
-    label: "Menyimak & angguk",
-    hint: "Saat kamu bicara (saran 6 dtk).",
+    label: "Mendengarkan",
+    hint: "Menyimak sampai kamu selesai bicara.",
     activeHint: "Aktif saat mendengarkanmu.",
   },
   {
     slot: "thinking",
-    label: "Mikir mau jawab",
-    hint: "Saat jeda berpikir (saran 4 dtk).",
-    activeHint: "Aktif saat menyiapkan jawaban.",
+    label: "Mikir menunggu jawaban",
+    hint: "Ekspresi mikir selagi AI menyiapkan balasan.",
+    activeHint: "Aktif saat menunggu jawaban AI.",
   },
   {
     slot: "talking",
-    label: "Bicara ramah",
-    hint: "Saat mengobrol biasa (saran 8 dtk).",
-    activeHint: "Aktif saat berbicara santai.",
+    label: "Menjawab biasa",
+    hint: "Saat menjawab santai/normal.",
+    activeHint: "Aktif saat menjawab biasa.",
+  },
+  {
+    slot: "smile",
+    label: "Menjawab sambil senyum",
+    hint: "Saat menjawab hangat & senang.",
+    activeHint: "Aktif saat tersenyum hangat.",
   },
   {
     slot: "laugh",
-    label: "Tertawa / ceria",
-    hint: "Saat bercanda & ketawa (saran 6 dtk).",
-    activeHint: "Aktif saat suasana ketawa.",
+    label: "Tertawa / bercanda",
+    hint: "Saat ketawa lepas & ceria.",
+    activeHint: "Aktif saat tertawa.",
   },
   {
     slot: "shy",
-    label: "Malu / senyum manis",
-    hint: "Saat dipuji / lembut (saran 6 dtk).",
-    activeHint: "Aktif saat tersipu / romantis.",
+    label: "Malu / tersipu",
+    hint: "Saat salah tingkah / dipuji.",
+    activeHint: "Aktif saat malu-malu.",
   },
   {
     slot: "pout",
-    label: "Cemberut / heran",
-    hint: "Saat ngambek manja / kaget (saran 6 dtk).",
-    activeHint: "Aktif saat cemberut / heran.",
-  },
-];
-
-const CALL_AUDIO_META: {
-  slot: CallAudioSlot;
-  label: string;
-  hint: string;
-}[] = [
-  {
-    slot: "greeting",
-    label: "Sapaan angkat telepon",
-    hint: "Langsung bunyi 0 dtk saat tersambung (2–4 dtk).",
+    label: "Cemberut / ngambek",
+    hint: "Saat ngambek manja / merajuk.",
+    activeHint: "Aktif saat cemberut.",
   },
   {
-    slot: "thinking",
-    label: "Gumam mikir ('Hmm…')",
-    hint: "Penutup jeda saat menunggu jawaban (1–2 dtk).",
+    slot: "confused",
+    label: "Bingung / heran",
+    hint: "Saat bingung memastikan maksudmu.",
+    activeHint: "Aktif saat bingung.",
   },
   {
-    slot: "laugh",
-    label: "Suara tawa asli",
-    hint: "Menyatu instan dengan klip Tertawa (1,5–2,5 dtk).",
+    slot: "angry",
+    label: "Marah / kesal",
+    hint: "Saat kesal atau protes tegas.",
+    activeHint: "Aktif saat marah/kesal.",
   },
   {
-    slot: "shy",
-    label: "Suara malu / manis",
-    hint: "Menyatu instan dengan klip Malu (1–2 dtk).",
+    slot: "sad",
+    label: "Sedih / empati",
+    hint: "Saat sedih, terharu, atau bersimpati.",
+    activeHint: "Aktif saat sedih.",
   },
   {
-    slot: "pout",
-    label: "Suara cemberut / heran",
-    hint: "Menyatu instan dengan klip Cemberut (1–2 dtk).",
+    slot: "surprised",
+    label: "Kaget / tak menyangka",
+    hint: "Saat spontan terkejut.",
+    activeHint: "Aktif saat kaget.",
   },
 ];
 
@@ -166,16 +183,19 @@ function MediaRow({
 /**
  * Media pribadi karakter di Cloudflare R2:
  * - Video saat chat (khusus ruang chat, terpisah dari video call)
- * - Video video call utama + paket 6 klip ekspresi interaktif + zoom 100–200%
- * - Suara telepon + paket 5 asset audio reaksi instan tanpa jeda generate
+ * - Video call utama + paket 12 klip pembuka & ekspresi (OmniFlash Flow) + zoom
+ * - Paket 10 asset audio panggilan dengan Generator per-Asset Gemini HD + uji putar langsung
  */
 export function CharacterMediaSection({
   characterId,
   media,
+  fallbackVoiceSlot = "female",
   onChange,
 }: {
   characterId: string;
   media: CharacterMedia | null | undefined;
+  /** Slot suara default dari halaman Suara bila karakter memakai mode 'Mengikuti Suara'. */
+  fallbackVoiceSlot?: "female" | "male";
   onChange: (next: CharacterMedia | null) => void;
 }) {
   const chatVideoRef = useRef<HTMLInputElement>(null);
@@ -183,6 +203,7 @@ export function CharacterMediaSection({
   const clipInputRef = useRef<HTMLInputElement>(null);
   const callAudioRef = useRef<HTMLInputElement>(null);
   const reactionAudioRef = useRef<HTMLInputElement>(null);
+  const previewAudioRef = useRef<HTMLAudioElement>(null);
   const pendingClipSlotRef = useRef<CallClipSlot | null>(null);
   const pendingAudioSlotRef = useRef<CallAudioSlot | null>(null);
 
@@ -194,13 +215,30 @@ export function CharacterMediaSection({
   ).length;
 
   const [busy, setBusy] = useState<BusyTarget | null>(null);
+  const [playingSlot, setPlayingSlot] = useState<CallAudioSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showExpressions, setShowExpressions] = useState<boolean>(filledClipCount > 0);
   const [showAudioPack, setShowAudioPack] = useState<boolean>(filledAudioCount > 0);
+  const [scriptDrafts, setScriptDrafts] = useState<Partial<Record<CallAudioSlot, string>>>(
+    {}
+  );
   /** Nilai sementara slider zoom — disimpan saat jari dilepas. */
   const [zoomDraft, setZoomDraft] = useState<number | null>(null);
   const zoom = zoomDraft ?? media?.callVideoZoom ?? 100;
   const hasAnyCallVideo = Boolean(media?.callVideoKey || filledClipCount > 0);
+
+  useEffect(() => {
+    const audioEl = previewAudioRef.current;
+    return () => {
+      audioEl?.pause();
+    };
+  }, []);
+
+  function scriptValueFor(slot: CallAudioSlot): string {
+    const draft = scriptDrafts[slot];
+    if (draft !== undefined) return draft;
+    return media?.callAudios?.[slot]?.text ?? DEFAULT_CALL_AUDIO_PACK[slot].defaultText;
+  }
 
   function emitOrNull(next: CharacterMedia) {
     const nextClipCount = CALL_CLIP_SLOTS.filter(
@@ -330,11 +368,13 @@ export function CharacterMediaSection({
     try {
       const uploaded = await uploadCharacterAudio(characterId, file);
       const prevKey = media?.callAudios?.[audioSlot]?.key;
+      const currentText = scriptValueFor(audioSlot).trim();
       const nextAudios: CallAudios = {
         ...(media?.callAudios ?? {}),
         [audioSlot]: {
           key: uploaded.key,
           name: uploaded.name,
+          ...(currentText ? { text: currentText } : {}),
         },
       };
       emitOrNull({
@@ -343,7 +383,7 @@ export function CharacterMediaSection({
       });
       if (prevKey) void removeCharacterMediaKey(prevKey);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengunggah audio reaksi.");
+      setError(err instanceof Error ? err.message : "Gagal mengunggah audio ekspresi.");
     } finally {
       setBusy(null);
       pendingAudioSlotRef.current = null;
@@ -351,7 +391,98 @@ export function CharacterMediaSection({
     }
   }
 
+  async function handleGenerateSlotAudio(audioSlot: CallAudioSlot) {
+    unlockSpeech();
+    const scriptText =
+      scriptValueFor(audioSlot).trim() || DEFAULT_CALL_AUDIO_PACK[audioSlot].defaultText;
+    setBusy(`gen:${audioSlot}`);
+    setError(null);
+    try {
+      const generated = await generateCharacterCallAudio({
+        characterId,
+        audioSlot,
+        text: scriptText,
+        fallbackSlot: fallbackVoiceSlot,
+      });
+      const prevKey = media?.callAudios?.[audioSlot]?.key;
+      const nextAudios: CallAudios = {
+        ...(media?.callAudios ?? {}),
+        [audioSlot]: {
+          key: generated.key,
+          name: generated.name,
+          text: generated.text,
+        },
+      };
+      emitOrNull({
+        ...(media ?? {}),
+        callAudios: nextAudios,
+      });
+      if (prevKey && prevKey !== generated.key) {
+        void removeCharacterMediaKey(prevKey);
+      }
+      // Putar pratinjau otomatis supaya langsung terdengar hasilnya!
+      playPreviewKey(audioSlot, generated.key);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Gagal men-generate audio Gemini untuk ekspresi ini."
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function stopPreviewAudio() {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.onended = null;
+      previewAudioRef.current.onerror = null;
+    }
+    setPlayingSlot(null);
+  }
+
+  function playPreviewKey(slot: CallAudioSlot, key: string) {
+    unlockSpeech();
+    if (playingSlot === slot) {
+      stopPreviewAudio();
+      return;
+    }
+    stopPreviewAudio();
+    const el = previewAudioRef.current;
+    if (!el) return;
+    ensureMediaUrl(key);
+
+    let retried = false;
+    const initial = getMediaUrl(key) ?? `/api/media/stream?key=${encodeURIComponent(key)}`;
+
+    const runUrl = (src: string) => {
+      el.onended = () => setPlayingSlot(null);
+      el.onerror = () => {
+        if (!retried && fallbackMediaToStream(key)) {
+          retried = true;
+          const nextUrl = getMediaUrl(key);
+          if (nextUrl) {
+            runUrl(nextUrl);
+            return;
+          }
+        }
+        setPlayingSlot(null);
+      };
+      el.src = src;
+      setPlayingSlot(slot);
+      void el.play().catch(() => {
+        setPlayingSlot(null);
+      });
+    };
+
+    runUrl(initial);
+  }
+
   function dropReactionAudio(audioSlot: CallAudioSlot) {
+    if (playingSlot === audioSlot) {
+      stopPreviewAudio();
+    }
     const prevKey = media?.callAudios?.[audioSlot]?.key;
     const nextAudios: CallAudios = { ...(media?.callAudios ?? {}) };
     delete nextAudios[audioSlot];
@@ -435,8 +566,8 @@ export function CharacterMediaSection({
         label="Video call · Diam / Utama"
         hint={
           media?.callVideoKey
-            ? "Tatapan tenang saat jeda panggilan."
-            : "Klip dasar menatap tenang (saran 8–10 dtk)."
+            ? "Klip dasar cadangan saat mic dimatikan."
+            : "Klip dasar menatap tenang (OmniFlash Flow)."
         }
         active={Boolean(media?.callVideoKey)}
         thumb={media?.callVideoPosterUrl}
@@ -447,7 +578,7 @@ export function CharacterMediaSection({
         onRemove={() => dropVideo("callVideo")}
       />
 
-      {/* Paket klip ekspresi tambahan untuk rekayasa video call natural */}
+      {/* Paket 12 klip video pembuka & ekspresi (OmniFlash Flow) */}
       <div className="rounded-xl border border-line">
         <button
           type="button"
@@ -459,20 +590,25 @@ export function CharacterMediaSection({
             <p className="text-xs font-medium text-ink">Paket ekspresi video call</p>
             <p className="truncate text-[12px] text-muted">
               {filledClipCount > 0
-                ? `${filledClipCount} dari 6 klip ekspresi aktif`
-                : "Opsional — menyimak, mikir, bicara, ketawa, malu, cemberut"}
+                ? `${filledClipCount} dari ${CALL_CLIP_SLOTS.length} klip aktif`
+                : "Pembuka 1x, dengar, mikir, jawab biasa, senyum, malu, marah, sedih, kaget…"}
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
-            {showExpressions ? "Tutup" : filledClipCount > 0 ? `${filledClipCount}/6` : "Atur"}
+            {showExpressions
+              ? "Tutup"
+              : filledClipCount > 0
+                ? `${filledClipCount}/${CALL_CLIP_SLOTS.length}`
+                : "Atur"}
           </span>
         </button>
 
         {showExpressions && (
           <div className="space-y-1.5 border-t border-line px-2.5 py-2.5">
             <p className="px-0.5 text-[11.5px] leading-snug text-muted">
-              Gunakan foto awal & akhir (*Frame*) yang sama agar perpindahan antar-ekspresi
-              menyatu mulus. Slot yang kosong otomatis memakai klip utama.
+              Unggah klip dari OmniFlash Flow dengan *frame* awal & akhir seragam agar
+              perpindahan mulus. Klip <strong>Pembuka</strong> diputar 1x di awal lalu
+              otomatis lanjut ke <strong>Mendengarkan</strong>.
             </p>
             {CALL_EXPRESSION_META.map((item) => {
               const clip = media?.callClips?.[item.slot];
@@ -525,7 +661,7 @@ export function CharacterMediaSection({
         </div>
       )}
 
-      {/* Paket asset audio reaksi instan (tanpa jeda generate) */}
+      {/* Paket 10 asset audio panggilan — Generate per-asset langsung dari Gemini HD */}
       <div className="rounded-xl border border-line">
         <button
           type="button"
@@ -534,42 +670,132 @@ export function CharacterMediaSection({
           className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
         >
           <div className="min-w-0">
-            <p className="text-xs font-medium text-ink">Paket audio reaksi panggilan</p>
+            <p className="text-xs font-medium text-ink">
+              Paket audio panggilan (Gemini HD)
+            </p>
             <p className="truncate text-[12px] text-muted">
               {filledAudioCount > 0
-                ? `${filledAudioCount} dari 5 suara instan aktif`
-                : "Opsional — sapaan, gumam mikir, tawa, malu, cemberut"}
+                ? `${filledAudioCount} dari ${CALL_AUDIO_SLOTS.length} suara ekspresi siap`
+                : "Buat suara pembuka, mikir, & tiap ekspresi langsung dari Gemini"}
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
-            {showAudioPack ? "Tutup" : filledAudioCount > 0 ? `${filledAudioCount}/5` : "Atur"}
+            {showAudioPack
+              ? "Tutup"
+              : filledAudioCount > 0
+                ? `${filledAudioCount}/${CALL_AUDIO_SLOTS.length}`
+                : "Atur"}
           </span>
         </button>
 
         {showAudioPack && (
-          <div className="space-y-1.5 border-t border-line px-2.5 py-2.5">
+          <div className="space-y-2 border-t border-line px-2.5 py-2.5">
             <p className="px-0.5 text-[11.5px] leading-snug text-muted">
-              Unggah WAV/MP3 pendek (mis. hasil VoxCPM2) agar suara & klip video langsung
-              menyatu 0 detik tanpa menunggu generate TTS.
+              Memakai pengaturan Suara HD Gemini dari halaman <strong>Suara</strong>.
+              Ubah kata bila perlu, ketuk <strong>Buat</strong> per ekspresi, dan ketuk{" "}
+              <strong>Ulang</strong> kapan saja bila ingin intonasi yang lebih natural.
             </p>
-            {CALL_AUDIO_META.map((item) => {
-              const entry = media?.callAudios?.[item.slot];
+
+            {CALL_AUDIO_SLOTS.map((slot) => {
+              const preset = DEFAULT_CALL_AUDIO_PACK[slot];
+              const entry = media?.callAudios?.[slot];
+              const hasAsset = Boolean(entry?.key);
+              const isGenBusy = busy === `gen:${slot}`;
+              const isUploadBusy = busy === `audio:${slot}`;
+              const rowBusy = isGenBusy || isUploadBusy;
+              const isPreviewing = playingSlot === slot;
+
               return (
-                <MediaRow
-                  key={item.slot}
-                  label={item.label}
-                  hint={entry?.name ?? (entry?.key ? "Suara instan siap." : item.hint)}
-                  active={Boolean(entry?.key)}
-                  icon={<SpeakerIcon className="h-3.5 w-3.5" />}
-                  busy={busy === `audio:${item.slot}`}
-                  disabled={busy !== null}
-                  compact
-                  onPick={() => {
-                    pendingAudioSlotRef.current = item.slot;
-                    reactionAudioRef.current?.click();
-                  }}
-                  onRemove={() => dropReactionAudio(item.slot)}
-                />
+                <div
+                  key={slot}
+                  className="rounded-xl border border-line bg-surface-2/40 p-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-ink">{preset.label}</p>
+                      <p className="truncate text-[11px] text-muted">
+                        {isGenBusy
+                          ? "Membuat suara Gemini…"
+                          : isUploadBusy
+                            ? "Mengunggah audio…"
+                            : preset.hint}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      {hasAsset && entry?.key && (
+                        <button
+                          type="button"
+                          onClick={() => playPreviewKey(slot, entry.key)}
+                          disabled={busy !== null}
+                          aria-label={`Putar pratinjau ${preset.label}`}
+                          title="Dengarkan hasil suara"
+                          className={`grid h-7 w-7 place-items-center rounded-full border transition disabled:opacity-45 ${
+                            isPreviewing
+                              ? "border-ink bg-ink text-surface"
+                              : "border-line bg-surface text-ink-soft hover:text-ink"
+                          }`}
+                        >
+                          <PlayIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => void handleGenerateSlotAudio(slot)}
+                        disabled={busy !== null}
+                        className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink transition hover:bg-surface-2 active:scale-95 disabled:opacity-45"
+                      >
+                        <RefreshIcon
+                          className={`h-3 w-3 ${isGenBusy ? "animate-spin" : ""}`}
+                        />
+                        {hasAsset ? "Ulang" : "Buat"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pendingAudioSlotRef.current = slot;
+                          reactionAudioRef.current?.click();
+                        }}
+                        disabled={busy !== null}
+                        title="Unggah file audio manual"
+                        aria-label={`Unggah file manual untuk ${preset.label}`}
+                        className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:text-ink disabled:opacity-45"
+                      >
+                        <SpeakerIcon className="h-3.5 w-3.5" />
+                      </button>
+
+                      {hasAsset && !rowBusy && (
+                        <button
+                          type="button"
+                          onClick={() => dropReactionAudio(slot)}
+                          title="Hapus asset ini"
+                          aria-label={`Hapus ${preset.label}`}
+                          className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition hover:text-rose-500 disabled:opacity-45"
+                          disabled={busy !== null}
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={scriptValueFor(slot)}
+                    onChange={(e) =>
+                      setScriptDrafts((prev) => ({
+                        ...prev,
+                        [slot]: e.target.value,
+                      }))
+                    }
+                    maxLength={140}
+                    placeholder={preset.defaultText}
+                    aria-label={`Naskah kata ${preset.label}`}
+                    className="mt-1.5 w-full rounded-lg border border-line bg-surface px-2.5 py-1 text-[12px] text-ink placeholder:text-muted"
+                  />
+                </div>
               );
             })}
           </div>
@@ -581,7 +807,7 @@ export function CharacterMediaSection({
         hint={
           media?.callAudioKey
             ? (media.callAudioName ?? "Rekaman suara aktif.")
-            : "Rekaman MP3/WAV untuk sapaan panggilan."
+            : "Rekaman MP3/WAV cadangan bila pembuka kosong."
         }
         active={Boolean(media?.callAudioKey)}
         icon={<SpeakerIcon className="h-4 w-4" />}
@@ -648,6 +874,7 @@ export function CharacterMediaSection({
           if (file) void pickAudio(file);
         }}
       />
+      <audio ref={previewAudioRef} preload="auto" playsInline className="hidden" />
     </div>
   );
 }

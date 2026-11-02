@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { geminiEmotionStyleHint, type CallEmotion } from "./callEmotion";
 import {
   DEFAULT_TTS_ACCOUNT_SUMMARY,
   speakableHdText,
@@ -90,6 +91,8 @@ let activeAudioFinish: (() => void) | null = null;
 export type SpeakOptions = {
   append?: boolean;
   target?: ResolvedVoiceTarget;
+  /** Emosi lisan saat panggilan (mengatur intonasi suara Gemini HD). */
+  emotion?: CallEmotion;
   /** Bila `false` (mis. tombol Tes HD), jangan jatuh ke suara robot perangkat saat HD gagal. */
   allowDeviceFallback?: boolean;
   onFallback?: (reason: string) => void;
@@ -304,14 +307,20 @@ export function invalidateHdAudioCache() {
 
 function resolveClientClipHash(
   cleanedClause: string,
-  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>
+  target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
+  emotion?: CallEmotion
 ): string {
   const provider: HdTtsProvider = target.customProvider ?? activeTtsSummary.provider;
   let voice = "";
   let style = "";
 
   if (provider === "gemini") {
-    style = activeTtsSummary.geminiStyle;
+    const baseStyle = activeTtsSummary.geminiStyle.trim();
+    const extra = geminiEmotionStyleHint(emotion).trim();
+    style = (baseStyle && extra ? `${baseStyle}; ${extra}` : baseStyle || extra).slice(
+      0,
+      260
+    );
     if (target.slot === "male") voice = activeTtsSummary.geminiMaleVoice;
     else if (target.slot === "custom") voice = target.customVoiceId ?? "";
     else voice = activeTtsSummary.geminiFemaleVoice;
@@ -332,14 +341,14 @@ function resolveClientClipHash(
 async function fetchHdClauseBlob(
   clauseText: string,
   target: Extract<ResolvedVoiceTarget, { kind: "hd" }>,
-  options: { forceSyncR2?: boolean } = {}
+  options: { forceSyncR2?: boolean; emotion?: CallEmotion } = {}
 ): Promise<Blob> {
   const cleaned = speakableHdText(clauseText);
   if (!cleaned) {
     throw new Error("Tidak ada teks yang perlu dibacakan.");
   }
 
-  const clipHash = resolveClientClipHash(cleaned, target);
+  const clipHash = resolveClientClipHash(cleaned, target, options.emotion);
   const ramKey = `${activeUserId}:${clipHash}`;
 
   if (!options.forceSyncR2) {
@@ -369,6 +378,7 @@ async function fetchHdClauseBlob(
         slot: target.slot,
         provider: target.customProvider,
         customVoiceId: target.customVoiceId,
+        emotion: options.emotion,
       }),
     });
 
@@ -401,14 +411,18 @@ async function fetchHdClauseBlob(
 }
 
 /**
- * Unduh lebih awal klausa pembuka selagi indikator "sedang mengetik..." tampil,
- * sehingga begitu gelembung pesan muncul suara langsung terdengar tanpa jeda.
+ * Unduh lebih awal klausa pembuka selagi indikator mengetik / klip reaksi berbunyi,
+ * sehingga begitu giliran bicara mulai suara langsung terdengar tanpa jeda.
  */
-export function prefetchSpeech(text: string, target?: ResolvedVoiceTarget): void {
+export function prefetchSpeech(
+  text: string,
+  target?: ResolvedVoiceTarget,
+  emotion?: CallEmotion
+): void {
   if (typeof window === "undefined" || !target || target.kind !== "hd") return;
   const clauses = splitTtsClauses(text).slice(0, 2);
   for (const clause of clauses) {
-    void fetchHdClauseBlob(clause, target).catch(() => undefined);
+    void fetchHdClauseBlob(clause, target, { emotion }).catch(() => undefined);
   }
 }
 
@@ -786,7 +800,9 @@ export function speak(
         const tasks: (Promise<Blob> | null)[] = new Array(clauses.length).fill(null);
         const ensure = (idx: number): Promise<Blob> => {
           if (!tasks[idx]) {
-            tasks[idx] = fetchHdClauseBlob(clauses[idx], target);
+            tasks[idx] = fetchHdClauseBlob(clauses[idx], target, {
+              emotion: options.emotion,
+            });
             // Redam unhandled rejection pada prefetch klausa berikutnya.
             tasks[idx]!.catch(() => undefined);
           }

@@ -8,12 +8,18 @@ import type { CallEmotion } from "./callEmotion";
  */
 
 export const CALL_CLIP_SLOTS = [
+  "greeting",
   "listening",
   "thinking",
   "talking",
+  "smile",
   "laugh",
   "shy",
   "pout",
+  "confused",
+  "angry",
+  "sad",
+  "surprised",
 ] as const;
 
 export type CallClipSlot = (typeof CALL_CLIP_SLOTS)[number];
@@ -28,9 +34,14 @@ export type CallClips = Partial<Record<CallClipSlot, CallClipItem>>;
 export const CALL_AUDIO_SLOTS = [
   "greeting",
   "thinking",
+  "smile",
   "laugh",
   "shy",
   "pout",
+  "confused",
+  "angry",
+  "sad",
+  "surprised",
 ] as const;
 
 export type CallAudioSlot = (typeof CALL_AUDIO_SLOTS)[number];
@@ -38,9 +49,105 @@ export type CallAudioSlot = (typeof CALL_AUDIO_SLOTS)[number];
 export type CallAudioItem = {
   key: string;
   name?: string;
+  /** Kata/ucapan pendek yang dipakai pada asset suara ini. */
+  text?: string;
 };
 
 export type CallAudios = Partial<Record<CallAudioSlot, CallAudioItem>>;
+
+export type CallAudioPresetMeta = {
+  slot: CallAudioSlot;
+  label: string;
+  defaultText: string;
+  styleHint: string;
+  hint: string;
+};
+
+/**
+ * Paket naskah pendek default & arahan intonasi Gemini HD untuk ke-10 slot audio panggilan.
+ * Dirancang ringkas dan netral agar selalu menyambung alami dengan kalimat balasan AI apa pun.
+ */
+export const DEFAULT_CALL_AUDIO_PACK: Record<CallAudioSlot, CallAudioPresetMeta> = {
+  greeting: {
+    slot: "greeting",
+    label: "Pembuka angkat telepon (1x)",
+    defaultText: "Ya, haloo...",
+    styleHint:
+      "baru mengangkat telepon dari orang dekat, nada hangat, santai, akrab, dan natural",
+    hint: "Diputar 1x di awal saat panggilan diangkat.",
+  },
+  thinking: {
+    slot: "thinking",
+    label: "Gumam mikir halus",
+    defaultText: "Hmm...",
+    styleHint:
+      "gumaman berpikir singkat, lembut, pelan, dan sangat natural tanpa kata tambahan",
+    hint: "Sesekali saat jeda mikir agak lama.",
+  },
+  smile: {
+    slot: "smile",
+    label: "Senyum hangat",
+    defaultText: "Hehe...",
+    styleHint: "tawa senyum tipis yang hangat, ramah, dan akrab",
+    hint: "Saat menjawab sambil tersenyum senang.",
+  },
+  laugh: {
+    slot: "laugh",
+    label: "Tertawa ceria",
+    defaultText: "Hahaha...",
+    styleHint: "tertawa ringan yang tulus, lepas, dan natural seperti bercanda akrab",
+    hint: "Saat bercanda & ketawa lepas.",
+  },
+  shy: {
+    slot: "shy",
+    label: "Malu / salah tingkah",
+    defaultText: "Ehehe...",
+    styleHint: "suara pelan tersipu malu-malu dan salah tingkah manis",
+    hint: "Saat dipuji atau suasana lembut.",
+  },
+  pout: {
+    slot: "pout",
+    label: "Cemberut / ngambek",
+    defaultText: "Hmmph...",
+    styleHint: "dengusan cemberut manja dan sedikit merajuk halus",
+    hint: "Saat diledek atau ngambek manja.",
+  },
+  confused: {
+    slot: "confused",
+    label: "Bingung / heran",
+    defaultText: "Eh...?",
+    styleHint: "nada bingung dan heran singkat seperti bertanya-tanya secara spontan",
+    hint: "Saat bingung atau memastikan maksudmu.",
+  },
+  angry: {
+    slot: "angry",
+    label: "Kesal / marah",
+    defaultText: "Ck, ih...",
+    styleHint: "decakan kesal singkat yang ekspresif, tegas, tapi tetap natural",
+    hint: "Saat kesal atau protes.",
+  },
+  sad: {
+    slot: "sad",
+    label: "Sedih / empati",
+    defaultText: "Yah...",
+    styleHint: "hela napas lirih dengan nada sedih lembut dan penuh simpati",
+    hint: "Saat sedih, kecewa, atau ikut bersimpati.",
+  },
+  surprised: {
+    slot: "surprised",
+    label: "Kaget / tak menyangka",
+    defaultText: "Loh, eh?!",
+    styleHint: "reaksi kaget spontan yang hidup dan tak menyangka",
+    hint: "Saat terkejut mendengar kabar mendadak.",
+  },
+};
+
+export function isValidCallAudioSlot(value: unknown): value is CallAudioSlot {
+  return (
+    typeof value === "string" &&
+    (CALL_AUDIO_SLOTS as readonly string[]).includes(value)
+  );
+}
 
 export type CharacterMedia = {
   /** Kunci objek R2 untuk klip video saat mengobrol di ruang chat. */
@@ -53,19 +160,20 @@ export type CharacterMedia = {
   callVideoKey?: string;
   /** Poster bingkai pertama klip utama video call. */
   callVideoPosterUrl?: string;
-  /** Paket klip reaksi & ekspresi tambahan khusus layar video call. */
+  /** Paket klip pembuka & ekspresi khusus layar video call. */
   callClips?: CallClips;
   /** Perbesaran video call (100–200%) untuk memotong bingkai hitam di tepi. */
   callVideoZoom?: number;
-  /** Kunci objek R2 untuk rekaman sapaan telepon utama. */
+  /** Kunci objek R2 untuk rekaman sapaan telepon utama (cadangan). */
   callAudioKey?: string;
   /** Nama file rekaman suara untuk ditampilkan di profil karakter. */
   callAudioName?: string;
-  /** Paket asset audio reaksi instan panggilan (sapaan, gumam mikir, tawa, malu, cemberut). */
+  /** Paket asset audio panggilan instan (pembuka, mikir, & ekspresi emosi). */
   callAudios?: CallAudios;
 };
 
 export type CallVisualPhase =
+  | { kind: "greeting" }
   | { kind: "idle" }
   | { kind: "listening" }
   | { kind: "thinking" }
@@ -131,7 +239,14 @@ function cleanCallAudios(raw: unknown, expectedUserId?: string): CallAudios | un
       typeof obj.name === "string" && obj.name.trim()
         ? obj.name.trim().slice(0, 160)
         : undefined;
-    cleaned[slot] = name ? { key, name } : { key };
+    const text =
+      typeof obj.text === "string" && obj.text.trim()
+        ? obj.text.trim().slice(0, 140)
+        : undefined;
+    const item: CallAudioItem = { key };
+    if (name) item.name = name;
+    if (text) item.text = text;
+    cleaned[slot] = item;
     count += 1;
   }
 
@@ -260,7 +375,6 @@ export function listUniqueCallClips(
     return Array.from(map.values());
   }
 
-  // Cadangan terakhir hanya bila belum ada satupun klip Video Call yang diisi.
   if (media.chatVideoKey) {
     return [{ key: media.chatVideoKey, posterUrl: media.chatVideoPosterUrl }];
   }
@@ -313,11 +427,16 @@ export function resolveActiveCallClip(
     : null;
 
   if (!idleBase && clips) {
+    // Jangan pakai klip pembuka 1x (`greeting`) sebagai klip diam utama bila slot lain ada.
     for (const slot of CALL_CLIP_SLOTS) {
+      if (slot === "greeting") continue;
       if (clips[slot]?.key) {
         idleBase = clips[slot]!;
         break;
       }
+    }
+    if (!idleBase && clips.greeting?.key) {
+      idleBase = clips.greeting;
     }
   }
 
@@ -327,6 +446,9 @@ export function resolveActiveCallClip(
       : null;
   }
 
+  if (phase.kind === "greeting") {
+    return clips?.greeting ?? clips?.talking ?? clips?.smile ?? idleBase;
+  }
   if (phase.kind === "idle") {
     return idleBase;
   }
@@ -339,12 +461,22 @@ export function resolveActiveCallClip(
 
   // phase.kind === "speaking"
   switch (phase.emotion) {
+    case "smile":
+      return clips?.smile ?? clips?.laugh ?? clips?.talking ?? idleBase;
     case "laugh":
-      return clips?.laugh ?? clips?.talking ?? idleBase;
+      return clips?.laugh ?? clips?.smile ?? clips?.talking ?? idleBase;
     case "shy":
-      return clips?.shy ?? clips?.talking ?? idleBase;
+      return clips?.shy ?? clips?.smile ?? clips?.talking ?? idleBase;
     case "pout":
       return clips?.pout ?? clips?.talking ?? idleBase;
+    case "confused":
+      return clips?.confused ?? clips?.thinking ?? clips?.pout ?? clips?.talking ?? idleBase;
+    case "angry":
+      return clips?.angry ?? clips?.pout ?? clips?.talking ?? idleBase;
+    case "sad":
+      return clips?.sad ?? clips?.pout ?? clips?.talking ?? idleBase;
+    case "surprised":
+      return clips?.surprised ?? clips?.laugh ?? clips?.pout ?? clips?.talking ?? idleBase;
     default:
       return clips?.talking ?? idleBase;
   }

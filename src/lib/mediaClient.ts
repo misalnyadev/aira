@@ -401,6 +401,30 @@ export async function uploadCharacterAudio(
   return { key: ticket.key, name: file.name };
 }
 
+export async function generateCharacterCallAudio(params: {
+  characterId: string;
+  audioSlot: string;
+  text: string;
+  fallbackSlot?: "female" | "male";
+}): Promise<{ key: string; name: string; text: string; voice: string }> {
+  const res = await fetch("/api/media/generate-call-audio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || typeof data.key !== "string") {
+    throw new Error(data.error || "Gagal membuat suara ekspresi dengan Gemini.");
+  }
+  preloadMediaBlob(data.key);
+  return {
+    key: data.key,
+    name: typeof data.name === "string" ? data.name : `${params.audioSlot}.wav`,
+    text: typeof data.text === "string" ? data.text : params.text,
+    voice: typeof data.voice === "string" ? data.voice : "",
+  };
+}
+
 export function useMediaUrl(key: string | null | undefined): string | null {
   return useSyncExternalStore(
     subscribeMedia,
