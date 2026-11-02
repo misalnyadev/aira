@@ -1,23 +1,29 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, ttsClips, users } from "@/db/schema";
+import { ttsClips, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import {
+  geminiEmotionStyleHint,
+  isValidCallEmotion,
+  type CallEmotion,
+} from "@/lib/callEmotion";
 import { ensureDb } from "@/lib/dbReady";
 import {
+  composeGeminiStyle,
+  synthesizeGeminiAudioForUser,
+} from "@/lib/geminiTtsServer";
+import {
   cleanVoiceId,
-  isModernGeminiTtsModel,
   isRotatableTtsStatus,
   parseTtsConfig,
-  pcmToWav,
-  sampleRateFromMime,
   speakableHdText,
   supportsLanguageCode,
   ttsClipHash,
   type HdTtsProvider,
   type TtsAccountConfig,
 } from "@/lib/hdVoice";
-import { buildKeyAttempts, parseBackupKeys, promoteKeyAtIndex } from "@/lib/providerPool";
+import { buildKeyAttempts, promoteKeyAtIndex } from "@/lib/providerPool";
 import { getR2Object, isR2Configured, putR2Object } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +31,7 @@ export const maxDuration = 30;
 
 const UNAUTHORIZED = { error: "Kamu belum masuk. Muat ulang halaman lalu masuk lagi." };
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1/text-to-speech";
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const ELEVEN_TIMEOUT_MS = 15_000;
-const GEMINI_TIMEOUT_MS = 25_000;
 
 type SynthResult =
   | { ok: true; bytes: Uint8Array; mimeType: string; ext: "wav" | "mp3" }
@@ -52,184 +56,6 @@ function friendlyElevenLabsError(status: number, rawBody: string): string {
     return "API key ElevenLabs ditolak atau izin Text-to-Speech belum diaktifkan pada key tersebut.";
   }
   return `ElevenLabs mengembalikan kendala (HTTP ${status}).`;
-}
-
-function friendlyGeminiTtsError(status: number, rawBody: string): string {
-  if (status === 429 || /resource_exhausted|quota/i.test(rawBody)) {
-    return "Kuota Gemini TTS di key ini sedang habis (429). Tambahkan API key Gemini cadangan atau tunggu kuota pulih.";
-  }
-  if (status === 400 && /api key not valid|api_key_invalid/i.test(rawBody)) {
-    return "API key Gemini tidak valid. Periksa kembali key dari aistudio.google.com.";
-  }
-  if (status === 401 || status === 403) {
-    return "API key Gemini ditolak atau belum memiliki akses ke model suara ini.";
-  }
-  if (status === 404) {
-    return "Model suara Gemini ini belum tersedia di API key kamu. Coba pilih model 2.5 Flash.";
-  }
-  if (status === 400 && /voice/i.test(rawBody)) {
-    return "Nama suara Gemini tidak dikenali. Pilih salah satu suara seperti Kore, Aoede, Leda, atau Puck.";
-  }
-  return `Gemini TTS mengembalikan kendala (HTTP ${status}).`;
-}
-
-async function synthesizeGeminiBytes(
-  userId: string,
-  config: TtsAccountConfig,
-  cleanedText: string,
-  voiceName: string
-): Promise<SynthResult> {
-  const dedicatedKeys = buildKeyAttempts(
-    "gemini",
-    config.geminiApiKey,
-    config.geminiBackupKeys
-  );
-  const providerRows = await db
-    .select({
-      apiKey: apiProviders.apiKey,
-      backupKeys: apiProviders.backupKeys,
-      isDefault: apiProviders.isDefault,
-    })
-    .from(apiProviders)
-    .where(and(eq(apiProviders.userId, userId), eq(apiProviders.type, "gemini")))
-    .orderBy(desc(apiProviders.isDefault));
-
-  const sharedKeys: string[] = [];
-  for (const row of providerRows) {
-    if (row.apiKey?.trim()) sharedKeys.push(row.apiKey.trim());
-    for (const bk of parseBackupKeys(row.backupKeys, row.apiKey)) {
-      sharedKeys.push(bk);
-    }
-  }
-
-  const allKeys = [...new Set([...dedicatedKeys, ...sharedKeys])].slice(0, 8);
-  if (allKeys.length === 0) {
-    return {
-      ok: false,
-      error:
-        "API key Gemini belum ada. Tambahkan provider Gemini di menu Setelan, atau isi key Gemini di menu Suara.",
-      status: 400,
-    };
-  }
-
-  const styleText = config.geminiStyle.trim();
-  const modelsToTry = [
-    ...new Set([
-      config.geminiModelId,
-      "gemini-3.8-flash-tts",
-      "gemini-3.8-flash-lite-tts",
-    ]),
-  ];
-
-  let lastError = "Gagal menghubungi Gemini TTS.";
-  let lastStatus = 502;
-
-  for (let keyIdx = 0; keyIdx < allKeys.length; keyIdx++) {
-    const key = allKeys[keyIdx];
-    let shouldTryNextKey = false;
-
-    for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
-      const modelId = modelsToTry[mIdx];
-      const modern = isModernGeminiTtsModel(modelId);
-      const speechPart = modern
-        ? {
-            text: cleanedText,
-            ...(styleText ? { speech_metadata: { style: styleText } } : {}),
-          }
-        : { text: styleText ? `${styleText}: ${cleanedText}` : cleanedText };
-
-      const url = `${GEMINI_BASE}/${encodeURIComponent(modelId)}:generateContent`;
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-          },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [speechPart] }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: {
-                voiceConfig: modern
-                  ? { voice: voiceName }
-                  : { prebuiltVoiceConfig: { voiceName } },
-              },
-            },
-          }),
-          signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-        });
-
-        if (!res.ok) {
-          const errBody = await res.text().catch(() => "");
-          lastStatus = res.status === 429 ? 429 : res.status;
-          lastError = friendlyGeminiTtsError(res.status, errBody);
-
-          if (res.status === 404 && mIdx < modelsToTry.length - 1) {
-            continue;
-          }
-          if (isRotatableTtsStatus(res.status, errBody) && keyIdx < allKeys.length - 1) {
-            shouldTryNextKey = true;
-          }
-          break;
-        }
-
-        const data = (await res.json().catch(() => null)) as {
-          candidates?: {
-            content?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] };
-          }[];
-        } | null;
-
-        const part = data?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
-        const base64 = part?.inlineData?.data;
-        if (!base64) {
-          lastStatus = 502;
-          lastError = "Gemini tidak mengembalikan data audio.";
-          if (keyIdx < allKeys.length - 1) shouldTryNextKey = true;
-          break;
-        }
-
-        const raw = new Uint8Array(Buffer.from(base64, "base64"));
-        const mime = part?.inlineData?.mimeType ?? "";
-        const alreadyWav =
-          /wav/i.test(mime) ||
-          (raw[0] === 0x52 && raw[1] === 0x49 && raw[2] === 0x46 && raw[3] === 0x46);
-        const wav = alreadyWav ? raw : pcmToWav(raw, sampleRateFromMime(mime));
-
-        if (keyIdx > 0 && keyIdx < dedicatedKeys.length) {
-          const promoted = promoteKeyAtIndex(
-            config.geminiApiKey,
-            config.geminiBackupKeys,
-            keyIdx
-          );
-          if (promoted) {
-            const updated = {
-              ...config,
-              geminiApiKey: promoted.apiKey,
-              geminiBackupKeys: promoted.backupKeys,
-            };
-            await db
-              .update(users)
-              .set({ ttsConfig: JSON.stringify(updated) })
-              .where(eq(users.id, userId))
-              .catch(() => undefined);
-          }
-        }
-
-        return { ok: true, bytes: wav, mimeType: "audio/wav", ext: "wav" };
-      } catch {
-        lastStatus = 504;
-        lastError = "Koneksi ke Gemini TTS melewati batas waktu.";
-        if (keyIdx < allKeys.length - 1) shouldTryNextKey = true;
-        break;
-      }
-    }
-
-    if (!shouldTryNextKey) break;
-  }
-
-  return { ok: false, error: lastError, status: lastStatus };
 }
 
 async function synthesizeElevenLabsBytes(
@@ -326,11 +152,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Permintaan suara tidak valid." }, { status: 400 });
   }
 
-  const { text, slot, provider, customVoiceId } = body as {
+  const { text, slot, provider, customVoiceId, emotion } = body as {
     text?: unknown;
     slot?: "female" | "male" | "custom";
     provider?: unknown;
     customVoiceId?: unknown;
+    emotion?: unknown;
   };
 
   if (typeof text !== "string") {
@@ -341,6 +168,11 @@ export async function POST(req: Request) {
   if (!cleanedText) {
     return NextResponse.json({ error: "Tidak ada teks yang perlu dibacakan." }, { status: 400 });
   }
+
+  const activeEmotion: CallEmotion | undefined = isValidCallEmotion(emotion)
+    ? emotion
+    : undefined;
+  const emotionStyle = geminiEmotionStyleHint(activeEmotion);
 
   const [row] = await db
     .select({ ttsConfig: users.ttsConfig })
@@ -355,7 +187,7 @@ export async function POST(req: Request) {
   let voice = "";
   let styleForHash = "";
   if (effectiveProvider === "gemini") {
-    styleForHash = config.geminiStyle;
+    styleForHash = composeGeminiStyle(config.geminiStyle, emotionStyle);
     if (slot === "male") {
       voice = config.geminiMaleVoice;
     } else if (slot === "custom") {
@@ -405,7 +237,6 @@ export async function POST(req: Request) {
           },
         });
       }
-      // Objek sudah tidak ada di R2 — bersihkan catatan yatim lalu buat ulang.
       await db
         .delete(ttsClips)
         .where(eq(ttsClips.id, existing.id))
@@ -414,10 +245,16 @@ export async function POST(req: Request) {
   }
 
   // 2. Belum ada di R2 -> buat lewat API Gemini / ElevenLabs.
-  const result =
+  const result: SynthResult =
     effectiveProvider === "elevenlabs"
       ? await synthesizeElevenLabsBytes(user.id, config, cleanedText, voice)
-      : await synthesizeGeminiBytes(user.id, config, cleanedText, voice);
+      : await synthesizeGeminiAudioForUser({
+          userId: user.id,
+          config,
+          cleanedText,
+          voiceName: voice,
+          extraStyleHint: emotionStyle,
+        });
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });

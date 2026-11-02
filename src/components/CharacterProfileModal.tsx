@@ -190,6 +190,7 @@ export function CharacterProfileModal({
             <CharacterMediaSection
               characterId={character.id}
               media={character.media}
+              fallbackVoiceSlot={voiceSettings.engine === "hd_male" ? "male" : "female"}
               onChange={onMediaChange}
             />
           </div>

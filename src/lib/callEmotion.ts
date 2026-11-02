@@ -1,63 +1,149 @@
 /**
- * Pengarah Ekspresi Emosi Video Call (`Call Emotion`).
+ * Pengarah Ekspresi & Intonasi Panggilan (`Call Emotion`).
  *
- * Saat mode Video Call aktif, model AI diminta mengawali balasannya dengan satu
- * penanda suasana singkat (`[NORMAL]`, `[LAUGH]`, `[SHY]`, atau `[POUT]`).
+ * Saat mode Video Call maupun Telepon Suara aktif, model AI diminta mengawali
+ * balasannya dengan satu penanda ekspresi singkat:
+ * `[NORMAL]`, `[SMILE]`, `[LAUGH]`, `[SHY]`, `[POUT]`,
+ * `[CONFUSED]`, `[ANGRY]`, `[SAD]`, atau `[SURPRISED]`.
+ *
  * Modul ini:
  * 1) Mencabut seluruh tag `[...]` tersebut sehingga teks yang disimpan ke
- *    database ruang chat maupun yang dibacakan Gemini TTS / ElevenLabs 100% bersih.
+ *    database ruang chat maupun yang dibacakan TTS 100% bersih.
  * 2) Menebak ekspresi cadangan secara alami dari kata-kata Bahasa Indonesia bila
  *    model lupa menyertakan tag.
+ * 3) Menyediakan arahan gaya intonasi suara untuk Gemini HD TTS (`geminiEmotionStyleHint`)
+ *    serta pemangkas vokalisasi awal (`stripLeadingReactionCue`) agar asset audio
+ *    reaksi pendek dan kalimat jawaban utama terdengar menyambung utuh.
  */
 
-export type CallEmotion = "normal" | "laugh" | "shy" | "pout";
+export const CALL_EMOTIONS = [
+  "normal",
+  "smile",
+  "laugh",
+  "shy",
+  "pout",
+  "confused",
+  "angry",
+  "sad",
+  "surprised",
+] as const;
+
+export type CallEmotion = (typeof CALL_EMOTIONS)[number];
+
+export function isValidCallEmotion(value: unknown): value is CallEmotion {
+  return typeof value === "string" && (CALL_EMOTIONS as readonly string[]).includes(value);
+}
 
 const TAG_MAP: Record<string, CallEmotion> = {
+  // Biasa / netral
   NORMAL: "normal",
   TALK: "normal",
-  WARM: "normal",
-  SMILE: "normal",
   CALM: "normal",
+  BIASA: "normal",
+  SANTAI: "normal",
+  // Senyum hangat
+  SMILE: "smile",
+  WARM: "smile",
+  HAPPY: "smile",
+  GLAD: "smile",
+  SENYUM: "smile",
+  SENANG: "smile",
+  // Tertawa / bercanda
   LAUGH: "laugh",
   LAUGHING: "laugh",
   GIGGLE: "laugh",
-  HAPPY: "laugh",
   EXCITED: "laugh",
+  TAWA: "laugh",
+  TERTAWA: "laugh",
+  // Malu / tersipu
   SHY: "shy",
   BLUSH: "shy",
   SWEET: "shy",
   LOVE: "shy",
   AFFECTIONATE: "shy",
+  MALU: "shy",
+  SALTING: "shy",
+  // Cemberut / ngambek manja
   POUT: "pout",
   SULK: "pout",
   TEASED: "pout",
-  CONFUSED: "pout",
-  SURPRISED: "pout",
-  SHOCKED: "pout",
-  SAD: "pout",
+  CEMBERUT: "pout",
+  NGAMBEK: "pout",
+  // Bingung / heran
+  CONFUSED: "confused",
+  PUZZLED: "confused",
+  WONDER: "confused",
+  BINGUNG: "confused",
+  HERAN: "confused",
+  // Marah / kesal
+  ANGRY: "angry",
+  MAD: "angry",
+  ANNOYED: "angry",
+  UPSET: "angry",
+  MARAH: "angry",
+  KESAL: "angry",
+  // Sedih / empati
+  SAD: "sad",
+  SORRY: "sad",
+  SYMPATHY: "sad",
+  TOUCHED: "sad",
+  SEDIH: "sad",
+  TERHARU: "sad",
+  // Kaget / tak menyangka
+  SURPRISED: "surprised",
+  SHOCKED: "surprised",
+  AMAZED: "surprised",
+  KAGET: "surprised",
+  TERKEJUT: "surprised",
 };
 
-const EMOTION_TAG_RE =
-  /^\s*\[?\s*(NORMAL|TALK|WARM|SMILE|CALM|LAUGH|LAUGHING|GIGGLE|HAPPY|EXCITED|SHY|BLUSH|SWEET|LOVE|AFFECTIONATE|POUT|SULK|TEASED|CONFUSED|SURPRISED|SHOCKED|SAD)\s*\]\s*[:\-–—]?\s*/i;
+const TAG_NAMES_PATTERN = Object.keys(TAG_MAP).join("|");
 
-const INLINE_EMOTION_TAG_RE =
-  /\[\s*(NORMAL|TALK|WARM|SMILE|CALM|LAUGH|LAUGHING|GIGGLE|HAPPY|EXCITED|SHY|BLUSH|SWEET|LOVE|AFFECTIONATE|POUT|SULK|TEASED|CONFUSED|SURPRISED|SHOCKED|SAD)\s*\]/gi;
+const EMOTION_TAG_RE = new RegExp(
+  `^\\s*\\[?\\s*(${TAG_NAMES_PATTERN})\\s*\\]\\s*[:\\-–—]?\\s*`,
+  "i"
+);
+
+const INLINE_EMOTION_TAG_RE = new RegExp(
+  `\\[\\s*(${TAG_NAMES_PATTERN})\\s*\\]`,
+  "gi"
+);
 
 const LAUGH_WORDS_RE =
-  /\b(hahaha+|hehehe+|hihihi+|wkwk+|wakaka+|ketawa|ngakak|lucu\s+banget|bisa\s+aja\s+kamu|kocak|receh\s+banget|ampun\s+deh\s+haha)\b/i;
+  /\b(hahaha+|wakaka+|wkwk+|ketawa|ngakak|lucu\s+banget|kocak|receh\s+banget|ampun\s+deh\s+haha)\b/i;
 
 const SHY_WORDS_RE =
-  /\b(jadi\s+malu|malu\s+ah|ih\s+malu|salting|bikin\s+baper|deg-degan|kangen\s+banget|aku\s+juga\s+kangen|sayang\s+kamu|sayang\s+banget|makasih\s+ya\s+sayang|manis\s+banget\s+sih|gombal\s+terus|jangan\s+liatin\s+gitu)\b/i;
+  /\b(jadi\s+malu|malu\s+ah|ih\s+malu|salting|bikin\s+baper|deg-degan|kangen\s+banget|aku\s+juga\s+kangen|sayang\s+kamu|sayang\s+banget|manis\s+banget\s+sih|gombal\s+terus|jangan\s+liatin\s+gitu)\b/i;
+
+const SURPRISED_WORDS_RE =
+  /\b(astaga|ya\s+ampun|hah\s+serius|seriusan\s*\?!|beneran\s*\?!|demi\s+apa|masa\s+iya\s*\?!|kaget\s+aku|nggak\s+nyangka)\b/i;
+
+const ANGRY_WORDS_RE =
+  /\b(kesel\s+banget|marah\s+nih|nyebelin\s+banget\s+sih|jangan\s+gitu\s+dong|kebangetan|parah\s+banget\s+kamu|capek\s+tau\s+nggak|males\s+ah\s+sama\s+kamu)\b/i;
+
+const SAD_WORDS_RE =
+  /\b(ikut\s+sedih|sedih\s+banget|kasihan\s+banget|sayang\s+banget\s+ya|maafin\s+aku\s+ya|turut\s+berduka|pasti\s+berat\s+banget|terharu\s+aku|rasanya\s+nyesek)\b/i;
+
+const CONFUSED_WORDS_RE =
+  /\b(maksudnya\s+gimana|gimana\s+maksudnya|aku\s+bingung|kok\s+bisa\s+gitu|tunggu\s+deh\s+kok|lah\s+terus\s+gimana|yang\s+mana\s+sih)\b/i;
 
 const POUT_WORDS_RE =
-  /\b(nyebelin|jahat\s+banget|jahat\s+ih|ih\s+kok\s+gitu|kok\s+gitu\s+sih|ngambek|sebel\s+ah|sebel\s+banget|awas\s+ya\s+kamu|ih\s+apaan\s+sih|hah\s+serius|masa\s+sih|eh\s+seriusan|bohong\s+ya|tega\s+banget)\b/i;
+  /\b(nyebelin|jahat\s+ih|ih\s+kok\s+gitu|kok\s+gitu\s+sih|ngambek|sebel\s+ah|awas\s+ya\s+kamu|ih\s+apaan\s+sih|bohong\s+ya|tega\s+banget)\b/i;
+
+const SMILE_WORDS_RE =
+  /\b(hehe+|seneng\s+banget|syukurlah|alhamdulillah|asik\s+banget|makasih\s+banyak\s+ya|wah\s+seru|ikut\s+seneng)\b/i;
 
 export function inferEmotionFromIndonesianText(text: string): CallEmotion {
   const sample = text.trim();
   if (!sample) return "normal";
   if (LAUGH_WORDS_RE.test(sample)) return "laugh";
   if (SHY_WORDS_RE.test(sample)) return "shy";
+  if (SURPRISED_WORDS_RE.test(sample)) return "surprised";
+  if (ANGRY_WORDS_RE.test(sample)) return "angry";
+  if (SAD_WORDS_RE.test(sample)) return "sad";
+  if (CONFUSED_WORDS_RE.test(sample)) return "confused";
   if (POUT_WORDS_RE.test(sample)) return "pout";
+  if (SMILE_WORDS_RE.test(sample)) return "smile";
   return "normal";
 }
 
@@ -90,37 +176,71 @@ export function extractCallReplyEmotion(rawText: string): {
   return { cleanText, emotion };
 }
 
-const LEADING_LAUGH_CUE_RE =
-  /^(?:(?:a*h+a+(?:h+a+)+|e*h+e+(?:h+e+)+|h+i+(?:h+i+)+|(?:wk){2,}w*k*|wakaka+k*)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*)*)+/i;
+/**
+ * Arahan intonasi tambahan untuk Gemini HD TTS (`speech_metadata.style`)
+ * agar warna suara kalimat utama di Video Call maupun Telepon Suara ikut
+ * mengekspresikan suasana hati jawaban secara alami.
+ */
+export function geminiEmotionStyleHint(emotion: CallEmotion | undefined): string {
+  switch (emotion) {
+    case "smile":
+      return "bicara sambil tersenyum hangat, ramah, dan akrab";
+    case "laugh":
+      return "bicara ceria dengan sisa tawa ringan yang natural dan menyenangkan";
+    case "shy":
+      return "bicara lembut, pelan, dan agak tersipu malu-malu";
+    case "pout":
+      return "bicara dengan nada cemberut manja dan sedikit merajuk";
+    case "confused":
+      return "bicara dengan nada bingung, heran, dan bertanya-tanya secara alami";
+    case "angry":
+      return "bicara dengan nada kesal, protes tegas, tapi tetap manusiawi";
+    case "sad":
+      return "bicara pelan dengan nada sedih, lirih, lembut, dan penuh empati";
+    case "surprised":
+      return "bicara spontan dengan nada kaget, tak menyangka, dan ekspresif";
+    default:
+      return "";
+  }
+}
 
-const LEADING_SHY_CUE_RE =
-  /^(?:(?:e+h+e+(?:h+e+)*|h+e+(?:h+e+)+|u+h+m+|e+m+m+|h+m+m+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*)*)+/i;
-
-const LEADING_POUT_CUE_RE =
-  /^(?:(?:h+m+p*h*|h+u+h+|i+s*h+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]+)+)+/i;
+const LEADING_CUE_PATTERNS: Partial<Record<CallEmotion, RegExp>> = {
+  smile:
+    /^(?:(?:h+e+(?:h+e+)+|i+y+a+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*\s*)*)+/i,
+  laugh:
+    /^(?:(?:a*h+a+(?:h+a+)+|e*h+e+(?:h+e+)+|h+i+(?:h+i+)+|(?:wk){2,}w*k*|wakaka+k*)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*\s*)*)+/i,
+  shy:
+    /^(?:(?:e+h+e+(?:h+e+)*|h+e+(?:h+e+)+|u+h+m+|e+m+m+|h+m+m+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]*\s*)*)+/i,
+  pout:
+    /^(?:(?:h+m+p*h*|h+u+h+|i+s*h+)(?=[,.!~…\-–—\s]|$)(?:\s*[,.!~…\-–—]+\s*|\s+)+)+/i,
+  confused:
+    /^(?:(?:e+h+|h+a+h+|h+m+m+|l+o+h+)(?=[,.!?~…\-–—\s]|$)(?:\s*[,.!?~…\-–—]+\s*|\s+)+)+/i,
+  angry:
+    /^(?:(?:c+k+|t+c+k+|i+s*h+|d+i+h+|h+u+f+t*)(?=[,.!?~…\-–—\s]|$)(?:\s*[,.!?~…\-–—]+\s*|\s+)+)+/i,
+  sad:
+    /^(?:(?:y+a+h+|h+u+h+u+|a+d+u+h+|h+u+f+t*)(?=[,.!?~…\-–—\s]|$)(?:\s*[,.!?~…\-–—]+\s*|\s+)+)+/i,
+  surprised:
+    /^(?:(?:l+o+h+|e+h+|h+a+h+|w+a+h+|a+s+t+a+g+a+)(?=[,.!?~…\-–—\s]|$)(?:\s*[,.!?~…\-–—]+\s*|\s+)+)+/i,
+};
 
 /**
- * Pangkas kata reaksi vokal pembuka (mis. "Hahaha, ..." saat klip audio tawa asli
- * sudah diputar lebih dulu) agar karakter tidak terdengar ketawa/bergumam dua kali,
- * sementara teks di ruang chat tetap utuh apa adanya.
+ * Pangkas kata reaksi vokal pembuka (mis. "Hahaha, ...", "Yah, ...", "Eh? ...")
+ * saat klip audio reaksi asli sudah diputar lebih dulu di detik ke-0, agar karakter
+ * tidak terdengar mengulang reaksi dua kali sementara teks di ruang chat tetap utuh.
  */
 export function stripLeadingReactionCue(
   text: string,
   emotion: CallEmotion
 ): string {
   const sample = text.trim();
-  if (!sample) return "";
+  if (!sample || emotion === "normal") return sample;
 
+  const pattern = LEADING_CUE_PATTERNS[emotion];
+  if (!pattern) return sample;
+
+  const rest = sample.replace(pattern, "").trim();
   if (emotion === "laugh") {
-    return sample.replace(LEADING_LAUGH_CUE_RE, "").trim();
+    return rest;
   }
-  if (emotion === "shy") {
-    const rest = sample.replace(LEADING_SHY_CUE_RE, "").trim();
-    return rest || sample;
-  }
-  if (emotion === "pout") {
-    const rest = sample.replace(LEADING_POUT_CUE_RE, "").trim();
-    return rest || sample;
-  }
-  return sample;
+  return rest || sample;
 }

@@ -336,10 +336,16 @@ function PreloadedCallClipLayer({
   clip,
   active,
   playing,
+  loop = true,
+  priority = false,
+  onEnded,
 }: {
   clip: CallClipItem;
   active: boolean;
   playing: boolean;
+  loop?: boolean;
+  priority?: boolean;
+  onEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const url = useVideoPlayback(videoRef, clip.key, active && playing, false, true);
@@ -365,12 +371,17 @@ function PreloadedCallClipLayer({
           src={url}
           poster={clip.posterUrl || undefined}
           muted
-          loop
+          loop={loop}
           playsInline
           autoPlay={active && playing}
-          preload="auto"
+          preload={active || priority ? "auto" : "metadata"}
           disablePictureInPicture
           tabIndex={-1}
+          onEnded={() => {
+            if (active && !loop) {
+              onEnded?.();
+            }
+          }}
           onError={() => {
             fallbackMediaToStream(clip.key);
           }}
@@ -383,7 +394,7 @@ function PreloadedCallClipLayer({
 
 /**
  * Panggung multi-klip khusus layar Video Call:
- * Memuat seluruh klip ekspresi karakter di latar belakang sejak awal panggilan
+ * Memuat klip pembuka (1x jalan) serta klip ekspresi karakter di latar belakang
  * dan melakukan perpindahan ekspresi mulus tanpa kedip hitam & tanpa menyentuh
  * video latar ruang chat.
  */
@@ -391,12 +402,17 @@ export function CallVideoStage({
   clips,
   activeKey,
   playing,
+  nonLoopKey,
+  onClipEnded,
   dim = 0.12,
   zoom = 1,
 }: {
   clips: CallClipItem[];
   activeKey: string | null;
   playing: boolean;
+  /** Kunci klip pembuka yang hanya diputar 1x tanpa loop. */
+  nonLoopKey?: string | null;
+  onClipEnded?: (key: string) => void;
   dim?: number;
   zoom?: number;
 }) {
@@ -418,14 +434,20 @@ export function CallVideoStage({
             className="absolute inset-0 h-full w-full object-cover"
           />
         )}
-        {clips.map((clip) => (
-          <PreloadedCallClipLayer
-            key={clip.key}
-            clip={clip}
-            active={clip.key === activeKey}
-            playing={playing}
-          />
-        ))}
+        {clips.map((clip, idx) => {
+          const isOnce = Boolean(nonLoopKey && clip.key === nonLoopKey);
+          return (
+            <PreloadedCallClipLayer
+              key={clip.key}
+              clip={clip}
+              active={clip.key === activeKey}
+              playing={playing}
+              loop={!isOnce}
+              priority={idx < 4}
+              onEnded={isOnce ? () => onClipEnded?.(clip.key) : undefined}
+            />
+          );
+        })}
       </div>
       <div className="absolute inset-0 z-20 bg-black" style={{ opacity: dim }} />
     </div>

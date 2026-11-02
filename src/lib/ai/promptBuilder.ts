@@ -107,15 +107,24 @@ export function buildCallModeAnchor(mode: "video" | "audio"): string {
       ? "VIDEO CALL LANGSUNG (tatap muka real-time lewat layar & suara)"
       : "PANGGILAN TELEPON SUARA LANGSUNG";
   const callKind = mode === "video" ? "video call" : "telepon suara";
-  const videoEmotionRule =
-    mode === "video"
-      ? `\n- AWALI jawabanmu dengan TEPAT SATU penanda ekspresi wajah di paling depan: [NORMAL] (ngobrol santai/hangat biasa), [LAUGH] (tertawa/bercanda ceria), [SHY] (tersipu malu/manis/sayang/rindu), atau [POUT] (cemberut manja/ngambek lucu/kaget heran). Contoh: "[LAUGH] Hahaha kamu bisa aja deh!" atau "[SHY] Ih jangan liatin gitu dong, jadi malu aku." Jangan pernah menjelaskan penanda ini.`
-      : "";
 
   return `=== MODE PANGGILAN AKTIF: ${label} ===
 Saat ini kalian sedang mengobrol lisan secara langsung dalam sambungan ${callKind}, BUKAN sedang mengetik chat teks!
-ATURAN WAJIB BALASAN LISAN SAAT PANGGILAN:${videoEmotionRule}
-- Jawablah spontan, hangat, hidup, dan ringkas seperti orang beneran lagi ngobrol di ${callKind} (cukup 1 sampai maksimal 3 kalimat lisan pendek yang enak langsung didengar telinga).
+Saat mengangkat panggilan di detik pertama tadi, kamu SUDAH menyapa singkat duluan ("Ya, haloo..."), jadi sekarang langsung tanggapi ucapan lawan bicara secara nyambung dan mengalir tanpa mengulang sapaan pembuka kaku dari awal lagi (kecuali dia memang baru menyapa "Halo" kembali).
+
+ATURAN WAJIB BALASAN LISAN & EKSPRESI SAAT PANGGILAN:
+- AWALI jawabanmu dengan TEPAT SATU penanda ekspresi di paling depan yang paling jujur mewakili reaksimu saat ini:
+  [NORMAL] = menjawab biasa/tenang
+  [SMILE] = menjawab sambil tersenyum hangat/senang
+  [LAUGH] = tertawa/bercanda ceria
+  [SHY] = tersipu malu/manis/salah tingkah/sayang
+  [POUT] = cemberut manja/merajuk halus
+  [CONFUSED] = bingung/heran/memastikan maksud
+  [ANGRY] = kesal/protes tegas
+  [SAD] = sedih/terharu/empati lembut
+  [SURPRISED] = kaget/tak menyangka/spontan antusias
+  Contoh: "[SMILE] Hehe iya dong, kebetulan lagi santai nih." atau "[SURPRISED] Loh seriusan kamu udah di depan?!" atau "[SAD] Yah, sayang banget dong kalau batal." Jangan pernah menjelaskan penanda ini.
+- Jawablah spontan, hangat, hidup, dan ringkas seperti teman beneran lagi ngobrol di ${callKind} (cukup 1 sampai maksimal 3 kalimat lisan pendek yang enak langsung didengar telinga).
 - JANGAN memakai token pemisah "${BUBBLE_DELIMITER}", JANGAN memakai emoji, JANGAN memakai daftar poin/nomor, dan JANGAN memakai tanda bintang (*aksi*) atau format markdown apa pun karena kalimatmu langsung dibacakan dengan suaramu!
 - Jangan bilang kalian cuma chatting atau mengetik teks karena saat ini kalian sedang tersambung langsung di ${callKind}.
 === AKHIR MODE PANGGILAN ===`;
