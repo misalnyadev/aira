@@ -47,6 +47,7 @@ import {
   CallEndIcon,
   ChatsIcon,
   MicIcon,
+  MicOffIcon,
   SendIcon,
   SpeakerIcon,
   SpeakerOffIcon,
@@ -54,11 +55,10 @@ import {
 } from "./icons";
 
 const CONNECT_DELAY = 1400;
-/** Jeda hening setelah berhenti bicara sebelum kalimat otomatis dikirim (mode Otomatis). */
+/** Jeda hening setelah berhenti bicara sebelum kalimat otomatis dikirim di balik layar. */
 const SILENCE_SEND_MS = 1600;
 /** Jeda singkat seusai karakter bicara sebelum mikrofon dibuka lagi agar gema speaker habis. */
 const POST_SPEECH_LISTEN_DELAY_MS = 450;
-const AUTO_MIC_STORAGE_KEY = "aira:call-auto-mic";
 
 const subscribeNothing = () => () => {};
 
@@ -68,16 +68,6 @@ function useIsClient() {
     () => true,
     () => false
   );
-}
-
-function readInitialAutoMic(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const saved = window.localStorage.getItem(AUTO_MIC_STORAGE_KEY);
-    return saved === null ? true : saved === "1";
-  } catch {
-    return true;
-  }
 }
 
 function formatDuration(total: number) {
@@ -94,10 +84,11 @@ export type CallTurnReply = {
 };
 
 /**
- * Layar panggilan suara & video call interaktif 2 arah:
+ * Layar panggilan suara & video call realistis tanpa teks/transkrip di layar:
+ * - Seluruh pendengaran mikrofon otomatis, pengiriman ke AI, dan penyimpanan
+ *   ke riwayat chat berlangsung murni di balik layar.
  * - Menggabungkan 7 klip ekspresi video + 5 asset audio instan (di-preload ke RAM)
- *   + sinkronisasi gelombang suara nyata (`useIsAudibleSpeaking`) sehingga gerak
- *   wajah/bibir dan keluarnya suara menyatu tanpa jeda generate TTS.
+ *   + sinkronisasi gelombang suara nyata (`useIsAudibleSpeaking`).
  */
 export function CallOverlay({
   character,
@@ -122,17 +113,13 @@ export function CallOverlay({
   const [connected, setConnected] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [muted, setMuted] = useState(false);
-  const [audioBlocked, setAudioBlocked] = useState(false);
-  const [autoMic, setAutoMic] = useState<boolean>(readInitialAutoMic);
+  const [micMuted, setMicMuted] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [preparingSpeech, setPreparingSpeech] = useState(false);
   const [cuePlayingSlot, setCuePlayingSlot] = useState<CallAudioSlot | null>(null);
   const [replyEmotion, setReplyEmotion] = useState<CallEmotion>("normal");
   const [silentExpressing, setSilentExpressing] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const [lastUserLine, setLastUserLine] = useState("");
-  const [lastAssistantLine, setLastAssistantLine] = useState("");
-  const [micHint, setMicHint] = useState<string | null>(null);
+  const [userSpeaking, setUserSpeaking] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [typedDraft, setTypedDraft] = useState("");
 
@@ -143,7 +130,8 @@ export function CallOverlay({
   const mountedRef = useRef(true);
   const connectedRef = useRef(false);
   const mutedRef = useRef(false);
-  const autoMicRef = useRef(autoMic);
+  const micMutedRef = useRef(false);
+  const permissionDeniedRef = useRef(false);
   const thinkingRef = useRef(false);
   const showTextInputRef = useRef(false);
   const mediaRef = useRef(character.media);
@@ -177,8 +165,8 @@ export function CallOverlay({
   }, [muted]);
 
   useEffect(() => {
-    autoMicRef.current = autoMic;
-  }, [autoMic]);
+    micMutedRef.current = micMuted;
+  }, [micMuted]);
 
   useEffect(() => {
     thinkingRef.current = thinking;
@@ -242,102 +230,93 @@ export function CallOverlay({
 
   /**
    * Putar klip asset audio pendek dari RAM (`0ms`) dan tunggu hingga selesai.
-   * Mengembalikan `true` jika berhasil diputar penuh/sebagian, `false` jika dilewati.
    */
-  const playCueSlot = useCallback(
-    (slot: CallAudioSlot): Promise<boolean> => {
-      const key = resolveCallAudioAssetKey(mediaRef.current, slot);
-      const el = getCueAudio();
-      if (!key || !el || mutedRef.current) return Promise.resolve(false);
+  const playCueSlot = useCallback((slot: CallAudioSlot): Promise<boolean> => {
+    const key = resolveCallAudioAssetKey(mediaRef.current, slot);
+    const el = getCueAudio();
+    if (!key || !el || mutedRef.current) return Promise.resolve(false);
 
-      const initialUrl = getMediaUrl(key) ?? `/api/media/stream?key=${encodeURIComponent(key)}`;
+    const initialUrl = getMediaUrl(key) ?? `/api/media/stream?key=${encodeURIComponent(key)}`;
 
-      if (activeCueFinishRef.current) {
-        const prevDone = activeCueFinishRef.current;
-        activeCueFinishRef.current = null;
-        prevDone();
-      }
+    if (activeCueFinishRef.current) {
+      const prevDone = activeCueFinishRef.current;
+      activeCueFinishRef.current = null;
+      prevDone();
+    }
 
-      return new Promise<boolean>((resolve) => {
-        let settled = false;
-        let retriedStream = false;
-        let started = false;
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      let retriedStream = false;
+      let started = false;
 
-        const finish = (ok: boolean) => {
-          if (settled) return;
-          settled = true;
-          window.clearTimeout(safetyId);
-          if (activeCueFinishRef.current === forceCancel) {
-            activeCueFinishRef.current = null;
-          }
-          el.onended = null;
-          el.onerror = null;
-          if (mountedRef.current) {
-            setCuePlayingSlot((curr) => (curr === slot ? null : curr));
-          }
-          resolve(ok);
-        };
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(safetyId);
+        if (activeCueFinishRef.current === forceCancel) {
+          activeCueFinishRef.current = null;
+        }
+        el.onended = null;
+        el.onerror = null;
+        if (mountedRef.current) {
+          setCuePlayingSlot((curr) => (curr === slot ? null : curr));
+        }
+        resolve(ok);
+      };
 
-        const forceCancel = () => finish(started);
-        activeCueFinishRef.current = forceCancel;
+      const forceCancel = () => finish(started);
+      activeCueFinishRef.current = forceCancel;
 
-        const safetyId = window.setTimeout(() => finish(started), 25_000);
+      const safetyId = window.setTimeout(() => finish(started), 25_000);
 
-        const tryPlayUrl = (srcUrl: string) => {
-          el.muted = mutedRef.current;
-          el.volume = Math.min(1, Math.max(0, voiceRef.current.volume ?? 1));
-          el.onended = () => finish(true);
-          el.onerror = () => {
-            if (!retriedStream && fallbackMediaToStream(key)) {
-              retriedStream = true;
-              const fallbackUrl = getMediaUrl(key);
-              if (fallbackUrl) {
-                tryPlayUrl(fallbackUrl);
-                return;
-              }
+      const tryPlayUrl = (srcUrl: string) => {
+        el.muted = mutedRef.current;
+        el.volume = Math.min(1, Math.max(0, voiceRef.current.volume ?? 1));
+        el.onended = () => finish(true);
+        el.onerror = () => {
+          if (!retriedStream && fallbackMediaToStream(key)) {
+            retriedStream = true;
+            const fallbackUrl = getMediaUrl(key);
+            if (fallbackUrl) {
+              tryPlayUrl(fallbackUrl);
+              return;
             }
-            finish(false);
-          };
-          el.src = srcUrl;
-          const p = el.play();
-          if (p && typeof p.then === "function") {
-            p.then(() => {
-              if (settled) return;
-              started = true;
-              if (mountedRef.current) {
-                setCuePlayingSlot(slot);
-              }
-            }).catch((err: unknown) => {
-              const errName = err instanceof Error ? err.name : "";
-              if (errName === "NotAllowedError" && mountedRef.current) {
-                setAudioBlocked(true);
-              }
-              finish(false);
-            });
-          } else {
+          }
+          finish(false);
+        };
+        el.src = srcUrl;
+        const p = el.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            if (settled) return;
             started = true;
             if (mountedRef.current) {
               setCuePlayingSlot(slot);
             }
+          }).catch(() => {
+            finish(false);
+          });
+        } else {
+          started = true;
+          if (mountedRef.current) {
+            setCuePlayingSlot(slot);
           }
-        };
+        }
+      };
 
-        tryPlayUrl(initialUrl);
-      });
-    },
-    []
-  );
+      tryPlayUrl(initialUrl);
+    });
+  }, []);
 
   const handleDictationText = useCallback(
     (spoken: string) => {
       if (ignoreDictationRef.current) return;
       const clean = spoken.trim();
       transcriptRef.current = clean;
-      setLiveTranscript(clean);
-      setMicHint(null);
+      setUserSpeaking(clean.length > 0);
 
       clearSilenceTimer();
-      if (autoMicRef.current && clean.length > 0) {
+      if (clean.length > 0) {
         silenceTimerRef.current = window.setTimeout(() => {
           submitSpokenRef.current();
         }, SILENCE_SEND_MS);
@@ -349,7 +328,10 @@ export function CallOverlay({
   const handleDictationError = useCallback(
     (message: string) => {
       clearSilenceTimer();
-      setMicHint(message);
+      setUserSpeaking(false);
+      if (message.includes("Izin dikte ditolak")) {
+        permissionDeniedRef.current = true;
+      }
     },
     [clearSilenceTimer]
   );
@@ -366,6 +348,7 @@ export function CallOverlay({
 
   const startListeningTurn = useCallback(() => {
     if (!mountedRef.current || !connectedRef.current) return;
+    if (micMutedRef.current || permissionDeniedRef.current) return;
     if (thinkingRef.current || showTextInputRef.current) return;
     if (!dictationRef.current.supported) return;
 
@@ -378,20 +361,26 @@ export function CallOverlay({
     stopSpeaking();
     transcriptRef.current = "";
     ignoreDictationRef.current = false;
-    setLiveTranscript("");
-    setMicHint(null);
+    setUserSpeaking(false);
     dictationRef.current.start();
   }, [clearAutoListenTimer, clearSilenceTimer, clearSilentExprTimer, stopCueAudio]);
 
   const scheduleAutoListen = useCallback(
     (delayMs = POST_SPEECH_LISTEN_DELAY_MS) => {
       clearAutoListenTimer();
-      if (!autoMicRef.current || !dictationRef.current.supported) return;
+      if (
+        micMutedRef.current ||
+        permissionDeniedRef.current ||
+        !dictationRef.current.supported
+      ) {
+        return;
+      }
       autoListenTimerRef.current = window.setTimeout(() => {
         if (
           mountedRef.current &&
           connectedRef.current &&
-          autoMicRef.current &&
+          !micMutedRef.current &&
+          !permissionDeniedRef.current &&
           !thinkingRef.current &&
           !showTextInputRef.current
         ) {
@@ -401,6 +390,48 @@ export function CallOverlay({
     },
     [clearAutoListenTimer, startListeningTurn]
   );
+
+  // Bila sesi dikte berhenti karena diam sangat lama (melewati batas restart), sambung lagi di balik layar.
+  useEffect(() => {
+    if (
+      !interactive ||
+      !connected ||
+      micMuted ||
+      thinking ||
+      preparingSpeech ||
+      speaking ||
+      cuePlayingSlot !== null ||
+      showTextInput ||
+      dictation.listening
+    ) {
+      return;
+    }
+    const id = window.setTimeout(() => {
+      if (
+        mountedRef.current &&
+        connectedRef.current &&
+        !micMutedRef.current &&
+        !permissionDeniedRef.current &&
+        !thinkingRef.current &&
+        !showTextInputRef.current &&
+        !dictationRef.current.listening
+      ) {
+        startListeningTurn();
+      }
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [
+    connected,
+    cuePlayingSlot,
+    dictation.listening,
+    interactive,
+    micMuted,
+    preparingSpeech,
+    showTextInput,
+    speaking,
+    startListeningTurn,
+    thinking,
+  ]);
 
   const sendUtterance = useCallback(
     async (rawText: string) => {
@@ -416,16 +447,13 @@ export function CallOverlay({
       setPreparingSpeech(false);
       ignoreDictationRef.current = true;
       transcriptRef.current = "";
+      setUserSpeaking(false);
       if (dictationRef.current.listening) {
         dictationRef.current.stop();
       }
       stopSpeaking();
 
       const myTurn = ++turnSeqRef.current;
-      setLiveTranscript("");
-      setLastUserLine(clean);
-      setLastAssistantLine("");
-      setMicHint(null);
       setThinking(true);
       thinkingRef.current = true;
 
@@ -456,7 +484,6 @@ export function CallOverlay({
 
       if (mutedRef.current) {
         stopCueAudio();
-        setLastAssistantLine(reply.text);
         setSilentExpressing(true);
         silentExprTimerRef.current = window.setTimeout(() => {
           setSilentExpressing(false);
@@ -484,7 +511,6 @@ export function CallOverlay({
           prefetchSpeech(spokenBody, voiceTargetRef.current);
         }
 
-        setLastAssistantLine(reply.text);
         await playCueSlot(reactionSlot);
         if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
 
@@ -504,7 +530,6 @@ export function CallOverlay({
           if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
           stopCueAudio();
           setPreparingSpeech(false);
-          setLastAssistantLine(reply.text);
         },
         onEnd: (completed) => {
           if (!mountedRef.current || turnSeqRef.current !== myTurn) return;
@@ -518,7 +543,6 @@ export function CallOverlay({
       if (!started) {
         stopCueAudio();
         setPreparingSpeech(false);
-        setLastAssistantLine(reply.text);
         setSilentExpressing(true);
         silentExprTimerRef.current = window.setTimeout(() => {
           setSilentExpressing(false);
@@ -622,30 +646,6 @@ export function CallOverlay({
     return () => window.clearInterval(id);
   }, [connected]);
 
-  function toggleAutoMic() {
-    const next = !autoMic;
-    setAutoMic(next);
-    autoMicRef.current = next;
-    try {
-      window.localStorage.setItem(AUTO_MIC_STORAGE_KEY, next ? "1" : "0");
-    } catch {
-      // Diabaikan bila mode privat menolak localStorage.
-    }
-    if (!next) {
-      clearSilenceTimer();
-      clearAutoListenTimer();
-    } else if (
-      connected &&
-      !thinking &&
-      !speaking &&
-      cuePlayingSlot === null &&
-      !dictation.listening &&
-      !showTextInput
-    ) {
-      startListeningTurn();
-    }
-  }
-
   function handleMicPress() {
     unlockSpeech();
     if (!connected || thinking) return;
@@ -655,28 +655,42 @@ export function CallOverlay({
       showTextInputRef.current = false;
     }
 
-    if (dictation.listening) {
-      const spoken = transcriptRef.current.trim();
-      if (spoken) {
-        void sendUtterance(spoken);
-      } else {
-        clearSilenceTimer();
-        ignoreDictationRef.current = true;
-        dictation.stop();
-      }
-      return;
-    }
-
+    // Bila karakter sedang bicara, ketukan Mic langsung menyela (barge-in) dan mengaktifkan mic.
     if (speaking || cuePlayingSlot !== null || preparingSpeech) {
       turnSeqRef.current += 1;
       stopCueAudio();
       setPreparingSpeech(false);
       stopSpeaking();
+      clearSilentExprTimer();
+      setSilentExpressing(false);
+      permissionDeniedRef.current = false;
+      setMicMuted(false);
+      micMutedRef.current = false;
+      startListeningTurn();
+      return;
     }
-    clearSilentExprTimer();
-    setSilentExpressing(false);
 
-    startListeningTurn();
+    // Bila sedang ada kalimat yang baru diucapkan, ketukan Mic mengirimnya seketika.
+    if (dictation.listening && transcriptRef.current.trim().length > 0) {
+      void sendUtterance(transcriptRef.current);
+      return;
+    }
+
+    // Selebihnya bekerja seperti tombol Bisukan / Nyalakan Mikrofon di panggilan nyata.
+    const nextMuted = !micMuted;
+    setMicMuted(nextMuted);
+    micMutedRef.current = nextMuted;
+    if (nextMuted) {
+      clearSilenceTimer();
+      clearAutoListenTimer();
+      ignoreDictationRef.current = true;
+      transcriptRef.current = "";
+      setUserSpeaking(false);
+      if (dictation.listening) dictation.stop();
+    } else {
+      permissionDeniedRef.current = false;
+      startListeningTurn();
+    }
   }
 
   function toggleTextInput() {
@@ -688,9 +702,17 @@ export function CallOverlay({
       clearSilenceTimer();
       clearAutoListenTimer();
       ignoreDictationRef.current = true;
+      transcriptRef.current = "";
+      setUserSpeaking(false);
       if (dictation.listening) dictation.stop();
       window.setTimeout(() => textInputRef.current?.focus(), 40);
-    } else if (connected && autoMic && !thinking && !speaking && cuePlayingSlot === null) {
+    } else if (
+      connected &&
+      !micMuted &&
+      !thinking &&
+      !speaking &&
+      cuePlayingSlot === null
+    ) {
       scheduleAutoListen(250);
     }
   }
@@ -710,7 +732,6 @@ export function CallOverlay({
     const next = !muted;
     setMuted(next);
     mutedRef.current = next;
-    setAudioBlocked(false);
     const el = getCueAudio();
     if (el) el.muted = next;
     if (next) {
@@ -728,6 +749,7 @@ export function CallOverlay({
     stopCueAudio();
     setPreparingSpeech(false);
     ignoreDictationRef.current = true;
+    setUserSpeaking(false);
     if (dictation.listening) dictation.stop();
     stopSpeaking();
     onClose();
@@ -749,30 +771,19 @@ export function CallOverlay({
         ? { kind: "speaking", emotion: replyEmotion }
         : thinking || preparingSpeech || cuePlayingSlot === "thinking"
           ? { kind: "thinking" }
-          : dictation.listening
+          : dictation.listening && userSpeaking
             ? { kind: "listening" }
             : { kind: "idle" };
 
   const activeClip = resolveActiveCallClip(media, visualPhase);
   const voiceActiveNow = audibleSpeaking || activeCueEmotion !== null;
-  const waitingReply = thinking || preparingSpeech;
 
   const showWave =
     connected &&
     !muted &&
-    (voiceActiveNow || cuePlayingSlot === "thinking" || dictation.listening);
+    (voiceActiveNow || cuePlayingSlot === "thinking" || (dictation.listening && userSpeaking));
 
-  const statusDetail = !connected
-    ? "Memanggil..."
-    : waitingReply
-      ? `Tersambung · ${formatDuration(seconds)} · Menjawab...`
-      : voiceActiveNow
-        ? `Tersambung · ${formatDuration(seconds)} · Berbicara`
-        : dictation.listening
-          ? `Tersambung · ${formatDuration(seconds)} · Mendengarkan`
-          : `Tersambung · ${formatDuration(seconds)}`;
-
-  const hasSpokenDraft = dictation.listening && liveTranscript.trim().length > 0;
+  const statusDetail = !connected ? "Memanggil..." : formatDuration(seconds);
 
   const content = (
     <div
@@ -793,25 +804,19 @@ export function CallOverlay({
               clips={allCallClips}
               activeKey={activeClip?.key ?? null}
               playing={connected}
-              dim={0.12}
+              dim={0.08}
               zoom={zoom}
             />
           </div>
         )}
       </div>
 
-      <div className="relative flex h-full flex-col justify-between px-4 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.25rem))] pt-[max(1.35rem,var(--safe-top))]">
+      <div className="relative flex h-full flex-col justify-between px-4 pb-[max(1.4rem,calc(env(safe-area-inset-bottom)+0.25rem))] pt-[max(1.35rem,var(--safe-top))]">
         <div className="text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">
-            {mode === "video" ? "Video call" : "Panggilan suara"}
+          <h2 className="text-lg font-semibold drop-shadow">{character.name}</h2>
+          <p className="mt-0.5 text-[13px] tabular-nums text-white/75 drop-shadow">
+            {statusDetail}
           </p>
-          <h2 className="mt-1 text-lg font-semibold drop-shadow">{character.name}</h2>
-          <p className="mt-0.5 text-[13px] text-white/75">{statusDetail}</p>
-          {audioBlocked && (
-            <p className="mt-1 text-[12px] text-white/60">
-              Ketuk ikon suara di bawah untuk menyalakan audio.
-            </p>
-          )}
         </div>
 
         {mode === "audio" ? (
@@ -847,50 +852,10 @@ export function CallOverlay({
           </div>
         )}
 
-        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-2.5">
-          {/* Kapsul teks percakapan langsung (muncul serentak saat suara benar-benar mulai keluar) */}
-          {interactive && connected && (
-            <div className="w-full">
-              {(liveTranscript ||
-                waitingReply ||
-                lastAssistantLine ||
-                dictation.listening ||
-                micHint) && (
-                <div className="mx-auto max-h-28 overflow-y-auto rounded-2xl bg-black/50 px-3.5 py-2 text-center text-[13.5px] leading-snug text-white/95 ring-1 ring-white/15 backdrop-blur-md">
-                  {waitingReply ? (
-                    <p className="text-white/85">
-                      <span className="text-white/55">Kamu:</span> “{lastUserLine}”
-                      <span className="mt-1 block text-[12px] text-white/65">
-                        {character.name} sedang menjawab…
-                      </span>
-                    </p>
-                  ) : dictation.listening && liveTranscript ? (
-                    <p>
-                      <span className="mr-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 align-middle" />
-                      “{liveTranscript}”
-                    </p>
-                  ) : voiceActiveNow && lastAssistantLine ? (
-                    <p>{lastAssistantLine}</p>
-                  ) : dictation.listening ? (
-                    <p className="text-[12.5px] text-white/75">
-                      <span className="mr-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400 align-middle" />
-                      {autoMic
-                        ? "Silakan bicara… otomatis terkirim saat jeda"
-                        : "Silakan bicara… ketuk Kirim saat selesai"}
-                    </p>
-                  ) : micHint ? (
-                    <p className="text-[12px] text-amber-200/90">{micHint}</p>
-                  ) : lastAssistantLine ? (
-                    <p className="text-white/85">{lastAssistantLine}</p>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Kolom ketik cepat di dalam panggilan bila lagi tidak enak bersuara */}
+        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3">
+          {/* Kolom ketik hanya muncul saat tombol Ketik ditekan; setelah dikirim langsung hilang bersih */}
           {interactive && connected && showTextInput && (
-            <div className="flex w-full items-center gap-1.5 rounded-full bg-black/60 p-1 pl-3.5 ring-1 ring-white/20 backdrop-blur-md">
+            <div className="flex w-full items-center gap-1.5 rounded-full bg-black/55 p-1 pl-3.5 ring-1 ring-white/20 backdrop-blur-md">
               <input
                 ref={textInputRef}
                 type="text"
@@ -927,104 +892,67 @@ export function CallOverlay({
             </div>
           )}
 
-          {/* Pil sakelar Otomatis vs Manual untuk mikrofon panggilan */}
-          {interactive && connected && dictation.supported && (
-            <button
-              type="button"
-              onClick={toggleAutoMic}
-              aria-pressed={autoMic}
-              className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1 text-[11.5px] font-medium text-white/80 ring-1 ring-white/15 backdrop-blur-md transition hover:bg-black/60 active:scale-95"
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  autoMic ? "bg-emerald-400" : "bg-white/45"
-                }`}
-              />
-              {autoMic ? "Mic Otomatis · Ketuk ke Manual" : "Mic Manual · Ketuk ke Otomatis"}
-            </button>
-          )}
-
-          <div className="flex items-start justify-center gap-5 sm:gap-7">
+          <div className="flex items-center justify-center gap-5 sm:gap-6">
             {interactive && dictation.supported && (
-              <div className="flex flex-col items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleMicPress}
-                  disabled={!connected || thinking}
-                  aria-pressed={dictation.listening}
-                  aria-label={
-                    hasSpokenDraft
-                      ? "Kirim ucapan sekarang"
-                      : dictation.listening
-                        ? "Jeda mikrofon"
-                        : "Mulai bicara"
-                  }
-                  className={`relative flex h-13 w-13 items-center justify-center rounded-full backdrop-blur transition active:scale-95 disabled:opacity-45 ${
-                    dictation.listening
-                      ? "bg-white text-zinc-950 shadow-lg ring-4 ring-white/25"
-                      : "bg-white/15 text-white hover:bg-white/25"
-                  }`}
-                >
-                  {hasSpokenDraft ? (
-                    <SendIcon className="h-5 w-5" />
-                  ) : (
-                    <MicIcon className="h-6 w-6" />
-                  )}
-                </button>
-                <span className="text-[11px] text-white/70">
-                  {hasSpokenDraft
-                    ? "Kirim"
-                    : dictation.listening
-                      ? "Mendengar"
-                      : "Bicara"}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={handleMicPress}
+                disabled={!connected || thinking}
+                aria-pressed={micMuted}
+                aria-label={micMuted ? "Nyalakan mikrofon" : "Bisukan mikrofon"}
+                className={`flex h-13 w-13 items-center justify-center rounded-full backdrop-blur-md transition active:scale-95 disabled:opacity-45 ${
+                  micMuted
+                    ? "bg-white text-zinc-950 shadow-lg"
+                    : "bg-white/18 text-white hover:bg-white/25"
+                }`}
+              >
+                {micMuted ? (
+                  <MicOffIcon className="h-6 w-6" />
+                ) : (
+                  <MicIcon className="h-6 w-6" />
+                )}
+              </button>
             )}
 
             {interactive && (
-              <div className="flex flex-col items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={toggleTextInput}
-                  disabled={!connected || thinking}
-                  aria-pressed={showTextInput}
-                  aria-label="Ketik pesan di dalam panggilan"
-                  className={`flex h-13 w-13 items-center justify-center rounded-full backdrop-blur transition active:scale-95 disabled:opacity-45 ${
-                    showTextInput
-                      ? "bg-white text-zinc-950 shadow-lg"
-                      : "bg-white/15 text-white hover:bg-white/25"
-                  }`}
-                >
-                  <ChatsIcon className="h-5 w-5" />
-                </button>
-                <span className="text-[11px] text-white/70">Ketik</span>
-              </div>
+              <button
+                type="button"
+                onClick={toggleTextInput}
+                disabled={!connected || thinking}
+                aria-pressed={showTextInput}
+                aria-label="Ketik pesan di dalam panggilan"
+                className={`flex h-13 w-13 items-center justify-center rounded-full backdrop-blur-md transition active:scale-95 disabled:opacity-45 ${
+                  showTextInput
+                    ? "bg-white text-zinc-950 shadow-lg"
+                    : "bg-white/18 text-white hover:bg-white/25"
+                }`}
+              >
+                <ChatsIcon className="h-5 w-5" />
+              </button>
             )}
 
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={toggleMute}
-                aria-pressed={muted}
-                aria-label={muted ? "Nyalakan suara panggilan" : "Bisukan panggilan"}
-                className="flex h-13 w-13 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25 active:scale-95"
-              >
-                {muted ? <SpeakerOffIcon className="h-6 w-6" /> : <SpeakerIcon className="h-6 w-6" />}
-              </button>
-              <span className="text-[11px] text-white/70">{muted ? "Nyalakan" : "Bisukan"}</span>
-            </div>
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-pressed={muted}
+              aria-label={muted ? "Nyalakan suara panggilan" : "Bisukan panggilan"}
+              className={`flex h-13 w-13 items-center justify-center rounded-full backdrop-blur-md transition active:scale-95 ${
+                muted
+                  ? "bg-white text-zinc-950 shadow-lg"
+                  : "bg-white/18 text-white hover:bg-white/25"
+              }`}
+            >
+              {muted ? <SpeakerOffIcon className="h-6 w-6" /> : <SpeakerIcon className="h-6 w-6" />}
+            </button>
 
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={endCall}
-                aria-label="Akhiri panggilan"
-                className="flex h-13 w-13 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg transition hover:bg-rose-600 active:scale-95"
-              >
-                <CallEndIcon className="h-6 w-6" />
-              </button>
-              <span className="text-[11px] text-white/70">Akhiri</span>
-            </div>
+            <button
+              type="button"
+              onClick={endCall}
+              aria-label="Akhiri panggilan"
+              className="flex h-13 w-13 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg transition hover:bg-rose-600 active:scale-95"
+            >
+              <CallEndIcon className="h-6 w-6" />
+            </button>
           </div>
         </div>
       </div>
