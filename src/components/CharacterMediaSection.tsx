@@ -46,8 +46,8 @@ const CALL_EXPRESSION_META: {
   {
     slot: "greeting",
     label: "Pembuka angkat telepon (1x)",
-    hint: "Sapaan 'Ya, haloo…' di awal (saran 4 dtk).",
-    activeHint: "Diputar 1x saat panggilan diangkat.",
+    hint: "Sapaan 1x dengan suara asli videonya (4 dtk).",
+    activeHint: "Diputar 1x bersuara asli saat diangkat.",
   },
   {
     slot: "listening",
