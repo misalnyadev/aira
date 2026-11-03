@@ -105,7 +105,6 @@ export function ChatWindow({
   background,
   bubble,
   composer,
-  contactControlBar,
   composerVisible = true,
   onScreenTap,
   onBack,
@@ -133,8 +132,6 @@ export function ChatWindow({
   bubble?: BubbleStyle;
   /** Kolom ketik di bagian bawah ruang chat (menyatu di atas latar/video penuh). */
   composer?: ReactNode;
-  /** Pita kontrol opsional untuk kontak 2 arah (mis. sakelar AI vs Balas Manual). */
-  contactControlBar?: ReactNode;
   /** Apakah kolom ketik sedang ditampilkan (pada mode hide muncul saat layar disentuh). */
   composerVisible?: boolean;
   /** Ketukan di layar bersih (dipakai pada mode hide untuk memunculkan/menyembunyikan komposer). */
@@ -560,12 +557,6 @@ export function ChatWindow({
               <PhoneCallIcon className="h-6 w-6" />
             </button>
           )}
-        </div>
-      )}
-
-      {!hideMessages && contactControlBar && (
-        <div className="z-10 border-b border-line bg-surface/90 px-3 py-2 backdrop-blur-xs sm:px-4">
-          {contactControlBar}
         </div>
       )}
 

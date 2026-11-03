@@ -91,9 +91,6 @@ export function ChatApp() {
   const [view, setView] = useState<AppView>("chats");
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [contactThreads, setContactThreads] = useState<CharacterSummary[]>([]);
-  const [togglingContactAiId, setTogglingContactAiId] = useState<string | null>(
-    null
-  );
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
@@ -673,27 +670,6 @@ export function ChatApp() {
     }
   }
 
-  async function handleToggleContactAi(contactId: string, nextAi: boolean) {
-    setTogglingContactAiId(contactId);
-    setContactThreads((prev) =>
-      prev.map((t) =>
-        t.contactId === contactId ? { ...t, aiAutoReply: nextAi } : t
-      )
-    );
-    try {
-      const res = await api(`/api/contacts/${contactId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle_ai", aiAutoReply: nextAi }),
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      await fetchCharacters();
-    } finally {
-      setTogglingContactAiId(null);
-    }
-  }
-
   async function openEdit(id: string) {
     const res = await api(`/api/characters/${id}`);
     const data = await res.json();
@@ -975,48 +951,6 @@ export function ChatApp() {
                     onStopSpeaking={stopSpeaking}
                     onDeleteMessage={handleDeleteMessage}
                     onRegenerate={handleRegenerate}
-                    contactControlBar={
-                      activeCharacter.threadKind === "owner_contact" &&
-                      activeCharacter.contactId ? (
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                          <span className="text-ink-soft">
-                            {activeCharacter.aiAutoReply !== false
-                              ? "🤖 AI otomatis menjawab tamu · Ketik di bawah untuk membalas manual tanpa AI"
-                              : "✋ AI dijeda · Hanya balasan manualmu yang dikirim ke tamu"}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={
-                              togglingContactAiId === activeCharacter.contactId
-                            }
-                            onClick={() =>
-                              activeCharacter.contactId &&
-                              handleToggleContactAi(
-                                activeCharacter.contactId,
-                                activeCharacter.aiAutoReply === false
-                              )
-                            }
-                            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
-                              activeCharacter.aiAutoReply !== false
-                                ? "bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25 dark:text-emerald-300"
-                                : "bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-300"
-                            }`}
-                          >
-                            {activeCharacter.aiAutoReply !== false
-                              ? "Jeda AI (Mode Manual)"
-                              : "Aktifkan Lagi AI"}
-                          </button>
-                        </div>
-                      ) : activeCharacter.threadKind === "guest_contact" &&
-                        activeCharacter.aiAutoReply === false ? (
-                        <div className="flex items-center justify-between gap-2 text-xs text-ink-soft">
-                          <span>
-                            💬 Pemilik karakter sedang membalas langsung secara
-                            manual (tanpa AI).
-                          </span>
-                        </div>
-                      ) : undefined
-                    }
                     composer={
                       <Composer
                         key={activeCharacter.id}
