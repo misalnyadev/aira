@@ -361,3 +361,20 @@ export function MicOffIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function NotesBoardIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x={4.5} y={3.5} width={15} height={17} rx={2.5} />
+      <path d="M8.5 8.5h7M8.5 12.5h7M8.5 16.5h4.5" />
+    </svg>
+  );
+}

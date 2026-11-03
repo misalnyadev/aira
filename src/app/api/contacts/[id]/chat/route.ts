@@ -25,6 +25,7 @@ import { serializeContactMessageForViewer } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
+import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
 import { readImageAsBase64 } from "@/lib/uploads";
 import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
@@ -94,16 +95,28 @@ export async function POST(
   // KASUS A: Pengirim adalah Pemilik Karakter -> Balas Manual Murni (Tanpa AI)
   // =========================================================================
   if (user.id === contact.ownerUserId && user.id !== contact.guestUserId) {
+    const cleanManualText = content?.trim() || "";
     const [manualRow] = await db
       .insert(contactMessages)
       .values({
         contactId: contact.id,
         senderKind: "owner_manual",
-        content: content?.trim() || "",
+        content: cleanManualText,
         imageUrl: imageUrl || null,
         isVoiceNote: userSentVoiceNote,
       })
       .returning();
+
+    const manualNotes = cleanManualText && !imageUrl
+      ? await captureAndBuildSharedNotesContext({
+          scope: {
+            characterId: contact.characterId,
+            scopeUserId: contact.guestUserId,
+          },
+          userText: cleanManualText,
+          enableAutoCapture: true,
+        }).catch(() => ({ capturedNotes: [] }))
+      : { capturedNotes: [] };
 
     await db
       .update(characterContacts)
@@ -117,6 +130,7 @@ export async function POST(
         contactMeta
       ),
       assistantMessages: [],
+      capturedNotes: manualNotes.capturedNotes,
       manualReply: true,
     });
   }
@@ -128,16 +142,28 @@ export async function POST(
 
   // Jika mode manual aktif (AI dijeda oleh pemilik karakter) & bukan telepon:
   if (!shouldRunAi) {
+    const cleanGuestManualText = content?.trim() || "";
     const [guestRow] = await db
       .insert(contactMessages)
       .values({
         contactId: contact.id,
         senderKind: "guest",
-        content: content?.trim() || "",
+        content: cleanGuestManualText,
         imageUrl: imageUrl || null,
         isVoiceNote: userSentVoiceNote,
       })
       .returning();
+
+    const guestManualNotes = cleanGuestManualText && !imageUrl
+      ? await captureAndBuildSharedNotesContext({
+          scope: {
+            characterId: contact.characterId,
+            scopeUserId: contact.guestUserId,
+          },
+          userText: cleanGuestManualText,
+          enableAutoCapture: true,
+        }).catch(() => ({ capturedNotes: [] }))
+      : { capturedNotes: [] };
 
     await db
       .update(characterContacts)
@@ -151,6 +177,7 @@ export async function POST(
         contactMeta
       ),
       assistantMessages: [],
+      capturedNotes: guestManualNotes.capturedNotes,
       manualMode: true,
     });
   }
@@ -219,17 +246,29 @@ export async function POST(
   });
 
   try {
+    const now = new Date();
+    const notesCtx = await captureAndBuildSharedNotesContext({
+      scope: { characterId: character.id, scopeUserId: contact.guestUserId },
+      userText: cleanUserText,
+      enableAutoCapture: !activeCallMode && !imageUrl,
+      now,
+    }).catch(() => ({
+      sharedNotesBlock: "",
+      capturedNotes: [],
+      activeCount: 0,
+    }));
+
+    const prior = normalizedHistory.filter((m) => m.id !== guestMessage.id);
+    const lastPrior = prior[prior.length - 1] ?? null;
+
     let memoryExtras: MemoryPromptContext | undefined;
     if (character.memoryEnabled || character.browsingEnabled) {
-      const now = new Date();
       let timeAwareness: string | undefined;
       let memorySummary: string | undefined;
       let webContext = "";
       let webSearchActive = false;
 
       if (character.memoryEnabled) {
-        const prior = normalizedHistory.filter((m) => m.id !== guestMessage.id);
-        const lastPrior = prior[prior.length - 1] ?? null;
         timeAwareness = describeTimeAwareness(now, lastPrior?.createdAt ?? null);
         memorySummary = contact.memorySummary || "";
       }
@@ -254,6 +293,15 @@ export async function POST(
           webSearchActive,
         };
       }
+    }
+    if (notesCtx.sharedNotesBlock) {
+      memoryExtras = {
+        ...memoryExtras,
+        sharedNotesBlock: notesCtx.sharedNotesBlock,
+        timeAwareness:
+          memoryExtras?.timeAwareness ||
+          describeTimeAwareness(now, lastPrior?.createdAt ?? null),
+      };
     }
     if (replyAsVoiceNote) {
       memoryExtras = { ...memoryExtras, voiceNoteReply: true };
@@ -341,6 +389,7 @@ export async function POST(
         contactMeta
       ),
       assistantMessages,
+      capturedNotes: notesCtx.capturedNotes,
       callEmotion,
     });
   } catch (err) {

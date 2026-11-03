@@ -289,6 +289,36 @@ export const contactMessages = pgTable("contact_messages", {
 });
 
 /**
+ * Papan "Catatan & Janji Kita" per karakter & per akun pengguna.
+ *
+ * `user_id` menyimpan pemilik papan ini (pemilik karakter saat chat pribadi,
+ * atau pengundang saat chat di ruang Kontak 2 Arah) sehingga catatan tetap
+ * privat per pasangan lawan bicara.
+ */
+export const characterNotes = pgTable("character_notes", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  characterId: uuid("character_id")
+    .notNull()
+    .references(() => characters.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** 'promise' | 'idea' | 'plan' | 'link' */
+  kind: text("kind").notNull().default("plan"),
+  title: text("title").notNull().default(""),
+  /** Tanggal target kalender WIB ('YYYY-MM-DD') atau null. */
+  dueDate: text("due_date"),
+  url: text("url"),
+  done: boolean("done").notNull().default(false),
+  /** 'auto' | 'manual' */
+  source: text("source").notNull().default("manual"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * Pengaturan global aplikasi yang dikelola oleh Admin (mis. override kode undangan pendaftaran).
  */
 export const appSettings = pgTable("app_settings", {
