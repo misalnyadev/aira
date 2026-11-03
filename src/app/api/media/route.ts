@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { canReadCharacterMediaKey } from "@/lib/contactsServer";
 import { deleteR2Object, isOwnedMediaKey, isR2Configured, presignR2Url } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** Ambil URL streaming bertanda tangan (berlaku 6 jam) untuk media milik pengguna ini. */
+/** Ambil URL streaming bertanda tangan (berlaku 6 jam) untuk media milik pengguna atau kontak aktifnya. */
 export async function GET(req: Request) {
   const user = await requireUser();
   if (!user) {
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const key = searchParams.get("key") ?? "";
-  if (!isOwnedMediaKey(key, user.id)) {
+  if (!(await canReadCharacterMediaKey(key, user.id))) {
     return NextResponse.json({ error: "Akses media ditolak." }, { status: 403 });
   }
 

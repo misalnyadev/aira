@@ -166,6 +166,16 @@ export function Sidebar({
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-semibold text-ink">
                       {c.name}
+                      {c.threadKind === "guest_contact" && (
+                        <span className="ml-1.5 inline-block rounded-full bg-surface-2 px-1.5 py-0.2 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                          Kontak
+                        </span>
+                      )}
+                      {c.threadKind === "owner_contact" && (
+                        <span className="ml-1.5 inline-block rounded-full bg-emerald-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                          2 Arah
+                        </span>
+                      )}
                       {c.hasBible && (
                         <span className="ml-1 text-[11px]" title="Memakai bible peran">
                           📖

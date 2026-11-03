@@ -108,7 +108,8 @@ export async function readImageAsBase64(
 
     // b) Lampiran dari Cloudflare R2 atau database (`/api/attachments/...`).
     if (url.startsWith("/api/attachments/")) {
-      const id = url.split("/").pop();
+      const cleanPath = url.split("?")[0];
+      const id = cleanPath.split("/").pop();
       if (!id) return null;
 
       const r2File = parseR2AttachmentId(id);

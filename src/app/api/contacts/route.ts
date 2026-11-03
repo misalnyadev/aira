@@ -9,6 +9,7 @@ import {
   isValidPinFormat,
   normalizePinInput,
 } from "@/lib/contactPin";
+import { withUploaderParam } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,7 @@ export async function GET() {
         r.guestNickname ||
         r.guestEmail.split("@")[0],
       guestEmail: r.guestEmail,
-      guestAvatarUrl: r.guestAvatarUrl,
+      guestAvatarUrl: withUploaderParam(r.guestAvatarUrl, r.guestUserId),
       adminStatus: r.adminStatus,
       ownerStatus: r.ownerStatus,
       aiAutoReply: Boolean(r.aiAutoReply),
@@ -100,7 +101,10 @@ export async function GET() {
       id: r.id,
       characterId: r.characterId,
       characterName: r.characterName,
-      characterAvatarUrl: r.characterAvatarUrl,
+      characterAvatarUrl: withUploaderParam(
+        r.characterAvatarUrl,
+        r.ownerUserId
+      ),
       characterShortBio: r.characterShortBio,
       ownerUserId: r.ownerUserId,
       ownerName:
