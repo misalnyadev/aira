@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
-import { asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, notInArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
-import { characterQuotaRequests, characters, users } from "@/db/schema";
+import {
+  characterContacts,
+  characterQuotaRequests,
+  characters,
+  users,
+} from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { effectiveCharacterLimit } from "@/lib/quotaRules";
@@ -26,7 +32,11 @@ export async function GET() {
     .groupBy(characters.userId)
     .as("char_count_sub");
 
-  const [allUsers, pendingRows, resolvedRows] = await Promise.all([
+  const guestUsers = alias(users, "guest_users");
+  const ownerUsers = alias(users, "owner_users");
+
+  const [allUsers, pendingRows, resolvedRows, pendingContactRows] =
+    await Promise.all([
     db
       .select({
         id: users.id,
@@ -81,6 +91,36 @@ export async function GET() {
       .where(ne(characterQuotaRequests.status, "pending"))
       .orderBy(desc(characterQuotaRequests.resolvedAt))
       .limit(10),
+    db
+      .select({
+        id: characterContacts.id,
+        characterId: characterContacts.characterId,
+        characterName: characters.name,
+        characterPin: characters.invitePin,
+        ownerUserId: characterContacts.ownerUserId,
+        ownerEmail: ownerUsers.email,
+        ownerDisplayName: ownerUsers.displayName,
+        ownerNickname: ownerUsers.nickname,
+        guestUserId: characterContacts.guestUserId,
+        guestEmail: guestUsers.email,
+        guestDisplayName: guestUsers.displayName,
+        guestNickname: guestUsers.nickname,
+        adminStatus: characterContacts.adminStatus,
+        ownerStatus: characterContacts.ownerStatus,
+        note: characterContacts.note,
+        createdAt: characterContacts.createdAt,
+      })
+      .from(characterContacts)
+      .innerJoin(characters, eq(characters.id, characterContacts.characterId))
+      .innerJoin(ownerUsers, eq(ownerUsers.id, characterContacts.ownerUserId))
+      .innerJoin(guestUsers, eq(guestUsers.id, characterContacts.guestUserId))
+      .where(
+        and(
+          eq(characterContacts.adminStatus, "pending"),
+          notInArray(characterContacts.ownerStatus, ["rejected", "blocked"])
+        )
+      )
+      .orderBy(asc(characterContacts.createdAt)),
   ]);
 
   return NextResponse.json({
@@ -93,5 +133,6 @@ export async function GET() {
     })),
     pendingRequests: pendingRows,
     recentResolved: resolvedRows,
+    pendingContacts: pendingContactRows,
   });
 }

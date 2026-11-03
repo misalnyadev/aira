@@ -43,6 +43,7 @@ import {
   useSpeechUnlock,
   useVoiceSettings,
 } from "@/lib/voice";
+import { AddContactModal } from "./AddContactModal";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { CallOverlay } from "./CallOverlay";
@@ -97,6 +98,10 @@ export function ChatApp() {
     useState<QuotaRequestSummary | null>(null);
   const [pendingQuotaRequestsCount, setPendingQuotaRequestsCount] =
     useState<number>(0);
+  const [pendingOwnerContactsCount, setPendingOwnerContactsCount] =
+    useState<number>(0);
+  const [pendingAdminContactsCount, setPendingAdminContactsCount] =
+    useState<number>(0);
   const [autoOpenQuotaRequest, setAutoOpenQuotaRequest] = useState(false);
   const [profileTab, setProfileTab] = useState<ProfileTab>("identity");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -105,6 +110,7 @@ export function ChatApp() {
   const [loaded, setLoaded] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showAddContact, setShowAddContact] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
   const [profileDetail, setProfileDetail] = useState<CharacterDetail | null>(null);
@@ -191,6 +197,12 @@ export function ChatApp() {
     setLatestQuotaRequest(data.latestQuotaRequest ?? null);
     if (typeof data.pendingQuotaRequestsCount === "number") {
       setPendingQuotaRequestsCount(data.pendingQuotaRequestsCount);
+    }
+    if (typeof data.pendingOwnerContactsCount === "number") {
+      setPendingOwnerContactsCount(data.pendingOwnerContactsCount);
+    }
+    if (typeof data.pendingAdminContactsCount === "number") {
+      setPendingAdminContactsCount(data.pendingAdminContactsCount);
     }
   }, [api]);
 
@@ -770,13 +782,16 @@ export function ChatApp() {
     );
   }
 
+  const adminTotalPending =
+    pendingQuotaRequestsCount + pendingAdminContactsCount;
+
   return (
     <div className="app-shell flex bg-app text-ink">
       <NavRail
         view={view}
         onChange={handleViewChange}
         profile={profile}
-        profileBadgeCount={isAdmin ? pendingQuotaRequestsCount : 0}
+        profileBadgeCount={isAdmin ? adminTotalPending : 0}
       />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -789,16 +804,11 @@ export function ChatApp() {
                   activeId={activeId}
                   profile={profile}
                   onSelect={handleSelect}
-                  onNewCharacter={() => setShowCreate(true)}
-                  onRequestSlot={() => {
-                    setAutoOpenQuotaRequest(true);
-                    handleViewChange("characters");
-                  }}
+                  onAddContact={() => setShowAddContact(true)}
                   onOpenSettings={() => handleViewChange("settings")}
                   onOpenProfile={() => handleViewChange("profile")}
                   hasProviders={hasProviders}
-                  limit={limit}
-                  isAdmin={isAdmin}
+                  pendingContactsCount={pendingOwnerContactsCount}
                 />
               </div>
 
@@ -918,7 +928,8 @@ export function ChatApp() {
               limit={limit}
               isAdmin={isAdmin}
               latestQuotaRequest={latestQuotaRequest}
-              pendingQuotaRequestsCount={pendingQuotaRequestsCount}
+              pendingQuotaRequestsCount={adminTotalPending}
+              pendingOwnerContactsCount={pendingOwnerContactsCount}
               autoOpenRequestForm={autoOpenQuotaRequest}
               onClearAutoOpenRequest={() => setAutoOpenQuotaRequest(false)}
               onQuotaChanged={fetchCharacters}
@@ -926,6 +937,7 @@ export function ChatApp() {
                 setProfileTab("admin");
                 handleViewChange("profile");
               }}
+              onOpenContactsModal={() => setShowAddContact(true)}
               onChat={handleSelect}
               onNew={() => setShowCreate(true)}
               onProfile={openProfile}
@@ -945,7 +957,7 @@ export function ChatApp() {
               characterCount={characters.length}
               characterLimit={limit}
               latestQuotaRequest={latestQuotaRequest}
-              pendingQuotaRequestsCount={pendingQuotaRequestsCount}
+              pendingQuotaRequestsCount={adminTotalPending}
               onQuotaChanged={fetchCharacters}
             />
           )}
@@ -975,10 +987,18 @@ export function ChatApp() {
           <MobileTabBar
             view={view}
             onChange={handleViewChange}
-            profileBadgeCount={isAdmin ? pendingQuotaRequestsCount : 0}
+            profileBadgeCount={isAdmin ? adminTotalPending : 0}
           />
         )}
       </div>
+
+      {showAddContact && (
+        <AddContactModal
+          onClose={() => setShowAddContact(false)}
+          onUpdated={fetchCharacters}
+          onOpenCharactersView={() => handleViewChange("characters")}
+        />
+      )}
 
       {showCreate && (
         <CharacterModal

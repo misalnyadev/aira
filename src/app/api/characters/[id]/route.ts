@@ -47,6 +47,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     memorySummary: row.memorySummary ?? "",
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
     browsingEnabled: Boolean(row.browsingEnabled),
+    invitePin: row.invitePin ?? null,
   };
 }
 

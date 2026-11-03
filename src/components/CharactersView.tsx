@@ -20,10 +20,12 @@ export function CharactersView({
   isAdmin = false,
   latestQuotaRequest = null,
   pendingQuotaRequestsCount = 0,
+  pendingOwnerContactsCount = 0,
   autoOpenRequestForm = false,
   onClearAutoOpenRequest,
   onQuotaChanged,
   onOpenAdminPanel,
+  onOpenContactsModal,
   onChat,
   onNew,
   onProfile,
@@ -35,10 +37,12 @@ export function CharactersView({
   isAdmin?: boolean;
   latestQuotaRequest?: QuotaRequestSummary | null;
   pendingQuotaRequestsCount?: number;
+  pendingOwnerContactsCount?: number;
   autoOpenRequestForm?: boolean;
   onClearAutoOpenRequest?: () => void;
   onQuotaChanged?: () => Promise<void> | void;
   onOpenAdminPanel?: () => void;
+  onOpenContactsModal?: () => void;
   onChat: (id: string) => void;
   onNew: () => void;
   onProfile?: (id: string) => void;
@@ -59,6 +63,19 @@ export function CharactersView({
     kind: "ok" | "err";
     text: string;
   } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function handleCopyPin(charId: string, pinValue: string) {
+    try {
+      await navigator.clipboard.writeText(pinValue);
+      setCopiedId(charId);
+      window.setTimeout(() => {
+        setCopiedId((cur) => (cur === charId ? null : cur));
+      }, 1800);
+    } catch {
+      // Abaikan jika browser menolak akses clipboard.
+    }
+  }
 
   const showReqForm =
     !isAdmin && !hasPendingReq && (requestFormOpen || autoOpenRequestForm);
@@ -177,11 +194,11 @@ export function CharactersView({
         className="flex-1 overflow-y-auto p-4 pb-[calc(var(--tabbar-space)+0.75rem)] sm:p-6 sm:pb-[calc(var(--tabbar-space)+1rem)]"
       >
         <div className="mx-auto max-w-5xl space-y-4">
-          {/* Pita pemberitahuan untuk Admin jika ada pengajuan kuota yang menunggu */}
+          {/* Pita pemberitahuan untuk Admin jika ada pengajuan yang menunggu */}
           {isAdmin && pendingQuotaRequestsCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3">
               <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                Ada <b>{pendingQuotaRequestsCount}</b> permintaan tambah slot karakter dari pengguna.
+                Ada <b>{pendingQuotaRequestsCount}</b> permintaan member (slot / kontak PIN) di Panel Admin.
               </p>
               {onOpenAdminPanel && (
                 <button
@@ -192,6 +209,22 @@ export function CharactersView({
                   Tinjau di Panel Admin
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Pita undangan kontak masuk ke karakter milik pengguna ini */}
+          {pendingOwnerContactsCount > 0 && onOpenContactsModal && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
+              <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                Ada <b>{pendingOwnerContactsCount}</b> undangan kontak masuk ke karaktermu.
+              </p>
+              <button
+                type="button"
+                onClick={onOpenContactsModal}
+                className="rounded-xl bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+              >
+                Kelola Undangan
+              </button>
             </div>
           )}
 
@@ -415,7 +448,27 @@ export function CharactersView({
                     </p>
                   )}
 
-                  <div className="mt-4 flex items-center gap-1.5 border-t border-line pt-3">
+                  {c.invitePin && (
+                    <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/60 px-3 py-2">
+                      <div className="min-w-0">
+                        <span className="block text-[10.5px] text-muted">
+                          PIN Undangan Kontak
+                        </span>
+                        <span className="font-mono text-xs font-bold tracking-widest text-ink">
+                          {c.invitePin}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyPin(c.id, c.invitePin!)}
+                        className="shrink-0 rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                      >
+                        {copiedId === c.id ? "✓ Disalin" : "Salin PIN"}
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-1.5 border-t border-line pt-3">
                     <button
                       onClick={() => onChat(c.id)}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98]"

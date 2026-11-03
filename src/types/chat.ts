@@ -42,6 +42,8 @@ export type CharacterSummary = {
   memoryEnabled: boolean;
   /** Apakah akses browsing internet & pembaca link aktif pada karakter ini. */
   browsingEnabled: boolean;
+  /** Kode PIN bawaan karakter (tampil pada karakter milik sendiri). */
+  invitePin?: string | null;
   preview: string;
   updatedAt: string;
 };
@@ -65,6 +67,7 @@ export type CharacterDetail = {
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
+  invitePin?: string | null;
 };
 
 export type ChatMessage = {
@@ -87,4 +90,37 @@ export type QuotaRequestSummary = {
   adminNote: string;
   createdAt: string;
   resolvedAt?: string | null;
+};
+
+export type IncomingContactItem = {
+  id: string;
+  characterId: string;
+  characterName: string;
+  characterAvatarUrl: string | null;
+  guestUserId: string;
+  guestName: string;
+  guestEmail: string;
+  guestAvatarUrl: string | null;
+  adminStatus: string;
+  ownerStatus: string;
+  aiAutoReply: boolean;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OutgoingContactItem = {
+  id: string;
+  characterId: string;
+  characterName: string;
+  characterAvatarUrl: string | null;
+  characterShortBio: string;
+  ownerUserId: string;
+  ownerName: string;
+  adminStatus: string;
+  ownerStatus: string;
+  aiAutoReply: boolean;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
 };

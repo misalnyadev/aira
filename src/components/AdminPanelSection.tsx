@@ -52,6 +52,25 @@ type ResolvedQuotaRow = {
   nickname: string;
 };
 
+type PendingAdminContactRow = {
+  id: string;
+  characterId: string;
+  characterName: string;
+  characterPin: string | null;
+  ownerUserId: string;
+  ownerEmail: string;
+  ownerDisplayName: string;
+  ownerNickname: string;
+  guestUserId: string;
+  guestEmail: string;
+  guestDisplayName: string;
+  guestNickname: string;
+  adminStatus: string;
+  ownerStatus: string;
+  note: string;
+  createdAt: string;
+};
+
 export function AdminPanelSection({
   currentAdminId,
   onAfterAction,
@@ -66,12 +85,16 @@ export function AdminPanelSection({
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [pending, setPending] = useState<PendingQuotaRow[]>([]);
   const [resolved, setResolved] = useState<ResolvedQuotaRow[]>([]);
+  const [pendingContacts, setPendingContacts] = useState<
+    PendingAdminContactRow[]
+  >([]);
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "member">(
     "all"
   );
   const [requestsOpen, setRequestsOpen] = useState(true);
+  const [contactsOpen, setContactsOpen] = useState(true);
   const [membersOpen, setMembersOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -93,10 +116,13 @@ export function AdminPanelSection({
     const nextUsers = (data.users ?? []) as AdminUserRow[];
     const nextPending = (data.pendingRequests ?? []) as PendingQuotaRow[];
     const nextResolved = (data.recentResolved ?? []) as ResolvedQuotaRow[];
+    const nextContacts = (data.pendingContacts ??
+      []) as PendingAdminContactRow[];
 
     setUsers(nextUsers);
     setPending(nextPending);
     setResolved(nextResolved);
+    setPendingContacts(nextContacts);
 
     const quotaMap: Record<string, number> = {};
     for (const r of nextPending) {
@@ -180,6 +206,40 @@ export function AdminPanelSection({
       onAfterAction?.();
     } catch {
       setError("Koneksi gagal saat memproses pengajuan.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleResolveContact(
+    cRow: PendingAdminContactRow,
+    action: "approve" | "reject"
+  ) {
+    setBusyId(`contact:${cRow.id}`);
+    setError(null);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/contacts/${cRow.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Gagal memproses persetujuan kontak.");
+        return;
+      }
+      const guestLabel =
+        cRow.guestDisplayName || cRow.guestNickname || cRow.guestEmail;
+      setFeedback(
+        action === "approve"
+          ? `Sambungan kontak ${guestLabel} → ${cRow.characterName} disetujui.`
+          : `Permintaan kontak ${guestLabel} → ${cRow.characterName} ditolak.`
+      );
+      await loadData();
+      onAfterAction?.();
+    } catch {
+      setError("Koneksi gagal saat memproses persetujuan kontak.");
     } finally {
       setBusyId(null);
     }
@@ -297,15 +357,15 @@ export function AdminPanelSection({
           </button>
         </div>
 
-        <div className="mt-3.5 grid grid-cols-3 gap-2">
-          <div className="rounded-xl bg-surface-2/70 px-3 py-2.5 text-center">
+        <div className="mt-3.5 grid grid-cols-4 gap-2">
+          <div className="rounded-xl bg-surface-2/70 px-2.5 py-2.5 text-center">
             <span className="block text-base font-extrabold text-ink">
               {loading ? "…" : users.length}
             </span>
-            <span className="text-[11px] text-muted">Total Akun</span>
+            <span className="text-[11px] text-muted">Akun</span>
           </div>
           <div
-            className={`rounded-xl px-3 py-2.5 text-center ${
+            className={`rounded-xl px-2.5 py-2.5 text-center ${
               pending.length > 0
                 ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
                 : "bg-surface-2/70 text-ink"
@@ -314,9 +374,21 @@ export function AdminPanelSection({
             <span className="block text-base font-extrabold">
               {loading ? "…" : pending.length}
             </span>
-            <span className="text-[11px] opacity-80">Request Slot</span>
+            <span className="text-[11px] opacity-80">Req Slot</span>
           </div>
-          <div className="rounded-xl bg-surface-2/70 px-3 py-2.5 text-center">
+          <div
+            className={`rounded-xl px-2.5 py-2.5 text-center ${
+              pendingContacts.length > 0
+                ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                : "bg-surface-2/70 text-ink"
+            }`}
+          >
+            <span className="block text-base font-extrabold">
+              {loading ? "…" : pendingContacts.length}
+            </span>
+            <span className="text-[11px] opacity-80">Req PIN</span>
+          </div>
+          <div className="rounded-xl bg-surface-2/70 px-2.5 py-2.5 text-center">
             <span className="block text-base font-extrabold text-ink">
               {loading ? "…" : totalCharacters}
             </span>
@@ -488,6 +560,124 @@ export function AdminPanelSection({
                             disabled={isBusy}
                             onClick={() =>
                               void handleResolveRequest(r, "reject")
+                            }
+                            className="inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
+                          >
+                            <XIcon className="h-3.5 w-3.5" />
+                            Tolak
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* 1B. Persetujuan Kontak PIN Karakter (Dropdown v) */}
+          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setContactsOpen((v) => !v)}
+              aria-expanded={contactsOpen}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink">
+                    Persetujuan Kontak PIN Karakter
+                  </h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                      pendingContacts.length > 0
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                        : "bg-surface-2 text-muted"
+                    }`}
+                  >
+                    {pendingContacts.length} menunggu
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  Setujui sambungan kontak antar-akun lewat PIN agar terkontrol
+                </p>
+              </div>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform duration-200 ${
+                    contactsOpen ? "rotate-180 text-ink" : ""
+                  }`}
+                />
+              </span>
+            </button>
+
+            {contactsOpen && (
+              <div className="space-y-2.5 border-t border-line p-4">
+                {pendingContacts.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-center text-xs text-muted">
+                    Tidak ada permintaan sambungan kontak PIN yang menunggu saat ini.
+                  </p>
+                ) : (
+                  pendingContacts.map((c) => {
+                    const guestLabel =
+                      c.guestDisplayName ||
+                      c.guestNickname ||
+                      c.guestEmail.split("@")[0];
+                    const ownerLabel =
+                      c.ownerDisplayName ||
+                      c.ownerNickname ||
+                      c.ownerEmail.split("@")[0];
+                    const isBusy = busyId === `contact:${c.id}`;
+
+                    return (
+                      <div
+                        key={c.id}
+                        className="space-y-2.5 rounded-xl border border-amber-500/35 bg-amber-500/[0.06] p-3.5"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-ink">
+                              {guestLabel}{" "}
+                              <span className="font-normal text-ink-soft">
+                                mengundang
+                              </span>{" "}
+                              {c.characterName}
+                            </p>
+                            <p className="truncate text-xs text-muted">
+                              {c.guestEmail} → pemilik: {ownerLabel}
+                              {c.characterPin ? ` · PIN ${c.characterPin}` : ""}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold text-ink ring-1 ring-line">
+                            {c.ownerStatus === "approved"
+                              ? "Pemilik setuju"
+                              : "Menunggu pemilik"}
+                          </span>
+                        </div>
+
+                        {c.note && (
+                          <p className="rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-soft">
+                            “{c.note}”
+                          </p>
+                        )}
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() =>
+                              void handleResolveContact(c, "approve")
+                            }
+                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+                          >
+                            <CheckIcon className="h-3.5 w-3.5" />
+                            Setujui Sambungan
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() =>
+                              void handleResolveContact(c, "reject")
                             }
                             className="inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
                           >

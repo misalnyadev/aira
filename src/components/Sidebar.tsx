@@ -27,25 +27,21 @@ export function Sidebar({
   activeId,
   profile,
   onSelect,
-  onNewCharacter,
-  onRequestSlot,
+  onAddContact,
   onOpenSettings,
   onOpenProfile,
   hasProviders,
-  limit,
-  isAdmin = false,
+  pendingContactsCount = 0,
 }: {
   characters: CharacterSummary[];
   activeId: string | null;
   profile: UserProfile;
   onSelect: (id: string) => void;
-  onNewCharacter: () => void;
-  onRequestSlot?: () => void;
+  onAddContact: () => void;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   hasProviders: boolean;
-  limit: number;
-  isAdmin?: boolean;
+  pendingContactsCount?: number;
 }) {
   const [query, setQuery] = useState("");
 
@@ -60,7 +56,6 @@ export function Sidebar({
     );
   }, [characters, query]);
 
-  const full = characters.length >= limit;
   const userName = profile.displayName || profile.nickname || "Kamu";
 
   return (
@@ -80,11 +75,8 @@ export function Sidebar({
               <h1 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
                 Aisherly<span className="text-muted">.</span>
               </h1>
-              <span
-                className={`text-[11px] font-medium ${full ? "text-rose-500" : "text-muted"}`}
-                title={`Maksimal ${limit} karakter`}
-              >
-                {characters.length}/{limit}
+              <span className="text-[11px] font-medium text-muted">
+                {characters.length} kontak
               </span>
             </div>
             {(profile.nickname || profile.displayName) && (
@@ -98,23 +90,18 @@ export function Sidebar({
         <div className="flex shrink-0 items-center gap-0.5">
           <ThemeQuickToggle className="md:hidden" />
           <button
-            onClick={!isAdmin && full && onRequestSlot ? onRequestSlot : onNewCharacter}
-            disabled={full && (isAdmin || !onRequestSlot)}
-            className="rounded-full bg-brand p-2 text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-            title={
-              !isAdmin && full
-                ? "Kuota karakter penuh — klik untuk ajukan tambah slot ke Admin"
-                : full
-                  ? `Maksimal ${limit} karakter`
-                  : "Buat karakter baru"
-            }
-            aria-label={
-              !isAdmin && full
-                ? "Ajukan tambah slot karakter"
-                : "Buat karakter baru"
-            }
+            type="button"
+            onClick={onAddContact}
+            className="relative rounded-full bg-brand p-2 text-brand-ink transition hover:bg-brand-strong active:scale-95"
+            title="Tambah & kelola kontak karakter (PIN)"
+            aria-label="Tambah & kelola kontak karakter"
           >
             <PlusIcon className="h-4 w-4" />
+            {pendingContactsCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
+                {pendingContactsCount > 9 ? "9+" : pendingContactsCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -160,7 +147,7 @@ export function Sidebar({
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-muted">
             {characters.length === 0
-              ? "Belum ada karakter. Ketuk + untuk membuat karakter pertamamu."
+              ? "Belum ada kontak obrolan. Ketuk + untuk menambah kontak lewat PIN, atau buka menu Karakter."
               : "Tidak ada yang cocok dengan pencarianmu."}
           </div>
         ) : (
@@ -212,12 +199,6 @@ export function Sidebar({
               </button>
             );
           })
-        )}
-
-        {full && (
-          <p className="px-4 py-3 text-center text-[11px] text-muted">
-            Batas {limit} karakter tercapai. Hapus salah satu untuk menambah yang baru.
-          </p>
         )}
       </div>
     </aside>
