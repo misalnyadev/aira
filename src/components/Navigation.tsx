@@ -3,9 +3,9 @@
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
-import { BrainstormIcon, ChatsIcon, GridIcon, SettingsIcon, SpeakerIcon, UserIcon } from "./icons";
+import { BrainstormIcon, ChatsIcon, SettingsIcon, SpeakerIcon, UserIcon } from "./icons";
 
-export type AppView = "chats" | "characters" | "voice" | "profile" | "settings" | "brainstorm";
+export type AppView = "chats" | "voice" | "profile" | "settings" | "brainstorm";
 
 type Item = {
   id: AppView;
@@ -17,7 +17,6 @@ const ITEMS: Item[] = [
   { id: "chats", label: "Chat", Icon: ChatsIcon },
   { id: "brainstorm", label: "Meja", Icon: BrainstormIcon },
   { id: "voice", label: "Suara", Icon: SpeakerIcon },
-  { id: "characters", label: "Karakter", Icon: GridIcon },
   { id: "profile", label: "Profil", Icon: UserIcon },
   { id: "settings", label: "Setelan", Icon: SettingsIcon },
 ];

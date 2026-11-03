@@ -59,7 +59,6 @@ import { CallOverlay } from "./CallOverlay";
 import { type MemoryPatch } from "./CharacterMemorySection";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
-import { CharactersView } from "./CharactersView";
 import { ChatWindow } from "./ChatWindow";
 import { Composer } from "./Composer";
 import { MobileTabBar, NavRail, type AppView } from "./Navigation";
@@ -119,7 +118,6 @@ export function ChatApp() {
     useState<number>(0);
   const [pendingAdminContactsCount, setPendingAdminContactsCount] =
     useState<number>(0);
-  const [autoOpenQuotaRequest, setAutoOpenQuotaRequest] = useState(false);
   const [profileTab, setProfileTab] = useState<ProfileTab>("identity");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
@@ -1425,8 +1423,8 @@ export function ChatApp() {
                         <button
                           onClick={() => {
                             if (!isAdmin && characters.length >= limit) {
-                              setAutoOpenQuotaRequest(true);
-                              handleViewChange("characters");
+                              setProfileTab("account");
+                              handleViewChange("profile");
                             } else {
                               setShowCreate(true);
                             }
@@ -1458,33 +1456,9 @@ export function ChatApp() {
             />
           )}
 
-          {view === "characters" && (
-            <CharactersView
-              characters={characters}
-              limit={limit}
-              isAdmin={isAdmin}
-              latestQuotaRequest={latestQuotaRequest}
-              pendingQuotaRequestsCount={adminTotalPending}
-              pendingOwnerContactsCount={pendingOwnerContactsCount}
-              autoOpenRequestForm={autoOpenQuotaRequest}
-              onClearAutoOpenRequest={() => setAutoOpenQuotaRequest(false)}
-              onQuotaChanged={fetchCharacters}
-              onOpenAdminPanel={() => {
-                setProfileTab("admin");
-                handleViewChange("profile");
-              }}
-              onOpenContactsModal={() => setShowAddContact(true)}
-              onChat={handleSelect}
-              onNew={() => setShowCreate(true)}
-              onProfile={openProfile}
-              onEdit={openEdit}
-              onDelete={handleDeleteCharacter}
-            />
-          )}
-
           {view === "profile" && (
             <ProfileView
-              key={`${profileTab}|${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}`}
+              key={`${profileTab}|${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}|${characters.length}|${limit}`}
               profile={profile}
               onSaved={setProfile}
               initialTab={profileTab}
@@ -1494,7 +1468,15 @@ export function ChatApp() {
               characterLimit={limit}
               latestQuotaRequest={latestQuotaRequest}
               pendingQuotaRequestsCount={adminTotalPending}
+              pendingOwnerContactsCount={pendingOwnerContactsCount}
+              characters={characters}
               onQuotaChanged={fetchCharacters}
+              onChatCharacter={handleSelect}
+              onNewCharacter={() => setShowCreate(true)}
+              onOpenCharacterProfile={openProfile}
+              onEditCharacter={openEdit}
+              onDeleteCharacter={handleDeleteCharacter}
+              onOpenContactsModal={() => setShowAddContact(true)}
             />
           )}
 
@@ -1525,7 +1507,10 @@ export function ChatApp() {
               onOpenRoom={handleOpenBrainstorm}
               onCreateRoom={handleCreateBrainstorm}
               onDeleteRoom={handleDeleteBrainstorm}
-              onNeedCharacters={() => handleViewChange("characters")}
+              onNeedCharacters={() => {
+                setProfileTab("account");
+                handleViewChange("profile");
+              }}
             />
           )}
 
@@ -1572,7 +1557,10 @@ export function ChatApp() {
         <AddContactModal
           onClose={() => setShowAddContact(false)}
           onUpdated={fetchCharacters}
-          onOpenCharactersView={() => handleViewChange("characters")}
+          onOpenCharactersView={() => {
+            setProfileTab("account");
+            handleViewChange("profile");
+          }}
           onOpenChatThread={(contactId) => handleSelect(`contact:${contactId}`)}
         />
       )}
