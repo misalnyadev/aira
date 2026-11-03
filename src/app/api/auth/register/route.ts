@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { createSession } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { checkInvite } from "@/lib/invite";
+import { getSignupCodeInfo } from "@/lib/inviteServer";
 import { adoptLegacyData } from "@/lib/legacyData";
 import { checkEmail, checkPasswordStrength, hashPassword, normalizeEmail } from "@/lib/password";
 import { seedStarterCharacter } from "@/lib/seedDemo";
@@ -25,11 +26,11 @@ export async function POST(req: Request) {
   };
 
   /*
-   * Kode undangan diperiksa PALING AWAL, sebelum menyentuh database.
-   * Dengan begitu percobaan tanpa kode tidak bisa dipakai untuk menebak email
-   * mana yang sudah terdaftar, dan tidak membebani database.
+   * Kode undangan diperiksa PALING AWAL, sebelum memeriksa tabel users.
+   * Mendukung kode bawaan Vercel (`SIGNUP_CODE`) maupun kode terbaru dari Panel Admin.
    */
-  const inviteError = checkInvite(process.env.SIGNUP_CODE, inviteCode);
+  const { code: expectedInviteCode } = await getSignupCodeInfo();
+  const inviteError = checkInvite(expectedInviteCode, inviteCode);
   if (inviteError) {
     return NextResponse.json({ error: inviteError }, { status: 403 });
   }

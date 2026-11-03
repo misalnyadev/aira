@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { getSignupCodeInfo } from "@/lib/inviteServer";
 import { effectiveCharacterLimit } from "@/lib/quotaRules";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export async function GET() {
   const guestUsers = alias(users, "guest_users");
   const ownerUsers = alias(users, "owner_users");
 
-  const [allUsers, pendingRows, resolvedRows, pendingContactRows] =
+  const [allUsers, pendingRows, resolvedRows, pendingContactRows, signupInvite] =
     await Promise.all([
     db
       .select({
@@ -121,6 +122,7 @@ export async function GET() {
         )
       )
       .orderBy(asc(characterContacts.createdAt)),
+    getSignupCodeInfo(),
   ]);
 
   return NextResponse.json({
@@ -134,5 +136,6 @@ export async function GET() {
     pendingRequests: pendingRows,
     recentResolved: resolvedRows,
     pendingContacts: pendingContactRows,
+    signupInvite,
   });
 }

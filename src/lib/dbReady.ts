@@ -174,6 +174,11 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE INDEX IF NOT EXISTS "contact_messages_contact_idx" ON "contact_messages" ("contact_id", "created_at" ASC)`,
+  sql`CREATE TABLE IF NOT EXISTS "app_settings" (
+    "key" text PRIMARY KEY NOT NULL,
+    "value" text DEFAULT '' NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
 ];
 
 async function backfillMissingCharacterPins(): Promise<void> {

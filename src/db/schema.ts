@@ -279,3 +279,12 @@ export const contactMessages = pgTable("contact_messages", {
   status: text("status").notNull().default("sent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Pengaturan global aplikasi yang dikelola oleh Admin (mis. override kode undangan pendaftaran).
+ */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

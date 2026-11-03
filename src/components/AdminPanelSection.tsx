@@ -5,10 +5,31 @@ import { Avatar } from "./Avatar";
 import {
   CheckIcon,
   ChevronDownIcon,
+  CopyIcon,
+  EyeIcon,
+  EyeOffIcon,
   RefreshIcon,
   SearchIcon,
   XIcon,
 } from "./icons";
+
+type SignupInviteState = {
+  code: string;
+  enabled: boolean;
+  source: "env" | "custom" | "closed";
+  hasEnvDefault: boolean;
+};
+
+function randomInviteSuggestion(): string {
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  let tail = "";
+  for (let i = 0; i < 6; i++) {
+    tail += chars[bytes[i] % chars.length];
+  }
+  return `aish-${tail}`;
+}
 
 type AdminUserRow = {
   id: string;
@@ -88,13 +109,20 @@ export function AdminPanelSection({
   const [pendingContacts, setPendingContacts] = useState<
     PendingAdminContactRow[]
   >([]);
+  const [signupInvite, setSignupInvite] = useState<SignupInviteState | null>(
+    null
+  );
+  const [showInviteCode, setShowInviteCode] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [draftInviteCode, setDraftInviteCode] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "member">(
     "all"
   );
-  const [requestsOpen, setRequestsOpen] = useState(true);
-  const [contactsOpen, setContactsOpen] = useState(true);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [contactsOpen, setContactsOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -118,11 +146,15 @@ export function AdminPanelSection({
     const nextResolved = (data.recentResolved ?? []) as ResolvedQuotaRow[];
     const nextContacts = (data.pendingContacts ??
       []) as PendingAdminContactRow[];
+    const nextInvite = (data.signupInvite ?? null) as SignupInviteState | null;
 
     setUsers(nextUsers);
     setPending(nextPending);
     setResolved(nextResolved);
     setPendingContacts(nextContacts);
+    setSignupInvite(nextInvite);
+    if (nextPending.length > 0) setRequestsOpen(true);
+    if (nextContacts.length > 0) setContactsOpen(true);
 
     const quotaMap: Record<string, number> = {};
     for (const r of nextPending) {
@@ -169,6 +201,55 @@ export function AdminPanelSection({
       );
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function handleCopyInviteCode() {
+    if (!signupInvite?.code) return;
+    try {
+      await navigator.clipboard.writeText(signupInvite.code);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 1800);
+    } catch {
+      // Abaikan bila clipboard ditolak browser.
+    }
+  }
+
+  async function handlePatchInviteCode(
+    mode: "custom" | "close" | "reset_env",
+    explicitCode?: string
+  ) {
+    setBusyId("invite");
+    setError(null);
+    setFeedback(null);
+    try {
+      const code = (explicitCode ?? draftInviteCode).trim();
+      const res = await fetch("/api/admin/invite-code", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Gagal menyimpan kode undangan.");
+        return;
+      }
+      if (data.signupInvite) {
+        setSignupInvite(data.signupInvite as SignupInviteState);
+      }
+      if (mode === "custom") {
+        setDraftInviteCode("");
+        setShowInviteCode(true);
+        setFeedback("Kode undangan pendaftaran baru berhasil disimpan.");
+      } else if (mode === "close") {
+        setFeedback("Pendaftaran member baru ditutup sementara.");
+      } else {
+        setFeedback("Kode undangan dikembalikan ke nilai bawaan Vercel.");
+      }
+    } catch {
+      setError("Koneksi gagal saat menyimpan kode undangan.");
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -415,6 +496,171 @@ export function AdminPanelSection({
         </div>
       ) : (
         <>
+          {/* 0. Kode Undangan Pendaftaran Member (Dropdown v) */}
+          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setInviteOpen((v) => !v)}
+              aria-expanded={inviteOpen}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink">
+                    Kode Undangan Pendaftaran Member
+                  </h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                      signupInvite?.enabled
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                        : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    {signupInvite?.enabled
+                      ? signupInvite.source === "custom"
+                        ? "Aktif · Diatur Admin"
+                        : "Aktif · Bawaan Vercel"
+                      : "Pendaftaran Ditutup"}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-ink-soft">
+                  Lihat, salin, atau ganti kode invite pendaftaran akun baru tanpa redeploy
+                </p>
+              </div>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform duration-200 ${
+                    inviteOpen ? "rotate-180 text-ink" : ""
+                  }`}
+                />
+              </span>
+            </button>
+
+            {inviteOpen && (
+              <div className="space-y-3 border-t border-line p-4">
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/50 px-3.5 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-[11px] text-muted">
+                      Kode undangan aktif saat ini
+                    </span>
+                    {signupInvite?.enabled && signupInvite.code ? (
+                      <span className="mt-0.5 block truncate font-mono text-sm font-bold tracking-wider text-ink">
+                        {showInviteCode
+                          ? signupInvite.code
+                          : "•".repeat(Math.min(12, Math.max(6, signupInvite.code.length)))}
+                      </span>
+                    ) : (
+                      <span className="mt-0.5 block text-xs font-medium text-rose-500">
+                        Belum aktif / pendaftaran ditutup
+                      </span>
+                    )}
+                  </div>
+
+                  {signupInvite?.enabled && signupInvite.code && (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowInviteCode((v) => !v)}
+                        title={showInviteCode ? "Sembunyikan kode" : "Lihat kode"}
+                        aria-label={showInviteCode ? "Sembunyikan kode" : "Lihat kode"}
+                        className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                      >
+                        {showInviteCode ? (
+                          <>
+                            <EyeOffIcon className="h-3.5 w-3.5" /> Tutup
+                          </>
+                        ) : (
+                          <>
+                            <EyeIcon className="h-3.5 w-3.5" /> Lihat
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyInviteCode()}
+                        className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                      >
+                        <CopyIcon className="h-3.5 w-3.5" />
+                        {inviteCopied ? "✓ Tersalin" : "Salin"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handlePatchInviteCode("custom");
+                  }}
+                  className="space-y-2"
+                >
+                  <label className="block text-xs font-medium text-ink-soft">
+                    Ganti kode undangan baru (tidak membedakan huruf besar/kecil)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 sm:flex-nowrap">
+                    <input
+                      type="text"
+                      value={draftInviteCode}
+                      onChange={(e) => setDraftInviteCode(e.target.value)}
+                      placeholder="Ketik kode baru atau klik Acak..."
+                      maxLength={64}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-ink focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDraftInviteCode(randomInviteSuggestion())}
+                      className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-line/60 hover:text-ink"
+                    >
+                      Acak
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={busyId === "invite" || draftInviteCode.trim().length < 4}
+                      className="shrink-0 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+                    >
+                      {busyId === "invite" ? "..." : "Simpan"}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2.5">
+                  <span className="text-[11px] text-muted">
+                    Langsung berlaku tanpa perlu redeploy Vercel.
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {signupInvite?.source !== "env" && signupInvite?.hasEnvDefault && (
+                      <button
+                        type="button"
+                        disabled={busyId === "invite"}
+                        onClick={() => void handlePatchInviteCode("reset_env")}
+                        className="text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:opacity-50"
+                      >
+                        Pakai bawaan Vercel
+                      </button>
+                    )}
+                    {signupInvite?.enabled && (
+                      <button
+                        type="button"
+                        disabled={busyId === "invite"}
+                        onClick={() => {
+                          if (!confirm("Tutup sementara pendaftaran akun baru?")) return;
+                          void handlePatchInviteCode("close");
+                        }}
+                        className="text-[11px] font-semibold text-rose-500 underline decoration-dotted hover:text-rose-600 disabled:opacity-50"
+                      >
+                        Tutup pendaftaran
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
           {/* 1. Permintaan Tambah Slot (Dropdown v) */}
           <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
             <button
