@@ -53,7 +53,7 @@ import { CharactersView } from "./CharactersView";
 import { ChatWindow } from "./ChatWindow";
 import { Composer } from "./Composer";
 import { MobileTabBar, NavRail, type AppView } from "./Navigation";
-import { ProfileView } from "./ProfileView";
+import { ProfileView, type ProfileTab } from "./ProfileView";
 import { SettingsView } from "./SettingsView";
 import { Sidebar } from "./Sidebar";
 import { VoiceView } from "./VoiceView";
@@ -98,6 +98,7 @@ export function ChatApp() {
   const [pendingQuotaRequestsCount, setPendingQuotaRequestsCount] =
     useState<number>(0);
   const [autoOpenQuotaRequest, setAutoOpenQuotaRequest] = useState(false);
+  const [profileTab, setProfileTab] = useState<ProfileTab>("identity");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
@@ -771,7 +772,12 @@ export function ChatApp() {
 
   return (
     <div className="app-shell flex bg-app text-ink">
-      <NavRail view={view} onChange={handleViewChange} profile={profile} />
+      <NavRail
+        view={view}
+        onChange={handleViewChange}
+        profile={profile}
+        profileBadgeCount={isAdmin ? pendingQuotaRequestsCount : 0}
+      />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1">
@@ -916,7 +922,10 @@ export function ChatApp() {
               autoOpenRequestForm={autoOpenQuotaRequest}
               onClearAutoOpenRequest={() => setAutoOpenQuotaRequest(false)}
               onQuotaChanged={fetchCharacters}
-              onOpenAdminPanel={() => handleViewChange("settings")}
+              onOpenAdminPanel={() => {
+                setProfileTab("admin");
+                handleViewChange("profile");
+              }}
               onChat={handleSelect}
               onNew={() => setShowCreate(true)}
               onProfile={openProfile}
@@ -927,9 +936,17 @@ export function ChatApp() {
 
           {view === "profile" && (
             <ProfileView
-              key={`${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}`}
+              key={`${profileTab}|${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}`}
               profile={profile}
               onSaved={setProfile}
+              initialTab={profileTab}
+              onTabChange={setProfileTab}
+              isAdmin={isAdmin}
+              characterCount={characters.length}
+              characterLimit={limit}
+              latestQuotaRequest={latestQuotaRequest}
+              pendingQuotaRequestsCount={pendingQuotaRequestsCount}
+              onQuotaChanged={fetchCharacters}
             />
           )}
 
@@ -943,7 +960,10 @@ export function ChatApp() {
               bubbleStyle={bubbleStyle}
               onBubbleStyleChange={setBubbleStyle}
               isAdmin={isAdmin}
-              onQuotaUpdated={fetchCharacters}
+              onOpenAccountManagement={() => {
+                setProfileTab(isAdmin ? "admin" : "account");
+                handleViewChange("profile");
+              }}
               onChanged={async () => {
                 await Promise.all([fetchProviders(), fetchTtsSettings()]);
               }}
@@ -951,7 +971,13 @@ export function ChatApp() {
           )}
         </div>
 
-        {showMobileTabBar && <MobileTabBar view={view} onChange={handleViewChange} />}
+        {showMobileTabBar && (
+          <MobileTabBar
+            view={view}
+            onChange={handleViewChange}
+            profileBadgeCount={isAdmin ? pendingQuotaRequestsCount : 0}
+          />
+        )}
       </div>
 
       {showCreate && (

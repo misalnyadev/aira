@@ -28,10 +28,12 @@ export function NavRail({
   view,
   onChange,
   profile,
+  profileBadgeCount = 0,
 }: {
   view: AppView;
   onChange: (next: AppView) => void;
   profile: UserProfile;
+  profileBadgeCount?: number;
 }) {
   const userName = profile.displayName || profile.nickname || "Kamu";
 
@@ -54,18 +56,26 @@ export function NavRail({
 
         {ITEMS.map(({ id, label, Icon }) => {
           const active = view === id;
+          const showBadge = id === "profile" && profileBadgeCount > 0;
           return (
             <button
               key={id}
               onClick={() => onChange(id)}
               aria-current={active ? "page" : undefined}
-              className={`group flex w-14 flex-col items-center gap-1 rounded-2xl py-2 text-[12px] font-medium transition active:scale-95 ${
+              className={`group relative flex w-14 flex-col items-center gap-1 rounded-2xl py-2 text-[12px] font-medium transition active:scale-95 ${
                 active
                   ? "bg-ink/10 font-semibold text-ink"
                   : "text-ink-soft hover:bg-surface-2 hover:text-ink"
               }`}
             >
-              <Icon className="h-5 w-5" />
+              <span className="relative">
+                <Icon className="h-5 w-5" />
+                {showBadge && (
+                  <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
+                    {profileBadgeCount > 9 ? "9+" : profileBadgeCount}
+                  </span>
+                )}
+              </span>
               <span>{label}</span>
             </button>
           );
@@ -85,9 +95,11 @@ export function NavRail({
 export function MobileTabBar({
   view,
   onChange,
+  profileBadgeCount = 0,
 }: {
   view: AppView;
   onChange: (next: AppView) => void;
+  profileBadgeCount?: number;
 }) {
   return (
     <div className="mobile-tabbar pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.7rem))] md:hidden">
@@ -97,6 +109,7 @@ export function MobileTabBar({
       >
         {ITEMS.map(({ id, label, Icon }) => {
           const active = view === id;
+          const showBadge = id === "profile" && profileBadgeCount > 0;
           return (
             <button
               key={id}
@@ -108,7 +121,14 @@ export function MobileTabBar({
                   : "text-ink-soft hover:text-ink"
               }`}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <span className="relative">
+                <Icon className="h-5 w-5 shrink-0" />
+                {showBadge && (
+                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
+                    {profileBadgeCount > 9 ? "9+" : profileBadgeCount}
+                  </span>
+                )}
+              </span>
               <span className="max-w-full truncate px-1">{label}</span>
             </button>
           );
