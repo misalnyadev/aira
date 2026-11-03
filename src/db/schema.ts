@@ -130,6 +130,10 @@ export const characters = pgTable("characters", {
   memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
   /** Aktifkan akses browsing internet & pembaca link URL pada karakter ini. */
   browsingEnabled: boolean("browsing_enabled").notNull().default(false),
+  /** Aktifkan inisiatif karakter menyapa duluan secara alami saat chat dibuka setelah jeda lama. */
+  proactiveEnabled: boolean("proactive_enabled").notNull().default(false),
+  /** Waktu terakhir karakter mengirim sapaan duluan otomatis (penjaga anti-spam). */
+  proactiveLastAt: timestamp("proactive_last_at", { withTimezone: true }),
   /** Kode PIN bawaan karakter untuk diundang sebagai kontak oleh pengguna lain. */
   invitePin: text("invite_pin")
     .unique()

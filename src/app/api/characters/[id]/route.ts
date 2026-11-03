@@ -47,6 +47,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     memorySummary: row.memorySummary ?? "",
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
     browsingEnabled: Boolean(row.browsingEnabled),
+    proactiveEnabled: Boolean(row.proactiveEnabled),
     invitePin: row.invitePin ?? null,
   };
 }
@@ -92,6 +93,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     memoryEnabled,
     memorySummary,
     browsingEnabled,
+    proactiveEnabled,
   } = body as {
     name?: string;
     avatarUrl?: string | null;
@@ -108,6 +110,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     memoryEnabled?: boolean;
     memorySummary?: string;
     browsingEnabled?: boolean;
+    proactiveEnabled?: boolean;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -176,6 +179,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (typeof browsingEnabled === "boolean") {
     updates.browsingEnabled = browsingEnabled;
+  }
+  if (typeof proactiveEnabled === "boolean") {
+    updates.proactiveEnabled = proactiveEnabled;
   }
   if (typeof memorySummary === "string") {
     const trimmed = memorySummary.trim();

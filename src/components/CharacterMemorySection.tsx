@@ -8,6 +8,7 @@ export type MemoryPatch = {
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
+  proactiveEnabled: boolean;
 };
 
 const MEMORY_PLACEHOLDER = `1. RENCANA, PENGINGAT & JANJI
@@ -40,6 +41,7 @@ export function CharacterMemorySection({
   memorySummary,
   memoryUpdatedAt,
   browsingEnabled,
+  proactiveEnabled = false,
   onChange,
   onNotice,
 }: {
@@ -49,18 +51,21 @@ export function CharacterMemorySection({
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
+  proactiveEnabled?: boolean;
   onChange: (next: MemoryPatch) => void;
   onNotice?: (msg: string) => void;
 }) {
   const [toggling, setToggling] = useState(false);
   const [togglingBrowse, setTogglingBrowse] = useState(false);
+  const [togglingProactive, setTogglingProactive] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [savingText, setSavingText] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [draft, setDraft] = useState(memorySummary);
 
-  const busy = toggling || togglingBrowse || summarizing || savingText;
+  const busy =
+    toggling || togglingBrowse || togglingProactive || summarizing || savingText;
   const hasSummary = Boolean(memorySummary.trim());
   const overLimit = draft.trim().length > MAX_MEMORY_SUMMARY_CHARS;
 
@@ -73,6 +78,7 @@ export function CharacterMemorySection({
       memorySummary,
       memoryUpdatedAt,
       browsingEnabled,
+      proactiveEnabled,
     });
 
     try {
@@ -96,6 +102,7 @@ export function CharacterMemorySection({
         memorySummary,
         memoryUpdatedAt,
         browsingEnabled,
+        proactiveEnabled,
       });
       onNotice?.(err instanceof Error ? err.message : "Gagal mengubah setelan ingatan.");
     } finally {
@@ -112,6 +119,7 @@ export function CharacterMemorySection({
       memorySummary,
       memoryUpdatedAt,
       browsingEnabled: nextBrowse,
+      proactiveEnabled,
     });
 
     try {
@@ -135,10 +143,51 @@ export function CharacterMemorySection({
         memorySummary,
         memoryUpdatedAt,
         browsingEnabled,
+        proactiveEnabled,
       });
       onNotice?.(err instanceof Error ? err.message : "Gagal mengubah setelan akses internet.");
     } finally {
       setTogglingBrowse(false);
+    }
+  }
+
+  async function handleToggleProactive() {
+    if (busy) return;
+    const nextProactive = !proactiveEnabled;
+    setTogglingProactive(true);
+    onChange({
+      memoryEnabled,
+      memorySummary,
+      memoryUpdatedAt,
+      browsingEnabled,
+      proactiveEnabled: nextProactive,
+    });
+
+    try {
+      const res = await fetch(`/api/characters/${characterId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proactiveEnabled: nextProactive }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Gagal mengubah setelan sapaan duluan.");
+      }
+    } catch (err) {
+      onChange({
+        memoryEnabled,
+        memorySummary,
+        memoryUpdatedAt,
+        browsingEnabled,
+        proactiveEnabled,
+      });
+      onNotice?.(
+        err instanceof Error
+          ? err.message
+          : "Gagal mengubah setelan sapaan duluan."
+      );
+    } finally {
+      setTogglingProactive(false);
     }
   }
 
@@ -161,6 +210,7 @@ export function CharacterMemorySection({
         memorySummary: nextSummary,
         memoryUpdatedAt: nextUpdatedAt,
         browsingEnabled,
+        proactiveEnabled,
       });
       onNotice?.(
         `Buku Ingatan diperbarui dari ${data?.summarizedCount ?? 0} gelembung chat.`
@@ -210,6 +260,7 @@ export function CharacterMemorySection({
         memorySummary: nextSummary,
         memoryUpdatedAt: nextUpdated,
         browsingEnabled,
+        proactiveEnabled,
       });
       onNotice?.(successToast);
     } catch (err) {
@@ -382,6 +433,41 @@ export function CharacterMemorySection({
             <span
               className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
                 browsingEnabled ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Kartu 3: Nyapa Duluan Secara Alami (Proactive Check-In) */}
+      <div className="rounded-2xl border border-line bg-surface-2/65 p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-ink">
+                👋 Nyapa Duluan Secara Alami
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+              Saat kamu membuka chat setelah jeda beberapa jam atau ganti hari, karakter bisa
+              menyapa duluan sesuai jam WIB &amp; obrolan terakhir tanpa spam.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={proactiveEnabled}
+            aria-label="Aktifkan karakter menyapa duluan secara alami"
+            disabled={busy}
+            onClick={handleToggleProactive}
+            className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
+              proactiveEnabled ? "bg-emerald-500" : "bg-line"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                proactiveEnabled ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
           </button>

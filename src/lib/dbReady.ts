@@ -145,6 +145,8 @@ const DDL = [
       AND NOT EXISTS (SELECT 1 FROM "users" WHERE "is_admin" = true)`,
 
   // ---- PIN Karakter & Kontak 2 Arah Antar-Pengguna ----
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_enabled" boolean DEFAULT false NOT NULL`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_last_at" timestamp with time zone`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "invite_pin" text`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "characters_invite_pin_idx" ON "characters" ("invite_pin") WHERE "invite_pin" IS NOT NULL`,
   sql`CREATE TABLE IF NOT EXISTS "character_contacts" (
