@@ -17,7 +17,6 @@ import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { ChatBackground } from "@/lib/chatBackground";
 import { useAuth } from "./AuthGate";
-import { AdminPanelSection } from "./AdminPanelSection";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { Switch } from "./Switch";
@@ -37,6 +36,66 @@ const FIELD =
 
 type TestState = { status: "testing" | "ok" | "fail"; message?: string };
 
+function SettingsAccordionCard({
+  title,
+  subtitle,
+  badge,
+  badgeTone = "neutral",
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  badgeTone?: "neutral" | "active" | "dark";
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-ink">{title}</h2>
+            {badge && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                  badgeTone === "active"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : badgeTone === "dark"
+                      ? "bg-ink font-bold text-surface"
+                      : "bg-surface-2 text-ink-soft"
+                }`}
+              >
+                {badge}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
+        </div>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+          <ChevronDownIcon
+            className={`h-4 w-4 transition-transform duration-200 ${
+              open ? "rotate-180 text-ink" : ""
+            }`}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-line px-4 py-4">{children}</div>
+      )}
+    </section>
+  );
+}
+
 export function SettingsView({
   providers,
   autoFallback,
@@ -47,7 +106,7 @@ export function SettingsView({
   onBubbleStyleChange,
   onChanged,
   isAdmin,
-  onQuotaUpdated,
+  onOpenAccountManagement,
 }: {
   providers: ProviderSummary[];
   autoFallback: boolean;
@@ -58,10 +117,21 @@ export function SettingsView({
   onBubbleStyleChange: (next: BubbleStyle) => void;
   onChanged: () => Promise<void>;
   isAdmin?: boolean;
-  onQuotaUpdated?: () => void;
+  onOpenAccountManagement?: () => void;
 }) {
   const { user, signOut } = useAuth();
   const effectiveIsAdmin = Boolean(isAdmin ?? user.isAdmin);
+  const [openSections, setOpenSections] = useState<{
+    providers: boolean;
+    appearance: boolean;
+    bubbles: boolean;
+    account: boolean;
+  }>(() => ({
+    providers: providers.length === 0,
+    appearance: false,
+    bubbles: false,
+    account: false,
+  }));
   const [editing, setEditing] = useState<ProviderSummary | null>(null);
   const [formOpen, setFormOpen] = useState(providers.length === 0);
   const [type, setType] = useState<ProviderType>("gemini");
@@ -571,54 +641,87 @@ export function SettingsView({
     }
   }
 
+  const defaultProvider = providers.find((p) => p.isDefault) ?? providers[0];
+  const providerSubtitle =
+    providers.length === 0
+      ? "Tambahkan minimal satu API key untuk mulai ngobrol"
+      : `${providers.length} provider tersimpan · ${defaultProvider.label} (${defaultProvider.model})`;
+  const bubbleSubtitle = bubbleStyle.glass
+    ? `Efek kaca aktif (${bubbleStyle.opacity}%)`
+    : "Gaya gelembung standar, warna pesan, & bar tipis";
+
+  function toggleSection(key: keyof typeof openSections) {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-surface">
+    <div className="flex h-full min-h-0 w-full flex-col bg-app">
       <div className="top-bar px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <h1 className="font-display text-xl font-bold tracking-tight text-ink">Setelan</h1>
-        <p className="text-xs text-ink-soft">Tema tampilan, provider AI, dan akunmu</p>
+        <p className="text-xs text-ink-soft">
+          Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
+        </p>
       </div>
 
       <div
         ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+4rem)]"
+        className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(var(--tabbar-space)+2rem)] sm:px-6"
       >
-        <div className="mx-auto w-full max-w-2xl space-y-6">
-          {/* Tampilan */}
-          <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-              Tampilan
-            </h2>
-            <ThemeSegmented />
-
-            <div className="mt-4 rounded-xl border border-line px-3.5 py-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="block text-sm text-ink">Latar chat</span>
-                  <span className="block text-[11px] text-muted">
-                    Tersimpan di akun, ikut ke semua perangkat
-                  </span>
-                </div>
-                {bgBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
+        <div className="mx-auto w-full max-w-2xl space-y-3">
+          {/* 1. Tema & Latar Chat */}
+          <SettingsAccordionCard
+            title="Tema & Latar Chat"
+            subtitle="Mode terang/gelap & wallpaper ruang obrolan"
+            open={openSections.appearance}
+            onToggle={() => toggleSection("appearance")}
+          >
+            <div className="space-y-4">
+              <div>
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted">
+                  Mode Tema
+                </span>
+                <ThemeSegmented />
               </div>
 
-              <ChatBackgroundPicker
-                value={chatBackground}
-                onChange={handleBackgroundChange}
-                disabled={bgBusy}
-              />
-
-              {bgError && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bgError}</p>}
-            </div>
-
-            <div className="mt-3 rounded-xl border border-line px-3.5 py-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="block text-sm text-ink">Gelembung pesan</span>
-                  <span className="block text-[11px] text-muted">
-                    Bawaan untuk semua karakter · tiap karakter bisa diatur sendiri di profilnya
-                  </span>
+              <div className="rounded-xl border border-line px-3.5 py-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block text-sm font-medium text-ink">Latar chat</span>
+                    <span className="block text-[11px] text-muted">
+                      Tersimpan di akun, ikut ke semua perangkat
+                    </span>
+                  </div>
+                  {bgBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
                 </div>
-                {bubbleBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
+
+                <ChatBackgroundPicker
+                  value={chatBackground}
+                  onChange={handleBackgroundChange}
+                  disabled={bgBusy}
+                />
+
+                {bgError && (
+                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bgError}</p>
+                )}
+              </div>
+            </div>
+          </SettingsAccordionCard>
+
+          {/* 2. Gaya Gelembung Pesan */}
+          <SettingsAccordionCard
+            title="Gaya Gelembung Pesan"
+            subtitle={bubbleSubtitle}
+            open={openSections.bubbles}
+            onToggle={() => toggleSection("bubbles")}
+          >
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-muted">
+                  Bawaan untuk semua karakter · tiap karakter bisa diatur sendiri di profilnya
+                </span>
+                {bubbleBusy && (
+                  <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
+                )}
               </div>
 
               <BubbleStyleControls
@@ -631,32 +734,40 @@ export function SettingsView({
                 <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bubbleError}</p>
               )}
             </div>
-          </section>
+          </SettingsAccordionCard>
 
-          {/* Provider tersimpan */}
-          <section className="border-t border-line pt-5">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Provider AI
-              </h2>
-              {!formOpen && (
-                <button
-                  type="button"
-                  onClick={startCreate}
-                  className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/60"
-                >
-                  <PlusIcon className="h-3.5 w-3.5" /> Tambah
-                </button>
-              )}
-            </div>
+          {/* 3. Provider AI & API Key */}
+          <SettingsAccordionCard
+            title="Provider AI & API Key"
+            subtitle={providerSubtitle}
+            badge={providers.length === 0 ? "Belum diatur" : `${providers.length} aktif`}
+            badgeTone={providers.length === 0 ? "neutral" : "active"}
+            open={openSections.providers}
+            onToggle={() => toggleSection("providers")}
+          >
+            <div>
+              <div className="mb-2.5 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  Daftar Provider Tersimpan
+                </span>
+                {!formOpen && (
+                  <button
+                    type="button"
+                    onClick={startCreate}
+                    className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/60"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" /> Tambah
+                  </button>
+                )}
+              </div>
 
-            {providers.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-xs text-muted">
-                Belum ada provider tersimpan. Tambahkan minimal satu API key di bawah untuk mulai
-                mengobrol.
-              </p>
-            ) : (
-              <div className="space-y-2">
+              {providers.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-xs text-muted">
+                  Belum ada provider tersimpan. Tambahkan minimal satu API key di bawah untuk mulai
+                  mengobrol.
+                </p>
+              ) : (
+                <div className="space-y-2">
                 {providers.map((p) => {
                   const test = tests[p.id];
                   const keyCount = (p.hasKey ? 1 : 0) + (p.backupCount ?? 0);
@@ -767,11 +878,10 @@ export function SettingsView({
                 label="Pindah provider saat key gagal"
               />
             </div>
-          </section>
 
           {/* Form tambah / edit provider */}
           {formOpen && (
-            <form onSubmit={handleSubmit} className="space-y-3 border-t border-line pt-5">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-line pt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
                   {editing ? `Edit provider (${editing.label})` : "Provider baru"}
@@ -1128,47 +1238,50 @@ export function SettingsView({
               </button>
             </form>
           )}
-
-          {/* Panel Admin (hanya tampil untuk akun Admin) */}
-          {effectiveIsAdmin && (
-            <AdminPanelSection
-              currentAdminId={user.id}
-              onAfterAction={onQuotaUpdated}
-            />
-          )}
-
-          {/* Akun */}
-          <section className="border-t border-line pt-5">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Akun</h2>
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-line px-3.5 py-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs text-muted">Masuk sebagai</p>
-                  {effectiveIsAdmin ? (
-                    <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
-                      Admin
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
-                      User
-                    </span>
-                  )}
-                </div>
-                <p className="truncate text-sm font-medium text-ink">{user.email}</p>
-              </div>
-              <button
-                type="button"
-                disabled={signingOut}
-                onClick={async () => {
-                  setSigningOut(true);
-                  await signOut();
-                }}
-                className="shrink-0 rounded-xl border border-line px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-60"
-              >
-                {signingOut ? "Keluar..." : "Keluar"}
-              </button>
             </div>
-          </section>
+          </SettingsAccordionCard>
+
+          {/* 4. Akun & Sesi */}
+          <SettingsAccordionCard
+            title="Akun & Sesi"
+            subtitle={user.email}
+            badge={effectiveIsAdmin ? "Admin" : "Member"}
+            badgeTone={effectiveIsAdmin ? "dark" : "neutral"}
+            open={openSections.account}
+            onToggle={() => toggleSection("account")}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2/40 px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted">Masuk sebagai</p>
+                  <p className="truncate text-sm font-medium text-ink">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={signingOut}
+                  onClick={async () => {
+                    setSigningOut(true);
+                    await signOut();
+                  }}
+                  className="shrink-0 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-60"
+                >
+                  {signingOut ? "Keluar..." : "Keluar"}
+                </button>
+              </div>
+
+              {onOpenAccountManagement && (
+                <button
+                  type="button"
+                  onClick={onOpenAccountManagement}
+                  className="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                >
+                  {effectiveIsAdmin
+                    ? "Buka Halaman Panel Admin & Kelola Member →"
+                    : "Buka Pengelolaan Akun & Kuota Member →"}
+                </button>
+              )}
+            </div>
+          </SettingsAccordionCard>
         </div>
       </div>
     </div>
