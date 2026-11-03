@@ -24,6 +24,8 @@ export type MemoryPromptContext = {
   chatExpressionMode?: boolean;
   /** Aktif saat giliran balasan ini dikirim sebagai Gelembung Pesan Suara (Voice Note). */
   voiceNoteReply?: boolean;
+  /** Konteks Papan "Catatan & Janji Kita" (rencana, ide naskah, link, & target ber-tanggal). */
+  sharedNotesBlock?: string;
 };
 
 /**
@@ -88,6 +90,12 @@ ${extras.recalledArchive.trim()}
 
 (Gunakan detail percakapan lama ber-tanggal di atas bila relevan agar jawaban dan pengingatmu akurat.)
 === AKHIR ARSIP TERKAIT ===`);
+  }
+
+  if (extras.sharedNotesBlock?.trim()) {
+    blocks.push(`=== PAPAN "CATATAN & JANJI KITA" ===
+${extras.sharedNotesBlock.trim()}
+=== AKHIR PAPAN CATATAN ===`);
   }
 
   if (extras.webContext?.trim() || extras.webSearchActive) {

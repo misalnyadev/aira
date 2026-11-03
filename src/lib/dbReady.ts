@@ -183,6 +183,20 @@ const DDL = [
   )`,
   sql`ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "is_voice_note" boolean DEFAULT false NOT NULL`,
   sql`CREATE INDEX IF NOT EXISTS "contact_messages_contact_idx" ON "contact_messages" ("contact_id", "created_at" ASC)`,
+  sql`CREATE TABLE IF NOT EXISTS "character_notes" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "kind" text DEFAULT 'plan' NOT NULL,
+    "title" text DEFAULT '' NOT NULL,
+    "due_date" text,
+    "url" text,
+    "done" boolean DEFAULT false NOT NULL,
+    "source" text DEFAULT 'manual' NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "character_notes_char_user_idx" ON "character_notes" ("character_id", "user_id", "done", "created_at" DESC)`,
   sql`CREATE TABLE IF NOT EXISTS "app_settings" (
     "key" text PRIMARY KEY NOT NULL,
     "value" text DEFAULT '' NOT NULL,

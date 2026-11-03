@@ -24,6 +24,7 @@ import {
   buildProactiveCheckInDirective,
   evaluateProactiveEligibility,
 } from "@/lib/proactiveCheckIn";
+import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -145,8 +146,21 @@ export async function POST(
         })
       : undefined;
 
+    const notesCtx = await captureAndBuildSharedNotesContext({
+      scope: { characterId, scopeUserId: user.id },
+      enableAutoCapture: false,
+      now,
+    }).catch(() => ({
+      sharedNotesBlock: "",
+      capturedNotes: [],
+      activeCount: 0,
+    }));
+
     const memoryExtras = {
       ...baseMemoryExtras,
+      ...(notesCtx.sharedNotesBlock
+        ? { sharedNotesBlock: notesCtx.sharedNotesBlock }
+        : {}),
       timeAwareness:
         baseMemoryExtras?.timeAwareness ||
         describeTimeAwareness(now, lastMsg.createdAt),

@@ -41,6 +41,7 @@ import {
   DoubleCheckIcon,
   EyeIcon,
   EyeOffIcon,
+  NotesBoardIcon,
   PhoneCallIcon,
   SpeakerIcon,
   SpeakerOffIcon,
@@ -111,6 +112,9 @@ export function ChatWindow({
   onBack,
   onOpenProfile,
   onOpenVoice,
+  onOpenNotes,
+  activeNotesCount = 0,
+  hasDueTodayNote = false,
   onToggleHideChat,
   onVideoCall,
   onAudioCall,
@@ -140,6 +144,9 @@ export function ChatWindow({
   onBack: () => void;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
+  onOpenNotes?: () => void;
+  activeNotesCount?: number;
+  hasDueTodayNote?: boolean;
   onToggleHideChat?: () => void;
   onVideoCall?: () => void;
   onAudioCall?: () => void;
@@ -464,6 +471,24 @@ export function ChatWindow({
             )}
           </button>
 
+          {onOpenNotes && (
+            <button
+              onClick={onOpenNotes}
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
+              aria-label={`Catatan Kita bersama ${character.name}`}
+              title="Catatan & Janji Kita"
+            >
+              <NotesBoardIcon className="h-5 w-5" />
+              {activeNotesCount > 0 && (
+                <span
+                  className={`absolute right-2 top-2 h-2 w-2 rounded-full ${
+                    hasDueTodayNote ? "bg-amber-500" : "bg-ink/80"
+                  }`}
+                />
+              )}
+            </button>
+          )}
+
           {onVideoCall && (
             <button
               onClick={onVideoCall}
@@ -541,6 +566,24 @@ export function ChatWindow({
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
             )}
           </button>
+
+          {onOpenNotes && (
+            <button
+              onClick={onOpenNotes}
+              className="relative shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
+              aria-label={`Catatan Kita bersama ${character.name}`}
+              title="Catatan & Janji Kita"
+            >
+              <NotesBoardIcon className="h-[22px] w-[22px]" />
+              {activeNotesCount > 0 && (
+                <span
+                  className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${
+                    hasDueTodayNote ? "bg-amber-500" : "bg-ink/75"
+                  }`}
+                />
+              )}
+            </button>
+          )}
 
           {onVideoCall && (
             <button

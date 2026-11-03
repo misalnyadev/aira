@@ -14,12 +14,16 @@ import {
   refreshCharacterMemory,
   toChatTurns,
 } from "@/lib/chatEngine";
-import { toTimeAwareChatTurns } from "@/lib/characterMemory";
+import {
+  describeTimeAwareness,
+  toTimeAwareChatTurns,
+} from "@/lib/characterMemory";
 import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
+import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
 import { readImageAsBase64 } from "@/lib/uploads";
 import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 
@@ -109,16 +113,44 @@ export async function POST(req: Request) {
   });
 
   try {
+    const turnNow = new Date();
+    const notesCtx = await captureAndBuildSharedNotesContext({
+      scope: { characterId, scopeUserId: user.id },
+      userText: cleanUserText,
+      enableAutoCapture: !activeCallMode && !imageUrl,
+      now: turnNow,
+    }).catch(() => ({
+      sharedNotesBlock: "",
+      capturedNotes: [],
+      activeCount: 0,
+    }));
+
     const baseExtras = await buildMemoryExtrasForTurn({
       character,
       chronologicalHistory,
       excludeMessageId: userMessage.id,
       userText: cleanUserText,
       primaryProviderType: candidates[0]?.type,
+      now: turnNow,
     });
-    const memoryExtras = replyAsVoiceNote
-      ? { ...baseExtras, voiceNoteReply: true }
-      : baseExtras;
+    const priorRows = chronologicalHistory.filter((m) => m.id !== userMessage.id);
+    const lastPrior = priorRows[priorRows.length - 1] ?? null;
+
+    const memoryExtras =
+      replyAsVoiceNote || notesCtx.sharedNotesBlock
+        ? {
+            ...baseExtras,
+            ...(notesCtx.sharedNotesBlock
+              ? {
+                  sharedNotesBlock: notesCtx.sharedNotesBlock,
+                  timeAwareness:
+                    baseExtras?.timeAwareness ||
+                    describeTimeAwareness(turnNow, lastPrior?.createdAt ?? null),
+                }
+              : {}),
+            ...(replyAsVoiceNote ? { voiceNoteReply: true } : {}),
+          }
+        : baseExtras;
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(chronologicalHistory, userMessage.id)
@@ -192,6 +224,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       userMessage,
       assistantMessages,
+      capturedNotes: notesCtx.capturedNotes,
       ...(callEmotion ? { callEmotion } : {}),
       fallbackUsed: result.fallbackUsed,
       providerLabel: result.providerLabel,

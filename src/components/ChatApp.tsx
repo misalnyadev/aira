@@ -32,6 +32,11 @@ import { MAX_CHARACTERS } from "@/lib/limits";
 import { shouldAttemptClientCheckIn } from "@/lib/proactiveCheckIn";
 import { useSafeTop } from "@/lib/safeTop";
 import { useScrollGuard } from "@/lib/scrollGuard";
+import {
+  getNoteDueStatus,
+  type SharedNoteItem,
+  type SharedNoteKind,
+} from "@/lib/sharedNotes";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
 import {
   loadVoiceSettings,
@@ -57,6 +62,7 @@ import { Composer } from "./Composer";
 import { MobileTabBar, NavRail, type AppView } from "./Navigation";
 import { ProfileView, type ProfileTab } from "./ProfileView";
 import { SettingsView } from "./SettingsView";
+import { SharedNotesDrawer } from "./SharedNotesDrawer";
 import { Sidebar } from "./Sidebar";
 import { VoiceView } from "./VoiceView";
 import { PlusIcon, SettingsIcon, XIcon } from "./icons";
@@ -120,6 +126,10 @@ export function ChatApp() {
   const [showCreate, setShowCreate] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotesDrawer, setShowNotesDrawer] = useState(false);
+  const [notesMap, setNotesMap] = useState<Record<string, SharedNoteItem[]>>({});
+  const [notesLoadingFor, setNotesLoadingFor] = useState<string | null>(null);
+  const notesLoadedRef = useRef<Set<string>>(new Set());
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
   const [profileDetail, setProfileDetail] = useState<CharacterDetail | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -331,6 +341,117 @@ export function ChatApp() {
     [api]
   );
 
+  const fetchSharedNotes = useCallback(
+    async (targetId: string) => {
+      const res = await api(
+        `/api/characters/${encodeURIComponent(targetId)}/notes`
+      );
+      if (!res.ok) return;
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data?.notes)) {
+        setNotesMap((prev) => ({ ...prev, [targetId]: data.notes }));
+      }
+    },
+    [api]
+  );
+
+  useEffect(() => {
+    if (!activeId || notesLoadedRef.current.has(activeId)) return;
+    notesLoadedRef.current.add(activeId);
+    void fetchSharedNotes(activeId);
+  }, [activeId, fetchSharedNotes]);
+
+  function handleOpenNotes(targetId: string) {
+    setShowNotesDrawer(true);
+    if (!notesMap[targetId]) {
+      setNotesLoadingFor(targetId);
+    }
+    void fetchSharedNotes(targetId).finally(() => {
+      setNotesLoadingFor((cur) => (cur === targetId ? null : cur));
+    });
+  }
+
+  async function handleAddSharedNote(
+    targetId: string,
+    input: {
+      kind: SharedNoteKind;
+      title: string;
+      dueDate: string | null;
+      url: string | null;
+    }
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await api(
+        `/api/characters/${encodeURIComponent(targetId)}/notes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.note) {
+        return { ok: false, error: data?.error || "Gagal menambah catatan." };
+      }
+      setNotesMap((prev) => ({
+        ...prev,
+        [targetId]: [data.note, ...(prev[targetId] ?? [])],
+      }));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Koneksi gagal saat menyimpan catatan." };
+    }
+  }
+
+  async function handleToggleSharedNote(
+    targetId: string,
+    noteId: string,
+    nextDone: boolean
+  ) {
+    setNotesMap((prev) => ({
+      ...prev,
+      [targetId]: (prev[targetId] ?? []).map((n) =>
+        n.id === noteId ? { ...n, done: nextDone } : n
+      ),
+    }));
+    try {
+      const res = await api(
+        `/api/characters/${encodeURIComponent(targetId)}/notes/${encodeURIComponent(noteId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ done: nextDone }),
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.note) {
+        setNotesMap((prev) => ({
+          ...prev,
+          [targetId]: (prev[targetId] ?? []).map((n) =>
+            n.id === noteId ? data.note : n
+          ),
+        }));
+      }
+    } catch {
+      // Biarkan perubahan optimis atau disinkronkan saat dibuka kembali.
+    }
+  }
+
+  async function handleDeleteSharedNote(targetId: string, noteId: string) {
+    setNotesMap((prev) => ({
+      ...prev,
+      [targetId]: (prev[targetId] ?? []).filter((n) => n.id !== noteId),
+    }));
+    try {
+      await api(
+        `/api/characters/${encodeURIComponent(targetId)}/notes/${encodeURIComponent(noteId)}`,
+        { method: "DELETE" }
+      );
+    } catch {
+      // Abaikan kegagalan jaringan senyap.
+    }
+  }
+
   // Sinkronisasi berkala 2 arah saat ruang chat kontak sedang dibuka & diam.
   useEffect(() => {
     const contactId = parseContactThreadId(activeId);
@@ -466,6 +587,18 @@ export function ChatApp() {
         setTypingFor(null);
         showToast(data.error || "Gagal mendapatkan balasan. Cek Setelan API key.");
         return;
+      }
+
+      if (Array.isArray(data.capturedNotes) && data.capturedNotes.length > 0) {
+        const fresh: SharedNoteItem[] = data.capturedNotes;
+        setNotesMap((prev) => {
+          const cur = prev[target] ?? [];
+          const existingIds = new Set(cur.map((n) => n.id));
+          const uniqueFresh = fresh.filter((n) => !existingIds.has(n.id));
+          return uniqueFresh.length > 0
+            ? { ...prev, [target]: [...uniqueFresh, ...cur] }
+            : prev;
+        });
       }
 
       if (data.fallbackUsed && data.providerLabel) {
@@ -1053,6 +1186,18 @@ export function ChatApp() {
                     }}
                     onOpenProfile={() => openProfile(activeCharacter.id)}
                     onOpenVoice={() => handleViewChange("voice")}
+                    onOpenNotes={() => handleOpenNotes(activeCharacter.id)}
+                    activeNotesCount={
+                      (notesMap[activeCharacter.id] ?? []).filter(
+                        (n) => !n.done
+                      ).length
+                    }
+                    hasDueTodayNote={(notesMap[activeCharacter.id] ?? []).some(
+                      (n) => {
+                        const st = getNoteDueStatus(n.dueDate, n.done);
+                        return st === "today" || st === "overdue";
+                      }
+                    )}
                     onToggleHideChat={handleToggleHideChat}
                     onVideoCall={
                       activeCharacter.threadKind === "owner_contact"
@@ -1256,6 +1401,22 @@ export function ChatApp() {
             await fetchCharacters();
             setShowProfile(false);
           }}
+        />
+      )}
+
+      {showNotesDrawer && activeCharacter && (
+        <SharedNotesDrawer
+          characterName={activeCharacter.name}
+          notes={notesMap[activeCharacter.id] ?? []}
+          loading={notesLoadingFor === activeCharacter.id}
+          onClose={() => setShowNotesDrawer(false)}
+          onAddNote={(input) => handleAddSharedNote(activeCharacter.id, input)}
+          onToggleDone={(noteId, nextDone) =>
+            handleToggleSharedNote(activeCharacter.id, noteId, nextDone)
+          }
+          onDeleteNote={(noteId) =>
+            handleDeleteSharedNote(activeCharacter.id, noteId)
+          }
         />
       )}
 
