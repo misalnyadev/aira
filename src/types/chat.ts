@@ -151,3 +151,33 @@ export type OutgoingContactItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type BrainstormMemberSummary = {
+  characterId: string;
+  name: string;
+  avatarUrl: string | null;
+  shortBio: string;
+};
+
+export type BrainstormRoomSummary = {
+  id: string;
+  title: string;
+  members: BrainstormMemberSummary[];
+  preview: string;
+  updatedAt: string;
+  messageCount: number;
+};
+
+export type BrainstormMessage = {
+  id: string;
+  roomId: string;
+  role: "user" | "assistant";
+  characterId: string | null;
+  characterName?: string | null;
+  characterAvatarUrl?: string | null;
+  content: string;
+  imageUrl: string | null;
+  isVoiceNote?: boolean;
+  emotion?: string | null;
+  createdAt: string;
+};

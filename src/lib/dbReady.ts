@@ -202,6 +202,34 @@ const DDL = [
     "value" text DEFAULT '' NOT NULL,
     "updated_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`CREATE TABLE IF NOT EXISTS "brainstorm_rooms" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "title" text DEFAULT '' NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE TABLE IF NOT EXISTS "brainstorm_room_members" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "room_id" uuid NOT NULL REFERENCES "brainstorm_rooms"("id") ON DELETE cascade,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "brainstorm_room_members_room_char_idx" ON "brainstorm_room_members" ("room_id", "character_id")`,
+  sql`CREATE INDEX IF NOT EXISTS "brainstorm_room_members_room_idx" ON "brainstorm_room_members" ("room_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "brainstorm_messages" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "room_id" uuid NOT NULL REFERENCES "brainstorm_rooms"("id") ON DELETE cascade,
+    "role" text NOT NULL,
+    "character_id" uuid,
+    "content" text DEFAULT '' NOT NULL,
+    "image_url" text,
+    "is_voice_note" boolean DEFAULT false NOT NULL,
+    "emotion" text,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "brainstorm_messages_room_idx" ON "brainstorm_messages" ("room_id", "created_at" ASC)`,
+  sql`CREATE INDEX IF NOT EXISTS "brainstorm_rooms_user_idx" ON "brainstorm_rooms" ("user_id", "updated_at" DESC)`,
 ];
 
 async function backfillMissingCharacterPins(): Promise<void> {

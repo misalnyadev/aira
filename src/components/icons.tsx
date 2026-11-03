@@ -378,3 +378,12 @@ export function NotesBoardIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function BrainstormIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} className={className}>
+      <path d="M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M16 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.5 19a5.5 5.5 0 0 1 6-5M18.5 19a5.5 5.5 0 0 0-6-5M8 14v5M16 14v5M5 14a4 4 0 0 1 14 0" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
