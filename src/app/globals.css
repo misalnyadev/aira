@@ -106,6 +106,7 @@
 html,
 body {
   height: 100vh;
+  height: 100dvh;
   width: 100%;
   max-width: 100%;
   overflow: hidden;
@@ -168,11 +169,15 @@ html.ios-standalone {
  * bar navigasi. Pakai 100vh agar kanvas penuh 812 px sampai dasar layar.
  */
 @media (display-mode: standalone), (display-mode: fullscreen) {
+  html,
+  body,
   .app-shell {
     height: 100vh;
   }
 }
 
+html.ios-standalone,
+html.ios-standalone body,
 html.ios-standalone .app-shell {
   height: 100vh;
 }

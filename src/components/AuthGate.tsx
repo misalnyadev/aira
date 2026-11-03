@@ -8,6 +8,7 @@ import {
   type AuthUser,
 } from "@/lib/authClient";
 import { useSafeTop } from "@/lib/safeTop";
+import { useScrollGuard } from "@/lib/scrollGuard";
 import { ThemeQuickToggle } from "./ThemeToggle";
 
 type AuthContextValue = {
@@ -47,6 +48,7 @@ export function AuthGate({
   const [error, setError] = useState<string | null>(null);
 
   useSafeTop();
+  useScrollGuard();
 
   const signOut = useCallback(async () => {
     await apiLogout();
@@ -67,6 +69,9 @@ export function AuthGate({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setError(null);
     setBusy(true);
 
@@ -83,6 +88,8 @@ export function AuthGate({
     }
 
     setPassword("");
+    window.scrollTo(0, 0);
+    window.setTimeout(() => window.scrollTo(0, 0), 150);
     setUser(result.user);
   }
 

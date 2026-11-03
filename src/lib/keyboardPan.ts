@@ -30,12 +30,22 @@ export function useKeyboardPan() {
     let lastHeight = -1;
     let settleTimer = 0;
     let watchTimer = 0;
+    let blurTimer = 0;
     let applied = 0;
 
     const clamp = (value: number) =>
       Math.max(-MAX_CORRECTION, Math.min(MAX_CORRECTION, value));
 
+    const hasFocusedInput = () => {
+      const el = document.activeElement;
+      if (!(el instanceof HTMLElement)) return false;
+      return Boolean(
+        el.closest("input, textarea, select, [contenteditable='true']")
+      );
+    };
+
     const isKeyboardUp = () => {
+      if (!hasFocusedInput()) return false;
       if (vv.offsetTop > threshold) return true;
       if (Math.abs(vv.scale - 1) > 0.01) return false;
       return baseHeight - Math.round(vv.height) > KEYBOARD_MIN;
@@ -62,6 +72,10 @@ export function useKeyboardPan() {
       root.style.removeProperty("--vv-transform");
       root.style.removeProperty("--vv-height");
       root.style.removeProperty("--kb-gap");
+
+      if (!hasFocusedInput() && window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
     };
 
     const measureGap = () => {
@@ -162,13 +176,30 @@ export function useKeyboardPan() {
       if (!frame) frame = window.requestAnimationFrame(tick);
     };
 
+    const onFocusOut = () => {
+      window.clearTimeout(blurTimer);
+      blurTimer = window.setTimeout(() => {
+        if (!hasFocusedInput()) {
+          clear();
+          window.scrollTo(0, 0);
+        } else {
+          start();
+        }
+      }, 80);
+    };
+
     vv.addEventListener("resize", start);
     vv.addEventListener("scroll", start);
+    document.addEventListener("focusin", start, true);
+    document.addEventListener("focusout", onFocusOut, true);
     start();
 
     return () => {
+      window.clearTimeout(blurTimer);
       vv.removeEventListener("resize", start);
       vv.removeEventListener("scroll", start);
+      document.removeEventListener("focusin", start, true);
+      document.removeEventListener("focusout", onFocusOut, true);
       clear();
     };
   }, []);
