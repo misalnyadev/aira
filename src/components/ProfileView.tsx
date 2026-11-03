@@ -18,8 +18,19 @@ import { AdminPanelSection } from "./AdminPanelSection";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { AvatarCropModal } from "./AvatarCropModal";
-import { CameraIcon, CheckIcon, RefreshIcon } from "./icons";
+import {
+  CameraIcon,
+  ChatsIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  PencilIcon,
+  PlusIcon,
+  RefreshIcon,
+  SettingsIcon,
+  TrashIcon,
+} from "./icons";
 import { QuotaDiscussionBox } from "./QuotaDiscussionBox";
+import type { CharacterSummary } from "@/types/chat";
 
 export type ProfileTab = "identity" | "account" | "admin";
 
@@ -45,7 +56,15 @@ export function ProfileView({
   characterLimit = MAX_CHARACTERS,
   latestQuotaRequest = null,
   pendingQuotaRequestsCount = 0,
+  pendingOwnerContactsCount = 0,
+  characters = [],
   onQuotaChanged,
+  onChatCharacter,
+  onNewCharacter,
+  onOpenCharacterProfile,
+  onEditCharacter,
+  onDeleteCharacter,
+  onOpenContactsModal,
 }: {
   profile: UserProfile;
   onSaved: (next: UserProfile) => void;
@@ -56,7 +75,15 @@ export function ProfileView({
   characterLimit?: number;
   latestQuotaRequest?: QuotaRequestSummary | null;
   pendingQuotaRequestsCount?: number;
+  pendingOwnerContactsCount?: number;
+  characters?: CharacterSummary[];
   onQuotaChanged?: () => Promise<void> | void;
+  onChatCharacter?: (id: string) => void;
+  onNewCharacter?: () => void;
+  onOpenCharacterProfile?: (id: string) => void;
+  onEditCharacter?: (id: string) => void;
+  onDeleteCharacter?: (id: string) => void;
+  onOpenContactsModal?: () => void;
 }) {
   const { user, signOut } = useAuth();
   const effectiveIsAdmin = Boolean(isAdmin || user.isAdmin);
@@ -88,6 +115,8 @@ export function ProfileView({
     kind: "ok" | "err";
     text: string;
   } | null>(null);
+
+  const [charsOpen, setCharsOpen] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -543,30 +572,187 @@ export function ProfileView({
               </div>
             </section>
 
-            {/* Khusus Admin: Pintasan ke Tab Panel Admin */}
-            {effectiveIsAdmin ? (
-              <section className="rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold text-ink">
-                      Halaman Panel Admin
-                    </h3>
-                    <p className="mt-0.5 text-xs text-ink-soft">
-                      {pendingQuotaRequestsCount > 0
-                        ? `Ada ${pendingQuotaRequestsCount} permintaan tambah slot dari member yang menunggu persetujuanmu.`
-                        : "Kelola daftar akun member, peran Admin/Member, dan kuota slot karakter."}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => selectTab("admin")}
-                    className="shrink-0 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
-                  >
-                    Buka Panel Admin →
-                  </button>
+            {/* Menu Karakter — compact dropdown “v” (pengganti shortcut Panel Admin) */}
+            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setCharsOpen((v) => !v)}
+                aria-expanded={charsOpen}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50 sm:px-5"
+              >
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-ink">
+                    Karakter Saya
+                  </h3>
+                  <p className="mt-0.5 text-xs text-ink-soft">
+                    {characters.length === 0
+                      ? "Kelola karakter — buat baru, atur profil & PIN."
+                      : `${characters.length} karakter · ${characters.length}/${characterLimit} slot terpakai`}
+                  </p>
                 </div>
-              </section>
-            ) : (
+                <span className="flex shrink-0 items-center gap-2">
+                  {pendingOwnerContactsCount > 0 && (
+                    <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                      {pendingOwnerContactsCount} baru
+                    </span>
+                  )}
+                  {pendingQuotaRequestsCount > 0 && effectiveIsAdmin && (
+                    <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                      {pendingQuotaRequestsCount} slot
+                    </span>
+                  )}
+                  <span
+                    className={`grid h-7 w-7 place-items-center rounded-full border border-line bg-surface-2 text-ink-soft transition ${charsOpen ? "rotate-180 bg-surface text-ink" : ""}`}
+                  >
+                    <ChevronDownIcon className="h-3.5 w-3.5" />
+                  </span>
+                </span>
+              </button>
+
+              {charsOpen && (
+                <div className="border-t border-line bg-surface-2/40 px-3 py-3 sm:px-4">
+                  {pendingOwnerContactsCount > 0 && onOpenContactsModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenContactsModal}
+                      className="mb-3 flex w-full items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-left transition hover:bg-amber-500/15"
+                    >
+                      <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                        Ada {pendingOwnerContactsCount} permintaan kontak menunggu persetujuanmu.
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-amber-800 underline decoration-dotted dark:text-amber-300">
+                        Tinjau →
+                      </span>
+                    </button>
+                  )}
+
+                  {characters.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-line bg-surface p-4 text-center">
+                      <p className="text-xs font-medium text-ink-soft">
+                        Belum ada karakter. Buat karakter pertamamu untuk mulai chat.
+                      </p>
+                      {onNewCharacter && (
+                        <button
+                          type="button"
+                          onClick={onNewCharacter}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+                        >
+                          <PlusIcon className="h-3.5 w-3.5" /> Buat Karakter
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {characters.map((ch) => (
+                        <li
+                          key={ch.id}
+                          className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 shadow-2xs"
+                        >
+                          <Avatar name={ch.name} src={ch.avatarUrl} size={40} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-ink">
+                              {ch.name}
+                            </p>
+                            <p className="truncate text-[11px] text-ink-soft">
+                              {ch.shortBio || ch.invitePin || "Tanpa deskripsi"}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              <span className="rounded-full bg-line px-1.5 py-0.5 text-[10px] font-bold text-ink-soft">
+                                PIN {ch.invitePin}
+                              </span>
+                              {ch.hasBible && (
+                                <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] font-bold text-surface">
+                                  Bible
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-col gap-1">
+                            <div className="flex items-center gap-1">
+                              {onChatCharacter && (
+                                <button
+                                  type="button"
+                                  onClick={() => onChatCharacter(ch.id)}
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  title="Chat"
+                                  aria-label={`Chat dengan ${ch.name}`}
+                                >
+                                  <ChatsIcon className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {onOpenCharacterProfile && (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenCharacterProfile(ch.id)}
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  title="Profil"
+                                  aria-label={`Profil ${ch.name}`}
+                                >
+                                  <SettingsIcon className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {onEditCharacter && (
+                                <button
+                                  type="button"
+                                  onClick={() => onEditCharacter(ch.id)}
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  title="Edit"
+                                  aria-label={`Edit ${ch.name}`}
+                                >
+                                  <PencilIcon className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {onDeleteCharacter && (
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteCharacter(ch.id)}
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10"
+                                  title="Hapus"
+                                  aria-label={`Hapus ${ch.name}`}
+                                >
+                                  <TrashIcon className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {characters.length > 0 && onNewCharacter && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {characters.length < characterLimit || effectiveIsAdmin ? (
+                        <button
+                          type="button"
+                          onClick={onNewCharacter}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-surface-2"
+                        >
+                          <PlusIcon className="h-3.5 w-3.5" /> Buat Karakter Baru
+                        </button>
+                      ) : (
+                        <p className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-ink-soft">
+                          Slot penuh ({characterLimit}). Ajukan tambah slot di bawah untuk buat lagi.
+                        </p>
+                      )}
+                      {onOpenContactsModal && (
+                        <button
+                          type="button"
+                          onClick={onOpenContactsModal}
+                          className="rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface-2"
+                        >
+                          Kelola Kontak Masuk
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {!effectiveIsAdmin && (
               /* Khusus Member: Pengajuan Tambah Slot Karakter ke Admin */
               <section className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
                 <div className="flex items-start justify-between gap-2">
