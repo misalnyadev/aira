@@ -28,6 +28,7 @@ import {
   sanitizeMemorySummary,
 } from "@/lib/characterMemory";
 import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
+import { getDailyPresenceForPrompt } from "@/lib/dailyPresence";
 import { AUTO_MEMORY_BATCH_MIN } from "@/lib/limits";
 import {
   buildKeyAttempts,
@@ -331,13 +332,24 @@ export async function generateBubbles({
   const sceneAnchor = buildSceneContinuityAnchor(history, userText);
   const chatExpressionMode =
     !callMode && isUsingCallClipsInChat(parseCharacterMedia(character.media));
+  const dailyPresence = getDailyPresenceForPrompt(
+    {
+      id: character.id,
+      name: character.name,
+      shortBio: character.shortBio ?? "",
+      personality: character.personality ?? "",
+      bible: character.bible ?? "",
+    },
+    new Date()
+  );
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor || callMode || chatExpressionMode
+    memoryExtras || sceneAnchor || callMode || chatExpressionMode || dailyPresence
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
           ...(callMode ? { callMode } : {}),
           ...(chatExpressionMode ? { chatExpressionMode: true } : {}),
+          dailyPresence,
         }
       : undefined;
 
