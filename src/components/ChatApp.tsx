@@ -29,6 +29,7 @@ import {
 } from "@/lib/hdVoice";
 import { useKeyboardPan } from "@/lib/keyboardPan";
 import { MAX_CHARACTERS } from "@/lib/limits";
+import { shouldAttemptClientCheckIn } from "@/lib/proactiveCheckIn";
 import { useSafeTop } from "@/lib/safeTop";
 import { useScrollGuard } from "@/lib/scrollGuard";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
@@ -126,6 +127,11 @@ export function ChatApp() {
   const [call, setCall] = useState<{ characterId: string; mode: "video" | "audio" } | null>(null);
   const [peekCharId, setPeekCharId] = useState<string | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
+  const [wakeTick, setWakeTick] = useState(0);
+  const proactiveCheckedRef = useRef<Set<string>>(new Set());
+  const deliverBubblesRef = useRef<
+    ((target: string, bubbles: ChatMessage[]) => Promise<void>) | null
+  >(null);
 
   const allThreads = useMemo(() => {
     if (contactThreads.length === 0) return characters;
@@ -787,6 +793,7 @@ export function ChatApp() {
               ...c,
               memoryEnabled: next.memoryEnabled,
               browsingEnabled: next.browsingEnabled,
+              proactiveEnabled: next.proactiveEnabled,
             }
           : c
       )
@@ -799,6 +806,7 @@ export function ChatApp() {
             memorySummary: next.memorySummary,
             memoryUpdatedAt: next.memoryUpdatedAt,
             browsingEnabled: next.browsingEnabled,
+            proactiveEnabled: next.proactiveEnabled,
           }
         : cur
     );
@@ -838,6 +846,105 @@ export function ChatApp() {
     const id = window.setTimeout(() => setPeekCharId(null), 8000);
     return () => window.clearTimeout(id);
   }, [isHiddenMode, composerRevealed, composerBusy]);
+
+  useEffect(() => {
+    deliverBubblesRef.current = deliverAssistantBubbles;
+  });
+
+  // Bangunkan pemeriksa waktu saat aplikasi kembali aktif dari latar belakang.
+  useEffect(() => {
+    function onVis() {
+      if (document.visibilityState === "visible") {
+        setWakeTick((n) => n + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Karakter menyapa duluan secara alami saat ruang chat dibuka setelah jeda lama.
+  useEffect(() => {
+    if (view !== "chats" || !activeCharacter) return;
+    if (parseContactThreadId(activeCharacter.id)) return;
+    if (!activeCharacter.proactiveEnabled || !hasProviders) return;
+    if (typingFor || call) return;
+
+    const isVisibleRoom =
+      mobileShowChat ||
+      (typeof window !== "undefined" &&
+        window.matchMedia("(min-width: 768px)").matches);
+    if (!isVisibleRoom) return;
+
+    const msgs = messagesMap[activeCharacter.id];
+    if (!msgs || !shouldAttemptClientCheckIn(msgs)) return;
+
+    const lastMsg = msgs[msgs.length - 1];
+    if (!lastMsg) return;
+
+    const attemptKey = `${activeCharacter.id}:${lastMsg.id}`;
+    if (proactiveCheckedRef.current.has(attemptKey)) return;
+
+    const targetId = activeCharacter.id;
+    let timerCancelled = false;
+    const timer = window.setTimeout(async () => {
+      if (timerCancelled || proactiveCheckedRef.current.has(attemptKey)) return;
+      proactiveCheckedRef.current.add(attemptKey);
+
+      try {
+        const res = await api(`/api/characters/${targetId}/check-in`, {
+          method: "POST",
+        });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        const incoming: ChatMessage[] = Array.isArray(data?.assistantMessages)
+          ? data.assistantMessages
+          : [];
+        if (!data?.triggered || incoming.length === 0) return;
+
+        if (activeIdRef.current === targetId && deliverBubblesRef.current) {
+          await deliverBubblesRef.current(targetId, incoming);
+          setTypingFor((cur) => (cur === targetId ? null : cur));
+        } else {
+          setMessagesMap((prev) => ({
+            ...prev,
+            [targetId]: [...(prev[targetId] ?? []), ...incoming],
+          }));
+        }
+
+        const finalBubble = incoming[incoming.length - 1];
+        if (finalBubble) {
+          setCharacters((prev) =>
+            prev.map((c) =>
+              c.id === targetId
+                ? {
+                    ...c,
+                    preview: finalBubble.content,
+                    updatedAt: finalBubble.createdAt,
+                  }
+                : c
+            )
+          );
+        }
+      } catch {
+        // Diam-diam abaikan kegagalan jaringan sapaan otomatis agar bebas gangguan.
+      }
+    }, 900);
+
+    return () => {
+      timerCancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    view,
+    activeCharacter,
+    hasProviders,
+    typingFor,
+    call,
+    mobileShowChat,
+    messagesMap,
+    wakeTick,
+    api,
+  ]);
 
   function handleToggleHideChat() {
     if (!activeCharacter) return;

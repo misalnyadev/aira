@@ -62,6 +62,7 @@ export async function GET() {
       voiceConfig: characters.voiceConfig,
       memoryEnabled: characters.memoryEnabled,
       browsingEnabled: characters.browsingEnabled,
+      proactiveEnabled: characters.proactiveEnabled,
       invitePin: characters.invitePin,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
@@ -93,6 +94,7 @@ export async function GET() {
         voiceConfig: parseCharacterVoice(row.voiceConfig),
         memoryEnabled: Boolean(row.memoryEnabled),
         browsingEnabled: Boolean(row.browsingEnabled),
+        proactiveEnabled: Boolean(row.proactiveEnabled),
         invitePin: row.invitePin ?? null,
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")

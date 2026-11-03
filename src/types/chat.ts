@@ -44,6 +44,8 @@ export type CharacterSummary = {
   memoryEnabled: boolean;
   /** Apakah akses browsing internet & pembaca link aktif pada karakter ini. */
   browsingEnabled: boolean;
+  /** Apakah sapaan duluan otomatis (Proactive Check-In) aktif pada karakter ini. */
+  proactiveEnabled?: boolean;
   /** Kode PIN bawaan karakter (tampil pada karakter milik sendiri). */
   invitePin?: string | null;
   /** Jenis utas di daftar kontak Chat (`owned`, `guest_contact`, atau `owner_contact`). */
@@ -79,6 +81,7 @@ export type CharacterDetail = {
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
+  proactiveEnabled: boolean;
   invitePin?: string | null;
 };
 

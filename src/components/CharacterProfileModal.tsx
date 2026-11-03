@@ -130,7 +130,7 @@ export function CharacterProfileModal({
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Ingatan & akses internet
+              Ingatan, sapaan &amp; internet
             </h4>
             <CharacterMemorySection
               key={`${character.id}|${character.memoryUpdatedAt ?? ""}`}
@@ -140,6 +140,7 @@ export function CharacterProfileModal({
               memorySummary={character.memorySummary}
               memoryUpdatedAt={character.memoryUpdatedAt}
               browsingEnabled={character.browsingEnabled}
+              proactiveEnabled={character.proactiveEnabled}
               onChange={onMemoryChange}
               onNotice={onNotice}
             />
