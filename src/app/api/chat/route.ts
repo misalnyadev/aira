@@ -17,9 +17,11 @@ import {
 import { toTimeAwareChatTurns } from "@/lib/characterMemory";
 import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
+import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
+import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,14 +43,16 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { characterId, content, imageUrl, callMode } = body as {
+  const { characterId, content, imageUrl, callMode, isVoiceNote } = body as {
     characterId?: string;
     content?: string;
     imageUrl?: string | null;
     callMode?: "video" | "audio" | null;
+    isVoiceNote?: boolean;
   };
   const activeCallMode =
     callMode === "video" || callMode === "audio" ? callMode : undefined;
+  const userSentVoiceNote = Boolean(isVoiceNote && !activeCallMode && content?.trim());
 
   if (!characterId) {
     return NextResponse.json({ error: "characterId wajib diisi." }, { status: 400 });
@@ -79,6 +83,7 @@ export async function POST(req: Request) {
       role: "user",
       content: content?.trim() || "",
       imageUrl: imageUrl || null,
+      isVoiceNote: userSentVoiceNote,
     })
     .returning();
 
@@ -94,14 +99,26 @@ export async function POST(req: Request) {
   const chronologicalHistory = [...historyRows].reverse();
   const cleanUserText = content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : "");
 
+  const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
+  const replyAsVoiceNote = shouldReplyWithVoiceNote({
+    mode: charVoiceCfg?.voiceNoteMode,
+    userSentVoiceNote,
+    userText: cleanUserText,
+    hasImage: Boolean(imageUrl),
+    callMode: activeCallMode,
+  });
+
   try {
-    const memoryExtras = await buildMemoryExtrasForTurn({
+    const baseExtras = await buildMemoryExtrasForTurn({
       character,
       chronologicalHistory,
       excludeMessageId: userMessage.id,
       userText: cleanUserText,
       primaryProviderType: candidates[0]?.type,
     });
+    const memoryExtras = replyAsVoiceNote
+      ? { ...baseExtras, voiceNoteReply: true }
+      : baseExtras;
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(chronologicalHistory, userMessage.id)
@@ -124,7 +141,7 @@ export async function POST(req: Request) {
     const shouldExtractEmotion = Boolean(activeCallMode || chatExpressionMode);
 
     let callEmotion: CallEmotion | undefined;
-    const preparedBubbles: { content: string; emotion?: CallEmotion }[] =
+    let preparedBubbles: { content: string; emotion?: CallEmotion }[] =
       shouldExtractEmotion
         ? result.bubbles
             .map((raw, idx) => {
@@ -134,6 +151,15 @@ export async function POST(req: Request) {
             })
             .filter((item) => item.content.length > 0)
         : result.bubbles.map((raw) => ({ content: raw }));
+
+    if (replyAsVoiceNote && preparedBubbles.length > 1) {
+      const mergedText = preparedBubbles.map((b) => b.content.trim()).join(" ");
+      if (mergedText.length <= 450) {
+        preparedBubbles = [
+          { content: mergedText, emotion: preparedBubbles[0]?.emotion },
+        ];
+      }
+    }
 
     const assistantMessages = [];
     const baseTime = Date.now();
@@ -145,6 +171,7 @@ export async function POST(req: Request) {
           characterId,
           role: "assistant",
           content: item.content,
+          isVoiceNote: replyAsVoiceNote,
           createdAt: new Date(baseTime + i),
         })
         .returning();

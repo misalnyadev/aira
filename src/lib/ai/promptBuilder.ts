@@ -22,6 +22,8 @@ export type MemoryPromptContext = {
   callMode?: "video" | "audio";
   /** Aktif saat ruang chat memakai aset video ekspresi panggilan karakter. */
   chatExpressionMode?: boolean;
+  /** Aktif saat giliran balasan ini dikirim sebagai Gelembung Pesan Suara (Voice Note). */
+  voiceNoteReply?: boolean;
 };
 
 /**
@@ -154,6 +156,14 @@ Layar ruang chat sedang menampilkan video ekspresi wajahmu secara langsung.
 === AKHIR PENANDA EKSPRESI ===`;
 }
 
+export function buildVoiceNoteReplyAnchor(withExpressionTag?: boolean): string {
+  return `=== MODE BALASAN PESAN SUARA (VOICE NOTE / VN) ===
+Pada giliran ini kamu membalas memakai REKAMAN PESAN SUARA (Voice Note / VN) yang langsung bisa diputar lawan bicara di ruang chat!
+- Bicaralah lisan secara santai, akrab, dan mengalir seperti teman dekat lagi ngerekam VN di HP (sekitar 1 sampai maksimal 3 kalimat lisan dalam SATU gelembung suara utuh tanpa "${BUBBLE_DELIMITER}", supaya enak diputar sekali jalan).
+- JANGAN memakai daftar poin/nomor, blok kode, simbol markdown, tanda bintang (*aksi*), atau emoji berlebihan karena kalimatmu langsung diputar menjadi suara.${withExpressionTag ? "\n- Tetap awali dengan TEPAT SATU penanda ekspresi wajah di paling depan (seperti [SMILE] atau [NORMAL]) sesuai aturan penanda ekspresi." : ""}
+=== AKHIR MODE VOICE NOTE ===`;
+}
+
 function extrasAnchor(extras?: MemoryPromptContext): string {
   const parts: string[] = [];
   if (extras?.sceneAnchor?.trim()) {
@@ -161,8 +171,13 @@ function extrasAnchor(extras?: MemoryPromptContext): string {
   }
   if (extras?.callMode === "video" || extras?.callMode === "audio") {
     parts.push(buildCallModeAnchor(extras.callMode));
-  } else if (extras?.chatExpressionMode) {
-    parts.push(buildChatExpressionAnchor());
+  } else {
+    if (extras?.chatExpressionMode) {
+      parts.push(buildChatExpressionAnchor());
+    }
+    if (extras?.voiceNoteReply) {
+      parts.push(buildVoiceNoteReplyAnchor(Boolean(extras?.chatExpressionMode)));
+    }
   }
   if (!parts.length) return "\n";
   return `\n${parts.join("\n\n")}\n\n`;

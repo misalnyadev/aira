@@ -174,7 +174,7 @@ export function CharacterProfileModal({
               Suara karakter
             </h4>
             <CharacterVoiceSection
-              key={`${character.id}|${ttsSummary.provider}|${character.voiceConfig?.mode ?? "inherit"}|${character.voiceConfig?.customProvider ?? ""}|${character.voiceConfig?.customVoiceId ?? ""}`}
+              key={`${character.id}|${ttsSummary.provider}|${character.voiceConfig?.mode ?? "inherit"}|${character.voiceConfig?.customProvider ?? ""}|${character.voiceConfig?.customVoiceId ?? ""}|${character.voiceConfig?.voiceNoteMode ?? "auto"}`}
               value={character.voiceConfig}
               ttsSummary={ttsSummary}
               voiceSettings={voiceSettings}

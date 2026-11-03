@@ -91,6 +91,7 @@ export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   imageUrl: string | null;
+  isVoiceNote?: boolean;
   status: string;
   createdAt: string;
   pending?: boolean;

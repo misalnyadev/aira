@@ -26,8 +26,9 @@ import {
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import { ensureMediaUrl } from "@/lib/mediaClient";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
-import { useIsAudibleSpeaking } from "@/lib/voice";
+import { useIsAudibleSpeaking, useSpeakingMessageId } from "@/lib/voice";
 import { Avatar } from "./Avatar";
+import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import {
   CallVideoStage,
   ChatCallStagePanel,
@@ -144,7 +145,11 @@ export function ChatWindow({
   onAudioCall?: () => void;
   onImageClick: (url: string) => void;
   onCopyMessage: (text: string) => void;
-  onSpeakMessage: (text: string) => void;
+  onSpeakMessage: (
+    text: string,
+    messageId?: string,
+    role?: "user" | "assistant"
+  ) => void;
   onStopSpeaking: () => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
@@ -259,6 +264,7 @@ export function ChatWindow({
   }, [isSpeaking]);
 
   const audibleSpeaking = useIsAudibleSpeaking();
+  const speakingMessageId = useSpeakingMessageId();
   const videoPlaying = audibleSpeaking || (!isSpeaking && reading && !isTyping);
 
   const latestAssistant = useMemo(() => {
@@ -355,7 +361,7 @@ export function ChatWindow({
               emotion: em,
               messageCount: messages.length,
             });
-            onSpeakMessage(message.content);
+            onSpeakMessage(message.content, message.id, message.role);
           },
         };
       }
@@ -682,25 +688,72 @@ export function ChatWindow({
                           className="mb-1.5 max-h-64 w-full cursor-pointer rounded-lg object-cover transition hover:opacity-90"
                         />
                       )}
-                      {m.content && (
-                        <p
-                          className="whitespace-pre-wrap break-words"
-                          style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
-                        >
-                          {m.content}
-                        </p>
+                      {m.isVoiceNote && m.content ? (
+                        <VoiceNoteBubble
+                          messageId={m.id}
+                          text={m.content}
+                          isActiveMessage={speakingMessageId === m.id}
+                          isAudible={audibleSpeaking}
+                          textStyle={bubbleInk(
+                            bubbleStyle,
+                            m.role === "user" ? "out" : "in"
+                          )}
+                          timeLabel={formatTime(m.createdAt)}
+                          ticksNode={
+                            m.role === "user" ? (
+                              <Ticks pending={m.pending} />
+                            ) : undefined
+                          }
+                          onTogglePlay={() => {
+                            if (speakingMessageId === m.id) {
+                              onStopSpeaking();
+                              return;
+                            }
+                            if (m.role === "assistant") {
+                              const em =
+                                m.emotion ??
+                                inferEmotionFromIndonesianText(m.content);
+                              setManualSpeakOverride({
+                                emotion: em,
+                                messageCount: messages.length,
+                              });
+                            }
+                            onSpeakMessage(m.content, m.id, m.role);
+                          }}
+                        />
+                      ) : (
+                        <>
+                          {m.content && (
+                            <p
+                              className="whitespace-pre-wrap break-words"
+                              style={bubbleInk(
+                                bubbleStyle,
+                                m.role === "user" ? "out" : "in"
+                              )}
+                            >
+                              {m.content}
+                            </p>
+                          )}
+                          <span
+                            className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
+                              (
+                                m.role === "user"
+                                  ? bubbleStyle.textColorOut
+                                  : bubbleStyle.textColorIn
+                              )
+                                ? "opacity-75"
+                                : "text-ink-soft/80"
+                            }`}
+                            style={bubbleInk(
+                              bubbleStyle,
+                              m.role === "user" ? "out" : "in"
+                            )}
+                          >
+                            {formatTime(m.createdAt)}
+                            {m.role === "user" && <Ticks pending={m.pending} />}
+                          </span>
+                        </>
                       )}
-                      <span
-                        className={`float-right ml-2 mt-1 flex translate-y-0.5 select-none items-center gap-1 text-[12px] ${
-                          (m.role === "user" ? bubbleStyle.textColorOut : bubbleStyle.textColorIn)
-                            ? "opacity-75"
-                            : "text-ink-soft/80"
-                        }`}
-                        style={bubbleInk(bubbleStyle, m.role === "user" ? "out" : "in")}
-                      >
-                        {formatTime(m.createdAt)}
-                        {m.role === "user" && <Ticks pending={m.pending} />}
-                      </span>
                     </div>
 
                     {m.role === "assistant" && (

@@ -16,10 +16,12 @@ import {
 import { toTimeAwareChatTurns } from "@/lib/characterMemory";
 import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
+import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { staleAssistantIds } from "@/lib/messageRules";
 import { findOwnedCharacter } from "@/lib/owned";
 import { readImageAsBase64 } from "@/lib/uploads";
+import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -79,14 +81,25 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     .reverse();
   const cleanUserText = lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : "");
 
+  const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
+  const replyAsVoiceNote = shouldReplyWithVoiceNote({
+    mode: charVoiceCfg?.voiceNoteMode,
+    userSentVoiceNote: Boolean(lastUser.isVoiceNote),
+    userText: cleanUserText,
+    hasImage: Boolean(lastUser.imageUrl),
+  });
+
   try {
-    const memoryExtras = await buildMemoryExtrasForTurn({
+    const baseExtras = await buildMemoryExtrasForTurn({
       character,
       chronologicalHistory: chronologicalPrior,
       excludeMessageId: lastUser.id,
       userText: cleanUserText,
       primaryProviderType: candidates[0]?.type,
     });
+    const memoryExtras = replyAsVoiceNote
+      ? { ...baseExtras, voiceNoteReply: true }
+      : baseExtras;
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(chronologicalPrior, lastUser.id)
@@ -106,7 +119,7 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     const chatExpressionMode = isUsingCallClipsInChat(
       parseCharacterMedia(character.media)
     );
-    const preparedBubbles: { content: string; emotion?: CallEmotion }[] =
+    let preparedBubbles: { content: string; emotion?: CallEmotion }[] =
       chatExpressionMode
         ? result.bubbles
             .map((raw) => {
@@ -115,6 +128,15 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
             })
             .filter((item) => item.content.length > 0)
         : result.bubbles.map((raw) => ({ content: raw }));
+
+    if (replyAsVoiceNote && preparedBubbles.length > 1) {
+      const mergedText = preparedBubbles.map((b) => b.content.trim()).join(" ");
+      if (mergedText.length <= 450) {
+        preparedBubbles = [
+          { content: mergedText, emotion: preparedBubbles[0]?.emotion },
+        ];
+      }
+    }
 
     const assistantMessages = [];
     const baseTime = Date.now();
@@ -126,6 +148,7 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
           characterId: id,
           role: "assistant",
           content: item.content,
+          isVoiceNote: replyAsVoiceNote,
           createdAt: new Date(baseTime + i),
         })
         .returning();

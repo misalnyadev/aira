@@ -13,6 +13,7 @@ import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { isOwnedMediaKey, parseMediaKeyMeta } from "@/lib/r2";
+import { formatVoiceNotePreview } from "@/lib/voiceNote";
 import type { CharacterSummary, ChatMessage } from "@/types/chat";
 
 /**
@@ -173,6 +174,7 @@ export function serializeContactMessageForViewer(
     role: isRightSide ? "user" : "assistant",
     content: row.content,
     imageUrl: withUploaderParam(row.imageUrl, uploaderId),
+    isVoiceNote: Boolean(row.isVoiceNote),
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     senderKind,
@@ -238,6 +240,7 @@ export async function loadActiveContactThreadsForUser(
         .select({
           content: contactMessages.content,
           imageUrl: contactMessages.imageUrl,
+          isVoiceNote: contactMessages.isVoiceNote,
           senderKind: contactMessages.senderKind,
           createdAt: contactMessages.createdAt,
         })
@@ -283,7 +286,9 @@ export async function loadActiveContactThreadsForUser(
         }
 
         const rawPreview = lastMsg
-          ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
+          ? lastMsg.isVoiceNote
+            ? formatVoiceNotePreview(lastMsg.content)
+            : lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Kontak terhubung — mulai sapa";
 
         return {
@@ -309,8 +314,13 @@ export async function loadActiveContactThreadsForUser(
         };
       }
 
+      const lastBodyLabel = lastMsg
+        ? lastMsg.isVoiceNote
+          ? formatVoiceNotePreview(lastMsg.content)
+          : lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
+        : "";
       const ownerPreview = lastMsg
-        ? `${lastMsg.senderKind === "guest" ? `${guestLabel}: ` : lastMsg.senderKind === "owner_manual" ? "Kamu: " : "AI: "}${lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")}`
+        ? `${lastMsg.senderKind === "guest" ? `${guestLabel}: ` : lastMsg.senderKind === "owner_manual" ? "Kamu: " : "AI: "}${lastBodyLabel}`
         : `Kontak baru dengan ${guestLabel}`;
 
       return {

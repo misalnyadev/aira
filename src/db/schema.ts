@@ -153,6 +153,8 @@ export const messages = pgTable("messages", {
   content: text("content").notNull().default(""),
   /** URL gambar: `/uploads/...` (lokal) atau `/api/attachments/{id}` (Vercel). */
   imageUrl: text("image_url"),
+  /** Apakah gelembung ini berupa Pesan Suara / Voice Note (VN). */
+  isVoiceNote: boolean("is_voice_note").notNull().default(false),
   status: text("status").notNull().default("sent"), // sent | read
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -279,9 +281,10 @@ export const contactMessages = pgTable("contact_messages", {
     .notNull()
     .references(() => characterContacts.id, { onDelete: "cascade" }),
   senderKind: text("sender_kind").notNull(),
-  content: text("content").notNull().default(""),
-  imageUrl: text("image_url"),
-  status: text("status").notNull().default("sent"),
+    content: text("content").notNull().default(""),
+    imageUrl: text("image_url"),
+    isVoiceNote: boolean("is_voice_note").notNull().default(false),
+    status: text("status").notNull().default("sent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
