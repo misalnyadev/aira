@@ -22,6 +22,8 @@ export type ProviderSummary = {
   createdAt: string;
 };
 
+export type ThreadKind = "owned" | "guest_contact" | "owner_contact";
+
 export type CharacterSummary = {
   id: string;
   name: string;
@@ -44,6 +46,16 @@ export type CharacterSummary = {
   browsingEnabled: boolean;
   /** Kode PIN bawaan karakter (tampil pada karakter milik sendiri). */
   invitePin?: string | null;
+  /** Jenis utas di daftar kontak Chat (`owned`, `guest_contact`, atau `owner_contact`). */
+  threadKind?: ThreadKind;
+  /** ID baris `character_contacts` bila ini utas kontak 2 arah. */
+  contactId?: string;
+  /** ID karakter asli bila ini utas kontak 2 arah. */
+  sourceCharacterId?: string;
+  /** Nama lawan bicara (pemilik karakter / tamu pengundang). */
+  partnerName?: string;
+  /** Apakah balasan AI otomatis sedang aktif pada utas kontak ini. */
+  aiAutoReply?: boolean;
   preview: string;
   updatedAt: string;
 };
@@ -80,6 +92,8 @@ export type ChatMessage = {
   createdAt: string;
   pending?: boolean;
   emotion?: CallEmotion;
+  /** Asal pengirim pada ruang obrolan kontak 2 arah. */
+  senderKind?: "guest" | "character_ai" | "owner_manual";
 };
 
 export type QuotaRequestSummary = {

@@ -105,6 +105,7 @@ export function ChatWindow({
   background,
   bubble,
   composer,
+  contactControlBar,
   composerVisible = true,
   onScreenTap,
   onBack,
@@ -132,6 +133,8 @@ export function ChatWindow({
   bubble?: BubbleStyle;
   /** Kolom ketik di bagian bawah ruang chat (menyatu di atas latar/video penuh). */
   composer?: ReactNode;
+  /** Pita kontrol opsional untuk kontak 2 arah (mis. sakelar AI vs Balas Manual). */
+  contactControlBar?: ReactNode;
   /** Apakah kolom ketik sedang ditampilkan (pada mode hide muncul saat layar disentuh). */
   composerVisible?: boolean;
   /** Ketukan di layar bersih (dipakai pada mode hide untuk memunculkan/menyembunyikan komposer). */
@@ -330,11 +333,16 @@ export function ChatWindow({
   );
 
   function actionsFor(message: ChatMessage): MessageAction[] {
-    const labels = messageActionsFor(message, {
+    const isSharedContact =
+      Boolean(character.threadKind) && character.threadKind !== "owned";
+    const rawLabels = messageActionsFor(message, {
       isLastAssistant: message.id === lastAssistant,
       isTyping,
       canSpeak,
     });
+    const labels = isSharedContact
+      ? rawLabels.filter((l) => l === "Salin teks" || l === "Bacakan")
+      : rawLabels;
 
     return labels.map((label): MessageAction => {
       if (label === "Salin teks") {
@@ -555,6 +563,12 @@ export function ChatWindow({
         </div>
       )}
 
+      {!hideMessages && contactControlBar && (
+        <div className="z-10 border-b border-line bg-surface/90 px-3 py-2 backdrop-blur-xs sm:px-4">
+          {contactControlBar}
+        </div>
+      )}
+
       {!hideMessages && hasChatVisual && !chatVideoFull && (
         <div className="px-3 pt-3 sm:px-4">
           <div className="mx-auto w-full max-w-lg">
@@ -647,6 +661,24 @@ export function ChatWindow({
                       } ${m.pending ? "opacity-60" : ""}`}
                       style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
                     >
+                      {character.threadKind === "owner_contact" &&
+                        m.senderKind === "character_ai" && (
+                          <span className="mb-0.5 block text-[10.5px] font-semibold opacity-70">
+                            🤖 Dijawab AI
+                          </span>
+                        )}
+                      {character.threadKind === "owner_contact" &&
+                        m.senderKind === "owner_manual" && (
+                          <span className="mb-0.5 block text-[10.5px] font-semibold opacity-70">
+                            ✍️ Balasan Manual
+                          </span>
+                        )}
+                      {character.threadKind === "guest_contact" &&
+                        m.senderKind === "owner_manual" && (
+                          <span className="mb-0.5 block text-[10.5px] font-semibold opacity-70">
+                            💬 Balasan langsung
+                          </span>
+                        )}
                       {m.imageUrl && (
                         <img
                           src={m.imageUrl}

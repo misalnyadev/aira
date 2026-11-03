@@ -15,10 +15,12 @@ export function AddContactModal({
   onClose,
   onUpdated,
   onOpenCharactersView,
+  onOpenChatThread,
 }: {
   onClose: () => void;
   onUpdated?: () => Promise<void> | void;
   onOpenCharactersView?: () => void;
+  onOpenChatThread?: (contactId: string) => void;
 }) {
   const [pin, setPin] = useState("");
   const [note, setNote] = useState("");
@@ -379,6 +381,18 @@ export function AddContactModal({
                         )}
 
                         <div className="flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+                          {state === "active" && onOpenChatThread && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                onOpenChatThread(item.id);
+                              }}
+                              className="mr-auto rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+                            >
+                              Buka Chat
+                            </button>
+                          )}
                           {item.ownerStatus === "blocked" ? (
                             <button
                               type="button"
@@ -481,16 +495,30 @@ export function AddContactModal({
                         </div>
                       </div>
 
-                      {state !== "blocked" && (
-                        <button
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => void handleAction(item.id, "remove")}
-                          className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface-2 hover:text-rose-500 disabled:opacity-50"
-                        >
-                          {state === "active" ? "Hapus" : "Batal"}
-                        </button>
-                      )}
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {state === "active" && onOpenChatThread && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClose();
+                              onOpenChatThread(item.id);
+                            }}
+                            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+                          >
+                            Buka Chat
+                          </button>
+                        )}
+                        {state !== "blocked" && (
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => void handleAction(item.id, "remove")}
+                            className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface-2 hover:text-rose-500 disabled:opacity-50"
+                          >
+                            {state === "active" ? "Hapus" : "Batal"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

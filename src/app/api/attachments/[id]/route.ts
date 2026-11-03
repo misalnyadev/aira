@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { attachments } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { hasActiveContactBetweenUsers } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { buildR2ImageKey, getR2Object, parseR2AttachmentId } from "@/lib/r2";
 
@@ -24,8 +25,10 @@ function fallbackMime(filename: string): string {
  * Hanya pemilik sesi yang boleh membukanya; browser otomatis mengirim cookie sesi
  * pada permintaan `<img src="...">` maupun CSS `background-image`.
  */
-export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
+  const { searchParams } = new URL(req.url);
+  const requestedOwnerId = searchParams.get("u")?.trim() || null;
 
   try {
     await ensureDb();
@@ -39,7 +42,17 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   // 1) Lampiran gambar baru yang tersimpan di Cloudflare R2.
   const r2File = parseR2AttachmentId(id);
   if (r2File) {
-    const r2Key = buildR2ImageKey(user.id, r2File);
+    let targetOwnerId = user.id;
+    if (requestedOwnerId && requestedOwnerId !== user.id) {
+      const allowed = await hasActiveContactBetweenUsers(
+        user.id,
+        requestedOwnerId
+      );
+      if (!allowed) return new Response("Not found", { status: 404 });
+      targetOwnerId = requestedOwnerId;
+    }
+
+    const r2Key = buildR2ImageKey(targetOwnerId, r2File);
     if (!r2Key) return new Response("Not found", { status: 404 });
 
     const obj = await getR2Object(r2Key);
@@ -71,7 +84,10 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
   }
 
   if (row.userId && row.userId !== user.id) {
-    return new Response("Not found", { status: 404 });
+    const allowed = await hasActiveContactBetweenUsers(user.id, row.userId);
+    if (!allowed) {
+      return new Response("Not found", { status: 404 });
+    }
   }
 
   const bytes = Buffer.from(row.data, "base64");

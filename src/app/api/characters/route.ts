@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import { parseCharacterMedia } from "@/lib/characterMedia";
 import { parseOptionalChatBackground } from "@/lib/chatBackground";
+import { loadActiveContactThreadsForUser } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
@@ -107,6 +108,7 @@ export async function GET() {
     adminPending,
     ownerPendingContacts,
     adminPendingContacts,
+    contactThreads,
   ] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
@@ -153,12 +155,14 @@ export async function GET() {
             )
           )
       : Promise.resolve([{ count: 0 }]),
+    loadActiveContactThreadsForUser(user.id),
   ]);
 
   const limit = effectiveCharacterLimit(user);
 
   return NextResponse.json({
     characters: list,
+    contactThreads,
     limit,
     count: Number(count),
     isAdmin: user.isAdmin,

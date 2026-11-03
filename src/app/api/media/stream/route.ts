@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { isOwnedMediaKey, isR2Configured, presignR2Url } from "@/lib/r2";
+import { canReadCharacterMediaKey } from "@/lib/contactsServer";
+import { isR2Configured, presignR2Url } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const key = searchParams.get("key") ?? "";
-  if (!isOwnedMediaKey(key, user.id)) {
+  if (!(await canReadCharacterMediaKey(key, user.id))) {
     return NextResponse.json({ error: "Akses media ditolak." }, { status: 403 });
   }
 

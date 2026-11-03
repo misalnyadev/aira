@@ -70,6 +70,12 @@ function typingDelayFor(text: string) {
   return Math.min(base + text.length * perChar, 2600);
 }
 
+function parseContactThreadId(id: string | null | undefined): string | null {
+  if (!id || !id.startsWith("contact:")) return null;
+  const raw = id.slice("contact:".length).trim();
+  return raw || null;
+}
+
 export function ChatApp() {
   const { user, expire } = useAuth();
   const [voice, setVoice] = useVoiceSettings(user.id);
@@ -84,6 +90,10 @@ export function ChatApp() {
 
   const [view, setView] = useState<AppView>("chats");
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
+  const [contactThreads, setContactThreads] = useState<CharacterSummary[]>([]);
+  const [togglingContactAiId, setTogglingContactAiId] = useState<string | null>(
+    null
+  );
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
@@ -120,6 +130,14 @@ export function ChatApp() {
   const [peekCharId, setPeekCharId] = useState<string | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
 
+  const allThreads = useMemo(() => {
+    if (contactThreads.length === 0) return characters;
+    return [...characters, ...contactThreads].sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [characters, contactThreads]);
+
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
   const bubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
@@ -130,8 +148,8 @@ export function ChatApp() {
   }, [activeId]);
 
   useEffect(() => {
-    charactersRef.current = characters;
-  }, [characters]);
+    charactersRef.current = allThreads;
+  }, [allThreads]);
 
   useEffect(() => {
     bubbleStyleRef.current = bubbleStyle;
@@ -192,6 +210,9 @@ export function ChatApp() {
     if (!res.ok) return;
     const data = await res.json();
     setCharacters(data.characters ?? []);
+    if (Array.isArray(data.contactThreads)) {
+      setContactThreads(data.contactThreads);
+    }
     if (typeof data.limit === "number") setLimit(data.limit);
     if (typeof data.isAdmin === "boolean") setIsAdmin(data.isAdmin);
     setLatestQuotaRequest(data.latestQuotaRequest ?? null);
@@ -274,13 +295,49 @@ export function ChatApp() {
 
   const fetchMessages = useCallback(
     async (characterId: string) => {
-      const res = await api(`/api/characters/${characterId}/messages`);
+      const contactId = parseContactThreadId(characterId);
+      const endpoint = contactId
+        ? `/api/contacts/${contactId}/messages`
+        : `/api/characters/${characterId}/messages`;
+      const res = await api(endpoint);
       if (!res.ok) return;
       const data = await res.json();
-      setMessagesMap((prev) => ({ ...prev, [characterId]: data.messages ?? [] }));
+      const incoming: ChatMessage[] = data.messages ?? [];
+      setMessagesMap((prev) => {
+        const current = prev[characterId];
+        if (
+          current &&
+          current.length === incoming.length &&
+          current[current.length - 1]?.id === incoming[incoming.length - 1]?.id &&
+          !current.some((m) => m.pending)
+        ) {
+          return prev;
+        }
+        return { ...prev, [characterId]: incoming };
+      });
+      if (contactId && typeof data.aiAutoReply === "boolean") {
+        setContactThreads((prev) =>
+          prev.map((t) =>
+            t.contactId === contactId && t.aiAutoReply !== data.aiAutoReply
+              ? { ...t, aiAutoReply: data.aiAutoReply }
+              : t
+          )
+        );
+      }
     },
     [api]
   );
+
+  // Sinkronisasi berkala 2 arah saat ruang chat kontak sedang dibuka & diam.
+  useEffect(() => {
+    const contactId = parseContactThreadId(activeId);
+    if (!activeId || !contactId || view !== "chats") return;
+    const timer = window.setInterval(() => {
+      if (document.hidden || typingFor === activeId) return;
+      void fetchMessages(activeId);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [activeId, view, typingFor, fetchMessages]);
 
   function handleViewChange(next: AppView) {
     if (next !== "chats") stopSpeaking();
@@ -339,11 +396,20 @@ export function ChatApp() {
       imageUrl = data.url;
     }
 
+    const contactId = parseContactThreadId(target);
+    const targetObj = charactersRef.current.find((c) => c.id === target);
+    const isOwnerManualSend = targetObj?.threadKind === "owner_contact";
+
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
       id: tempId,
       characterId: target,
       role: "user",
+      senderKind: isOwnerManualSend
+        ? "owner_manual"
+        : contactId
+          ? "guest"
+          : undefined,
       content: text,
       imageUrl,
       status: "sent",
@@ -356,13 +422,21 @@ export function ChatApp() {
       [target]: [...(prev[target] ?? []), optimisticMsg],
     }));
 
-    setTypingFor(target);
+    if (!isOwnerManualSend) {
+      setTypingFor(target);
+    }
 
     try {
-      const res = await api("/api/chat", {
+      const endpoint = contactId
+        ? `/api/contacts/${contactId}/chat`
+        : "/api/chat";
+      const payload = contactId
+        ? { content: text, imageUrl }
+        : { characterId: target, content: text, imageUrl };
+      const res = await api(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ characterId: target, content: text, imageUrl }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -388,7 +462,10 @@ export function ChatApp() {
         void fetchProviders();
       }
 
-      await deliverAssistantBubbles(target, data.assistantMessages ?? []);
+      const replies: ChatMessage[] = data.assistantMessages ?? [];
+      if (replies.length > 0) {
+        await deliverAssistantBubbles(target, replies);
+      }
       setTypingFor(null);
       fetchCharacters();
     } catch {
@@ -423,15 +500,22 @@ export function ChatApp() {
     }));
 
     try {
-      const res = await api("/api/chat", {
+      const contactId = parseContactThreadId(characterId);
+      const endpoint = contactId
+        ? `/api/contacts/${contactId}/chat`
+        : "/api/chat";
+      const payload = contactId
+        ? { content: trimmed, imageUrl: null, callMode }
+        : {
+            characterId,
+            content: trimmed,
+            imageUrl: null,
+            callMode,
+          };
+      const res = await api(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          characterId,
-          content: trimmed,
-          imageUrl: null,
-          callMode,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -577,11 +661,36 @@ export function ChatApp() {
   }
 
   async function openProfile(id: string) {
+    if (parseContactThreadId(id)) {
+      setShowAddContact(true);
+      return;
+    }
     const res = await api(`/api/characters/${id}`);
     const data = await res.json();
     if (res.ok) {
       setProfileDetail(data.character);
       setShowProfile(true);
+    }
+  }
+
+  async function handleToggleContactAi(contactId: string, nextAi: boolean) {
+    setTogglingContactAiId(contactId);
+    setContactThreads((prev) =>
+      prev.map((t) =>
+        t.contactId === contactId ? { ...t, aiAutoReply: nextAi } : t
+      )
+    );
+    try {
+      const res = await api(`/api/contacts/${contactId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle_ai", aiAutoReply: nextAi }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      await fetchCharacters();
+    } finally {
+      setTogglingContactAiId(null);
     }
   }
 
@@ -729,14 +838,14 @@ export function ChatApp() {
     return `${chosen.label} · ${modelName}`;
   })();
 
-  const activeCharacter = characters.find((c) => c.id === activeId) ?? null;
+  const activeCharacter = allThreads.find((c) => c.id === activeId) ?? null;
   const activeBubble = activeCharacter?.bubbleStyle ?? bubbleStyle;
   const isHiddenMode = Boolean(activeBubble.hideMessages);
   const composerRevealed = Boolean(
     isHiddenMode && activeCharacter && peekCharId === activeCharacter.id
   );
   const composerVisible = !isHiddenMode || composerRevealed;
-  const callCharacter = call ? (characters.find((c) => c.id === call.characterId) ?? null) : null;
+  const callCharacter = call ? (allThreads.find((c) => c.id === call.characterId) ?? null) : null;
   const callVoiceTarget = useMemo(
     () =>
       callCharacter
@@ -759,6 +868,16 @@ export function ChatApp() {
     const base = activeCharacter.bubbleStyle ?? bubbleStyle;
     const nextHidden = !Boolean(base.hideMessages);
     setPeekCharId(null);
+    if (parseContactThreadId(activeCharacter.id)) {
+      setContactThreads((prev) =>
+        prev.map((c) =>
+          c.id === activeCharacter.id
+            ? { ...c, bubbleStyle: { ...base, hideMessages: nextHidden } }
+            : c
+        )
+      );
+      return;
+    }
     void handleCharacterBubble(activeCharacter.id, { ...base, hideMessages: nextHidden });
   }
 
@@ -800,7 +919,7 @@ export function ChatApp() {
             <>
               <div className={`${mobileShowChat ? "hidden" : "flex"} min-h-0 w-full md:w-auto md:flex`}>
                 <Sidebar
-                  characters={characters}
+                  characters={allThreads}
                   activeId={activeId}
                   profile={profile}
                   onSelect={handleSelect}
@@ -832,14 +951,72 @@ export function ChatApp() {
                     onOpenProfile={() => openProfile(activeCharacter.id)}
                     onOpenVoice={() => handleViewChange("voice")}
                     onToggleHideChat={handleToggleHideChat}
-                    onVideoCall={() => setCall({ characterId: activeCharacter.id, mode: "video" })}
-                    onAudioCall={() => setCall({ characterId: activeCharacter.id, mode: "audio" })}
+                    onVideoCall={
+                      activeCharacter.threadKind === "owner_contact"
+                        ? undefined
+                        : () =>
+                            setCall({
+                              characterId: activeCharacter.id,
+                              mode: "video",
+                            })
+                    }
+                    onAudioCall={
+                      activeCharacter.threadKind === "owner_contact"
+                        ? undefined
+                        : () =>
+                            setCall({
+                              characterId: activeCharacter.id,
+                              mode: "audio",
+                            })
+                    }
                     onImageClick={(url) => setLightbox(url)}
                     onCopyMessage={handleCopyMessage}
                     onSpeakMessage={handleSpeakMessage}
                     onStopSpeaking={stopSpeaking}
                     onDeleteMessage={handleDeleteMessage}
                     onRegenerate={handleRegenerate}
+                    contactControlBar={
+                      activeCharacter.threadKind === "owner_contact" &&
+                      activeCharacter.contactId ? (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="text-ink-soft">
+                            {activeCharacter.aiAutoReply !== false
+                              ? "🤖 AI otomatis menjawab tamu · Ketik di bawah untuk membalas manual tanpa AI"
+                              : "✋ AI dijeda · Hanya balasan manualmu yang dikirim ke tamu"}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={
+                              togglingContactAiId === activeCharacter.contactId
+                            }
+                            onClick={() =>
+                              activeCharacter.contactId &&
+                              handleToggleContactAi(
+                                activeCharacter.contactId,
+                                activeCharacter.aiAutoReply === false
+                              )
+                            }
+                            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
+                              activeCharacter.aiAutoReply !== false
+                                ? "bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25 dark:text-emerald-300"
+                                : "bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-300"
+                            }`}
+                          >
+                            {activeCharacter.aiAutoReply !== false
+                              ? "Jeda AI (Mode Manual)"
+                              : "Aktifkan Lagi AI"}
+                          </button>
+                        </div>
+                      ) : activeCharacter.threadKind === "guest_contact" &&
+                        activeCharacter.aiAutoReply === false ? (
+                        <div className="flex items-center justify-between gap-2 text-xs text-ink-soft">
+                          <span>
+                            💬 Pemilik karakter sedang membalas langsung secara
+                            manual (tanpa AI).
+                          </span>
+                        </div>
+                      ) : undefined
+                    }
                     composer={
                       <Composer
                         key={activeCharacter.id}
@@ -997,6 +1174,7 @@ export function ChatApp() {
           onClose={() => setShowAddContact(false)}
           onUpdated={fetchCharacters}
           onOpenCharactersView={() => handleViewChange("characters")}
+          onOpenChatThread={(contactId) => handleSelect(`contact:${contactId}`)}
         />
       )}
 

@@ -144,6 +144,18 @@ export function isOwnedMediaKey(key: string, userId: string): boolean {
   return match[1] === userId;
 }
 
+/**
+ * Ekstrak `ownerUserId` dan `characterId` dari kunci media karakter di R2.
+ */
+export function parseMediaKeyMeta(
+  key: string
+): { ownerUserId: string; characterId: string } | null {
+  if (!key || key.length > 260) return null;
+  const match = SAFE_MEDIA_KEY_RE.exec(key);
+  if (!match) return null;
+  return { ownerUserId: match[1], characterId: match[2] };
+}
+
 export function isOwnedTtsKey(key: string, userId: string): boolean {
   if (!key || key.length > 260) return false;
   const match = SAFE_TTS_KEY_RE.exec(key);
