@@ -547,3 +547,62 @@ export function CallVideoStage({
   );
 }
 
+/**
+ * Panel 16:9 multi-klip ekspresi di atas daftar pesan ruang chat
+ * saat opsi "Gunakan aset video call saat chat" dinyalakan dengan tampilan Panel atas.
+ */
+export function ChatCallStagePanel({
+  clips,
+  activeKey,
+  dim,
+  name,
+  zoom = 1,
+}: {
+  clips: CallClipItem[];
+  activeKey: string | null;
+  dim: number;
+  name: string;
+  zoom?: number;
+}) {
+  const fallbackPoster = clips[0]?.posterUrl;
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-line bg-[#07070a] shadow-xs">
+      <div
+        className="absolute inset-0"
+        style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}
+      >
+        {fallbackPoster && (
+          <img
+            src={fallbackPoster}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
+        {clips.map((clip, idx) => (
+          <PreloadedCallClipLayer
+            key={clip.key}
+            clip={clip}
+            active={clip.key === activeKey}
+            playing
+            loop
+            sound={false}
+            priority={idx < 4}
+          />
+        ))}
+      </div>
+
+      <div
+        className="pointer-events-none absolute inset-0 z-20 bg-black"
+        style={{ opacity: dim }}
+      />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 bg-gradient-to-b from-black/55 to-transparent px-3 pb-6 pt-2">
+        <span className="min-w-0 truncate text-xs font-semibold text-white/90">
+          {name}
+        </span>
+      </div>
+    </div>
+  );
+}
+

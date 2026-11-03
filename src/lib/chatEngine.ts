@@ -27,6 +27,7 @@ import {
   pickRelevantArchivedSnippets,
   sanitizeMemorySummary,
 } from "@/lib/characterMemory";
+import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { AUTO_MEMORY_BATCH_MIN } from "@/lib/limits";
 import {
   buildKeyAttempts,
@@ -328,12 +329,15 @@ export async function generateBubbles({
   callMode?: "video" | "audio";
 }): Promise<GenerateBubblesResult> {
   const sceneAnchor = buildSceneContinuityAnchor(history, userText);
+  const chatExpressionMode =
+    !callMode && isUsingCallClipsInChat(parseCharacterMedia(character.media));
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor || callMode
+    memoryExtras || sceneAnchor || callMode || chatExpressionMode
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
           ...(callMode ? { callMode } : {}),
+          ...(chatExpressionMode ? { chatExpressionMode: true } : {}),
         }
       : undefined;
 

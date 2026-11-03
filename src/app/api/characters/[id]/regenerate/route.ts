@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { messages } from "@/db/schema";
 import { toUserFacingError } from "@/lib/ai";
 import { requireUser } from "@/lib/auth";
+import { extractCallReplyEmotion, type CallEmotion } from "@/lib/callEmotion";
 import {
   NO_PROVIDER_ERROR,
   buildMemoryExtrasForTurn,
@@ -13,6 +14,7 @@ import {
   toChatTurns,
 } from "@/lib/chatEngine";
 import { toTimeAwareChatTurns } from "@/lib/characterMemory";
+import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { staleAssistantIds } from "@/lib/messageRules";
@@ -101,19 +103,35 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       memoryExtras,
     });
 
+    const chatExpressionMode = isUsingCallClipsInChat(
+      parseCharacterMedia(character.media)
+    );
+    const preparedBubbles: { content: string; emotion?: CallEmotion }[] =
+      chatExpressionMode
+        ? result.bubbles
+            .map((raw) => {
+              const parsed = extractCallReplyEmotion(raw);
+              return { content: parsed.cleanText, emotion: parsed.emotion };
+            })
+            .filter((item) => item.content.length > 0)
+        : result.bubbles.map((raw) => ({ content: raw }));
+
     const assistantMessages = [];
     const baseTime = Date.now();
-    for (let i = 0; i < result.bubbles.length; i++) {
+    for (let i = 0; i < preparedBubbles.length; i++) {
+      const item = preparedBubbles[i];
       const [row] = await db
         .insert(messages)
         .values({
           characterId: id,
           role: "assistant",
-          content: result.bubbles[i],
+          content: item.content,
           createdAt: new Date(baseTime + i),
         })
         .returning();
-      assistantMessages.push(row);
+      assistantMessages.push(
+        item.emotion ? { ...row, emotion: item.emotion } : row
+      );
     }
 
     return NextResponse.json({

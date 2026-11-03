@@ -1,4 +1,5 @@
 import type { BubbleStyle } from "@/lib/bubbleStyle";
+import type { CallEmotion } from "@/lib/callEmotion";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig } from "@/lib/hdVoice";
@@ -75,4 +76,5 @@ export type ChatMessage = {
   status: string;
   createdAt: string;
   pending?: boolean;
+  emotion?: CallEmotion;
 };

@@ -256,6 +256,10 @@ export function CharacterMediaSection({
     }
     if (!cleaned.callVideoKey && nextClipCount === 0) {
       delete cleaned.callVideoZoom;
+      delete cleaned.useCallClipsInChat;
+    }
+    if (!cleaned.chatVideoKey && !cleaned.useCallClipsInChat) {
+      delete cleaned.chatVideoLayout;
     }
     if (
       !cleaned.chatVideoKey &&
@@ -499,13 +503,30 @@ export function CharacterMediaSection({
     if (slot === "chatVideo") {
       delete next.chatVideoKey;
       delete next.chatVideoPosterUrl;
-      delete next.chatVideoLayout;
+      if (!next.useCallClipsInChat) {
+        delete next.chatVideoLayout;
+      }
     } else {
       delete next.callVideoKey;
       delete next.callVideoPosterUrl;
     }
     emitOrNull(next);
     if (previous) void removeCharacterMediaKey(previous);
+  }
+
+  function toggleUseCallClipsInChat() {
+    if (!hasAnyCallVideo || !media) return;
+    const next: CharacterMedia = { ...media };
+    if (media.useCallClipsInChat) {
+      delete next.useCallClipsInChat;
+      if (!next.chatVideoKey) {
+        delete next.chatVideoLayout;
+      }
+    } else {
+      next.useCallClipsInChat = true;
+      next.chatVideoLayout = media.chatVideoLayout ?? "tile";
+    }
+    emitOrNull(next);
   }
 
   function dropAudio() {
@@ -517,14 +538,19 @@ export function CharacterMediaSection({
     if (previous) void removeCharacterMediaKey(previous);
   }
 
+  const useCallInChat = Boolean(hasAnyCallVideo && media?.useCallClipsInChat);
+  const showChatLayoutSelector = Boolean(media?.chatVideoKey || useCallInChat);
+
   return (
     <div className="space-y-2">
       <MediaRow
         label="Video saat chat"
         hint={
-          media?.chatVideoKey
-            ? "Khusus ruang chat (tidak dipakai di video call)."
-            : "Adegan khusus ruang chat."
+          useCallInChat
+            ? "Sedang memakai ekspresi dari aset video call."
+            : media?.chatVideoKey
+              ? "Khusus ruang chat (tidak dipakai di video call)."
+              : "Adegan khusus ruang chat."
         }
         active={Boolean(media?.chatVideoKey)}
         thumb={media?.chatVideoPosterUrl}
@@ -535,7 +561,39 @@ export function CharacterMediaSection({
         onRemove={() => dropVideo("chatVideo")}
       />
 
-      {media?.chatVideoKey && (
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-ink">
+            Gunakan aset video call saat chat
+          </p>
+          <p className="text-[12px] leading-snug text-muted">
+            {!hasAnyCallVideo
+              ? "Unggah klip video call dulu untuk menampilkan ekspresi di chat."
+              : useCallInChat
+                ? "Ekspresi diam, dengar, mikir, & bicara ikut hidup di ruang chat."
+                : "Tampilkan ekspresi hidup dari klip video call langsung saat chat."}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={useCallInChat}
+          aria-label="Gunakan aset video call saat chat"
+          disabled={!hasAnyCallVideo || busy !== null}
+          onClick={toggleUseCallClipsInChat}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-45 ${
+            useCallInChat ? "bg-emerald-500" : "bg-line"
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+              useCallInChat ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      {showChatLayoutSelector && media && (
         <div className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
           <span className="text-xs font-medium text-ink-soft">Tampilan video chat</span>
           <div className="flex gap-0.5 rounded-full bg-surface-2 p-0.5">
@@ -638,7 +696,9 @@ export function CharacterMediaSection({
       {hasAnyCallVideo && (
         <div className="rounded-xl border border-line px-3 py-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-ink-soft">Zoom video call</span>
+            <span className="text-xs font-medium text-ink-soft">
+              {useCallInChat ? "Zoom video call & chat" : "Zoom video call"}
+            </span>
             <span className="text-xs font-semibold text-ink">{zoom}%</span>
           </div>
           <input

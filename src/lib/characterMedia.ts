@@ -156,6 +156,8 @@ export type CharacterMedia = {
   chatVideoPosterUrl?: string;
   /** `tile` = panel 16:9 di atas pesan, `full` = latar penuh ruang chat. */
   chatVideoLayout?: "tile" | "full";
+  /** Pakai paket klip ekspresi Video Call (`callVideoKey` + `callClips`) secara hidup di ruang chat. */
+  useCallClipsInChat?: boolean;
   /** Kunci objek R2 untuk klip utama / diam (idle) layar video call. */
   callVideoKey?: string;
   /** Poster bingkai pertama klip utama video call. */
@@ -280,7 +282,6 @@ export function normalizeCharacterMedia(
     result.chatVideoKey = chatVideoKey;
     const poster = cleanPosterUrl(raw.chatVideoPosterUrl);
     if (poster) result.chatVideoPosterUrl = poster;
-    result.chatVideoLayout = raw.chatVideoLayout === "full" ? "full" : "tile";
   }
 
   if (callVideoKey) {
@@ -299,6 +300,13 @@ export function normalizeCharacterMedia(
         ? raw.callVideoZoom
         : 100;
     result.callVideoZoom = Math.min(200, Math.max(100, Math.round(zoomRaw)));
+    if (raw.useCallClipsInChat === true) {
+      result.useCallClipsInChat = true;
+    }
+  }
+
+  if (chatVideoKey || result.useCallClipsInChat) {
+    result.chatVideoLayout = raw.chatVideoLayout === "full" ? "full" : "tile";
   }
 
   if (callAudioKey) {
@@ -346,6 +354,27 @@ export function collectMediaKeys(media: CharacterMedia | null | undefined): stri
   return Array.from(keys);
 }
 
+/** Apakah karakter memiliki minimal satu aset video untuk Video Call (`callVideoKey` atau `callClips`). */
+export function hasCallVideoAssets(
+  media: CharacterMedia | null | undefined
+): boolean {
+  if (!media) return false;
+  if (media.callVideoKey) return true;
+  if (media.callClips) {
+    for (const slot of CALL_CLIP_SLOTS) {
+      if (media.callClips[slot]?.key) return true;
+    }
+  }
+  return false;
+}
+
+/** Apakah ruang chat biasa aktif memakai paket ekspresi Video Call. */
+export function isUsingCallClipsInChat(
+  media: CharacterMedia | null | undefined
+): boolean {
+  return Boolean(media?.useCallClipsInChat && hasCallVideoAssets(media));
+}
+
 /**
  * Daftar klip unik khusus layar Video Call (tidak pernah mencampur `chatVideoKey`
  * selama karakter sudah memiliki minimal satu klip khusus Video Call).
@@ -379,6 +408,38 @@ export function listUniqueCallClips(
     return [{ key: media.chatVideoKey, posterUrl: media.chatVideoPosterUrl }];
   }
   return [];
+}
+
+/**
+ * Daftar klip ekspresi Video Call untuk dipakai di ruang Chat (tanpa memuat slot
+ * pembuka telepon `greeting` kecuali memang satu-satunya klip yang ada).
+ */
+export function listUniqueChatCallClips(
+  media: CharacterMedia | null | undefined
+): CallClipItem[] {
+  if (!media) return [];
+  const map = new Map<string, CallClipItem>();
+
+  if (media.callVideoKey) {
+    map.set(media.callVideoKey, {
+      key: media.callVideoKey,
+      posterUrl: media.callVideoPosterUrl,
+    });
+  }
+  if (media.callClips) {
+    for (const slot of CALL_CLIP_SLOTS) {
+      if (slot === "greeting") continue;
+      const item = media.callClips[slot];
+      if (item?.key && !map.has(item.key)) {
+        map.set(item.key, item);
+      }
+    }
+    if (map.size === 0 && media.callClips.greeting?.key) {
+      map.set(media.callClips.greeting.key, media.callClips.greeting);
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 /** Daftar seluruh kunci audio panggilan unik untuk di-preload ke RAM saat panggilan dibuka. */
