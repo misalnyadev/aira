@@ -49,6 +49,11 @@ export const users = pgTable("users", {
   /** Pengaturan Suara HD (ElevenLabs) milik akun: API key, key cadangan, dan 2 slot suara (JSON). */
   ttsConfig: text("tts_config").notNull().default("{}"),
 
+  /** Status Admin — hanya Admin yang bebas membuat banyak karakter & menyetujui kuota user. */
+  isAdmin: boolean("is_admin").notNull().default(false),
+  /** Kuota maksimal pembuatan karakter milik sendiri (bawaan 1 untuk user biasa). */
+  characterQuota: integer("character_quota").notNull().default(1),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -185,3 +190,22 @@ export const ttsClips = pgTable(
   },
   (table) => [uniqueIndex("tts_clips_user_hash_idx").on(table.userId, table.clipHash)]
 );
+
+/**
+ * Permintaan penambahan kuota karakter dari pengguna standar ke Admin.
+ */
+export const characterQuotaRequests = pgTable("character_quota_requests", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  requestedQuota: integer("requested_quota").notNull(),
+  reason: text("reason").notNull().default(""),
+  /** 'pending' | 'approved' | 'rejected' */
+  status: text("status").notNull().default("pending"),
+  adminNote: text("admin_note").notNull().default(""),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

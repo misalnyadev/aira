@@ -17,6 +17,7 @@ import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { ChatBackground } from "@/lib/chatBackground";
 import { useAuth } from "./AuthGate";
+import { AdminPanelSection } from "./AdminPanelSection";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { Switch } from "./Switch";
@@ -45,6 +46,8 @@ export function SettingsView({
   bubbleStyle,
   onBubbleStyleChange,
   onChanged,
+  isAdmin,
+  onQuotaUpdated,
 }: {
   providers: ProviderSummary[];
   autoFallback: boolean;
@@ -54,8 +57,11 @@ export function SettingsView({
   bubbleStyle: BubbleStyle;
   onBubbleStyleChange: (next: BubbleStyle) => void;
   onChanged: () => Promise<void>;
+  isAdmin?: boolean;
+  onQuotaUpdated?: () => void;
 }) {
   const { user, signOut } = useAuth();
+  const effectiveIsAdmin = Boolean(isAdmin ?? user.isAdmin);
   const [editing, setEditing] = useState<ProviderSummary | null>(null);
   const [formOpen, setFormOpen] = useState(providers.length === 0);
   const [type, setType] = useState<ProviderType>("gemini");
@@ -1123,12 +1129,31 @@ export function SettingsView({
             </form>
           )}
 
+          {/* Panel Admin (hanya tampil untuk akun Admin) */}
+          {effectiveIsAdmin && (
+            <AdminPanelSection
+              currentAdminId={user.id}
+              onAfterAction={onQuotaUpdated}
+            />
+          )}
+
           {/* Akun */}
           <section className="border-t border-line pt-5">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Akun</h2>
             <div className="flex items-center justify-between gap-3 rounded-xl border border-line px-3.5 py-3">
               <div className="min-w-0">
-                <p className="text-xs text-muted">Masuk sebagai</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs text-muted">Masuk sebagai</p>
+                  {effectiveIsAdmin ? (
+                    <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
+                      Admin
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+                      User
+                    </span>
+                  )}
+                </div>
                 <p className="truncate text-sm font-medium text-ink">{user.email}</p>
               </div>
               <button

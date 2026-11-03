@@ -3,6 +3,8 @@
 export type AuthUser = {
   id: string;
   email: string;
+  isAdmin?: boolean;
+  characterQuota?: number;
 };
 
 type Result = { ok: true; user: AuthUser } | { ok: false; error: string };

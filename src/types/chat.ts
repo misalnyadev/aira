@@ -78,3 +78,13 @@ export type ChatMessage = {
   pending?: boolean;
   emotion?: CallEmotion;
 };
+
+export type QuotaRequestSummary = {
+  id: string;
+  requestedQuota: number;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | string;
+  adminNote: string;
+  createdAt: string;
+  resolvedAt?: string | null;
+};
