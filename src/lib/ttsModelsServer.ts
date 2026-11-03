@@ -10,12 +10,14 @@ import {
   isModernGeminiTtsModel,
   isRotatableTtsStatus,
   pickBestAvailableTtsModel,
+  pickDynamicRecommendedTtsModels,
   supportsLanguageCode,
   type HdTtsProvider,
+  type SharedGeminiKeySummary,
   type TtsAccountConfig,
   type TtsModelOption,
 } from "./hdVoice";
-import { buildKeyAttempts, parseBackupKeys } from "./providerPool";
+import { buildKeyAttempts, maskKey, parseBackupKeys } from "./providerPool";
 
 const GEMINI_MODELS_URL =
   "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000";
@@ -599,4 +601,294 @@ export async function testTtsConnection(params: {
     error: failures[failures.length - 1] || "Gagal terhubung ke ElevenLabs.",
     keysTried: failures.length,
   };
+}
+
+/**
+ * Ambil daftar ringkasan aman API key Gemini dari menu Setelan (`api_providers`)
+ * supaya setiap key bersama dapat ditampilkan jelas & diuji 1/1 di menu Suara.
+ */
+export async function loadSharedGeminiKeySummaries(
+  userId: string
+): Promise<SharedGeminiKeySummary[]> {
+  const rows = await db
+    .select({
+      id: apiProviders.id,
+      label: apiProviders.label,
+      apiKey: apiProviders.apiKey,
+      backupKeys: apiProviders.backupKeys,
+      isDefault: apiProviders.isDefault,
+    })
+    .from(apiProviders)
+    .where(and(eq(apiProviders.userId, userId), eq(apiProviders.type, "gemini")))
+    .orderBy(desc(apiProviders.isDefault));
+
+  const out: SharedGeminiKeySummary[] = [];
+  for (const row of rows) {
+    const backups = parseBackupKeys(row.backupKeys, row.apiKey);
+    const primary = row.apiKey?.trim() || backups[0] || "";
+    if (!primary) continue;
+    out.push({
+      id: row.id,
+      label: row.label || "Gemini",
+      maskedKey: maskKey(primary),
+      backupCount: row.apiKey?.trim() ? backups.length : Math.max(0, backups.length - 1),
+    });
+  }
+  return out;
+}
+
+export type TtsSingleKeyTestResult =
+  | {
+      ok: true;
+      activeModel: string;
+      activeModelsCount: number;
+      models: TtsModelOption[];
+      recommended: string[];
+      quotaNote?: string;
+    }
+  | {
+      ok: false;
+      error: string;
+      keyValid?: boolean;
+      modelUnavailable?: boolean;
+      requestedModel?: string;
+      suggestedModel?: string;
+      models?: TtsModelOption[];
+      recommended?: string[];
+      quotaNote?: string;
+    };
+
+/**
+ * Uji TEPAT SATU API key suara secara 1/1 (tanpa lompat diam-diam ke key lain)
+ * sekaligus mengecek model suara apa saja yang aktif di key tersebut.
+ */
+export async function testSingleTtsKey(params: {
+  provider: HdTtsProvider;
+  apiKey: string;
+  modelId: string;
+  voiceId?: string;
+}): Promise<TtsSingleKeyTestResult> {
+  const cleanKey = params.apiKey.trim();
+  const { provider } = params;
+
+  if (!cleanKey) {
+    return {
+      ok: false,
+      error: "API key kosong. Tempel atau pilih API key terlebih dulu.",
+    };
+  }
+
+  const requestedModel =
+    cleanTtsModelId(params.modelId) ||
+    (provider === "gemini" ? DEFAULT_GEMINI_MODEL_ID : DEFAULT_HD_MODEL_ID);
+
+  if (provider === "gemini") {
+    const voiceName = params.voiceId?.trim() || DEFAULT_GEMINI_FEMALE_VOICE;
+    let models: TtsModelOption[] = [];
+    let recommended: string[] = [];
+
+    try {
+      models = await listGeminiTtsModelsForKey(cleanKey, 7_000);
+      recommended = pickDynamicRecommendedTtsModels(models, "gemini");
+    } catch (err) {
+      if (err instanceof TtsUpstreamError && (err.status === 400 || err.status === 401 || err.status === 403 || err.status === 429)) {
+        return { ok: false, error: err.message };
+      }
+    }
+
+    try {
+      const probe = await runSingleGeminiSynthProbe({
+        apiKey: cleanKey,
+        modelId: requestedModel,
+        voiceName,
+      });
+
+      if (probe.ok) {
+        return {
+          ok: true,
+          activeModel: requestedModel,
+          activeModelsCount: models.length,
+          models,
+          recommended,
+        };
+      }
+
+      if (probe.status === 404) {
+        if (models.length === 0) {
+          try {
+            models = await listGeminiTtsModelsForKey(cleanKey, 6_000);
+            recommended = pickDynamicRecommendedTtsModels(models, "gemini");
+          } catch {
+            // Biarkan kosong bila gagal.
+          }
+        }
+        const best = pickBestAvailableTtsModel(models, "gemini", null);
+        if (best && best !== requestedModel && models.length > 0) {
+          const fallbackProbe = await runSingleGeminiSynthProbe({
+            apiKey: cleanKey,
+            modelId: best,
+            voiceName,
+          });
+          if (fallbackProbe.ok) {
+            return {
+              ok: false,
+              keyValid: true,
+              modelUnavailable: true,
+              requestedModel,
+              suggestedModel: best,
+              models,
+              recommended,
+              error: `Key aktif, namun model "${requestedModel}" tidak tersedia di key ini.`,
+            };
+          }
+        }
+        return {
+          ok: false,
+          keyValid: models.length > 0,
+          modelUnavailable: models.length > 0,
+          requestedModel,
+          suggestedModel: models.length > 0 ? best : undefined,
+          models,
+          recommended,
+          error: `Model "${requestedModel}" tidak tersedia pada API key ini.`,
+        };
+      }
+
+      const msg =
+        probe.status === 429 || /resource_exhausted|quota/i.test(probe.rawBody)
+          ? "Kuota Gemini TTS pada key ini sedang habis (429)."
+          : probe.status === 400 &&
+              /api key not valid|api_key_invalid/i.test(probe.rawBody)
+            ? "API key Gemini tidak valid."
+            : probe.status === 401 || probe.status === 403
+              ? "API key Gemini ditolak atau belum diizinkan untuk TTS."
+              : `Gemini TTS mengembalikan kendala (HTTP ${probe.status}).`;
+
+      return { ok: false, error: msg };
+    } catch {
+      return {
+        ok: false,
+        error: "Koneksi ke server Gemini TTS melewati batas waktu.",
+      };
+    }
+  }
+
+  // ElevenLabs (1/1)
+  const voiceId = params.voiceId?.trim() || DEFAULT_FEMALE_VOICE_ID;
+  let models: TtsModelOption[] = [];
+  let recommended: string[] = [];
+  let modelsChecked = false;
+
+  try {
+    models = await listElevenLabsTtsModelsForKey(cleanKey, 7_000);
+    recommended = pickDynamicRecommendedTtsModels(models, "elevenlabs");
+    modelsChecked = true;
+  } catch (err) {
+    if (err instanceof TtsUpstreamError && err.status === 429) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  let quotaNote: string | undefined;
+  try {
+    const subRes = await fetch(`${ELEVEN_BASE}/user/subscription`, {
+      headers: { "xi-api-key": cleanKey },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (subRes.ok) {
+      const sub = (await subRes.json().catch(() => null)) as {
+        character_count?: number;
+        character_limit?: number;
+      } | null;
+      if (
+        typeof sub?.character_count === "number" &&
+        typeof sub?.character_limit === "number" &&
+        sub.character_limit > 0
+      ) {
+        const remaining = Math.max(0, sub.character_limit - sub.character_count);
+        quotaNote = `sisa ${remaining.toLocaleString("id-ID")}/${sub.character_limit.toLocaleString("id-ID")} karakter`;
+        modelsChecked = true;
+      }
+    }
+  } catch {
+    // Opsional.
+  }
+
+  if (modelsChecked) {
+    if (models.length > 0 && !models.some((m) => m.id === requestedModel)) {
+      const best = pickBestAvailableTtsModel(models, "elevenlabs", null);
+      return {
+        ok: false,
+        keyValid: true,
+        modelUnavailable: true,
+        requestedModel,
+        suggestedModel: best,
+        models,
+        recommended,
+        quotaNote,
+        error: `Key aktif, namun model "${requestedModel}" tidak tersedia di key ini.`,
+      };
+    }
+    return {
+      ok: true,
+      activeModel: requestedModel,
+      activeModelsCount: models.length,
+      models,
+      recommended,
+      quotaNote,
+    };
+  }
+
+  // Fallback scoped key ketat khusus endpoint TTS
+  try {
+    const payload: Record<string, unknown> = {
+      text: "Tes.",
+      model_id: requestedModel,
+    };
+    if (supportsLanguageCode(requestedModel)) {
+      payload.language_code = "id";
+    }
+    const synthRes = await fetch(
+      `${ELEVEN_BASE}/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": cleanKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
+
+    if (synthRes.ok) {
+      await synthRes.arrayBuffer().catch(() => undefined);
+      return {
+        ok: true,
+        activeModel: requestedModel,
+        activeModelsCount: 0,
+        models: [],
+        recommended: [],
+      };
+    }
+
+    const rawErr = await synthRes.text().catch(() => "");
+    const msg =
+      synthRes.status === 401 || synthRes.status === 403
+        ? "API key ElevenLabs ditolak atau izin Text-to-Speech belum diaktifkan."
+        : synthRes.status === 429 || /quota_exceeded/i.test(rawErr)
+          ? "Kuota ElevenLabs pada key ini sudah habis."
+          : synthRes.status === 404
+            ? `Model "${requestedModel}" atau Voice ID tidak ditemukan di ElevenLabs.`
+            : `ElevenLabs mengembalikan kendala (HTTP ${synthRes.status}).`;
+
+    return { ok: false, error: msg };
+  } catch {
+    return {
+      ok: false,
+      error: "Koneksi ke ElevenLabs melewati batas waktu.",
+    };
+  }
 }

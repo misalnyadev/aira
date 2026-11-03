@@ -11,9 +11,15 @@ import {
   parseTtsConfig,
   toTtsAccountSummary,
 } from "@/lib/hdVoice";
-import { parseBackupKeys, promoteKeyAtIndex } from "@/lib/providerPool";
+import {
+  buildKeyAttempts,
+  parseBackupKeys,
+  promoteKeyAtIndex,
+} from "@/lib/providerPool";
 import {
   collectTtsKeyPoolForUser,
+  loadSharedGeminiKeySummaries,
+  testSingleTtsKey,
   testTtsConnection,
 } from "@/lib/ttsModelsServer";
 
@@ -21,23 +27,18 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-async function checkSharedGeminiKey(userId: string): Promise<boolean> {
-  const rows = await db
-    .select({ apiKey: apiProviders.apiKey, backupKeys: apiProviders.backupKeys })
-    .from(apiProviders)
-    .where(and(eq(apiProviders.userId, userId), eq(apiProviders.type, "gemini")));
-
-  return rows.some(
-    (r) =>
-      Boolean(r.apiKey?.trim()) ||
-      parseBackupKeys(r.backupKeys, r.apiKey).length > 0
-  );
-}
+type RawTestTarget = {
+  kind?: unknown;
+  apiKey?: unknown;
+  index?: unknown;
+  providerId?: unknown;
+};
 
 /**
- * Uji langsung API key Suara HD (Gemini TTS maupun ElevenLabs) di sisi server:
- * - Mendukung key yang sedang diketik di form maupun key yang sudah tersimpan.
- * - Memeriksa ketersediaan model & menyembuhkan otomatis bila model lama dipensiunkan.
+ * Uji koneksi API key Suara HD di sisi server:
+ * - Bila `target` diberikan (`typed`, `dedicated_primary`, `dedicated_backup`, `shared_provider`):
+ *   menguji TEPAT SATU key tersebut secara 1/1 dan mengembalikan daftar model suara yang aktif.
+ * - Bila tanpa `target`: menguji seluruh antrean key suara pengguna.
  */
 export async function POST(req: Request) {
   await ensureDb();
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const {
     provider: rawProvider,
+    target: rawTarget,
     apiKey,
     backupKeys,
     clearStoredPrimary,
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     voiceId,
   } = (body ?? {}) as {
     provider?: unknown;
+    target?: RawTestTarget;
     apiKey?: unknown;
     backupKeys?: unknown;
     clearStoredPrimary?: unknown;
@@ -78,7 +81,114 @@ export async function POST(req: Request) {
     .limit(1);
 
   const config = parseTtsConfig(row?.ttsConfig);
+  const targetModel =
+    cleanTtsModelId(modelId) ||
+    (provider === "gemini" ? config.geminiModelId : config.modelId);
+  const targetVoice =
+    cleanVoiceId(voiceId) ||
+    (provider === "gemini" ? config.geminiFemaleVoice : config.femaleVoiceId);
 
+  // Mode uji 1/1 pada key tertentu (mirip menu Setelan & tes sebelum simpan)
+  if (rawTarget && typeof rawTarget === "object" && typeof rawTarget.kind === "string") {
+    const kind = rawTarget.kind;
+
+    if (kind === "typed") {
+      const typedKey = typeof rawTarget.apiKey === "string" ? rawTarget.apiKey.trim() : "";
+      const single = await testSingleTtsKey({
+        provider,
+        apiKey: typedKey,
+        modelId: targetModel,
+        voiceId: targetVoice,
+      });
+      return NextResponse.json(single);
+    }
+
+    if (kind === "dedicated_primary") {
+      const primaryKey = provider === "gemini" ? config.geminiApiKey : config.apiKey;
+      if (!primaryKey.trim()) {
+        return NextResponse.json({
+          ok: false,
+          error: "Key utama suara belum tersimpan.",
+        });
+      }
+      const single = await testSingleTtsKey({
+        provider,
+        apiKey: primaryKey,
+        modelId: targetModel,
+        voiceId: targetVoice,
+      });
+      return NextResponse.json(single);
+    }
+
+    if (kind === "dedicated_backup") {
+      const idx = typeof rawTarget.index === "number" ? rawTarget.index : -1;
+      const list =
+        provider === "gemini" ? config.geminiBackupKeys : config.backupKeys;
+      const backupKey = idx >= 0 && idx < list.length ? list[idx] : "";
+      if (!backupKey.trim()) {
+        return NextResponse.json({
+          ok: false,
+          error: "Key cadangan tersebut tidak ditemukan.",
+        });
+      }
+      const single = await testSingleTtsKey({
+        provider,
+        apiKey: backupKey,
+        modelId: targetModel,
+        voiceId: targetVoice,
+      });
+      return NextResponse.json(single);
+    }
+
+    if (kind === "shared_provider" && provider === "gemini") {
+      const pid = typeof rawTarget.providerId === "string" ? rawTarget.providerId.trim() : "";
+      const [provRow] = pid
+        ? await db
+            .select()
+            .from(apiProviders)
+            .where(and(eq(apiProviders.id, pid), eq(apiProviders.userId, user.id)))
+            .limit(1)
+        : [];
+      if (!provRow || provRow.type !== "gemini") {
+        return NextResponse.json({
+          ok: false,
+          error: "Provider Gemini di Setelan tidak ditemukan.",
+        });
+      }
+      const provBackups = parseBackupKeys(provRow.backupKeys, provRow.apiKey);
+      const provAttempts = buildKeyAttempts("gemini", provRow.apiKey, provBackups);
+      if (provAttempts.length === 0) {
+        return NextResponse.json({
+          ok: false,
+          error: "Provider Gemini di Setelan belum memiliki API key.",
+        });
+      }
+      // Uji key pertama provider Setelan (atau cadangan internal provider itu bila ada)
+      let lastRes = await testSingleTtsKey({
+        provider: "gemini",
+        apiKey: provAttempts[0],
+        modelId: targetModel,
+        voiceId: targetVoice,
+      });
+      if (!lastRes.ok && !lastRes.modelUnavailable && provAttempts.length > 1) {
+        for (let i = 1; i < provAttempts.length; i++) {
+          const retry = await testSingleTtsKey({
+            provider: "gemini",
+            apiKey: provAttempts[i],
+            modelId: targetModel,
+            voiceId: targetVoice,
+          });
+          if (retry.ok || retry.modelUnavailable) {
+            lastRes = retry;
+            break;
+          }
+        }
+      }
+      return NextResponse.json(lastRes);
+    }
+  }
+
+  // Fallback: uji pool gabungan
   const poolResult = await collectTtsKeyPoolForUser({
     userId: user.id,
     provider,
@@ -92,13 +202,6 @@ export async function POST(req: Request) {
       ? keepBackupIndexes.filter((n): n is number => typeof n === "number")
       : undefined,
   });
-
-  const targetModel =
-    cleanTtsModelId(modelId) ||
-    (provider === "gemini" ? config.geminiModelId : config.modelId);
-  const targetVoice =
-    cleanVoiceId(voiceId) ||
-    (provider === "gemini" ? config.geminiFemaleVoice : config.femaleVoiceId);
 
   const probe = await testTtsConnection({
     provider,
@@ -160,8 +263,11 @@ export async function POST(req: Request) {
         .set({ ttsConfig: JSON.stringify(nextConfig) })
         .where(eq(users.id, user.id))
         .catch(() => undefined);
-      const hasSharedGeminiKey = await checkSharedGeminiKey(user.id);
-      updatedSummary = toTtsAccountSummary(nextConfig, { hasSharedGeminiKey });
+      const sharedGeminiProviders = await loadSharedGeminiKeySummaries(user.id);
+      updatedSummary = toTtsAccountSummary(nextConfig, {
+        hasSharedGeminiKey: sharedGeminiProviders.length > 0,
+        sharedGeminiProviders,
+      });
     }
   }
 

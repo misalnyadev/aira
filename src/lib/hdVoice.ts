@@ -162,6 +162,13 @@ export type TtsAccountConfig = {
 };
 
 /** Ringkasan aman yang dikirim ke browser (API key asli tidak pernah ikut keluar). */
+export type SharedGeminiKeySummary = {
+  id: string;
+  label: string;
+  maskedKey: string;
+  backupCount: number;
+};
+
 export type TtsAccountSummary = {
   provider: HdTtsProvider;
   /** Apakah penyedia yang sedang dipilih siap dipakai (punya key sendiri atau ikut Setelan). */
@@ -169,6 +176,7 @@ export type TtsAccountSummary = {
   // Gemini TTS
   hasGeminiKey: boolean;
   hasSharedGeminiKey: boolean;
+  sharedGeminiProviders?: SharedGeminiKeySummary[];
   maskedGeminiKey: string;
   geminiBackupCount: number;
   maskedGeminiBackupKeys: string[];
@@ -354,10 +362,16 @@ export function parseTtsConfig(json: string | null | undefined): TtsAccountConfi
 
 export function toTtsAccountSummary(
   config: TtsAccountConfig,
-  options: { hasSharedGeminiKey?: boolean } = {}
+  options: {
+    hasSharedGeminiKey?: boolean;
+    sharedGeminiProviders?: SharedGeminiKeySummary[];
+  } = {}
 ): TtsAccountSummary {
   const hasGeminiKey = Boolean(config.geminiApiKey.trim());
-  const hasSharedGeminiKey = Boolean(options.hasSharedGeminiKey);
+  const sharedList = options.sharedGeminiProviders ?? [];
+  const hasSharedGeminiKey = Boolean(
+    options.hasSharedGeminiKey || sharedList.length > 0
+  );
   const hasElevenKey = Boolean(config.apiKey.trim());
   const hasActiveKey =
     config.provider === "gemini" ? hasGeminiKey || hasSharedGeminiKey : hasElevenKey;
@@ -367,6 +381,7 @@ export function toTtsAccountSummary(
     hasActiveKey,
     hasGeminiKey,
     hasSharedGeminiKey,
+    ...(sharedList.length > 0 ? { sharedGeminiProviders: sharedList } : {}),
     maskedGeminiKey: maskKey(config.geminiApiKey),
     geminiBackupCount: config.geminiBackupKeys.length,
     maskedGeminiBackupKeys: config.geminiBackupKeys.map(maskKey),
