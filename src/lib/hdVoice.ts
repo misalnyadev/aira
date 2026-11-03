@@ -30,12 +30,13 @@ export type CharacterVoiceConfig = {
 /* Gemini TTS (utama — logat Indonesia natural seperti WaiChat)        */
 /* ------------------------------------------------------------------ */
 
-export type GeminiTtsModelId =
-  | "gemini-3.8-flash-tts"
-  | "gemini-3.8-flash-lite-tts"
-  | "gemini-3.1-flash-tts-preview"
-  | "gemini-2.5-flash-preview-tts"
-  | "gemini-2.5-pro-preview-tts";
+export type GeminiTtsModelId = string;
+
+export type TtsModelOption = {
+  id: string;
+  label?: string;
+  hint?: string;
+};
 
 export const GEMINI_TTS_MODELS: {
   id: GeminiTtsModelId;
@@ -88,7 +89,7 @@ export const MAX_GEMINI_STYLE_CHARS = 180;
 /* ElevenLabs TTS (opsional — cocok bila punya Voice Clone sendiri)    */
 /* ------------------------------------------------------------------ */
 
-export type HdTtsModelId = "eleven_flash_v2_5" | "eleven_multilingual_v2";
+export type HdTtsModelId = string;
 
 export const HD_TTS_MODELS: {
   id: HdTtsModelId;
@@ -247,34 +248,42 @@ export function normalizeHdProvider(value: unknown): HdTtsProvider {
   return value === "elevenlabs" ? "elevenlabs" : "gemini";
 }
 
-const VALID_GEMINI_MODELS = new Set<GeminiTtsModelId>([
-  "gemini-3.8-flash-tts",
-  "gemini-3.8-flash-lite-tts",
-  "gemini-3.1-flash-tts-preview",
-  "gemini-2.5-flash-preview-tts",
-  "gemini-2.5-pro-preview-tts",
-]);
+const SAFE_TTS_MODEL_ID = /^[A-Za-z0-9._:-]{3,96}$/;
+
+/** Bersihkan ID model suara manual (menanggalkan awalan `models/` bila ditempel dari dokumentasi). */
+export function cleanTtsModelId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim().replace(/^models\//i, "");
+  return SAFE_TTS_MODEL_ID.test(trimmed) ? trimmed : "";
+}
 
 export function normalizeGeminiModelId(value: unknown): GeminiTtsModelId {
-  return typeof value === "string" && VALID_GEMINI_MODELS.has(value as GeminiTtsModelId)
-    ? (value as GeminiTtsModelId)
-    : DEFAULT_GEMINI_MODEL_ID;
-}
-
-export function isModernGeminiTtsModel(modelId: string): boolean {
-  return modelId === "gemini-3.8-flash-tts" || modelId === "gemini-3.8-flash-lite-tts";
-}
-
-export function normalizeHdModelId(value: unknown): HdTtsModelId {
-  return value === "eleven_multilingual_v2" ? "eleven_multilingual_v2" : "eleven_flash_v2_5";
+  return cleanTtsModelId(value) || DEFAULT_GEMINI_MODEL_ID;
 }
 
 /**
- * Hanya model keluarga Flash/Turbo v2.5 yang menerima parameter `language_code`.
- * `eleven_multilingual_v2` akan menolak request 400 bila diberi `language_code`.
+ * Gemini TTS generasi >= 3.8 memakai skema modern `{ voice: voiceName }` & `speech_metadata`.
+ * Generasi sebelumnya (`2.5`, `3.1`) memakai `{ prebuiltVoiceConfig: { voiceName } }`.
+ */
+export function isModernGeminiTtsModel(modelId: string): boolean {
+  const clean = modelId.trim().replace(/^models\//i, "");
+  const match = /^gemini-(\d+)(?:\.(\d+))?/i.exec(clean);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = match[2] !== undefined ? Number(match[2]) : 0;
+  return major > 3 || (major === 3 && minor >= 8);
+}
+
+export function normalizeHdModelId(value: unknown): HdTtsModelId {
+  return cleanTtsModelId(value) || DEFAULT_HD_MODEL_ID;
+}
+
+/**
+ * Model keluarga Flash/Turbo/v3 di ElevenLabs menerima parameter `language_code`.
+ * `eleven_multilingual_v2` / `eleven_monolingual_v1` menolak request 400 bila diberi `language_code`.
  */
 export function supportsLanguageCode(modelId: HdTtsModelId): boolean {
-  return modelId === "eleven_flash_v2_5";
+  return /flash|turbo|_v3\b/i.test(modelId);
 }
 
 export function cleanStyleText(value: unknown): string {
@@ -646,4 +655,137 @@ export const COMMON_VOICE_PHRASES = [
   "Makasih.",
   "Sampai nanti.",
 ];
+
+/* ------------------------------------------------------------------ */
+/* Perankingan & Pemilihan Dinamis Model Suara HD (Jangka Panjang)     */
+/* ------------------------------------------------------------------ */
+
+function ttsVersionScore(id: string): number[] {
+  return (id.match(/\d+/g) ?? []).slice(0, 3).map(Number);
+}
+
+function compareTtsVersionDesc(aId: string, bId: string): number {
+  const va = ttsVersionScore(aId);
+  const vb = ttsVersionScore(bId);
+  for (let i = 0; i < Math.max(va.length, vb.length); i++) {
+    const diff = (vb[i] ?? 0) - (va[i] ?? 0);
+    if (diff) return diff;
+  }
+  if (aId.length !== bId.length) return aId.length - bId.length;
+  return aId.localeCompare(bId);
+}
+
+/**
+ * Pilih daftar rekomendasi model TTS secara DINAMIS dari model yang benar-benar
+ * terdeteksi aktif di API key pengguna (otomatis beradaptasi bila generasi baru rilis).
+ */
+export function pickDynamicRecommendedTtsModels(
+  models: readonly TtsModelOption[],
+  provider: HdTtsProvider,
+  maxCount = 4
+): string[] {
+  if (!models.length) return [];
+  const ids = models.map((m) => m.id);
+
+  if (provider === "gemini") {
+    const modernPool = ids.filter((id) => {
+      const m = /^gemini-(\d+)/i.exec(id);
+      return m ? Number(m[1]) >= 3 : false;
+    });
+    const basePool = modernPool.length > 0 ? modernPool : ids;
+
+    const cleanSort = (list: string[]) => {
+      const nonExp = list.filter((id) => !/(exp|experimental)/i.test(id));
+      const target = nonExp.length > 0 ? nonExp : list;
+      return [...target].sort(compareTtsVersionDesc);
+    };
+
+    const flashMain = cleanSort(
+      basePool.filter((id) => /flash/i.test(id) && !/lite/i.test(id))
+    );
+    const flashLite = cleanSort(basePool.filter((id) => /flash-lite|lite/i.test(id)));
+    const pro = cleanSort(basePool.filter((id) => /\bpro\b|-pro(?:-|$)/i.test(id)));
+    const fallbackLegacy = cleanSort(ids.filter((id) => !basePool.includes(id)));
+    const others = cleanSort(ids);
+
+    const picked: string[] = [];
+    for (const group of [flashMain, flashLite, pro, fallbackLegacy, others]) {
+      for (const id of group) {
+        if (!picked.includes(id)) {
+          picked.push(id);
+          break;
+        }
+      }
+      if (picked.length >= maxCount) break;
+    }
+    for (const id of others) {
+      if (picked.length >= maxCount) break;
+      if (!picked.includes(id)) picked.push(id);
+    }
+    return picked.slice(0, maxCount);
+  }
+
+  const flash = ids.filter((id) => /flash/i.test(id)).sort(compareTtsVersionDesc);
+  const multilingual = ids
+    .filter((id) => /multilingual/i.test(id))
+    .sort(compareTtsVersionDesc);
+  const turboOrV3 = ids
+    .filter((id) => /turbo|_v[3-9]/i.test(id))
+    .sort(compareTtsVersionDesc);
+  const rest = ids
+    .filter((id) => !/monolingual_v1/i.test(id))
+    .sort(compareTtsVersionDesc);
+
+  const picked: string[] = [];
+  for (const group of [flash, multilingual, turboOrV3, rest, ids]) {
+    for (const id of group) {
+      if (!picked.includes(id)) {
+        picked.push(id);
+        break;
+      }
+    }
+    if (picked.length >= maxCount) break;
+  }
+  for (const id of rest) {
+    if (picked.length >= maxCount) break;
+    if (!picked.includes(id)) picked.push(id);
+  }
+  return picked.slice(0, maxCount);
+}
+
+/**
+ * Pilih satu model TTS terbaik yang pasti tersedia di daftar model live:
+ * - Mempertahankan `preferredCurrent` bila memang masih ada di daftar aktif.
+ * - Mengganti otomatis ke model aktif terbaik bila model lama sudah dipensiunkan.
+ */
+export function pickBestAvailableTtsModel(
+  models: readonly TtsModelOption[],
+  provider: HdTtsProvider,
+  preferredCurrent?: string | null
+): string {
+  const cleanPref = cleanTtsModelId(preferredCurrent);
+  if (cleanPref && models.some((m) => m.id === cleanPref)) {
+    return cleanPref;
+  }
+  const recs = pickDynamicRecommendedTtsModels(models, provider, 1);
+  if (recs.length > 0) return recs[0];
+  return (
+    models[0]?.id ||
+    cleanPref ||
+    (provider === "gemini" ? DEFAULT_GEMINI_MODEL_ID : DEFAULT_HD_MODEL_ID)
+  );
+}
+
+export function sortTtsModels(
+  list: readonly TtsModelOption[],
+  recommended: readonly string[]
+): TtsModelOption[] {
+  return [...list].sort((a, b) => {
+    const ra = recommended.indexOf(a.id);
+    const rb = recommended.indexOf(b.id);
+    if (ra !== rb) return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
+    return compareTtsVersionDesc(a.id, b.id);
+  });
+}
+
 

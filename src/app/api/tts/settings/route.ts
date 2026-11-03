@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import {
   cleanStyleText,
+  cleanTtsModelId,
   cleanVoiceId,
   DEFAULT_TTS_ACCOUNT_SUMMARY,
   normalizeGeminiModelId,
@@ -98,6 +99,28 @@ export async function PATCH(req: Request) {
     similarityBoost?: unknown;
   };
 
+  if (
+    patch.geminiModelId !== undefined &&
+    typeof patch.geminiModelId === "string" &&
+    patch.geminiModelId.trim() !== "" &&
+    !cleanTtsModelId(patch.geminiModelId)
+  ) {
+    return NextResponse.json(
+      { error: "ID model Gemini TTS tidak valid (hindari spasi)." },
+      { status: 400 }
+    );
+  }
+  if (
+    patch.modelId !== undefined &&
+    typeof patch.modelId === "string" &&
+    patch.modelId.trim() !== "" &&
+    !cleanTtsModelId(patch.modelId)
+  ) {
+    return NextResponse.json(
+      { error: "ID model ElevenLabs tidak valid (hindari spasi)." },
+      { status: 400 }
+    );
+  }
   if (patch.geminiFemaleVoice !== undefined && !cleanVoiceId(patch.geminiFemaleVoice)) {
     return NextResponse.json(
       { error: "Nama suara Gemini Perempuan tidak valid." },

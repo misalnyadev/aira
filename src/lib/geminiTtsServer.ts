@@ -5,11 +5,13 @@ import {
   isModernGeminiTtsModel,
   isRotatableTtsStatus,
   pcmToWav,
+  pickBestAvailableTtsModel,
   sampleRateFromMime,
   type CharacterVoiceConfig,
   type TtsAccountConfig,
 } from "./hdVoice";
 import { buildKeyAttempts, parseBackupKeys, promoteKeyAtIndex } from "./providerPool";
+import { listGeminiTtsModelsForKey } from "./ttsModelsServer";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const GEMINI_TIMEOUT_MS = 25_000;
@@ -129,6 +131,8 @@ export async function synthesizeGeminiAudioForUser(params: {
     ]),
   ];
 
+  let triedDynamicHeal = false;
+  let healedModel: string | null = null;
   let lastError = "Gagal menghubungi Gemini TTS.";
   let lastStatus = 502;
 
@@ -138,18 +142,17 @@ export async function synthesizeGeminiAudioForUser(params: {
 
     for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
       const modelId = modelsToTry[mIdx];
-      const modern = isModernGeminiTtsModel(modelId);
-      const speechPart = modern
-        ? {
-            text: cleanedText,
-            ...(styleText ? { speech_metadata: { style: styleText } } : {}),
-          }
-        : { text: styleText ? `${styleText}: ${cleanedText}` : cleanedText };
-
       const url = `${GEMINI_BASE}/${encodeURIComponent(modelId)}:generateContent`;
 
-      try {
-        const res = await fetch(url, {
+      const callWithFormat = async (modern: boolean) => {
+        const speechPart = modern
+          ? {
+              text: cleanedText,
+              ...(styleText ? { speech_metadata: { style: styleText } } : {}),
+            }
+          : { text: styleText ? `${styleText}: ${cleanedText}` : cleanedText };
+
+        return fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -168,14 +171,54 @@ export async function synthesizeGeminiAudioForUser(params: {
           }),
           signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
         });
+      };
+
+      try {
+        const preferModern = isModernGeminiTtsModel(modelId);
+        let res = await callWithFormat(preferModern);
+        let errBody = "";
 
         if (!res.ok) {
-          const errBody = await res.text().catch(() => "");
+          errBody = await res.text().catch(() => "");
+          if (
+            res.status === 400 &&
+            /voice_config|voiceConfig|prebuiltVoiceConfig|speech_metadata|unknown name/i.test(
+              errBody
+            )
+          ) {
+            const altRes = await callWithFormat(!preferModern);
+            if (altRes.ok) {
+              res = altRes;
+              errBody = "";
+            } else {
+              res = altRes;
+              errBody = await altRes.text().catch(() => "");
+            }
+          }
+        }
+
+        if (!res.ok) {
           lastStatus = res.status === 429 ? 429 : res.status;
           lastError = friendlyGeminiTtsError(res.status, errBody);
 
-          if (res.status === 404 && mIdx < modelsToTry.length - 1) {
-            continue;
+          if (res.status === 404) {
+            if (mIdx < modelsToTry.length - 1) {
+              continue;
+            }
+            if (!triedDynamicHeal) {
+              triedDynamicHeal = true;
+              try {
+                const liveModels = await listGeminiTtsModelsForKey(key, 6_000);
+                const liveBest = pickBestAvailableTtsModel(liveModels, "gemini", null);
+                if (liveBest && !modelsToTry.includes(liveBest)) {
+                  modelsToTry.push(liveBest);
+                  healedModel = liveBest;
+                  continue;
+                }
+              } catch {
+                // Biarkan lanjut ke pelaporan error di bawah.
+              }
+            }
           }
           if (isRotatableTtsStatus(res.status, errBody) && keyIdx < allKeys.length - 1) {
             shouldTryNextKey = true;
@@ -205,24 +248,31 @@ export async function synthesizeGeminiAudioForUser(params: {
           (raw[0] === 0x52 && raw[1] === 0x49 && raw[2] === 0x46 && raw[3] === 0x46);
         const wav = alreadyWav ? raw : pcmToWav(raw, sampleRateFromMime(mime));
 
-        if (keyIdx > 0 && keyIdx < dedicatedKeys.length) {
-          const promoted = promoteKeyAtIndex(
-            config.geminiApiKey,
-            config.geminiBackupKeys,
-            keyIdx
-          );
-          if (promoted) {
-            const updated = {
-              ...config,
-              geminiApiKey: promoted.apiKey,
-              geminiBackupKeys: promoted.backupKeys,
-            };
-            await db
-              .update(users)
-              .set({ ttsConfig: JSON.stringify(updated) })
-              .where(eq(users.id, userId))
-              .catch(() => undefined);
-          }
+        const promoted =
+          keyIdx > 0 && keyIdx < dedicatedKeys.length
+            ? promoteKeyAtIndex(config.geminiApiKey, config.geminiBackupKeys, keyIdx)
+            : null;
+        const persistModel =
+          healedModel && modelId === healedModel && config.geminiModelId !== healedModel
+            ? healedModel
+            : null;
+
+        if (promoted || persistModel) {
+          const updated = {
+            ...config,
+            ...(promoted
+              ? {
+                  geminiApiKey: promoted.apiKey,
+                  geminiBackupKeys: promoted.backupKeys,
+                }
+              : {}),
+            ...(persistModel ? { geminiModelId: persistModel } : {}),
+          };
+          await db
+            .update(users)
+            .set({ ttsConfig: JSON.stringify(updated) })
+            .where(eq(users.id, userId))
+            .catch(() => undefined);
         }
 
         return { ok: true, bytes: wav, mimeType: "audio/wav", ext: "wav" };

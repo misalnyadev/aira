@@ -4,18 +4,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { readClipboardText } from "@/lib/clipboard";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import {
+  cleanTtsModelId,
   cleanVoiceId,
+  DEFAULT_GEMINI_MODEL_ID,
+  DEFAULT_HD_MODEL_ID,
   FEMALE_VOICE_PRESETS,
   GEMINI_FEMALE_PRESETS,
   GEMINI_MALE_PRESETS,
   GEMINI_TTS_MODELS,
   HD_TTS_MODELS,
   MALE_VOICE_PRESETS,
+  pickDynamicRecommendedTtsModels,
   resolveVoiceTarget,
+  sortTtsModels,
   type GeminiTtsModelId,
   type HdTtsModelId,
   type HdTtsProvider,
   type TtsAccountSummary,
+  type TtsModelOption,
   type VoiceEngineChoice,
 } from "@/lib/hdVoice";
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
@@ -35,7 +41,16 @@ import {
 } from "@/lib/voice";
 import { Switch } from "./Switch";
 import { VoiceBankCard } from "./VoiceBankCard";
-import { CheckIcon, ChevronDownIcon, PlusIcon, SpeakerIcon, TrashIcon, XIcon } from "./icons";
+import {
+  BoltIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  PlusIcon,
+  RefreshIcon,
+  SpeakerIcon,
+  TrashIcon,
+  XIcon,
+} from "./icons";
 
 function Slider({
   label,
@@ -79,6 +94,234 @@ const ENGINE_OPTIONS: { id: VoiceEngineChoice; label: string; sub: string }[] = 
   { id: "hd_female", label: "HD Perempuan", sub: "Suara HD" },
   { id: "hd_male", label: "HD Laki-laki", sub: "Suara HD" },
 ];
+
+type KeyTestState = { status: "testing" | "ok" | "fail"; message?: string };
+
+function TtsModelSelector({
+  title,
+  provider,
+  value,
+  defaultModel,
+  presets,
+  detectedModels,
+  liveRecommended,
+  modelsBusy,
+  modelsError,
+  autoNotice,
+  showList,
+  onToggleList,
+  onRefreshModels,
+  onChange,
+}: {
+  title: string;
+  provider: HdTtsProvider;
+  value: string;
+  defaultModel: string;
+  presets: { id: string; label: string; hint: string }[];
+  detectedModels: TtsModelOption[] | null;
+  liveRecommended: string[];
+  modelsBusy: boolean;
+  modelsError: string | null;
+  autoNotice: string | null;
+  showList: boolean;
+  onToggleList: () => void;
+  onRefreshModels: () => void;
+  onChange: (next: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const recommended = useMemo(
+    () =>
+      liveRecommended.length > 0
+        ? liveRecommended
+        : detectedModels
+          ? pickDynamicRecommendedTtsModels(detectedModels, provider)
+          : [],
+    [detectedModels, liveRecommended, provider]
+  );
+
+  const sortedModels = useMemo(
+    () => (detectedModels ? sortTtsModels(detectedModels, recommended) : []),
+    [detectedModels, recommended]
+  );
+
+  const visibleModels = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sortedModels;
+    return sortedModels.filter(
+      (m) =>
+        m.id.toLowerCase().includes(q) ||
+        (m.label ? m.label.toLowerCase().includes(q) : false)
+    );
+  }, [query, sortedModels]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-ink">
+          {title}
+          {detectedModels ? (
+            <span className="ml-1 font-normal text-muted">
+              ({detectedModels.length} tersedia)
+            </span>
+          ) : null}
+        </span>
+        <button
+          type="button"
+          onClick={onToggleList}
+          disabled={modelsBusy}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
+        >
+          {modelsBusy
+            ? "Mendeteksi..."
+            : showList
+              ? "Tutup daftar"
+              : detectedModels
+                ? "Semua model"
+                : "Deteksi model"}
+          <ChevronDownIcon
+            className={`h-3.5 w-3.5 transition ${showList ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+
+      <div
+        className={`grid gap-1.5 ${
+          presets.length >= 3 ? "grid-cols-3" : "grid-cols-2"
+        }`}
+      >
+        {presets.map((m) => {
+          const active = value.trim() === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onChange(m.id)}
+              className={`rounded-xl border p-2.5 text-left transition ${
+                active
+                  ? "border-ink bg-surface-2 text-ink"
+                  : "border-line text-ink-soft hover:bg-surface-2"
+              }`}
+            >
+              <span className="block text-xs font-bold">{m.label}</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+                {m.hint}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={
+            modelsBusy
+              ? "Mendeteksi model suara yang tersedia dari API key..."
+              : `ID model manual / deteksi otomatis (mis. ${defaultModel})`
+          }
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-ink focus:outline-none"
+        />
+        <p className="mt-1 text-[11px] text-muted">
+          Bisa pilih cepat di atas, klik <b>Deteksi model</b> dari API key, atau ketik ID model manual bila kelak rilis generasi baru.
+        </p>
+      </div>
+
+      {autoNotice && (
+        <p className="rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+          {autoNotice}
+        </p>
+      )}
+
+      {!showList && modelsError && (
+        <p className="text-[11px] text-rose-600 dark:text-rose-400">
+          {modelsError}
+        </p>
+      )}
+
+      {showList && (
+        <div className="overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="flex items-center gap-1 border-b border-line px-2.5 py-1">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari model suara yang tersedia..."
+              className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-muted"
+            />
+            <button
+              type="button"
+              onClick={onRefreshModels}
+              disabled={modelsBusy}
+              aria-label="Muat ulang daftar model suara"
+              title="Muat ulang daftar model"
+              className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 disabled:opacity-50"
+            >
+              <RefreshIcon className={`h-4 w-4 ${modelsBusy ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+
+          {modelsError ? (
+            <p className="px-3 py-3 text-xs text-rose-600 dark:text-rose-400">
+              {modelsError}
+            </p>
+          ) : sortedModels.length === 0 ? (
+            <p className="px-3 py-3 text-xs text-muted">
+              {modelsBusy
+                ? "Mendeteksi model suara aktif..."
+                : "Belum ada model suara terdeteksi pada API key ini."}
+            </p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto">
+              {visibleModels.length === 0 && (
+                <p className="px-3 py-3 text-xs text-muted">Tidak ditemukan.</p>
+              )}
+              {visibleModels.map((m) => {
+                const active = value.trim() === m.id;
+                const isRecommended = recommended.includes(m.id);
+                return (
+                  <button
+                    type="button"
+                    key={m.id}
+                    onClick={() => {
+                      onChange(m.id);
+                      onToggleList();
+                    }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left transition ${
+                      active ? "bg-ink/[0.06]" : "hover:bg-surface-2"
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-mono text-xs text-ink">
+                        {m.id}
+                      </span>
+                      {m.label && m.label !== m.id && (
+                        <span className="block truncate text-[11px] text-muted">
+                          {m.label}
+                        </span>
+                      )}
+                    </span>
+                    {isRecommended && (
+                      <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[10.5px] font-semibold text-ink">
+                        tersedia &amp; disarankan
+                      </span>
+                    )}
+                    {active && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HdVoiceCard({
   ttsSummary,
@@ -127,7 +370,265 @@ function HdVoiceCard({
     () => !ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
   );
 
-  async function pasteInto(setter: (val: string) => void, onFilled?: () => void) {
+  // Tes koneksi API key & deteksi daftar model suara live (seragam dengan menu Pengaturan)
+  const [keyTests, setKeyTests] = useState<Partial<Record<HdTtsProvider, KeyTestState>>>({});
+  const [detectedModels, setDetectedModels] = useState<
+    Partial<Record<HdTtsProvider, TtsModelOption[] | null>>
+  >({});
+  const [liveRecommended, setLiveRecommended] = useState<
+    Partial<Record<HdTtsProvider, string[]>>
+  >({});
+  const [modelsBusy, setModelsBusy] = useState<Partial<Record<HdTtsProvider, boolean>>>({});
+  const [modelsError, setModelsError] = useState<
+    Partial<Record<HdTtsProvider, string | null>>
+  >({});
+  const [autoNotices, setAutoNotices] = useState<
+    Partial<Record<HdTtsProvider, string | null>>
+  >({});
+  const [showModelList, setShowModelList] = useState<
+    Partial<Record<HdTtsProvider, boolean>>
+  >({});
+  const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const detectSeqRef = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
+    },
+    []
+  );
+
+  async function detectModelsFor(
+    targetProvider: HdTtsProvider,
+    opts?: {
+      primaryKey?: string;
+      backups?: string[];
+      openDropdown?: boolean;
+      silentIfMissingKey?: boolean;
+    }
+  ) {
+    const primaryVal =
+      opts?.primaryKey ?? (targetProvider === "gemini" ? geminiApiKey : apiKey);
+    const backupsVal =
+      opts?.backups ?? (targetProvider === "gemini" ? newGeminiBackups : newBackups);
+    const clearFlag =
+      targetProvider === "gemini" ? clearGeminiPrimary : clearPrimary;
+    const keptIdxs =
+      targetProvider === "gemini" ? keptGeminiBackups : keptBackupIndexes;
+    const currentModelVal =
+      targetProvider === "gemini" ? geminiModelId : modelId;
+
+    const hasAnyKey =
+      Boolean(primaryVal.trim()) ||
+      backupsVal.some((k) => Boolean(k.trim())) ||
+      (targetProvider === "gemini"
+        ? (ttsSummary.hasGeminiKey && !clearFlag) ||
+          keptIdxs.length > 0 ||
+          ttsSummary.hasSharedGeminiKey
+        : (ttsSummary.hasKey && !clearFlag) || keptIdxs.length > 0);
+
+    if (!hasAnyKey) {
+      if (!opts?.silentIfMissingKey) {
+        setModelsError((prev) => ({
+          ...prev,
+          [targetProvider]:
+            targetProvider === "gemini"
+              ? "Isi API key Gemini dulu (di atas atau di menu Setelan)."
+              : "Isi API key ElevenLabs dulu.",
+        }));
+        if (opts?.openDropdown) {
+          setShowModelList((prev) => ({ ...prev, [targetProvider]: true }));
+        }
+      }
+      return;
+    }
+
+    const seq = ++detectSeqRef.current;
+    setModelsBusy((prev) => ({ ...prev, [targetProvider]: true }));
+    setModelsError((prev) => ({ ...prev, [targetProvider]: null }));
+
+    try {
+      const res = await fetch("/api/tts/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: targetProvider,
+          apiKey: primaryVal.trim(),
+          backupKeys: backupsVal.map((k) => k.trim()).filter(Boolean),
+          clearStoredPrimary: clearFlag,
+          keepBackupIndexes: keptIdxs,
+          currentModel: currentModelVal.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (seq !== detectSeqRef.current) return;
+
+      if (!res.ok || !data.ok) {
+        setDetectedModels((prev) => ({ ...prev, [targetProvider]: null }));
+        setLiveRecommended((prev) => ({ ...prev, [targetProvider]: [] }));
+        setModelsError((prev) => ({
+          ...prev,
+          [targetProvider]: data.error || "Gagal mendeteksi model suara.",
+        }));
+        if (opts?.openDropdown) {
+          setShowModelList((prev) => ({ ...prev, [targetProvider]: true }));
+        }
+        return;
+      }
+
+      const fetched = (data.models ?? []) as TtsModelOption[];
+      const recs = Array.isArray(data.recommended)
+        ? (data.recommended as string[])
+        : pickDynamicRecommendedTtsModels(fetched, targetProvider);
+      const best = typeof data.bestModel === "string" ? data.bestModel : recs[0] ?? "";
+
+      setDetectedModels((prev) => ({ ...prev, [targetProvider]: fetched }));
+      setLiveRecommended((prev) => ({ ...prev, [targetProvider]: recs }));
+
+      if (opts?.openDropdown) {
+        setShowModelList((prev) => ({ ...prev, [targetProvider]: true }));
+      }
+
+      const trimmedCur = cleanTtsModelId(currentModelVal);
+      if (!trimmedCur && best) {
+        if (targetProvider === "gemini") setGeminiModelId(best);
+        else setModelId(best);
+        setAutoNotices((prev) => ({ ...prev, [targetProvider]: null }));
+      } else if (trimmedCur && data.currentAvailable === false && best) {
+        if (targetProvider === "gemini") setGeminiModelId(best);
+        else setModelId(best);
+        setAutoNotices((prev) => ({
+          ...prev,
+          [targetProvider]: `Model "${trimmedCur}" sudah tidak tersedia di key ini — diganti otomatis ke "${best}".`,
+        }));
+      } else {
+        setAutoNotices((prev) => ({ ...prev, [targetProvider]: null }));
+      }
+    } catch {
+      if (seq !== detectSeqRef.current) return;
+      setDetectedModels((prev) => ({ ...prev, [targetProvider]: null }));
+      setLiveRecommended((prev) => ({ ...prev, [targetProvider]: [] }));
+      setModelsError((prev) => ({
+        ...prev,
+        [targetProvider]: "Koneksi gagal saat mendeteksi model suara.",
+      }));
+      if (opts?.openDropdown) {
+        setShowModelList((prev) => ({ ...prev, [targetProvider]: true }));
+      }
+    } finally {
+      if (seq === detectSeqRef.current) {
+        setModelsBusy((prev) => ({ ...prev, [targetProvider]: false }));
+      }
+    }
+  }
+
+  function scheduleAutoDetect(
+    targetProvider: HdTtsProvider,
+    nextPrimary: string,
+    nextBackups: string[]
+  ) {
+    if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
+    const hasFreshKey =
+      nextPrimary.trim().length >= 12 ||
+      nextBackups.some((b) => b.trim().length >= 12);
+    if (!hasFreshKey) return;
+
+    detectTimerRef.current = setTimeout(() => {
+      void detectModelsFor(targetProvider, {
+        primaryKey: nextPrimary,
+        backups: nextBackups,
+        openDropdown: false,
+        silentIfMissingKey: true,
+      });
+    }, 600);
+  }
+
+  async function handleTestApiKey(targetProvider: HdTtsProvider) {
+    setKeyTests((prev) => ({ ...prev, [targetProvider]: { status: "testing" } }));
+    const primaryVal = targetProvider === "gemini" ? geminiApiKey : apiKey;
+    const backupsVal =
+      targetProvider === "gemini" ? newGeminiBackups : newBackups;
+    const clearFlag =
+      targetProvider === "gemini" ? clearGeminiPrimary : clearPrimary;
+    const keptIdxs =
+      targetProvider === "gemini" ? keptGeminiBackups : keptBackupIndexes;
+    const modelVal =
+      cleanTtsModelId(targetProvider === "gemini" ? geminiModelId : modelId) ||
+      (targetProvider === "gemini"
+        ? DEFAULT_GEMINI_MODEL_ID
+        : DEFAULT_HD_MODEL_ID);
+    const voiceVal =
+      targetProvider === "gemini"
+        ? geminiFemaleVoice.trim()
+        : femaleVoiceId.trim();
+
+    try {
+      const res = await fetch("/api/tts/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: targetProvider,
+          apiKey: primaryVal.trim(),
+          backupKeys: backupsVal.map((k) => k.trim()).filter(Boolean),
+          clearStoredPrimary: clearFlag,
+          keepBackupIndexes: keptIdxs,
+          modelId: modelVal,
+          voiceId: voiceVal,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        const sourceNote =
+          data.usedSource === "shared"
+            ? " · key Gemini Setelan"
+            : data.usedKeyNumber > 1
+              ? ` · key ke-${data.usedKeyNumber} dari ${data.totalKeys}`
+              : "";
+        const quotaPart =
+          typeof data.quotaNote === "string" && data.quotaNote
+            ? ` · ${data.quotaNote}`
+            : "";
+        const modelPart =
+          data.healedFrom && data.activeModel
+            ? ` · model otomatis diperbarui ke ${data.activeModel}`
+            : data.activeModel
+              ? ` · ${data.activeModel}`
+              : "";
+
+        if (data.healedFrom && typeof data.activeModel === "string") {
+          if (targetProvider === "gemini") setGeminiModelId(data.activeModel);
+          else setModelId(data.activeModel);
+        }
+
+        setKeyTests((prev) => ({
+          ...prev,
+          [targetProvider]: {
+            status: "ok",
+            message: `Terhubung${sourceNote}${quotaPart}${modelPart}`,
+          },
+        }));
+      } else {
+        setKeyTests((prev) => ({
+          ...prev,
+          [targetProvider]: {
+            status: "fail",
+            message: data.error || "Gagal terhubung ke layanan suara.",
+          },
+        }));
+      }
+    } catch {
+      setKeyTests((prev) => ({
+        ...prev,
+        [targetProvider]: {
+          status: "fail",
+          message: "Koneksi gagal saat menguji API key.",
+        },
+      }));
+    }
+  }
+
+  async function pasteInto(setter: (val: string) => void, onFilled?: (val: string) => void) {
     const pasted = await readClipboardText();
     if (!pasted) {
       setFeedback({
@@ -137,7 +638,7 @@ function HdVoiceCard({
       return;
     }
     setter(pasted);
-    onFilled?.();
+    onFilled?.(pasted);
   }
 
   const totalGeminiBackupSlots = keptGeminiBackups.length + newGeminiBackups.length;
@@ -146,13 +647,17 @@ function HdVoiceCard({
   const totalBackupSlots = keptBackupIndexes.length + newBackups.length;
   const canAddBackup = totalBackupSlots < MAX_BACKUP_KEYS;
 
+  const effectiveGeminiModel =
+    cleanTtsModelId(geminiModelId) || DEFAULT_GEMINI_MODEL_ID;
+  const effectiveElevenModel = cleanTtsModelId(modelId) || DEFAULT_HD_MODEL_ID;
+
   const hasPendingChanges =
     provider !== ttsSummary.provider ||
     Boolean(geminiApiKey.trim()) ||
     clearGeminiPrimary ||
     keptGeminiBackups.length !== ttsSummary.maskedGeminiBackupKeys.length ||
     newGeminiBackups.some((k) => Boolean(k.trim())) ||
-    geminiModelId !== ttsSummary.geminiModelId ||
+    effectiveGeminiModel !== ttsSummary.geminiModelId ||
     geminiFemaleVoice.trim() !== ttsSummary.geminiFemaleVoice ||
     geminiMaleVoice.trim() !== ttsSummary.geminiMaleVoice ||
     geminiStyle.trim() !== ttsSummary.geminiStyle ||
@@ -160,7 +665,7 @@ function HdVoiceCard({
     clearPrimary ||
     keptBackupIndexes.length !== ttsSummary.maskedBackupKeys.length ||
     newBackups.some((k) => Boolean(k.trim())) ||
-    modelId !== ttsSummary.modelId ||
+    effectiveElevenModel !== ttsSummary.modelId ||
     femaleVoiceId.trim() !== ttsSummary.femaleVoiceId ||
     maleVoiceId.trim() !== ttsSummary.maleVoiceId ||
     Math.abs(stability - ttsSummary.stability) > 0.005 ||
@@ -172,6 +677,20 @@ function HdVoiceCard({
   ): Promise<TtsAccountSummary | null> {
     const nextProvider = overrideProvider ?? provider;
 
+    if (geminiModelId.trim() && !cleanTtsModelId(geminiModelId)) {
+      setFeedback({
+        kind: "err",
+        text: "ID model Gemini TTS tidak valid (hindari spasi).",
+      });
+      return null;
+    }
+    if (modelId.trim() && !cleanTtsModelId(modelId)) {
+      setFeedback({
+        kind: "err",
+        text: "ID model ElevenLabs tidak valid (hindari spasi).",
+      });
+      return null;
+    }
     if (!cleanVoiceId(geminiFemaleVoice) || !cleanVoiceId(geminiMaleVoice)) {
       setFeedback({ kind: "err", text: "Nama suara Gemini tidak valid." });
       return null;
@@ -188,13 +707,13 @@ function HdVoiceCard({
         provider: nextProvider,
         keepGeminiBackupIndexes: keptGeminiBackups,
         newGeminiBackupKeys: newGeminiBackups.map((k) => k.trim()).filter(Boolean),
-        geminiModelId,
+        geminiModelId: effectiveGeminiModel,
         geminiFemaleVoice: geminiFemaleVoice.trim(),
         geminiMaleVoice: geminiMaleVoice.trim(),
         geminiStyle: geminiStyle.trim(),
         keepBackupIndexes: keptBackupIndexes,
         newBackupKeys: newBackups.map((k) => k.trim()).filter(Boolean),
-        modelId,
+        modelId: effectiveElevenModel,
         femaleVoiceId: femaleVoiceId.trim(),
         maleVoiceId: maleVoiceId.trim(),
         stability,
@@ -221,6 +740,7 @@ function HdVoiceCard({
         setClearGeminiPrimary(false);
         setNewGeminiBackups([]);
         setKeptGeminiBackups(updated.maskedGeminiBackupKeys.map((_, idx) => idx));
+        setGeminiModelId(updated.geminiModelId);
         setGeminiFemaleVoice(updated.geminiFemaleVoice);
         setGeminiMaleVoice(updated.geminiMaleVoice);
         setGeminiStyle(updated.geminiStyle);
@@ -228,6 +748,7 @@ function HdVoiceCard({
         setClearPrimary(false);
         setNewBackups([]);
         setKeptBackupIndexes(updated.maskedBackupKeys.map((_, idx) => idx));
+        setModelId(updated.modelId);
         setFemaleVoiceId(updated.femaleVoiceId);
         setMaleVoiceId(updated.maleVoiceId);
         if (!silent) {
@@ -383,20 +904,51 @@ function HdVoiceCard({
         <>
           {/* API Key Gemini (otomatis ikut Setelan bila sudah ada) */}
           <div className="rounded-xl border border-line bg-surface-2/60 p-3">
-            <button
-              type="button"
-              onClick={() => setGeminiKeyOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 text-left text-xs font-semibold text-ink"
-            >
-              <span>
-                {ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
-                  ? "Otomatis memakai API key Gemini dari Setelan (ketuk untuk key terpisah)"
-                  : "API Key Gemini Suara"}
-              </span>
-              <ChevronDownIcon
-                className={`h-4 w-4 shrink-0 text-muted transition ${geminiKeyOpen ? "rotate-180" : ""}`}
-              />
-            </button>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setGeminiKeyOpen((v) => !v)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-ink"
+              >
+                <span className="min-w-0 flex-1">
+                  {ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
+                    ? "Otomatis memakai API key Gemini dari Setelan (ketuk untuk key terpisah)"
+                    : "API Key Gemini Suara"}
+                </span>
+                <ChevronDownIcon
+                  className={`h-4 w-4 shrink-0 text-muted transition ${geminiKeyOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleTestApiKey("gemini")}
+                disabled={keyTests.gemini?.status === "testing"}
+                title="Tes koneksi API key Gemini Suara"
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-line/50 disabled:opacity-45"
+              >
+                <BoltIcon className="h-3.5 w-3.5" />
+                {keyTests.gemini?.status === "testing" ? "Menguji..." : "Tes Key"}
+              </button>
+            </div>
+
+            {keyTests.gemini && (
+              <p
+                className={`mt-1.5 text-xs ${
+                  keyTests.gemini.status === "ok"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : keyTests.gemini.status === "fail"
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-ink-soft"
+                }`}
+              >
+                {keyTests.gemini.status === "testing"
+                  ? "Menguji koneksi API key Gemini..."
+                  : keyTests.gemini.status === "ok"
+                    ? `✓ ${keyTests.gemini.message}`
+                    : `✗ ${keyTests.gemini.message}`}
+              </p>
+            )}
 
             {geminiKeyOpen && (
               <div className="mt-2.5 space-y-2">
@@ -410,7 +962,10 @@ function HdVoiceCard({
                     <button
                       type="button"
                       onClick={() =>
-                        void pasteInto(setGeminiApiKey, () => setClearGeminiPrimary(false))
+                        void pasteInto(setGeminiApiKey, (pasted) => {
+                          setClearGeminiPrimary(false);
+                          scheduleAutoDetect("gemini", pasted, newGeminiBackups);
+                        })
                       }
                       className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
                     >
@@ -453,8 +1008,10 @@ function HdVoiceCard({
                   type="text"
                   value={geminiApiKey}
                   onChange={(e) => {
-                    setGeminiApiKey(e.target.value);
-                    if (e.target.value.trim()) setClearGeminiPrimary(false);
+                    const val = e.target.value;
+                    setGeminiApiKey(val);
+                    if (val.trim()) setClearGeminiPrimary(false);
+                    scheduleAutoDetect("gemini", val, newGeminiBackups);
                   }}
                   placeholder={
                     ttsSummary.hasGeminiKey && !clearGeminiPrimary
@@ -503,11 +1060,13 @@ function HdVoiceCard({
                     <input
                       type="text"
                       value={val}
-                      onChange={(e) =>
-                        setNewGeminiBackups((prev) =>
-                          prev.map((v, i) => (i === idx ? e.target.value : v))
-                        )
-                      }
+                      onChange={(e) => {
+                        const nextList = newGeminiBackups.map((v, i) =>
+                          i === idx ? e.target.value : v
+                        );
+                        setNewGeminiBackups(nextList);
+                        scheduleAutoDetect("gemini", geminiApiKey, nextList);
+                      }}
                       placeholder={`Key Gemini cadangan #${keptGeminiBackups.length + idx + 1}...`}
                       autoComplete="off"
                       autoCorrect="off"
@@ -520,11 +1079,13 @@ function HdVoiceCard({
                     <button
                       type="button"
                       onClick={() =>
-                        void pasteInto((pasted) =>
-                          setNewGeminiBackups((prev) =>
-                            prev.map((v, i) => (i === idx ? pasted : v))
-                          )
-                        )
+                        void pasteInto((pasted) => {
+                          const nextList = newGeminiBackups.map((v, i) =>
+                            i === idx ? pasted : v
+                          );
+                          setNewGeminiBackups(nextList);
+                          scheduleAutoDetect("gemini", geminiApiKey, nextList);
+                        })
                       }
                       className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
                     >
@@ -556,32 +1117,40 @@ function HdVoiceCard({
             )}
           </div>
 
-          {/* Model Gemini TTS */}
-          <div className="space-y-1.5">
-            <span className="block text-xs font-semibold text-ink">Model Gemini TTS</span>
-            <div className="grid grid-cols-3 gap-1.5">
-              {GEMINI_TTS_MODELS.map((m) => {
-                const active = geminiModelId === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setGeminiModelId(m.id)}
-                    className={`rounded-xl border p-2.5 text-left transition ${
-                      active
-                        ? "border-ink bg-surface-2 text-ink"
-                        : "border-line text-ink-soft hover:bg-surface-2"
-                    }`}
-                  >
-                    <span className="block text-xs font-bold">{m.label}</span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-                      {m.hint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Model Gemini TTS (Preset Cepat + Deteksi Live + Mode Manual) */}
+          <TtsModelSelector
+            title="Model Gemini TTS"
+            provider="gemini"
+            value={geminiModelId}
+            defaultModel={DEFAULT_GEMINI_MODEL_ID}
+            presets={GEMINI_TTS_MODELS}
+            detectedModels={detectedModels.gemini ?? null}
+            liveRecommended={liveRecommended.gemini ?? []}
+            modelsBusy={Boolean(modelsBusy.gemini)}
+            modelsError={modelsError.gemini ?? null}
+            autoNotice={autoNotices.gemini ?? null}
+            showList={Boolean(showModelList.gemini)}
+            onToggleList={() => {
+              if (showModelList.gemini) {
+                setShowModelList((prev) => ({ ...prev, gemini: false }));
+              } else {
+                void detectModelsFor("gemini", {
+                  openDropdown: true,
+                  silentIfMissingKey: false,
+                });
+              }
+            }}
+            onRefreshModels={() =>
+              void detectModelsFor("gemini", {
+                openDropdown: true,
+                silentIfMissingKey: false,
+              })
+            }
+            onChange={(next) => {
+              setGeminiModelId(next);
+              setAutoNotices((prev) => ({ ...prev, gemini: null }));
+            }}
+          />
 
           {/* Gaya Bicara (seperti WaiChat) */}
           <div className="space-y-1">
@@ -674,10 +1243,25 @@ function HdVoiceCard({
           <div className="space-y-2 rounded-xl border border-line bg-surface-2/60 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-semibold text-ink">API Key ElevenLabs</label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => void pasteInto(setApiKey, () => setClearPrimary(false))}
+                  onClick={() => void handleTestApiKey("elevenlabs")}
+                  disabled={keyTests.elevenlabs?.status === "testing"}
+                  title="Tes koneksi API key ElevenLabs"
+                  className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50 disabled:opacity-45"
+                >
+                  <BoltIcon className="h-3.5 w-3.5" />
+                  {keyTests.elevenlabs?.status === "testing" ? "Menguji..." : "Tes Key"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void pasteInto(setApiKey, (pasted) => {
+                      setClearPrimary(false);
+                      scheduleAutoDetect("elevenlabs", pasted, newBackups);
+                    })
+                  }
                   className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
                 >
                   Tempel
@@ -700,6 +1284,24 @@ function HdVoiceCard({
               </div>
             </div>
 
+            {keyTests.elevenlabs && (
+              <p
+                className={`text-xs ${
+                  keyTests.elevenlabs.status === "ok"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : keyTests.elevenlabs.status === "fail"
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-ink-soft"
+                }`}
+              >
+                {keyTests.elevenlabs.status === "testing"
+                  ? "Menguji koneksi API key ElevenLabs..."
+                  : keyTests.elevenlabs.status === "ok"
+                    ? `✓ ${keyTests.elevenlabs.message}`
+                    : `✗ ${keyTests.elevenlabs.message}`}
+              </p>
+            )}
+
             {ttsSummary.hasKey && !clearPrimary && (
               <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs">
                 <span className="truncate font-mono text-[11px] text-ink-soft">
@@ -719,8 +1321,10 @@ function HdVoiceCard({
               type="text"
               value={apiKey}
               onChange={(e) => {
-                setApiKey(e.target.value);
-                if (e.target.value.trim()) setClearPrimary(false);
+                const val = e.target.value;
+                setApiKey(val);
+                if (val.trim()) setClearPrimary(false);
+                scheduleAutoDetect("elevenlabs", val, newBackups);
               }}
               placeholder={
                 ttsSummary.hasKey && !clearPrimary
@@ -769,9 +1373,13 @@ function HdVoiceCard({
                 <input
                   type="text"
                   value={val}
-                  onChange={(e) =>
-                    setNewBackups((prev) => prev.map((v, i) => (i === idx ? e.target.value : v)))
-                  }
+                  onChange={(e) => {
+                    const nextList = newBackups.map((v, i) =>
+                      i === idx ? e.target.value : v
+                    );
+                    setNewBackups(nextList);
+                    scheduleAutoDetect("elevenlabs", apiKey, nextList);
+                  }}
                   placeholder={`API key cadangan #${keptBackupIndexes.length + idx + 1}...`}
                   autoComplete="off"
                   autoCorrect="off"
@@ -784,9 +1392,13 @@ function HdVoiceCard({
                 <button
                   type="button"
                   onClick={() =>
-                    void pasteInto((pasted) =>
-                      setNewBackups((prev) => prev.map((v, i) => (i === idx ? pasted : v)))
-                    )
+                    void pasteInto((pasted) => {
+                      const nextList = newBackups.map((v, i) =>
+                        i === idx ? pasted : v
+                      );
+                      setNewBackups(nextList);
+                      scheduleAutoDetect("elevenlabs", apiKey, nextList);
+                    })
                   }
                   className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
                 >
@@ -814,32 +1426,40 @@ function HdVoiceCard({
             )}
           </div>
 
-          {/* Model ElevenLabs */}
-          <div className="space-y-1.5">
-            <span className="block text-xs font-semibold text-ink">Model ElevenLabs</span>
-            <div className="grid grid-cols-2 gap-2">
-              {HD_TTS_MODELS.map((m) => {
-                const active = modelId === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setModelId(m.id)}
-                    className={`rounded-xl border p-2.5 text-left transition ${
-                      active
-                        ? "border-ink bg-surface-2 text-ink"
-                        : "border-line text-ink-soft hover:bg-surface-2"
-                    }`}
-                  >
-                    <span className="block text-xs font-bold">{m.label}</span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-                      {m.hint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Model ElevenLabs (Preset Cepat + Deteksi Live + Mode Manual) */}
+          <TtsModelSelector
+            title="Model ElevenLabs"
+            provider="elevenlabs"
+            value={modelId}
+            defaultModel={DEFAULT_HD_MODEL_ID}
+            presets={HD_TTS_MODELS}
+            detectedModels={detectedModels.elevenlabs ?? null}
+            liveRecommended={liveRecommended.elevenlabs ?? []}
+            modelsBusy={Boolean(modelsBusy.elevenlabs)}
+            modelsError={modelsError.elevenlabs ?? null}
+            autoNotice={autoNotices.elevenlabs ?? null}
+            showList={Boolean(showModelList.elevenlabs)}
+            onToggleList={() => {
+              if (showModelList.elevenlabs) {
+                setShowModelList((prev) => ({ ...prev, elevenlabs: false }));
+              } else {
+                void detectModelsFor("elevenlabs", {
+                  openDropdown: true,
+                  silentIfMissingKey: false,
+                });
+              }
+            }}
+            onRefreshModels={() =>
+              void detectModelsFor("elevenlabs", {
+                openDropdown: true,
+                silentIfMissingKey: false,
+              })
+            }
+            onChange={(next) => {
+              setModelId(next);
+              setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
+            }}
+          />
 
           {/* Slot 1 ElevenLabs: Perempuan */}
           <div className="space-y-2 rounded-xl border border-line p-3">
