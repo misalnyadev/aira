@@ -28,20 +28,24 @@ export function Sidebar({
   profile,
   onSelect,
   onNewCharacter,
+  onRequestSlot,
   onOpenSettings,
   onOpenProfile,
   hasProviders,
   limit,
+  isAdmin = false,
 }: {
   characters: CharacterSummary[];
   activeId: string | null;
   profile: UserProfile;
   onSelect: (id: string) => void;
   onNewCharacter: () => void;
+  onRequestSlot?: () => void;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   hasProviders: boolean;
   limit: number;
+  isAdmin?: boolean;
 }) {
   const [query, setQuery] = useState("");
 
@@ -94,11 +98,21 @@ export function Sidebar({
         <div className="flex shrink-0 items-center gap-0.5">
           <ThemeQuickToggle className="md:hidden" />
           <button
-            onClick={onNewCharacter}
-            disabled={full}
+            onClick={!isAdmin && full && onRequestSlot ? onRequestSlot : onNewCharacter}
+            disabled={full && (isAdmin || !onRequestSlot)}
             className="rounded-full bg-brand p-2 text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-            title={full ? `Maksimal ${limit} karakter` : "Buat karakter baru"}
-            aria-label="Buat karakter baru"
+            title={
+              !isAdmin && full
+                ? "Kuota karakter penuh — klik untuk ajukan tambah slot ke Admin"
+                : full
+                  ? `Maksimal ${limit} karakter`
+                  : "Buat karakter baru"
+            }
+            aria-label={
+              !isAdmin && full
+                ? "Ajukan tambah slot karakter"
+                : "Buat karakter baru"
+            }
           >
             <PlusIcon className="h-4 w-4" />
           </button>

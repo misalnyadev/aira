@@ -31,7 +31,13 @@ export async function POST(req: Request) {
   }
 
   const [row] = await db
-    .select({ id: users.id, email: users.email, passwordHash: users.passwordHash })
+    .select({
+      id: users.id,
+      email: users.email,
+      passwordHash: users.passwordHash,
+      isAdmin: users.isAdmin,
+      characterQuota: users.characterQuota,
+    })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
@@ -50,5 +56,12 @@ export async function POST(req: Request) {
 
   await createSession(row.id);
 
-  return NextResponse.json({ user: { id: row.id, email: row.email } });
+  return NextResponse.json({
+    user: {
+      id: row.id,
+      email: row.email,
+      isAdmin: Boolean(row.isAdmin),
+      characterQuota: row.characterQuota,
+    },
+  });
 }

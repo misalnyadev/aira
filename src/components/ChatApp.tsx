@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CharacterDetail, CharacterSummary, ChatMessage, ProviderSummary } from "@/types/chat";
+import type {
+  CharacterDetail,
+  CharacterSummary,
+  ChatMessage,
+  ProviderSummary,
+  QuotaRequestSummary,
+} from "@/types/chat";
 import {
   DEFAULT_BUBBLE_STYLE,
   type BubbleStyle,
@@ -83,7 +89,15 @@ export function ChatApp() {
   const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
   const [bubbleStyle, setBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const [ttsSummary, setTtsSummary] = useState<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
-  const [limit, setLimit] = useState<number>(MAX_CHARACTERS);
+  const [limit, setLimit] = useState<number>(
+    user.isAdmin ? 50 : user.characterQuota ?? MAX_CHARACTERS
+  );
+  const [isAdmin, setIsAdmin] = useState<boolean>(Boolean(user.isAdmin));
+  const [latestQuotaRequest, setLatestQuotaRequest] =
+    useState<QuotaRequestSummary | null>(null);
+  const [pendingQuotaRequestsCount, setPendingQuotaRequestsCount] =
+    useState<number>(0);
+  const [autoOpenQuotaRequest, setAutoOpenQuotaRequest] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
@@ -172,6 +186,11 @@ export function ChatApp() {
     const data = await res.json();
     setCharacters(data.characters ?? []);
     if (typeof data.limit === "number") setLimit(data.limit);
+    if (typeof data.isAdmin === "boolean") setIsAdmin(data.isAdmin);
+    setLatestQuotaRequest(data.latestQuotaRequest ?? null);
+    if (typeof data.pendingQuotaRequestsCount === "number") {
+      setPendingQuotaRequestsCount(data.pendingQuotaRequestsCount);
+    }
   }, [api]);
 
   const fetchProviders = useCallback(async () => {
@@ -765,10 +784,15 @@ export function ChatApp() {
                   profile={profile}
                   onSelect={handleSelect}
                   onNewCharacter={() => setShowCreate(true)}
+                  onRequestSlot={() => {
+                    setAutoOpenQuotaRequest(true);
+                    handleViewChange("characters");
+                  }}
                   onOpenSettings={() => handleViewChange("settings")}
                   onOpenProfile={() => handleViewChange("profile")}
                   hasProviders={hasProviders}
                   limit={limit}
+                  isAdmin={isAdmin}
                 />
               </div>
 
@@ -847,11 +871,21 @@ export function ChatApp() {
                           <SettingsIcon className="h-4 w-4" /> Atur API Key
                         </button>
                         <button
-                          onClick={() => setShowCreate(true)}
-                          disabled={characters.length >= limit}
+                          onClick={() => {
+                            if (!isAdmin && characters.length >= limit) {
+                              setAutoOpenQuotaRequest(true);
+                              handleViewChange("characters");
+                            } else {
+                              setShowCreate(true);
+                            }
+                          }}
+                          disabled={isAdmin && characters.length >= limit}
                           className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          <PlusIcon className="h-4 w-4" /> Buat Karakter
+                          <PlusIcon className="h-4 w-4" />{" "}
+                          {!isAdmin && characters.length >= limit
+                            ? "Minta Tambah Slot"
+                            : "Buat Karakter"}
                         </button>
                       </div>
                     </div>
@@ -876,6 +910,13 @@ export function ChatApp() {
             <CharactersView
               characters={characters}
               limit={limit}
+              isAdmin={isAdmin}
+              latestQuotaRequest={latestQuotaRequest}
+              pendingQuotaRequestsCount={pendingQuotaRequestsCount}
+              autoOpenRequestForm={autoOpenQuotaRequest}
+              onClearAutoOpenRequest={() => setAutoOpenQuotaRequest(false)}
+              onQuotaChanged={fetchCharacters}
+              onOpenAdminPanel={() => handleViewChange("settings")}
               onChat={handleSelect}
               onNew={() => setShowCreate(true)}
               onProfile={openProfile}
@@ -901,6 +942,8 @@ export function ChatApp() {
               onChatBackgroundChange={setChatBackground}
               bubbleStyle={bubbleStyle}
               onBubbleStyleChange={setBubbleStyle}
+              isAdmin={isAdmin}
+              onQuotaUpdated={fetchCharacters}
               onChanged={async () => {
                 await Promise.all([fetchProviders(), fetchTtsSettings()]);
               }}

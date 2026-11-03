@@ -41,20 +41,28 @@ export async function POST(req: Request) {
   const passwordError = checkPasswordStrength(password ?? "");
   if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
 
-  // Apakah ini akun pertama? Menentukan siapa yang mengambil data lama.
+  // Apakah ini akun pertama atau cocok ADMIN_EMAIL? Menentukan status Admin & kuota.
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(users);
   const isFirstUser = Number(count) === 0;
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const isAdmin = isFirstUser || Boolean(adminEmail && email === adminEmail);
+  const initialQuota = isAdmin ? 50 : 1;
 
   const passwordHash = await hashPassword(password!);
 
   let created;
   try {
-    [created] = await db.insert(users).values({ email, passwordHash }).returning({
-      id: users.id,
-      email: users.email,
-    });
+    [created] = await db
+      .insert(users)
+      .values({ email, passwordHash, isAdmin, characterQuota: initialQuota })
+      .returning({
+        id: users.id,
+        email: users.email,
+        isAdmin: users.isAdmin,
+        characterQuota: users.characterQuota,
+      });
   } catch (err) {
     // Balapan: dua permintaan mendaftar dengan email sama hampir bersamaan.
     const message = err instanceof Error ? err.message : "";

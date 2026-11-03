@@ -5,8 +5,14 @@
  * dilihat pengguna tidak pernah berbeda dengan aturan yang sebenarnya berlaku.
  */
 
-/** Jumlah karakter maksimal per akun. */
-export const MAX_CHARACTERS = 10;
+/** Kuota karakter bawaan untuk user biasa (1 karakter; tambah slot lewat persetujuan Admin). */
+export const DEFAULT_USER_CHARACTER_QUOTA = 1;
+
+/** Kuota karakter untuk Admin. */
+export const ADMIN_CHARACTER_QUOTA = 50;
+
+/** Batas karakter fallback bila kuota akun belum termuat di klien. */
+export const MAX_CHARACTERS = DEFAULT_USER_CHARACTER_QUOTA;
 
 /**
  * Panjang maksimal bible peran.

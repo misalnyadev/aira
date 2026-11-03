@@ -117,6 +117,28 @@ const DDL = [
   )`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "tts_clips_user_hash_idx" ON "tts_clips" ("user_id", "clip_hash")`,
   sql`CREATE INDEX IF NOT EXISTS "tts_clips_user_created_idx" ON "tts_clips" ("user_id", "created_at" DESC)`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_admin" boolean NOT NULL DEFAULT false`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "character_quota" integer NOT NULL DEFAULT 1`,
+  sql`CREATE TABLE IF NOT EXISTS "character_quota_requests" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "requested_quota" integer NOT NULL,
+    "reason" text DEFAULT '' NOT NULL,
+    "status" text DEFAULT 'pending' NOT NULL,
+    "admin_note" text DEFAULT '' NOT NULL,
+    "resolved_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "quota_requests_user_idx" ON "character_quota_requests" ("user_id", "created_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "quota_requests_status_idx" ON "character_quota_requests" ("status", "created_at" DESC)`,
+  // Jika belum ada satu pun Admin di database, otomatis angkat akun pertama (pemilik utama) menjadi Admin.
+  sql`UPDATE "users"
+      SET "is_admin" = true,
+          "character_quota" = GREATEST("character_quota", 50)
+      WHERE "id" = (
+        SELECT "id" FROM "users" ORDER BY "created_at" ASC LIMIT 1
+      )
+      AND NOT EXISTS (SELECT 1 FROM "users" WHERE "is_admin" = true)`,
 ];
 
 let readyPromise: Promise<void> | null = null;
@@ -127,6 +149,15 @@ export function ensureDb(): Promise<void> {
     readyPromise = (async () => {
       for (const statement of DDL) {
         await db.execute(statement);
+      }
+      const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+      if (adminEmail) {
+        await db.execute(
+          sql`UPDATE "users"
+              SET "is_admin" = true,
+                  "character_quota" = GREATEST("character_quota", 50)
+              WHERE lower("email") = ${adminEmail}`
+        );
       }
     })().catch((err) => {
       // Reset supaya percobaan berikutnya bisa mencoba lagi.

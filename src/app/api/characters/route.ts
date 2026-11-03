@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { characters, messages } from "@/db/schema";
+import { characterQuotaRequests, characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import { parseCharacterMedia } from "@/lib/characterMedia";
@@ -10,11 +10,11 @@ import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
-  MAX_CHARACTERS,
   MAX_GREETING_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
+import { effectiveCharacterLimit } from "@/lib/quotaRules";
 
 export const dynamic = "force-dynamic";
 
@@ -94,12 +94,43 @@ export async function GET() {
     })
   );
 
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(characters)
-    .where(eq(characters.userId, user.id));
+  const [[{ count }], [latestReq], adminPending] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(characters)
+      .where(eq(characters.userId, user.id)),
+    db
+      .select({
+        id: characterQuotaRequests.id,
+        requestedQuota: characterQuotaRequests.requestedQuota,
+        reason: characterQuotaRequests.reason,
+        status: characterQuotaRequests.status,
+        adminNote: characterQuotaRequests.adminNote,
+        createdAt: characterQuotaRequests.createdAt,
+        resolvedAt: characterQuotaRequests.resolvedAt,
+      })
+      .from(characterQuotaRequests)
+      .where(eq(characterQuotaRequests.userId, user.id))
+      .orderBy(desc(characterQuotaRequests.createdAt))
+      .limit(1),
+    user.isAdmin
+      ? db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(characterQuotaRequests)
+          .where(eq(characterQuotaRequests.status, "pending"))
+      : Promise.resolve([{ count: 0 }]),
+  ]);
 
-  return NextResponse.json({ characters: list, limit: MAX_CHARACTERS, count: Number(count) });
+  const limit = effectiveCharacterLimit(user);
+
+  return NextResponse.json({
+    characters: list,
+    limit,
+    count: Number(count),
+    isAdmin: user.isAdmin,
+    latestQuotaRequest: latestReq ?? null,
+    pendingQuotaRequestsCount: Number(adminPending[0]?.count ?? 0),
+  });
 }
 
 export async function POST(req: Request) {
@@ -129,17 +160,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Deskripsi kepribadian wajib diisi." }, { status: 400 });
   }
 
-  // Batas jumlah karakter dijaga di server, bukan cuma di tampilan.
+  // Batas jumlah karakter milik sendiri dijaga ketat di server sesuai peran & kuota akun.
+  const limit = effectiveCharacterLimit(user);
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(characters)
     .where(eq(characters.userId, user.id));
 
-  if (Number(count) >= MAX_CHARACTERS) {
-    return NextResponse.json(
-      { error: `Maksimal ${MAX_CHARACTERS} karakter per akun. Hapus salah satu dulu.` },
-      { status: 409 }
-    );
+  if (Number(count) >= limit) {
+    const errText = user.isAdmin
+      ? `Maksimal ${limit} karakter per akun. Hapus salah satu dulu.`
+      : `Kuota karakter kamu sudah penuh (${count}/${limit}). Ajukan tambah slot karakter ke Admin di menu Karakter.`;
+    return NextResponse.json({ error: errText }, { status: 403 });
   }
 
   if (personality.trim().length > MAX_PERSONALITY_CHARS) {
