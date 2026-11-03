@@ -17,6 +17,7 @@ import {
   cleanVoiceId,
   isRotatableTtsStatus,
   parseTtsConfig,
+  pickBestAvailableTtsModel,
   speakableHdText,
   supportsLanguageCode,
   ttsClipHash,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/hdVoice";
 import { buildKeyAttempts, promoteKeyAtIndex } from "@/lib/providerPool";
 import { getR2Object, isR2Configured, putR2Object } from "@/lib/r2";
+import { listElevenLabsTtsModelsForKey } from "@/lib/ttsModelsServer";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -73,17 +75,24 @@ async function synthesizeElevenLabsBytes(
     };
   }
 
-  const payload: Record<string, unknown> = {
-    text: cleanedText,
-    model_id: config.modelId,
-    voice_settings: {
-      stability: config.stability,
-      similarity_boost: config.similarityBoost,
-    },
+  let activeModelId = config.modelId;
+  let healedModelId: string | null = null;
+  let triedModelHeal = false;
+
+  const buildPayload = (modelId: string, includeLang: boolean): Record<string, unknown> => {
+    const p: Record<string, unknown> = {
+      text: cleanedText,
+      model_id: modelId,
+      voice_settings: {
+        stability: config.stability,
+        similarity_boost: config.similarityBoost,
+      },
+    };
+    if (includeLang) {
+      p.language_code = "id";
+    }
+    return p;
   };
-  if (supportsLanguageCode(config.modelId)) {
-    payload.language_code = "id";
-  }
 
   const url = `${ELEVENLABS_BASE}/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`;
   let lastError = "Gagal menghubungi ElevenLabs.";
@@ -92,38 +101,72 @@ async function synthesizeElevenLabsBytes(
   for (let idx = 0; idx < attempts.length; idx++) {
     const key = attempts[idx];
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "xi-api-key": key,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(ELEVEN_TIMEOUT_MS),
-      });
+      const sendReq = (modelId: string, withLang: boolean) =>
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "xi-api-key": key,
+            "Content-Type": "application/json",
+            Accept: "audio/mpeg",
+          },
+          body: JSON.stringify(buildPayload(modelId, withLang)),
+          signal: AbortSignal.timeout(ELEVEN_TIMEOUT_MS),
+        });
+
+      const wantLang = supportsLanguageCode(activeModelId);
+      let res = await sendReq(activeModelId, wantLang);
+      let errBody = "";
+
+      if (!res.ok) {
+        errBody = await res.text().catch(() => "");
+        if (wantLang && res.status === 400 && /language_code/i.test(errBody)) {
+          res = await sendReq(activeModelId, false);
+          errBody = res.ok ? "" : await res.text().catch(() => "");
+        }
+      }
+
+      if (
+        !res.ok &&
+        !triedModelHeal &&
+        (res.status === 404 || res.status === 400) &&
+        /model_not_found|model_deprecated|model_id|invalid.*model/i.test(errBody)
+      ) {
+        triedModelHeal = true;
+        try {
+          const liveModels = await listElevenLabsTtsModelsForKey(key, 6_000);
+          const nextModel = pickBestAvailableTtsModel(liveModels, "elevenlabs", null);
+          if (nextModel && nextModel !== activeModelId) {
+            activeModelId = nextModel;
+            healedModelId = nextModel;
+            res = await sendReq(activeModelId, supportsLanguageCode(activeModelId));
+            errBody = res.ok ? "" : await res.text().catch(() => "");
+          }
+        } catch {
+          // Biarkan lanjut ke pelaporan error di bawah.
+        }
+      }
 
       if (res.ok) {
         const audio = new Uint8Array(await res.arrayBuffer());
-        if (idx > 0) {
-          const promoted = promoteKeyAtIndex(config.apiKey, config.backupKeys, idx);
-          if (promoted) {
-            const updated = {
-              ...config,
-              apiKey: promoted.apiKey,
-              backupKeys: promoted.backupKeys,
-            };
-            await db
-              .update(users)
-              .set({ ttsConfig: JSON.stringify(updated) })
-              .where(eq(users.id, userId))
-              .catch(() => undefined);
-          }
+        const promoted =
+          idx > 0 ? promoteKeyAtIndex(config.apiKey, config.backupKeys, idx) : null;
+        if (promoted || healedModelId) {
+          const updated = {
+            ...config,
+            ...(promoted
+              ? { apiKey: promoted.apiKey, backupKeys: promoted.backupKeys }
+              : {}),
+            ...(healedModelId ? { modelId: healedModelId } : {}),
+          };
+          await db
+            .update(users)
+            .set({ ttsConfig: JSON.stringify(updated) })
+            .where(eq(users.id, userId))
+            .catch(() => undefined);
         }
         return { ok: true, bytes: audio, mimeType: "audio/mpeg", ext: "mp3" };
       }
 
-      const errBody = await res.text().catch(() => "");
       lastStatus = res.status;
       lastError = friendlyElevenLabsError(res.status, errBody);
 
