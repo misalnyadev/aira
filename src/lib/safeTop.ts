@@ -54,13 +54,6 @@ function isStandaloneShell(): boolean {
   return mq("standalone") || mq("fullscreen");
 }
 
-function isAppMode(): boolean {
-  if (typeof navigator === "undefined") return false;
-  if (isStandaloneShell()) return true;
-  if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
-  return window.screen.height - window.innerHeight < 100;
-}
-
 function readInsetTop(): number {
   const probe = document.createElement("div");
   probe.setAttribute("aria-hidden", "true");
@@ -77,12 +70,13 @@ export function resolveSafeTop(): number {
   const measured = readInsetTop();
 
   // Kalau browser sudah melaporkan jarak aman yang wajar, percayai itu.
-  // Angka tabel hanya dipakai saat env() terbaca 0 — jangan menambah jarak
-  // di atas jarak yang sudah ada, karena hasilnya pita kosong di bawah
-  // status bar.
   if (measured > 0) return measured;
 
-  if (!isAppMode()) return 0;
+  // Jaring pengaman tinggi status bar HANYA dipakai pada PWA Home Screen
+  // (standalone / fullscreen) yang merender ke belakang status bar.
+  // Pada tab browser biasa (Safari / Chrome iOS), kanvas sudah berada di bawah
+  // status bar sehingga menambah angka ini justru menurunkan header & isi halaman.
+  if (!isStandaloneShell()) return 0;
   return deviceStatusBarHeight();
 }
 
