@@ -173,15 +173,15 @@ export function AddContactModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs sm:items-center sm:p-4"
+      className="modal-sheet-overlay absolute inset-0 z-50 flex items-end justify-center bg-black/55 px-0 pb-0 pt-[max(0.5rem,var(--safe-top))] backdrop-blur-xs sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-2xl sm:rounded-3xl"
+        className="flex max-h-[min(90dvh,100%)] min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
             <h2 className="font-display text-base font-bold text-ink">
               Kontak Karakter
@@ -211,7 +211,7 @@ export function AddContactModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 pb-6">
           {/* Form Tambah Kontak dengan PIN */}
           <form
             onSubmit={handleSubmitPin}

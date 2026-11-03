@@ -154,6 +154,7 @@ html.ios-standalone {
 /* Shell aplikasi — penuh sampai tepi bawah layar iPhone               */
 /* ------------------------------------------------------------------ */
 .app-shell {
+  position: relative;
   height: 100vh;
   height: 100dvh;
   width: 100%;
@@ -189,6 +190,14 @@ html.kb-panned .app-shell {
 
 /* Saat keyboard naik, garis Home Indicator tertutup keyboard */
 html.kb-panned .composer-bar {
+  padding-bottom: 0px;
+}
+
+html.kb-panned .modal-overlay {
+  padding-bottom: 0.375rem;
+}
+
+html.kb-panned .modal-sheet-overlay {
   padding-bottom: 0px;
 }
 
