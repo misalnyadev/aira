@@ -7,6 +7,7 @@ import {
   register as apiRegister,
   type AuthUser,
 } from "@/lib/authClient";
+import { useKeyboardPan } from "@/lib/keyboardPan";
 import { useSafeTop } from "@/lib/safeTop";
 import { useScrollGuard } from "@/lib/scrollGuard";
 import { ThemeQuickToggle } from "./ThemeToggle";
@@ -49,6 +50,7 @@ export function AuthGate({
 
   useSafeTop();
   useScrollGuard();
+  useKeyboardPan();
 
   const signOut = useCallback(async () => {
     await apiLogout();
@@ -98,7 +100,7 @@ export function AuthGate({
 
     return (
       <div className="app-shell flex flex-col bg-app">
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,var(--safe-top))]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,var(--safe-top))]">
           <div className="flex justify-end">
             <ThemeQuickToggle />
           </div>

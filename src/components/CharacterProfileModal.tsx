@@ -61,17 +61,17 @@ export function CharacterProfileModal({
 
   return (
     <div
-      className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+      className="fade-in modal-overlay absolute inset-0 z-50 flex items-center justify-center bg-black/55 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,var(--safe-top))] backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="pop-in flex max-h-[85vh] w-full max-w-md flex-col rounded-3xl border border-line bg-surface shadow-2xl"
+        className="pop-in flex max-h-[min(85dvh,100%)] min-h-0 w-full max-w-md flex-col rounded-3xl border border-line bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={`Profil ${character.name}`}
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-display text-lg font-bold text-ink">Profil Karakter</h2>
           <button
             onClick={onClose}
@@ -82,7 +82,7 @@ export function CharacterProfileModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-6">
           <div className="flex flex-col items-center gap-2 text-center">
             <Avatar name={character.name} src={character.avatarUrl} size={104} ring />
             <h3 className="mt-2 font-display text-xl font-bold text-ink">{character.name}</h3>

@@ -209,17 +209,17 @@ export function CharacterModal({
 
   return (
     <div
-      className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+      className="fade-in modal-overlay absolute inset-0 z-50 flex items-center justify-center bg-black/55 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,var(--safe-top))] backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="pop-in flex max-h-[90vh] w-full max-w-lg flex-col rounded-3xl border border-line bg-surface shadow-2xl"
+        className="pop-in flex max-h-[min(90dvh,100%)] min-h-0 w-full max-w-lg flex-col rounded-3xl border border-line bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={initial ? "Edit Karakter" : "Buat Karakter Baru"}
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-display text-lg font-bold text-ink">
             {initial ? "Edit Karakter" : "Buat Karakter Baru"}
           </h2>
@@ -232,7 +232,10 @@ export function CharacterModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <form
+          onSubmit={handleSubmit}
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4 pb-6"
+        >
           <div className="flex flex-col items-center gap-2">
             <button
               type="button"
