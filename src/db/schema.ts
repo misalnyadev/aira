@@ -209,9 +209,10 @@ export const characterQuotaRequests = pgTable("character_quota_requests", {
   requestedQuota: integer("requested_quota").notNull(),
   reason: text("reason").notNull().default(""),
   /** 'pending' | 'approved' | 'rejected' */
-  status: text("status").notNull().default("pending"),
-  adminNote: text("admin_note").notNull().default(""),
-  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    status: text("status").notNull().default("pending"),
+    adminNote: text("admin_note").notNull().default(""),
+    discussion: text("discussion").notNull().default("[]"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

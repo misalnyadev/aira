@@ -128,9 +128,11 @@ const DDL = [
     "reason" text DEFAULT '' NOT NULL,
     "status" text DEFAULT 'pending' NOT NULL,
     "admin_note" text DEFAULT '' NOT NULL,
+    "discussion" text DEFAULT '[]' NOT NULL,
     "resolved_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "character_quota_requests" ADD COLUMN IF NOT EXISTS "discussion" text DEFAULT '[]' NOT NULL`,
   sql`CREATE INDEX IF NOT EXISTS "quota_requests_user_idx" ON "character_quota_requests" ("user_id", "created_at" DESC)`,
   sql`CREATE INDEX IF NOT EXISTS "quota_requests_status_idx" ON "character_quota_requests" ("status", "created_at" DESC)`,
   // Jika belum ada satu pun Admin di database, otomatis angkat akun pertama (pemilik utama) menjadi Admin.

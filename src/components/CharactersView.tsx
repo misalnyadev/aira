@@ -13,6 +13,7 @@ import {
   SettingsIcon,
   TrashIcon,
 } from "./icons";
+import { QuotaDiscussionBox } from "./QuotaDiscussionBox";
 
 export function CharactersView({
   characters,
@@ -198,7 +199,7 @@ export function CharactersView({
           {isAdmin && pendingQuotaRequestsCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3">
               <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                Ada <b>{pendingQuotaRequestsCount}</b> permintaan member (slot / kontak PIN) di Panel Admin.
+                Ada <b>{pendingQuotaRequestsCount}</b> permintaan tambah slot member di Panel Admin.
               </p>
               {onOpenAdminPanel && (
                 <button
@@ -232,13 +233,13 @@ export function CharactersView({
           {!isAdmin && (full || latestQuotaRequest || showReqForm || reqFeedback) && (
             <div className="space-y-3 rounded-2xl border border-line bg-surface-2/60 p-4">
               {hasPendingReq ? (
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <span className="inline-block rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
                         Menunggu Persetujuan Admin
                       </span>
-                      <p className="mt-1.5 text-xs leading-relaxed text-ink">
+                      <p className="mt-1.5 break-words text-xs leading-relaxed text-ink">
                         Kamu mengajukan penambahan kuota menjadi{" "}
                         <b>{latestQuotaRequest?.requestedQuota} karakter</b>.
                         {latestQuotaRequest?.reason
@@ -251,11 +252,18 @@ export function CharactersView({
                       onClick={() => void onQuotaChanged?.()}
                       title="Cek pembaruan status"
                       aria-label="Cek pembaruan status"
-                      className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface hover:text-ink"
+                      className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface hover:text-ink"
                     >
                       <RefreshIcon className="h-4 w-4" />
                     </button>
                   </div>
+                  <QuotaDiscussionBox
+                    viewerRole="member"
+                    requestId={latestQuotaRequest?.id}
+                    messages={latestQuotaRequest?.discussion ?? []}
+                    onMessagesChange={() => void onQuotaChanged?.()}
+                    onPollRefresh={onQuotaChanged}
+                  />
                   <button
                     type="button"
                     disabled={reqBusy}

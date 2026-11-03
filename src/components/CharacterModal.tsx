@@ -10,6 +10,7 @@ import {
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
 import { Avatar } from "./Avatar";
+import { AvatarCropModal } from "./AvatarCropModal";
 import { CameraIcon, XIcon } from "./icons";
 
 const FIELD =
@@ -53,6 +54,7 @@ export function CharacterModal({
   const [bible, setBible] = useState(initial?.bible ?? "");
   const [greeting, setGreeting] = useState(initial?.greeting ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initial?.avatarUrl ?? null);
+  const [cropSource, setCropSource] = useState<File | string | null>(null);
   const [providerId, setProviderId] = useState<string>(initial?.providerId ?? "");
   const [model, setModel] = useState(initial?.model ?? "");
   const [detectedModels, setDetectedModels] = useState<string[]>([]);
@@ -67,11 +69,11 @@ export function CharacterModal({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !cropSource) onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, cropSource]);
 
   const resolvedProvider = providerId
     ? providers.find((p) => p.id === providerId)
@@ -112,21 +114,35 @@ export function CharacterModal({
     }
   }
 
-  async function handleAvatarPick(file: File) {
+  async function uploadCroppedAvatar(file: File) {
     setUploading(true);
+    setError(null);
     try {
-      const compressed = await compressImageFile(file, { maxSize: 512, quality: 0.8 });
+      const compressed = await compressImageFile(file, {
+        maxSize: 512,
+        quality: 0.86,
+      });
       const fd = new FormData();
       fd.append("file", compressed);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto.");
       setAvatarUrl(data.url);
+      setCropSource(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengunggah foto.");
     } finally {
       setUploading(false);
     }
+  }
+
+  function handleAvatarPick(file: File) {
+    setError(null);
+    if (file.type === "image/gif") {
+      void uploadCroppedAvatar(file);
+      return;
+    }
+    setCropSource(file);
   }
 
   async function handleBibleFile(file: File) {
@@ -259,7 +275,38 @@ export function CharacterModal({
                 e.target.value = "";
               }}
             />
-            {uploading && <span className="text-xs text-muted">Mengunggah...</span>}
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="font-medium text-ink-soft transition hover:text-ink"
+              >
+                {uploading
+                  ? "Mengunggah..."
+                  : avatarUrl
+                    ? "Ganti foto"
+                    : "Pilih foto"}
+              </button>
+              {avatarUrl && (
+                <>
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => setCropSource(avatarUrl)}
+                    className="font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
+                  >
+                    Atur posisi
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl(null)}
+                    className="text-ink-soft hover:text-rose-500"
+                  >
+                    Hapus
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div>
@@ -452,6 +499,17 @@ export function CharacterModal({
           </button>
         </form>
       </div>
+
+      {cropSource && (
+        <AvatarCropModal
+          source={cropSource}
+          title="Atur Foto Karakter"
+          busy={uploading}
+          onCancel={() => setCropSource(null)}
+          onConfirm={uploadCroppedAvatar}
+          onPickAnother={() => fileRef.current?.click()}
+        />
+      )}
     </div>
   );
 }

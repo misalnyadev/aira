@@ -96,12 +96,21 @@ export type ChatMessage = {
   senderKind?: "guest" | "character_ai" | "owner_manual";
 };
 
+export type QuotaDiscussionMessage = {
+  id: string;
+  senderRole: "admin" | "member";
+  senderName: string;
+  text: string;
+  createdAt: string;
+};
+
 export type QuotaRequestSummary = {
   id: string;
   requestedQuota: number;
   reason: string;
   status: "pending" | "approved" | "rejected" | string;
   adminNote: string;
+  discussion?: QuotaDiscussionMessage[];
   createdAt: string;
   resolvedAt?: string | null;
 };

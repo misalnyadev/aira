@@ -17,7 +17,9 @@ import {
 import { AdminPanelSection } from "./AdminPanelSection";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
+import { AvatarCropModal } from "./AvatarCropModal";
 import { CameraIcon, CheckIcon, RefreshIcon } from "./icons";
+import { QuotaDiscussionBox } from "./QuotaDiscussionBox";
 
 export type ProfileTab = "identity" | "account" | "admin";
 
@@ -71,6 +73,7 @@ export function ProfileView({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     profile.avatarUrl ?? null
   );
+  const [cropSource, setCropSource] = useState<File | string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -97,13 +100,13 @@ export function ProfileView({
     onTabChange?.(resolved);
   }
 
-  async function handleAvatarPick(file: File) {
+  async function uploadCroppedAvatar(file: File) {
     setUploading(true);
     setError(null);
     try {
       const compressed = await compressImageFile(file, {
-        maxSize: 384,
-        quality: 0.82,
+        maxSize: 512,
+        quality: 0.86,
       });
       const fd = new FormData();
       fd.append("file", compressed);
@@ -111,11 +114,21 @@ export function ProfileView({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto.");
       setAvatarUrl(data.url);
+      setCropSource(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengunggah foto.");
     } finally {
       setUploading(false);
     }
+  }
+
+  function handleAvatarPick(file: File) {
+    setError(null);
+    if (file.type === "image/gif") {
+      void uploadCroppedAvatar(file);
+      return;
+    }
+    setCropSource(file);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -325,22 +338,36 @@ export function ProfileView({
                   e.target.value = "";
                 }}
               />
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   className="font-medium text-ink-soft transition hover:text-ink"
                 >
-                  {uploading ? "Mengunggah..." : "Ganti foto"}
+                  {uploading
+                    ? "Mengunggah..."
+                    : avatarUrl
+                      ? "Ganti foto"
+                      : "Pilih foto"}
                 </button>
                 {avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl(null)}
-                    className="text-ink-soft hover:text-rose-500"
-                  >
-                    Hapus
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => setCropSource(avatarUrl)}
+                      className="font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
+                    >
+                      Atur posisi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl(null)}
+                      className="text-ink-soft hover:text-rose-500"
+                    >
+                      Hapus
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -563,17 +590,24 @@ export function ProfileView({
                 </div>
 
                 {hasPendingReq ? (
-                  <div className="space-y-2 rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5">
+                  <div className="min-w-0 space-y-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5">
                     <span className="inline-block rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
                       Menunggu Persetujuan Admin
                     </span>
-                    <p className="text-xs leading-relaxed text-ink">
+                    <p className="break-words text-xs leading-relaxed text-ink">
                       Kamu mengajukan penambahan kuota menjadi{" "}
                       <b>{latestQuotaRequest?.requestedQuota} slot karakter</b>.
                       {latestQuotaRequest?.reason
                         ? ` (“${latestQuotaRequest.reason}”)`
                         : ""}
                     </p>
+                    <QuotaDiscussionBox
+                      viewerRole="member"
+                      requestId={latestQuotaRequest?.id}
+                      messages={latestQuotaRequest?.discussion ?? []}
+                      onMessagesChange={() => void onQuotaChanged?.()}
+                      onPollRefresh={onQuotaChanged}
+                    />
                     <button
                       type="button"
                       disabled={reqBusy}
@@ -681,6 +715,17 @@ export function ProfileView({
           />
         )}
       </div>
+
+      {cropSource && (
+        <AvatarCropModal
+          source={cropSource}
+          title="Atur Foto Profil Saya"
+          busy={uploading}
+          onCancel={() => setCropSource(null)}
+          onConfirm={uploadCroppedAvatar}
+          onPickAnother={() => fileRef.current?.click()}
+        />
+      )}
     </div>
   );
 }

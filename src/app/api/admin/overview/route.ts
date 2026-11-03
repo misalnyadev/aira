@@ -9,7 +9,7 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { getSignupCodeInfo } from "@/lib/inviteServer";
-import { effectiveCharacterLimit } from "@/lib/quotaRules";
+import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,6 +56,7 @@ export async function GET() {
         reason: characterQuotaRequests.reason,
         status: characterQuotaRequests.status,
         adminNote: characterQuotaRequests.adminNote,
+        discussion: characterQuotaRequests.discussion,
         createdAt: characterQuotaRequests.createdAt,
         email: users.email,
         displayName: users.displayName,
@@ -76,6 +77,7 @@ export async function GET() {
         reason: characterQuotaRequests.reason,
         status: characterQuotaRequests.status,
         adminNote: characterQuotaRequests.adminNote,
+        discussion: characterQuotaRequests.discussion,
         createdAt: characterQuotaRequests.createdAt,
         resolvedAt: characterQuotaRequests.resolvedAt,
         email: users.email,
@@ -98,8 +100,14 @@ export async function GET() {
         characterQuota: u.characterQuota,
       }),
     })),
-    pendingRequests: pendingRows,
-    recentResolved: resolvedRows,
+    pendingRequests: pendingRows.map((r) => ({
+      ...r,
+      discussion: parseQuotaDiscussion(r.discussion),
+    })),
+    recentResolved: resolvedRows.map((r) => ({
+      ...r,
+      discussion: parseQuotaDiscussion(r.discussion),
+    })),
     pendingContacts: [],
     signupInvite,
   });
