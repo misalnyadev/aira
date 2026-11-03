@@ -15,6 +15,7 @@ import {
   toChatTurns,
 } from "@/lib/chatEngine";
 import { toTimeAwareChatTurns } from "@/lib/characterMemory";
+import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
@@ -118,28 +119,38 @@ export async function POST(req: Request) {
       callMode: activeCallMode,
     });
 
+    const chatExpressionMode =
+      !activeCallMode && isUsingCallClipsInChat(parseCharacterMedia(character.media));
+    const shouldExtractEmotion = Boolean(activeCallMode || chatExpressionMode);
+
     let callEmotion: CallEmotion | undefined;
-    const cleanedBubbles = activeCallMode
-      ? result.bubbles.map((raw, idx) => {
-          const parsed = extractCallReplyEmotion(raw);
-          if (idx === 0) callEmotion = parsed.emotion;
-          return parsed.cleanText;
-        })
-      : result.bubbles;
+    const preparedBubbles: { content: string; emotion?: CallEmotion }[] =
+      shouldExtractEmotion
+        ? result.bubbles
+            .map((raw, idx) => {
+              const parsed = extractCallReplyEmotion(raw);
+              if (activeCallMode && idx === 0) callEmotion = parsed.emotion;
+              return { content: parsed.cleanText, emotion: parsed.emotion };
+            })
+            .filter((item) => item.content.length > 0)
+        : result.bubbles.map((raw) => ({ content: raw }));
 
     const assistantMessages = [];
     const baseTime = Date.now();
-    for (let i = 0; i < cleanedBubbles.length; i++) {
+    for (let i = 0; i < preparedBubbles.length; i++) {
+      const item = preparedBubbles[i];
       const [row] = await db
         .insert(messages)
         .values({
           characterId,
           role: "assistant",
-          content: cleanedBubbles[i],
+          content: item.content,
           createdAt: new Date(baseTime + i),
         })
         .returning();
-      assistantMessages.push(row);
+      assistantMessages.push(
+        item.emotion ? { ...row, emotion: item.emotion } : row
+      );
     }
 
     if (character.memoryEnabled) {

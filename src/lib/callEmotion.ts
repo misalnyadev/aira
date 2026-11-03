@@ -110,28 +110,28 @@ const INLINE_EMOTION_TAG_RE = new RegExp(
 );
 
 const LAUGH_WORDS_RE =
-  /\b(hahaha+|wakaka+|wkwk+|ketawa|ngakak|lucu\s+banget|kocak|receh\s+banget|ampun\s+deh\s+haha)\b/i;
+  /([😂🤣😆😹]|\b(hahaha+|wakaka+|wkwk+|ketawa|ngakak|lucu\s+banget|kocak|receh\s+banget|ampun\s+deh\s+haha)\b)/iu;
 
 const SHY_WORDS_RE =
-  /\b(jadi\s+malu|malu\s+ah|ih\s+malu|salting|bikin\s+baper|deg-degan|kangen\s+banget|aku\s+juga\s+kangen|sayang\s+kamu|sayang\s+banget|manis\s+banget\s+sih|gombal\s+terus|jangan\s+liatin\s+gitu)\b/i;
+  /([😳🙈🫣💓💕💞🥰😘]|\b(jadi\s+malu|malu\s+ah|ih\s+malu|salting|bikin\s+baper|deg-degan|kangen\s+banget|aku\s+juga\s+kangen|sayang\s+kamu|sayang\s+banget|manis\s+banget\s+sih|gombal\s+terus|jangan\s+liatin\s+gitu)\b)/iu;
 
 const SURPRISED_WORDS_RE =
-  /\b(astaga|ya\s+ampun|hah\s+serius|seriusan\s*\?!|beneran\s*\?!|demi\s+apa|masa\s+iya\s*\?!|kaget\s+aku|nggak\s+nyangka)\b/i;
+  /([😲😱🤯😮😯]|\b(astaga|ya\s+ampun|hah\s+serius|seriusan\s*\?!|beneran\s*\?!|demi\s+apa|masa\s+iya\s*\?!|kaget\s+aku|nggak\s+nyangka)\b)/iu;
 
 const ANGRY_WORDS_RE =
-  /\b(kesel\s+banget|marah\s+nih|nyebelin\s+banget\s+sih|jangan\s+gitu\s+dong|kebangetan|parah\s+banget\s+kamu|capek\s+tau\s+nggak|males\s+ah\s+sama\s+kamu)\b/i;
+  /([😠😡🤬💢]|\b(kesel\s+banget|marah\s+nih|nyebelin\s+banget\s+sih|jangan\s+gitu\s+dong|kebangetan|parah\s+banget\s+kamu|capek\s+tau\s+nggak|males\s+ah\s+sama\s+kamu)\b)/iu;
 
 const SAD_WORDS_RE =
-  /\b(ikut\s+sedih|sedih\s+banget|kasihan\s+banget|sayang\s+banget\s+ya|maafin\s+aku\s+ya|turut\s+berduka|pasti\s+berat\s+banget|terharu\s+aku|rasanya\s+nyesek)\b/i;
+  /([😢😭🥺💔😔😞😿]|\b(ikut\s+sedih|sedih\s+banget|kasihan\s+banget|sayang\s+banget\s+ya|maafin\s+aku\s+ya|turut\s+berduka|pasti\s+berat\s+banget|terharu\s+aku|rasanya\s+nyesek)\b)/iu;
 
 const CONFUSED_WORDS_RE =
-  /\b(maksudnya\s+gimana|gimana\s+maksudnya|aku\s+bingung|kok\s+bisa\s+gitu|tunggu\s+deh\s+kok|lah\s+terus\s+gimana|yang\s+mana\s+sih)\b/i;
+  /([🤔😕🤨🧐❓]|\b(maksudnya\s+gimana|gimana\s+maksudnya|aku\s+bingung|kok\s+bisa\s+gitu|tunggu\s+deh\s+kok|lah\s+terus\s+gimana|yang\s+mana\s+sih)\b)/iu;
 
 const POUT_WORDS_RE =
-  /\b(nyebelin|jahat\s+ih|ih\s+kok\s+gitu|kok\s+gitu\s+sih|ngambek|sebel\s+ah|awas\s+ya\s+kamu|ih\s+apaan\s+sih|bohong\s+ya|tega\s+banget)\b/i;
+  /([😤😒🙄😣😖]|\b(nyebelin|jahat\s+ih|ih\s+kok\s+gitu|kok\s+gitu\s+sih|ngambek|sebel\s+ah|awas\s+ya\s+kamu|ih\s+apaan\s+sih|bohong\s+ya|tega\s+banget)\b)/iu;
 
 const SMILE_WORDS_RE =
-  /\b(hehe+|seneng\s+banget|syukurlah|alhamdulillah|asik\s+banget|makasih\s+banyak\s+ya|wah\s+seru|ikut\s+seneng)\b/i;
+  /([😊☺️🙂😄😁🤗✨]|\b(hehe+|seneng\s+banget|syukurlah|alhamdulillah|asik\s+banget|makasih\s+banyak\s+ya|wah\s+seru|ikut\s+seneng)\b)/iu;
 
 export function inferEmotionFromIndonesianText(text: string): CallEmotion {
   const sample = text.trim();

@@ -20,6 +20,8 @@ export type MemoryPromptContext = {
   sceneAnchor?: string;
   /** Aktif saat giliran ini berasal dari sambungan telepon / video call 2 arah. */
   callMode?: "video" | "audio";
+  /** Aktif saat ruang chat memakai aset video ekspresi panggilan karakter. */
+  chatExpressionMode?: boolean;
 };
 
 /**
@@ -130,6 +132,28 @@ ATURAN WAJIB BALASAN LISAN & EKSPRESI SAAT PANGGILAN:
 === AKHIR MODE PANGGILAN ===`;
 }
 
+export function buildChatExpressionAnchor(): string {
+  return `=== PENANDA EKSPRESI WAJAH SAAT CHAT ===
+Layar ruang chat sedang menampilkan video ekspresi wajahmu secara langsung.
+- AWALI setiap bubble balasanmu (termasuk setiap bubble setelah "${BUBBLE_DELIMITER}") dengan TEPAT SATU penanda ekspresi di paling depan yang paling jujur mewakili ekspresi wajahmu pada bubble itu:
+  [NORMAL] = bicara biasa/tenang
+  [SMILE] = tersenyum hangat/senang
+  [LAUGH] = tertawa/bercanda ceria
+  [SHY] = tersipu malu/manis/salah tingkah/sayang
+  [POUT] = cemberut manja/merajuk halus
+  [CONFUSED] = bingung/heran/memastikan maksud
+  [ANGRY] = kesal/protes tegas
+  [SAD] = sedih/terharu/empati lembut
+  [SURPRISED] = kaget/tak menyangka/spontan antusias
+- Contoh satu bubble: "[SMILE] Hehe iya, lagi santai kok."
+- Contoh beberapa bubble:
+  [SURPRISED] Loh seriusan kamu lagi di daerah situ?!
+  ${BUBBLE_DELIMITER}
+  [SMILE] Mampir sini dong sekalian ngopi bareng!
+- Penanda ini otomatis dihapus oleh sistem sebelum pesan tampil — jangan pernah menyebut atau menjelaskan penanda ini di dalam percakapan.
+=== AKHIR PENANDA EKSPRESI ===`;
+}
+
 function extrasAnchor(extras?: MemoryPromptContext): string {
   const parts: string[] = [];
   if (extras?.sceneAnchor?.trim()) {
@@ -137,6 +161,8 @@ function extrasAnchor(extras?: MemoryPromptContext): string {
   }
   if (extras?.callMode === "video" || extras?.callMode === "audio") {
     parts.push(buildCallModeAnchor(extras.callMode));
+  } else if (extras?.chatExpressionMode) {
+    parts.push(buildChatExpressionAnchor());
   }
   if (!parts.length) return "\n";
   return `\n${parts.join("\n\n")}\n\n`;

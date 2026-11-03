@@ -16,12 +16,24 @@ import {
   bubblePaint,
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
+import { inferEmotionFromIndonesianText, type CallEmotion } from "@/lib/callEmotion";
+import {
+  isUsingCallClipsInChat,
+  listUniqueChatCallClips,
+  resolveActiveCallClip,
+  type CallVisualPhase,
+} from "@/lib/characterMedia";
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import { ensureMediaUrl } from "@/lib/mediaClient";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { useIsAudibleSpeaking } from "@/lib/voice";
 import { Avatar } from "./Avatar";
-import { ChatVideoBackground, ChatVideoPanel } from "./ChatVideo";
+import {
+  CallVideoStage,
+  ChatCallStagePanel,
+  ChatVideoBackground,
+  ChatVideoPanel,
+} from "./ChatVideo";
 import {
   BackIcon,
   CheckIcon,
@@ -145,11 +157,18 @@ export function ChatWindow({
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
   const backdrop = chatBackgroundProps(background, isDark);
   const chatMedia = character.media;
+  const useCallInChat = isUsingCallClipsInChat(chatMedia);
+  const chatCallClips = useMemo(
+    () => (useCallInChat ? listUniqueChatCallClips(chatMedia) : []),
+    [chatMedia, useCallInChat]
+  );
+  const callZoom = Math.min(2, Math.max(1, (chatMedia?.callVideoZoom ?? 100) / 100));
   const chatVideo = chatMedia?.chatVideoKey
     ? { videoKey: chatMedia.chatVideoKey, posterUrl: chatMedia.chatVideoPosterUrl }
     : null;
+  const hasChatVisual = useCallInChat ? chatCallClips.length > 0 : Boolean(chatVideo);
   const chatVideoFull = Boolean(
-    chatVideo && ((chatMedia?.chatVideoLayout ?? "tile") === "full" || hideMessages)
+    hasChatVisual && ((chatMedia?.chatVideoLayout ?? "tile") === "full" || hideMessages)
   );
 
   // Siapkan tiket URL klip utama & pembuka Video Call lebih dulu agar 0ms saat tombol ditekan.
@@ -170,6 +189,41 @@ export function ChatWindow({
   const readTimer = useRef(0);
   const startTimer = useRef(0);
   const wasTyping = useRef(false);
+
+  const [composingState, setComposingState] = useState<{
+    active: boolean;
+    messageCount: number;
+  }>({ active: false, messageCount: 0 });
+  const composingTimerRef = useRef(0);
+
+  const [manualSpeakOverride, setManualSpeakOverride] = useState<{
+    emotion: CallEmotion;
+    messageCount: number;
+  } | null>(null);
+
+  useEffect(() => () => window.clearTimeout(composingTimerRef.current), []);
+
+  function handleComposerActivity(target: EventTarget | null) {
+    window.clearTimeout(composingTimerRef.current);
+    if (
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLInputElement
+    ) {
+      if (!target.value.trim()) {
+        setComposingState({ active: false, messageCount: messages.length });
+        return;
+      }
+    }
+    setComposingState({ active: true, messageCount: messages.length });
+    composingTimerRef.current = window.setTimeout(() => {
+      setComposingState((prev) => ({ ...prev, active: false }));
+    }, 3500);
+  }
+
+  function clearComposerActivity() {
+    window.clearTimeout(composingTimerRef.current);
+    setComposingState({ active: false, messageCount: messages.length });
+  }
 
   useEffect(() => {
     const typingNow = isTyping;
@@ -207,6 +261,52 @@ export function ChatWindow({
   const audibleSpeaking = useIsAudibleSpeaking();
   const videoPlaying = audibleSpeaking || (!isSpeaking && reading && !isTyping);
 
+  const latestAssistant = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") return messages[i];
+    }
+    return null;
+  }, [messages]);
+
+  const activeEmotion: CallEmotion = useMemo(() => {
+    if (
+      isSpeaking &&
+      manualSpeakOverride &&
+      manualSpeakOverride.messageCount === messages.length
+    ) {
+      return manualSpeakOverride.emotion;
+    }
+    if (!latestAssistant) return "normal";
+    return (
+      latestAssistant.emotion ??
+      inferEmotionFromIndonesianText(latestAssistant.content)
+    );
+  }, [isSpeaking, latestAssistant, manualSpeakOverride, messages.length]);
+
+  const userComposing =
+    composingState.active && composingState.messageCount === messages.length;
+
+  const chatStagePhase: CallVisualPhase = useMemo(() => {
+    if (audibleSpeaking) {
+      return { kind: "speaking", emotion: activeEmotion };
+    }
+    if (!isSpeaking && reading && !isTyping) {
+      return { kind: "speaking", emotion: activeEmotion };
+    }
+    if (isTyping || (isSpeaking && !audibleSpeaking)) {
+      return { kind: "thinking" };
+    }
+    if (userComposing) {
+      return { kind: "listening" };
+    }
+    return { kind: "idle" };
+  }, [activeEmotion, audibleSpeaking, isSpeaking, isTyping, reading, userComposing]);
+
+  const activeChatCallClip = useMemo(
+    () => (useCallInChat ? resolveActiveCallClip(chatMedia, chatStagePhase) : null),
+    [chatMedia, chatStagePhase, useCallInChat]
+  );
+
   const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
     useMessageActions();
 
@@ -241,7 +341,18 @@ export function ChatWindow({
         return { label, onClick: () => onCopyMessage(message.content) };
       }
       if (label === "Bacakan") {
-        return { label, onClick: () => onSpeakMessage(message.content) };
+        return {
+          label,
+          onClick: () => {
+            const em =
+              message.emotion ?? inferEmotionFromIndonesianText(message.content);
+            setManualSpeakOverride({
+              emotion: em,
+              messageCount: messages.length,
+            });
+            onSpeakMessage(message.content);
+          },
+        };
       }
       if (label === "Ulangi balasan") {
         return { label, onClick: onRegenerate };
@@ -256,15 +367,26 @@ export function ChatWindow({
       className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
       style={backdrop.style}
     >
-      {chatVideo && chatVideoFull && (
-        <ChatVideoBackground
-          videoKey={chatVideo.videoKey}
-          posterUrl={chatVideo.posterUrl}
-          dim={hideMessages ? 0.06 : 0.12}
-          playing={videoPlaying}
-          restartOnPlay
-        />
-      )}
+      {chatVideoFull &&
+        (useCallInChat ? (
+          <CallVideoStage
+            clips={chatCallClips}
+            activeKey={activeChatCallClip?.key ?? null}
+            playing
+            dim={hideMessages ? 0.06 : 0.12}
+            zoom={callZoom}
+          />
+        ) : (
+          chatVideo && (
+            <ChatVideoBackground
+              videoKey={chatVideo.videoKey}
+              posterUrl={chatVideo.posterUrl}
+              dim={hideMessages ? 0.06 : 0.12}
+              playing={videoPlaying}
+              restartOnPlay
+            />
+          )
+        ))}
 
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
@@ -433,15 +555,27 @@ export function ChatWindow({
         </div>
       )}
 
-      {!hideMessages && chatVideo && !chatVideoFull && (
+      {!hideMessages && hasChatVisual && !chatVideoFull && (
         <div className="px-3 pt-3 sm:px-4">
           <div className="mx-auto w-full max-w-lg">
-            <ChatVideoPanel
-              videoKey={chatVideo.videoKey}
-              posterUrl={chatVideo.posterUrl}
-              dim={0.05}
-              name={character.name}
-            />
+            {useCallInChat ? (
+              <ChatCallStagePanel
+                clips={chatCallClips}
+                activeKey={activeChatCallClip?.key ?? null}
+                dim={0.05}
+                name={character.name}
+                zoom={callZoom}
+              />
+            ) : (
+              chatVideo && (
+                <ChatVideoPanel
+                  videoKey={chatVideo.videoKey}
+                  posterUrl={chatVideo.posterUrl}
+                  dim={0.05}
+                  name={character.name}
+                />
+              )
+            )}
           </div>
         </div>
       )}
@@ -603,6 +737,12 @@ export function ChatWindow({
       {composer && (
         <div
           onClick={(e) => e.stopPropagation()}
+          onInputCapture={(e) => handleComposerActivity(e.target)}
+          onKeyDownCapture={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              clearComposerActivity();
+            }
+          }}
           className={`z-10 shrink-0 transition-all duration-200 ${
             composerVisible
               ? "translate-y-0 opacity-100"
