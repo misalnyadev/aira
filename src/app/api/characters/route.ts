@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { characterQuotaRequests, characters, messages } from "@/db/schema";
+import {
+  characterContacts,
+  characterQuotaRequests,
+  characters,
+  messages,
+} from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import { parseCharacterMedia } from "@/lib/characterMedia";
@@ -56,6 +61,7 @@ export async function GET() {
       voiceConfig: characters.voiceConfig,
       memoryEnabled: characters.memoryEnabled,
       browsingEnabled: characters.browsingEnabled,
+      invitePin: characters.invitePin,
       createdAt: characters.createdAt,
       lastAt: lastMessageSub.lastAt,
     })
@@ -86,6 +92,7 @@ export async function GET() {
         voiceConfig: parseCharacterVoice(row.voiceConfig),
         memoryEnabled: Boolean(row.memoryEnabled),
         browsingEnabled: Boolean(row.browsingEnabled),
+        invitePin: row.invitePin ?? null,
         preview: lastMsg
           ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",
@@ -94,7 +101,13 @@ export async function GET() {
     })
   );
 
-  const [[{ count }], [latestReq], adminPending] = await Promise.all([
+  const [
+    [{ count }],
+    [latestReq],
+    adminPending,
+    ownerPendingContacts,
+    adminPendingContacts,
+  ] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(characters)
@@ -119,6 +132,27 @@ export async function GET() {
           .from(characterQuotaRequests)
           .where(eq(characterQuotaRequests.status, "pending"))
       : Promise.resolve([{ count: 0 }]),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(characterContacts)
+      .where(
+        and(
+          eq(characterContacts.ownerUserId, user.id),
+          eq(characterContacts.ownerStatus, "pending"),
+          ne(characterContacts.adminStatus, "rejected")
+        )
+      ),
+    user.isAdmin
+      ? db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(characterContacts)
+          .where(
+            and(
+              eq(characterContacts.adminStatus, "pending"),
+              notInArray(characterContacts.ownerStatus, ["rejected", "blocked"])
+            )
+          )
+      : Promise.resolve([{ count: 0 }]),
   ]);
 
   const limit = effectiveCharacterLimit(user);
@@ -130,6 +164,8 @@ export async function GET() {
     isAdmin: user.isAdmin,
     latestQuotaRequest: latestReq ?? null,
     pendingQuotaRequestsCount: Number(adminPending[0]?.count ?? 0),
+    pendingOwnerContactsCount: Number(ownerPendingContacts[0]?.count ?? 0),
+    pendingAdminContactsCount: Number(adminPendingContacts[0]?.count ?? 0),
   });
 }
 

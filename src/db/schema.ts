@@ -1,4 +1,5 @@
 import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { generateCharacterPin } from "@/lib/contactPin";
 
 export const providerTypeValues = ["gemini", "groq", "openrouter", "custom", "grok"] as const;
 export type ProviderType = (typeof providerTypeValues)[number];
@@ -129,6 +130,10 @@ export const characters = pgTable("characters", {
   memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
   /** Aktifkan akses browsing internet & pembaca link URL pada karakter ini. */
   browsingEnabled: boolean("browsing_enabled").notNull().default(false),
+  /** Kode PIN bawaan karakter untuk diundang sebagai kontak oleh pengguna lain. */
+  invitePin: text("invite_pin")
+    .unique()
+    .$defaultFn(() => generateCharacterPin()),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -207,5 +212,70 @@ export const characterQuotaRequests = pgTable("character_quota_requests", {
   status: text("status").notNull().default("pending"),
   adminNote: text("admin_note").notNull().default(""),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Sambungan kontak karakter antar-pengguna melalui PIN Karakter.
+ *
+ * Sebuah sambungan kontak hanya aktif (`active`) bila:
+ *   `admin_status = 'approved'` DAN `owner_status = 'approved'`.
+ */
+export const characterContacts = pgTable(
+  "character_contacts",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    characterId: uuid("character_id")
+      .notNull()
+      .references(() => characters.id, { onDelete: "cascade" }),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    guestUserId: uuid("guest_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** 'pending' | 'approved' | 'rejected' — persetujuan Admin */
+    adminStatus: text("admin_status").notNull().default("pending"),
+    /** 'pending' | 'approved' | 'rejected' | 'blocked' — kendali pemilik karakter */
+    ownerStatus: text("owner_status").notNull().default("pending"),
+    /** Jika true, AI karakter membalas otomatis memakai API key pengundang. */
+    aiAutoReply: boolean("ai_auto_reply").notNull().default(true),
+    /** Catatan sapaan dari pengundang saat memasukkan PIN. */
+    note: text("note").notNull().default(""),
+    /** Buku ingatan terpisah khusus antara karakter & pengundang ini. */
+    memorySummary: text("memory_summary").notNull().default(""),
+    memoryThroughAt: timestamp("memory_through_at", { withTimezone: true }),
+    memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("character_contacts_char_guest_idx").on(
+      table.characterId,
+      table.guestUserId
+    ),
+  ]
+);
+
+/**
+ * Riwayat obrolan 2 arah pada sebuah kontak karakter (terisolasi per kontak).
+ * `sender_kind`:
+ *   - 'guest'        : pesan dari pengguna pengundang
+ *   - 'character_ai' : balasan otomatis AI karakter (memakai API key pengundang)
+ *   - 'owner_manual' : balasan manual langsung dari pemilik karakter tanpa AI
+ */
+export const contactMessages = pgTable("contact_messages", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  contactId: uuid("contact_id")
+    .notNull()
+    .references(() => characterContacts.id, { onDelete: "cascade" }),
+  senderKind: text("sender_kind").notNull(),
+  content: text("content").notNull().default(""),
+  imageUrl: text("image_url"),
+  status: text("status").notNull().default("sent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

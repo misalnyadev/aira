@@ -1,5 +1,7 @@
-import { sql } from "drizzle-orm";
+import { isNull, or, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { characters } from "@/db/schema";
+import { generateCharacterPin } from "@/lib/contactPin";
 
 /**
  * DDL idempoten — dijalankan otomatis sekali per instance server.
@@ -139,7 +141,62 @@ const DDL = [
         SELECT "id" FROM "users" ORDER BY "created_at" ASC LIMIT 1
       )
       AND NOT EXISTS (SELECT 1 FROM "users" WHERE "is_admin" = true)`,
+
+  // ---- PIN Karakter & Kontak 2 Arah Antar-Pengguna ----
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "invite_pin" text`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "characters_invite_pin_idx" ON "characters" ("invite_pin") WHERE "invite_pin" IS NOT NULL`,
+  sql`CREATE TABLE IF NOT EXISTS "character_contacts" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "owner_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "guest_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "admin_status" text DEFAULT 'pending' NOT NULL,
+    "owner_status" text DEFAULT 'pending' NOT NULL,
+    "ai_auto_reply" boolean DEFAULT true NOT NULL,
+    "note" text DEFAULT '' NOT NULL,
+    "memory_summary" text DEFAULT '' NOT NULL,
+    "memory_through_at" timestamp with time zone,
+    "memory_updated_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "character_contacts_char_guest_idx" ON "character_contacts" ("character_id", "guest_user_id")`,
+  sql`CREATE INDEX IF NOT EXISTS "character_contacts_owner_idx" ON "character_contacts" ("owner_user_id", "updated_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "character_contacts_guest_idx" ON "character_contacts" ("guest_user_id", "updated_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "character_contacts_admin_status_idx" ON "character_contacts" ("admin_status", "created_at" ASC)`,
+  sql`CREATE TABLE IF NOT EXISTS "contact_messages" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "contact_id" uuid NOT NULL REFERENCES "character_contacts"("id") ON DELETE cascade,
+    "sender_kind" text NOT NULL,
+    "content" text DEFAULT '' NOT NULL,
+    "image_url" text,
+    "status" text DEFAULT 'sent' NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "contact_messages_contact_idx" ON "contact_messages" ("contact_id", "created_at" ASC)`,
 ];
+
+async function backfillMissingCharacterPins(): Promise<void> {
+  const missing = await db
+    .select({ id: characters.id })
+    .from(characters)
+    .where(or(isNull(characters.invitePin), eq(characters.invitePin, "")));
+
+  for (const row of missing) {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const candidate = generateCharacterPin();
+      try {
+        await db
+          .update(characters)
+          .set({ invitePin: candidate })
+          .where(eq(characters.id, row.id));
+        break;
+      } catch {
+        // Ulangi bila kebetulan bertabrakan dengan PIN lain.
+      }
+    }
+  }
+}
 
 let readyPromise: Promise<void> | null = null;
 
@@ -159,6 +216,7 @@ export function ensureDb(): Promise<void> {
               WHERE lower("email") = ${adminEmail}`
         );
       }
+      await backfillMissingCharacterPins();
     })().catch((err) => {
       // Reset supaya percobaan berikutnya bisa mencoba lagi.
       readyPromise = null;
