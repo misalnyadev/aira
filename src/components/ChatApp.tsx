@@ -38,6 +38,7 @@ import {
   type SharedNoteKind,
 } from "@/lib/sharedNotes";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
+import type { BrainstormMessage, BrainstormRoomSummary } from "@/types/chat";
 import {
   loadVoiceSettings,
   prefetchSpeech,
@@ -52,6 +53,8 @@ import {
 import { AddContactModal } from "./AddContactModal";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
+import { BrainstormRoomView } from "./BrainstormRoomView";
+import { BrainstormView } from "./BrainstormView";
 import { CallOverlay } from "./CallOverlay";
 import { type MemoryPatch } from "./CharacterMemorySection";
 import { CharacterModal } from "./CharacterModal";
@@ -142,6 +145,13 @@ export function ChatApp() {
   const deliverBubblesRef = useRef<
     ((target: string, bubbles: ChatMessage[]) => Promise<void>) | null
   >(null);
+
+  // Brainstorm Room state
+  const [brainstormRooms, setBrainstormRooms] = useState<BrainstormRoomSummary[]>([]);
+  const [activeBrainstormId, setActiveBrainstormId] = useState<string | null>(null);
+  const [brainstormMessages, setBrainstormMessages] = useState<Record<string, BrainstormMessage[]>>({});
+  const [brainstormTyping, setBrainstormTyping] = useState<string | null>(null);
+  const [brainstormTypingLabel, setBrainstormTypingLabel] = useState<string | null>(null);
 
   const allThreads = useMemo(() => {
     if (contactThreads.length === 0) return characters;
@@ -296,16 +306,6 @@ export function ChatApp() {
     [api, showToast]
   );
 
-  useEffect(() => {
-    Promise.all([
-      fetchCharacters(),
-      fetchProviders(),
-      fetchProfile(),
-      fetchAppearance(),
-      fetchTtsSettings(),
-    ]).finally(() => setLoaded(true));
-  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance, fetchTtsSettings]);
-
   const fetchMessages = useCallback(
     async (characterId: string) => {
       const contactId = parseContactThreadId(characterId);
@@ -341,6 +341,23 @@ export function ChatApp() {
     [api]
   );
 
+  const fetchBrainstormRooms = useCallback(async () => {
+    const res = await api("/api/brainstorm");
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    if (Array.isArray(data?.rooms)) setBrainstormRooms(data.rooms);
+  }, [api]);
+
+  const fetchBrainstormMessages = useCallback(
+    async (roomId: string) => {
+      const res = await api(`/api/brainstorm/${encodeURIComponent(roomId)}/messages`);
+      if (!res.ok) return;
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data?.messages)) setBrainstormMessages((prev) => ({ ...prev, [roomId]: data.messages }));
+    },
+    [api]
+  );
+
   const fetchSharedNotes = useCallback(
     async (targetId: string) => {
       const res = await api(
@@ -354,6 +371,17 @@ export function ChatApp() {
     },
     [api]
   );
+
+  useEffect(() => {
+    Promise.all([
+      fetchCharacters(),
+      fetchProviders(),
+      fetchProfile(),
+      fetchAppearance(),
+      fetchTtsSettings(),
+      fetchBrainstormRooms(),
+    ]).finally(() => setLoaded(true));
+  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance, fetchTtsSettings, fetchBrainstormRooms]);
 
   useEffect(() => {
     if (!activeId || notesLoadedRef.current.has(activeId)) return;
@@ -449,6 +477,131 @@ export function ChatApp() {
       );
     } catch {
       // Abaikan kegagalan jaringan senyap.
+    }
+  }
+
+  async function handleCreateBrainstorm(title: string, characterIds: string[]): Promise<boolean> {
+    try {
+      const res = await api("/api/brainstorm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, characterIds }),
+      });
+      if (!res.ok) return false;
+      await fetchBrainstormRooms();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleDeleteBrainstorm(roomId: string) {
+    try {
+      await api(`/api/brainstorm/${encodeURIComponent(roomId)}`, { method: "DELETE" });
+      setBrainstormRooms((prev) => prev.filter((r) => r.id !== roomId));
+      if (activeBrainstormId === roomId) setActiveBrainstormId(null);
+    } catch {}
+  }
+
+  async function handleClearBrainstorm(roomId: string) {
+    try {
+      await api(`/api/brainstorm/${encodeURIComponent(roomId)}/messages`, { method: "DELETE" });
+      setBrainstormMessages((prev) => ({ ...prev, [roomId]: [] }));
+      fetchBrainstormRooms();
+    } catch {}
+  }
+
+  function handleOpenBrainstorm(roomId: string) {
+    setActiveBrainstormId(roomId);
+    setView("brainstorm");
+    fetchBrainstormMessages(roomId);
+  }
+
+  async function handleSendBrainstorm(text: string) {
+    if (!activeBrainstormId) return;
+    const roomId = activeBrainstormId;
+    const activeRoom = brainstormRooms.find((r) => r.id === roomId);
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: BrainstormMessage = {
+      id: tempId,
+      roomId,
+      role: "user",
+      characterId: null,
+      content: text,
+      imageUrl: null,
+      createdAt: new Date().toISOString(),
+    };
+    setBrainstormMessages((prev) => ({ ...prev, [roomId]: [...(prev[roomId] ?? []), optimistic] }));
+    setBrainstormTyping(roomId);
+    // Tampilkan label bergiliran
+    const memberNames = activeRoom?.members.map((m) => m.name) ?? [];
+    let labelIdx = 0;
+    setBrainstormTypingLabel(memberNames[0] ? `${memberNames[0]} mengetik...` : "Mengetik...");
+
+    const labelInterval = memberNames.length > 1 ? window.setInterval(() => {
+      labelIdx = (labelIdx + 1) % memberNames.length;
+      setBrainstormTypingLabel(`${memberNames[labelIdx]} mengetik...`);
+    }, 2200) : null;
+
+    try {
+      const res = await api(`/api/brainstorm/${encodeURIComponent(roomId)}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text }),
+      });
+      const data = await res.json().catch(() => null);
+      if (labelInterval) window.clearInterval(labelInterval);
+      setBrainstormTyping(null);
+      setBrainstormTypingLabel(null);
+
+      if (!res.ok) {
+        setBrainstormMessages((prev) => ({
+          ...prev,
+          [roomId]: (prev[roomId] ?? []).filter((m) => m.id !== tempId),
+        }));
+        return;
+      }
+      // Ganti optimistic dengan real userMessage dari server
+      setBrainstormMessages((prev) => {
+        const cur = prev[roomId] ?? [];
+        const replaced = cur.map((m) => (m.id === tempId ? (data.userMessage ?? { ...m, id: data.userMessage?.id ?? m.id, pending: false }) : m));
+        return { ...prev, [roomId]: replaced };
+      });
+      const assistants: BrainstormMessage[] = data.assistantMessages ?? [];
+      // Deliver sequential with delay + TTS prefetch
+      for (let i = 0; i < assistants.length; i++) {
+        const msg = assistants[i];
+        // prefetch voice
+        const charObj = characters.find((c) => c.id === msg.characterId);
+        if (charObj) {
+          const target = resolveVoiceTarget(charObj.voiceConfig, voice.engine, ttsSummaryRef.current.hasActiveKey);
+          prefetchSpeech(msg.content, target);
+        }
+        await new Promise((r) => setTimeout(r, typingDelayFor(msg.content)));
+        setBrainstormMessages((prev) => ({ ...prev, [roomId]: [...(prev[roomId] ?? []), msg] }));
+        // auto speak jika voice enabled
+        if (voice.enabled && charObj) {
+          const currVoice = loadVoiceSettings(user.id);
+          const target = resolveVoiceTarget(charObj.voiceConfig, currVoice.engine, ttsSummaryRef.current.hasActiveKey);
+          speak(msg.content, currVoice, { messageId: msg.id, target });
+          if (i < assistants.length - 1) await new Promise((r) => setTimeout(r, 600));
+        } else if (i < assistants.length - 1) {
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+      fetchBrainstormRooms();
+    } catch {
+      if (labelInterval) window.clearInterval(labelInterval);
+      setBrainstormTyping(null);
+      setBrainstormTypingLabel(null);
+    }
+  }
+
+  function handleSpeakBrainstorm(text: string, messageId?: string, characterId?: string | null) {
+    const charObj = characterId ? characters.find((c) => c.id === characterId) : null;
+    const target = charObj ? resolveVoiceTarget(charObj.voiceConfig, voice.engine, ttsSummaryRef.current.hasActiveKey) : { kind: "device" as const };
+    if (!speak(text, voice, { messageId, target, onFallback: (r) => showToast(`${r} Beralih ke suara perangkat.`) })) {
+      showToast("Pesan ini tidak bisa dibacakan di browser ini.");
     }
   }
 
@@ -992,7 +1145,7 @@ export function ChatApp() {
   );
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
-  const showMobileTabBar = !(view === "chats" && mobileShowChat);
+  const showMobileTabBar = !(view === "chats" && mobileShowChat) && !(view === "brainstorm" && Boolean(activeBrainstormId));
 
   useEffect(() => {
     if (!isHiddenMode || !composerRevealed || composerBusy) return;
@@ -1363,6 +1516,46 @@ export function ChatApp() {
                 await Promise.all([fetchProviders(), fetchTtsSettings()]);
               }}
             />
+          )}
+
+          {view === "brainstorm" && !activeBrainstormId && (
+            <BrainstormView
+              rooms={brainstormRooms}
+              characters={characters}
+              onOpenRoom={handleOpenBrainstorm}
+              onCreateRoom={handleCreateBrainstorm}
+              onDeleteRoom={handleDeleteBrainstorm}
+              onNeedCharacters={() => handleViewChange("characters")}
+            />
+          )}
+
+          {view === "brainstorm" && activeBrainstormId && (
+            (() => {
+              const room = brainstormRooms.find((r) => r.id === activeBrainstormId);
+              if (!room) return null;
+              return (
+                <BrainstormRoomView
+                  roomTitle={room.title}
+                  members={room.members}
+                  messages={brainstormMessages[activeBrainstormId] ?? []}
+                  isTyping={brainstormTyping === activeBrainstormId}
+                  typingLabel={brainstormTypingLabel}
+                  bubble={bubbleStyle}
+                  characters={characters}
+                  onBack={() => {
+                    setActiveBrainstormId(null);
+                    fetchBrainstormRooms();
+                  }}
+                  onClear={() => handleClearBrainstorm(activeBrainstormId)}
+                  onDeleteRoom={() => handleDeleteBrainstorm(activeBrainstormId)}
+                  onSend={handleSendBrainstorm}
+                  onCopy={handleCopyMessage}
+                  onSpeak={handleSpeakBrainstorm}
+                  onStopSpeaking={stopSpeaking}
+                  canSpeak={speechSupported || ttsSummary.hasActiveKey}
+                />
+              );
+            })()
           )}
         </div>
 

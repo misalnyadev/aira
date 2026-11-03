@@ -326,3 +326,53 @@ export const appSettings = pgTable("app_settings", {
   value: text("value").notNull().default(""),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Meja Diskusi (Brainstorm Room) — ruang brainstorm 2–3 karakter milik satu pengguna.
+ */
+export const brainstormRooms = pgTable("brainstorm_rooms", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const brainstormRoomMembers = pgTable(
+  "brainstorm_room_members",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    roomId: uuid("room_id")
+      .notNull()
+      .references(() => brainstormRooms.id, { onDelete: "cascade" }),
+    characterId: uuid("character_id")
+      .notNull()
+      .references(() => characters.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("brainstorm_room_members_room_char_idx").on(table.roomId, table.characterId)]
+);
+
+export const brainstormMessages = pgTable("brainstorm_messages", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  roomId: uuid("room_id")
+    .notNull()
+    .references(() => brainstormRooms.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  /** Karakter yang berbicara (null untuk pesan user). */
+  characterId: uuid("character_id"),
+  content: text("content").notNull().default(""),
+  imageUrl: text("image_url"),
+  isVoiceNote: boolean("is_voice_note").notNull().default(false),
+  /** Emosi yang terdeteksi (untuk sinkron klip video/voice). */
+  emotion: text("emotion"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
