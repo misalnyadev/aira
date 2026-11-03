@@ -20,6 +20,7 @@ import {
   type GeminiTtsModelId,
   type HdTtsModelId,
   type HdTtsProvider,
+  type SharedGeminiKeySummary,
   type TtsAccountSummary,
   type TtsModelOption,
   type VoiceEngineChoice,
@@ -45,6 +46,7 @@ import {
   BoltIcon,
   CheckIcon,
   ChevronDownIcon,
+  PencilIcon,
   PlusIcon,
   RefreshIcon,
   SpeakerIcon,
@@ -94,8 +96,6 @@ const ENGINE_OPTIONS: { id: VoiceEngineChoice; label: string; sub: string }[] = 
   { id: "hd_female", label: "HD Perempuan", sub: "Suara HD" },
   { id: "hd_male", label: "HD Laki-laki", sub: "Suara HD" },
 ];
-
-type KeyTestState = { status: "testing" | "ok" | "fail"; message?: string };
 
 function TtsModelSelector({
   title,
@@ -323,6 +323,1067 @@ function TtsModelSelector({
   );
 }
 
+type SingleRowTestState = {
+  status: "testing" | "ok" | "model_unavailable" | "fail";
+  message?: string;
+  suggestedModel?: string;
+  activeModels?: TtsModelOption[];
+  recommended?: string[];
+};
+
+type KeyFormMode =
+  | null
+  | { kind: "create" }
+  | { kind: "edit_primary" }
+  | { kind: "edit_backup"; index: number };
+
+function TtsProviderKeySection({
+  provider,
+  hasPrimary,
+  maskedPrimary,
+  maskedBackups,
+  hasSharedFallback,
+  sharedProviders,
+  modelId,
+  defaultModel,
+  voiceId,
+  busy,
+  onSelectModel,
+  onSelectAndSaveModel,
+  onOpenModelEditor,
+  onDetectedModelsFromTest,
+  onPatchKeys,
+  onPendingPatchChange,
+  onFeedbackError,
+}: {
+  provider: HdTtsProvider;
+  hasPrimary: boolean;
+  maskedPrimary: string;
+  maskedBackups: string[];
+  hasSharedFallback: boolean;
+  sharedProviders: SharedGeminiKeySummary[];
+  modelId: string;
+  defaultModel: string;
+  voiceId: string;
+  busy: boolean;
+  onSelectModel: (nextModel: string) => void;
+  onSelectAndSaveModel: (nextModel: string) => Promise<void>;
+  onOpenModelEditor: () => void;
+  onDetectedModelsFromTest: (
+    models: TtsModelOption[],
+    recommended: string[]
+  ) => void;
+  onPatchKeys: (
+    patch: Record<string, unknown>,
+    okMessage: string
+  ) => Promise<boolean>;
+  onPendingPatchChange: (patch: Record<string, unknown> | null) => void;
+  onFeedbackError: (msg: string) => void;
+}) {
+  const effectiveSharedList: SharedGeminiKeySummary[] =
+    provider === "gemini"
+      ? sharedProviders.length > 0
+        ? sharedProviders
+        : hasSharedFallback
+          ? [
+              {
+                id: "__shared_default__",
+                label: "Gemini Setelan",
+                maskedKey: "Key dari menu Setelan",
+                backupCount: 0,
+              },
+            ]
+          : []
+      : [];
+
+  const hasAnyRegistered =
+    hasPrimary || maskedBackups.length > 0 || effectiveSharedList.length > 0;
+
+  const [formMode, setFormMode] = useState<KeyFormMode>(() =>
+    hasAnyRegistered ? null : { kind: "create" }
+  );
+  const [createTarget, setCreateTarget] = useState<"primary" | "backup">(() =>
+    hasPrimary ? "backup" : "primary"
+  );
+  const [draftKey, setDraftKey] = useState("");
+  const [extraBackups, setExtraBackups] = useState<string[]>([]);
+  const [showRawKey, setShowRawKey] = useState(false);
+  const [rowTests, setRowTests] = useState<Record<string, SingleRowTestState>>(
+    {}
+  );
+  const [formBusy, setFormBusy] = useState(false);
+
+  const effectiveModel = cleanTtsModelId(modelId) || defaultModel;
+  const maxExtraBackups = Math.max(0, MAX_BACKUP_KEYS - maskedBackups.length);
+
+  function buildPendingPatch(
+    mode: KeyFormMode,
+    target: "primary" | "backup",
+    mainVal: string,
+    extras: string[]
+  ): Record<string, unknown> | null {
+    if (!mode) return null;
+    const trimmedMain = mainVal.trim();
+    const trimmedExtras = extras.map((k) => k.trim()).filter(Boolean);
+    if (!trimmedMain && trimmedExtras.length === 0) return null;
+
+    if (mode.kind === "edit_primary") {
+      if (!trimmedMain) return null;
+      return provider === "gemini"
+        ? { geminiApiKey: trimmedMain }
+        : { apiKey: trimmedMain };
+    }
+
+    if (mode.kind === "edit_backup") {
+      if (!trimmedMain) return null;
+      return provider === "gemini"
+        ? { replaceGeminiBackup: { index: mode.index, apiKey: trimmedMain } }
+        : { replaceBackup: { index: mode.index, apiKey: trimmedMain } };
+    }
+
+    if (target === "primary") {
+      const patch: Record<string, unknown> = {};
+      if (trimmedMain) {
+        if (provider === "gemini") patch.geminiApiKey = trimmedMain;
+        else patch.apiKey = trimmedMain;
+      }
+      if (trimmedExtras.length > 0) {
+        if (provider === "gemini") {
+          patch.keepGeminiBackupIndexes = maskedBackups.map((_, i) => i);
+          patch.newGeminiBackupKeys = trimmedExtras;
+        } else {
+          patch.keepBackupIndexes = maskedBackups.map((_, i) => i);
+          patch.newBackupKeys = trimmedExtras;
+        }
+      }
+      return Object.keys(patch).length > 0 ? patch : null;
+    }
+
+    const combinedNew = [
+      ...(trimmedMain ? [trimmedMain] : []),
+      ...trimmedExtras,
+    ];
+    if (combinedNew.length === 0) return null;
+    return provider === "gemini"
+      ? {
+          keepGeminiBackupIndexes: maskedBackups.map((_, i) => i),
+          newGeminiBackupKeys: combinedNew,
+        }
+      : {
+          keepBackupIndexes: maskedBackups.map((_, i) => i),
+          newBackupKeys: combinedNew,
+        };
+  }
+
+  function syncDraft(
+    nextMode: KeyFormMode,
+    nextTarget: "primary" | "backup",
+    nextMain: string,
+    nextExtras: string[]
+  ) {
+    onPendingPatchChange(
+      buildPendingPatch(nextMode, nextTarget, nextMain, nextExtras)
+    );
+  }
+
+  function openCreateForm() {
+    const nextMode: KeyFormMode = { kind: "create" };
+    const nextTarget: "primary" | "backup" = hasPrimary ? "backup" : "primary";
+    setFormMode(nextMode);
+    setCreateTarget(nextTarget);
+    setDraftKey("");
+    setExtraBackups([]);
+    setRowTests((prev) => {
+      const next = { ...prev };
+      delete next.draft_main;
+      return next;
+    });
+    syncDraft(nextMode, nextTarget, "", []);
+  }
+
+  function openEditPrimary() {
+    const nextMode: KeyFormMode = { kind: "edit_primary" };
+    setFormMode(nextMode);
+    setDraftKey("");
+    setExtraBackups([]);
+    setRowTests((prev) => {
+      const next = { ...prev };
+      delete next.draft_main;
+      return next;
+    });
+    syncDraft(nextMode, "primary", "", []);
+  }
+
+  function openEditBackup(index: number) {
+    const nextMode: KeyFormMode = { kind: "edit_backup", index };
+    setFormMode(nextMode);
+    setDraftKey("");
+    setExtraBackups([]);
+    setRowTests((prev) => {
+      const next = { ...prev };
+      delete next.draft_main;
+      return next;
+    });
+    syncDraft(nextMode, "backup", "", []);
+  }
+
+  function closeForm() {
+    setFormMode(null);
+    setDraftKey("");
+    setExtraBackups([]);
+    onPendingPatchChange(null);
+  }
+
+  async function pasteText(onVal: (val: string) => void) {
+    const pasted = await readClipboardText();
+    if (!pasted) {
+      onFeedbackError(
+        "Clipboard kosong atau belum diizinkan. Salin API key dulu lalu coba lagi."
+      );
+      return;
+    }
+    onVal(pasted);
+  }
+
+  async function runSingleKeyTest(
+    rowId: string,
+    target:
+      | { kind: "typed"; apiKey: string }
+      | { kind: "dedicated_primary" }
+      | { kind: "dedicated_backup"; index: number }
+      | { kind: "shared_provider"; providerId: string }
+  ) {
+    if (target.kind === "typed" && !target.apiKey.trim()) {
+      setRowTests((prev) => ({
+        ...prev,
+        [rowId]: {
+          status: "fail",
+          message: "Tempel atau ketik API key dulu sebelum dites.",
+        },
+      }));
+      return;
+    }
+
+    setRowTests((prev) => ({
+      ...prev,
+      [rowId]: { status: "testing" },
+    }));
+
+    try {
+      const res = await fetch("/api/tts/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          target:
+            target.kind === "shared_provider" &&
+            target.providerId === "__shared_default__"
+              ? undefined
+              : target,
+          modelId: effectiveModel,
+          voiceId,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      const models = Array.isArray(data.models)
+        ? (data.models as TtsModelOption[])
+        : [];
+      const recs = Array.isArray(data.recommended)
+        ? (data.recommended as string[])
+        : pickDynamicRecommendedTtsModels(models, provider);
+
+      if (models.length > 0) {
+        onDetectedModelsFromTest(models, recs);
+      }
+
+      if (res.ok && data.ok) {
+        const countPart =
+          typeof data.activeModelsCount === "number" &&
+          data.activeModelsCount > 0
+            ? ` · ${data.activeModelsCount} model aktif`
+            : models.length > 0
+              ? ` · ${models.length} model aktif`
+              : "";
+        const quotaPart =
+          typeof data.quotaNote === "string" && data.quotaNote
+            ? ` · ${data.quotaNote}`
+            : "";
+        const activeMod =
+          typeof data.activeModel === "string" && data.activeModel
+            ? data.activeModel
+            : effectiveModel;
+
+        setRowTests((prev) => ({
+          ...prev,
+          [rowId]: {
+            status: "ok",
+            message: `Terhubung · ${activeMod} siap${countPart}${quotaPart}`,
+            activeModels: models,
+            recommended: recs,
+          },
+        }));
+        return;
+      }
+
+      if (data.modelUnavailable) {
+        const suggested =
+          typeof data.suggestedModel === "string" && data.suggestedModel
+            ? data.suggestedModel
+            : recs[0] || models[0]?.id;
+        setRowTests((prev) => ({
+          ...prev,
+          [rowId]: {
+            status: "model_unavailable",
+            message:
+              data.error ||
+              `Key aktif, namun model "${effectiveModel}" tidak tersedia di key ini.`,
+            suggestedModel: suggested,
+            activeModels: models,
+            recommended: recs,
+          },
+        }));
+        return;
+      }
+
+      setRowTests((prev) => ({
+        ...prev,
+        [rowId]: {
+          status: "fail",
+          message: data.error || "Gagal menguji API key ini.",
+        },
+      }));
+    } catch {
+      setRowTests((prev) => ({
+        ...prev,
+        [rowId]: {
+          status: "fail",
+          message: "Koneksi gagal saat menguji API key.",
+        },
+      }));
+    }
+  }
+
+  async function handleSaveForm() {
+    const patch = buildPendingPatch(
+      formMode,
+      createTarget,
+      draftKey,
+      extraBackups
+    );
+    if (!patch) {
+      onFeedbackError("Tempel API key baru terlebih dulu sebelum menyimpan.");
+      return;
+    }
+
+    setFormBusy(true);
+    try {
+      const fullPatch = {
+        ...patch,
+        ...(provider === "gemini"
+          ? { geminiModelId: effectiveModel }
+          : { modelId: effectiveModel }),
+      };
+      const labelMsg =
+        formMode?.kind === "edit_primary"
+          ? "Key utama suara diperbarui."
+          : formMode?.kind === "edit_backup"
+            ? `Key cadangan #${formMode.index + 1} diperbarui.`
+            : "API key suara tersimpan.";
+      const ok = await onPatchKeys(fullPatch, labelMsg);
+      if (ok) {
+        closeForm();
+      }
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function handlePromoteBackup(index: number) {
+    setFormBusy(true);
+    try {
+      const patch =
+        provider === "gemini"
+          ? { promoteGeminiBackupIndex: index }
+          : { promoteBackupIndex: index };
+      await onPatchKeys(
+        patch,
+        `Key cadangan #${index + 1} dijadikan key utama.`
+      );
+      setRowTests({});
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function handleDeletePrimary() {
+    if (!confirm("Hapus key utama suara ini?")) return;
+    setFormBusy(true);
+    try {
+      const patch =
+        provider === "gemini"
+          ? { clearGeminiApiKey: true }
+          : { clearApiKey: true };
+      await onPatchKeys(patch, "Key utama suara dihapus.");
+      setRowTests((prev) => {
+        const next = { ...prev };
+        delete next.primary;
+        return next;
+      });
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function handleDeleteBackup(index: number) {
+    if (!confirm(`Hapus key cadangan #${index + 1}?`)) return;
+    setFormBusy(true);
+    try {
+      const remaining = maskedBackups
+        .map((_, idx) => idx)
+        .filter((idx) => idx !== index);
+      const patch =
+        provider === "gemini"
+          ? { keepGeminiBackupIndexes: remaining }
+          : { keepBackupIndexes: remaining };
+      await onPatchKeys(patch, `Key cadangan #${index + 1} dihapus.`);
+      setRowTests({});
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  function renderRowTestFeedback(rowId: string) {
+    const t = rowTests[rowId];
+    if (!t) return null;
+
+    if (t.status === "testing") {
+      return (
+        <p className="mt-2 text-xs text-muted">
+          Menguji API key ini &amp; mengecek model suara aktif...
+        </p>
+      );
+    }
+
+    if (t.status === "ok") {
+      return (
+        <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+          ✓ {t.message}
+        </p>
+      );
+    }
+
+    if (t.status === "model_unavailable") {
+      return (
+        <div className="mt-2 space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            ⚠ {t.message}
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {t.suggestedModel && (
+              <button
+                type="button"
+                disabled={busy || formBusy}
+                onClick={async () => {
+                  await onSelectAndSaveModel(t.suggestedModel!);
+                  setRowTests((prev) => ({
+                    ...prev,
+                    [rowId]: {
+                      status: "ok",
+                      message: `Model diperbarui ke ${t.suggestedModel} dan siap dipakai.`,
+                      activeModels: t.activeModels,
+                      recommended: t.recommended,
+                    },
+                  }));
+                }}
+                className="rounded-lg bg-ink px-2.5 py-1 text-[11px] font-semibold text-surface transition hover:opacity-90 disabled:opacity-50"
+              >
+                Pakai {t.suggestedModel}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenModelEditor}
+              className="rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-surface-2"
+            >
+              Pilih / Edit Model
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">
+        ✗ {t.message}
+      </p>
+    );
+  }
+
+  const draftTest = rowTests.draft_main;
+  const draftSortedModels = useMemo(() => {
+    if (!draftTest?.activeModels?.length) return [];
+    return sortTtsModels(draftTest.activeModels, draftTest.recommended ?? []);
+  }, [draftTest]);
+
+  const keyPortalHref =
+    provider === "gemini"
+      ? "https://aistudio.google.com/apikey"
+      : "https://elevenlabs.io/app/settings/api-keys";
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink-soft">
+          {provider === "gemini"
+            ? "Daftar API Key Gemini TTS"
+            : "Daftar API Key ElevenLabs"}
+        </h3>
+        {!formMode && (
+          <button
+            type="button"
+            onClick={openCreateForm}
+            className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-line"
+          >
+            <PlusIcon className="h-3.5 w-3.5" /> Tambah
+          </button>
+        )}
+      </div>
+
+      {!hasAnyRegistered && !formMode && (
+        <p className="rounded-xl border border-dashed border-line p-3.5 text-center text-xs text-muted">
+          Belum ada API key terdaftar. Klik <b>+ Tambah</b> untuk menempel key dan mengujinya sebelum disimpan.
+        </p>
+      )}
+
+      {/* Daftar API key terdaftar (mirip menu Setelan, masing-masing bisa dites 1/1) */}
+      {hasAnyRegistered && (
+        <div className="space-y-2">
+          {hasPrimary && (
+            <div className="rounded-xl border border-line bg-surface p-3">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold text-ink">
+                      Key Suara Utama
+                    </span>
+                    <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
+                      utama
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-muted">
+                    {effectiveModel} · {maskedPrimary || "••••"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={busy || formBusy}
+                  onClick={() =>
+                    void runSingleKeyTest("primary", {
+                      kind: "dedicated_primary",
+                    })
+                  }
+                  title="Tes key utama ini (1/1)"
+                  aria-label="Tes key utama ini"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                >
+                  <BoltIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || formBusy}
+                  onClick={openEditPrimary}
+                  title="Edit key utama"
+                  aria-label="Edit key utama"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || formBusy}
+                  onClick={() => void handleDeletePrimary()}
+                  title="Hapus key utama"
+                  aria-label="Hapus key utama"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-rose-600 disabled:opacity-50"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+              {renderRowTestFeedback("primary")}
+            </div>
+          )}
+
+          {maskedBackups.map((masked, idx) => {
+            const rowKey = `backup:${idx}`;
+            return (
+              <div
+                key={rowKey}
+                className="rounded-xl border border-line bg-surface p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-ink">
+                        Key Cadangan #{idx + 1}
+                      </span>
+                      <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+                        cadangan
+                      </span>
+                    </div>
+                    <p className="truncate text-xs text-muted">
+                      {effectiveModel} · {masked}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={() =>
+                      void runSingleKeyTest(rowKey, {
+                        kind: "dedicated_backup",
+                        index: idx,
+                      })
+                    }
+                    title={`Tes key cadangan #${idx + 1} (1/1)`}
+                    aria-label={`Tes key cadangan #${idx + 1}`}
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                  >
+                    <BoltIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={() => openEditBackup(idx)}
+                    title={`Edit key cadangan #${idx + 1}`}
+                    aria-label={`Edit key cadangan #${idx + 1}`}
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={() => void handlePromoteBackup(idx)}
+                    title="Jadikan key utama"
+                    aria-label="Jadikan key utama"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                  >
+                    <CheckIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={() => void handleDeleteBackup(idx)}
+                    title={`Hapus key cadangan #${idx + 1}`}
+                    aria-label={`Hapus key cadangan #${idx + 1}`}
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-rose-600 disabled:opacity-50"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                {renderRowTestFeedback(rowKey)}
+              </div>
+            );
+          })}
+
+          {effectiveSharedList.map((sp) => {
+            const rowKey = `shared:${sp.id}`;
+            const isPrimaryActive = !hasPrimary && maskedBackups.length === 0;
+            return (
+              <div
+                key={rowKey}
+                className="rounded-xl border border-line bg-surface p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-ink">
+                        {sp.label}
+                      </span>
+                      <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+                        dari Setelan
+                      </span>
+                      {isPrimaryActive && (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                          dipakai aktif
+                        </span>
+                      )}
+                      {sp.backupCount > 0 && (
+                        <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+                          +{sp.backupCount} key
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-xs text-muted">
+                      {effectiveModel} · {sp.maskedKey}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={() =>
+                      void runSingleKeyTest(rowKey, {
+                        kind: "shared_provider",
+                        providerId: sp.id,
+                      })
+                    }
+                    title="Tes key Setelan ini untuk Suara (1/1)"
+                    aria-label="Tes key Setelan ini untuk Suara"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                  >
+                    <BoltIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || formBusy}
+                    onClick={onOpenModelEditor}
+                    title="Pilih atau edit model suara"
+                    aria-label="Pilih atau edit model suara"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                {renderRowTestFeedback(rowKey)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Form Tambah / Edit API Key + Tes Dulu Sebelum Disimpan */}
+      {formMode && (
+        <div className="space-y-3 rounded-xl border border-line bg-surface-2/60 p-3.5">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft">
+              {formMode.kind === "edit_primary"
+                ? "Edit Key Suara Utama"
+                : formMode.kind === "edit_backup"
+                  ? `Edit Key Cadangan #${formMode.index + 1}`
+                  : "Tambah API Key Suara"}
+            </h4>
+            {hasAnyRegistered && (
+              <button
+                type="button"
+                onClick={closeForm}
+                className="text-xs text-ink-soft hover:text-ink"
+              >
+                Tutup
+              </button>
+            )}
+          </div>
+
+          {formMode.kind === "create" && hasPrimary && (
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateTarget("backup");
+                  syncDraft(formMode, "backup", draftKey, extraBackups);
+                }}
+                className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                  createTarget === "backup"
+                    ? "bg-ink text-surface"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                Tambah jadi Cadangan
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateTarget("primary");
+                  syncDraft(formMode, "primary", draftKey, extraBackups);
+                }}
+                className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                  createTarget === "primary"
+                    ? "bg-ink text-surface"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                Ganti Key Utama
+              </button>
+            </div>
+          )}
+
+          <div>
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-ink-soft">
+                {formMode.kind === "edit_primary"
+                  ? `Ganti Key Utama (${maskedPrimary || "tersimpan"})`
+                  : formMode.kind === "edit_backup"
+                    ? `Ganti Key Cadangan #${formMode.index + 1} (${maskedBackups[formMode.index] || "tersimpan"})`
+                    : createTarget === "backup" && hasPrimary
+                      ? `API key cadangan baru #${maskedBackups.length + 1}`
+                      : "API key baru"}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRawKey((v) => !v)}
+                  className="text-[11px] font-medium text-ink-soft hover:text-ink"
+                >
+                  {showRawKey ? "Sembunyikan" : "Tampilkan"}
+                </button>
+                <a
+                  href={keyPortalHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] font-semibold text-ink underline underline-offset-2"
+                >
+                  Ambil key ↗
+                </a>
+              </div>
+            </div>
+
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={draftKey}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDraftKey(val);
+                  syncDraft(formMode, createTarget, val, extraBackups);
+                }}
+                placeholder={
+                  provider === "gemini"
+                    ? "Tempel API key Gemini (AIzaSy...)..."
+                    : "Tempel API key ElevenLabs (sk_...)..."
+                }
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-1p-ignore="true"
+                data-lpignore="true"
+                className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${
+                  showRawKey ? "" : "masked-key"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  void pasteText((val) => {
+                    setDraftKey(val);
+                    syncDraft(formMode, createTarget, val, extraBackups);
+                  })
+                }
+                className="shrink-0 rounded-xl border border-line bg-surface px-2.5 py-2 text-xs font-semibold text-ink transition hover:bg-line/50"
+              >
+                Tempel
+              </button>
+            </div>
+          </div>
+
+          {/* Hasil tes pra-simpan beserta daftar model yang aktif di key baru ini */}
+          {draftTest && (
+            <div
+              className={`space-y-2 rounded-xl border p-2.5 ${
+                draftTest.status === "ok"
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : draftTest.status === "model_unavailable"
+                    ? "border-amber-500/30 bg-amber-500/10"
+                    : draftTest.status === "fail"
+                      ? "border-rose-500/30 bg-rose-500/10"
+                      : "border-line bg-surface"
+              }`}
+            >
+              <p
+                className={`text-xs ${
+                  draftTest.status === "ok"
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : draftTest.status === "model_unavailable"
+                      ? "text-amber-800 dark:text-amber-300"
+                      : draftTest.status === "fail"
+                        ? "text-rose-600 dark:text-rose-300"
+                        : "text-muted"
+                }`}
+              >
+                {draftTest.status === "testing"
+                  ? "Menguji API key baru & mengecek model yang aktif..."
+                  : draftTest.status === "ok"
+                    ? `✓ ${draftTest.message}`
+                    : draftTest.status === "model_unavailable"
+                      ? `⚠ ${draftTest.message}`
+                      : `✗ ${draftTest.message}`}
+              </p>
+
+              {draftSortedModels.length > 0 && (
+                <div className="space-y-1.5 pt-0.5">
+                  <span className="block text-[11px] font-semibold text-ink-soft">
+                    Model suara aktif di API key ini (klik untuk pakai):
+                  </span>
+                  <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+                    {draftSortedModels.map((m) => {
+                      const selected = effectiveModel === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectModel(m.id);
+                            setRowTests((prev) => ({
+                              ...prev,
+                              draft_main: {
+                                ...draftTest,
+                                status: "ok",
+                                message: `Key aktif · model dipilih: ${m.id}`,
+                              },
+                            }));
+                          }}
+                          className={`rounded-full border px-2.5 py-1 font-mono text-[11px] font-semibold transition ${
+                            selected
+                              ? "border-ink bg-ink text-surface"
+                              : "border-line bg-surface text-ink hover:bg-surface-2"
+                          }`}
+                        >
+                          {m.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Slot cadangan tambahan saat mode tambah */}
+          {formMode.kind === "create" && extraBackups.length > 0 && (
+            <div className="space-y-2 border-t border-line pt-2.5">
+              <span className="block text-[11px] font-medium text-ink-soft">
+                Key cadangan tambahan (bisa dites 1/1 sebelum disimpan)
+              </span>
+              {extraBackups.map((val, idx) => {
+                const extraRowKey = `draft_extra:${idx}`;
+                return (
+                  <div key={extraRowKey} className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={val}
+                        onChange={(e) => {
+                          const nextList = extraBackups.map((v, i) =>
+                            i === idx ? e.target.value : v
+                          );
+                          setExtraBackups(nextList);
+                          syncDraft(formMode, createTarget, draftKey, nextList);
+                        }}
+                        placeholder={`API key cadangan tambahan #${idx + 1}...`}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        data-1p-ignore="true"
+                        data-lpignore="true"
+                        className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${
+                          showRawKey ? "" : "masked-key"
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void pasteText((pasted) => {
+                            const nextList = extraBackups.map((v, i) =>
+                              i === idx ? pasted : v
+                            );
+                            setExtraBackups(nextList);
+                            syncDraft(formMode, createTarget, draftKey, nextList);
+                          })
+                        }
+                        className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
+                      >
+                        Tempel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runSingleKeyTest(extraRowKey, {
+                            kind: "typed",
+                            apiKey: val,
+                          })
+                        }
+                        title="Tes key cadangan ini sebelum disimpan"
+                        aria-label="Tes key cadangan ini sebelum disimpan"
+                        className="shrink-0 rounded-lg border border-line bg-surface p-1.5 text-ink-soft hover:text-ink"
+                      >
+                        <BoltIcon className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextList = extraBackups.filter(
+                            (_, i) => i !== idx
+                          );
+                          setExtraBackups(nextList);
+                          syncDraft(formMode, createTarget, draftKey, nextList);
+                        }}
+                        aria-label="Hapus baris"
+                        className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {renderRowTestFeedback(extraRowKey)}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {formMode.kind === "create" &&
+            extraBackups.length +
+              (createTarget === "backup" && hasPrimary ? 1 : 0) <
+              maxExtraBackups && (
+              <button
+                type="button"
+                onClick={() => setExtraBackups((prev) => [...prev, ""])}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-ink"
+              >
+                <PlusIcon className="h-3.5 w-3.5" /> Tambah baris cadangan lagi
+              </button>
+            )}
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              disabled={busy || formBusy || !draftKey.trim()}
+              onClick={() =>
+                void runSingleKeyTest("draft_main", {
+                  kind: "typed",
+                  apiKey: draftKey,
+                })
+              }
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-line/50 disabled:opacity-50"
+            >
+              <BoltIcon className="h-3.5 w-3.5" />
+              Tes &amp; Cek Model
+            </button>
+            <button
+              type="button"
+              disabled={
+                busy ||
+                formBusy ||
+                (!draftKey.trim() &&
+                  !extraBackups.some((k) => Boolean(k.trim())))
+              }
+              onClick={() => void handleSaveForm()}
+              className="flex-1 rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+            >
+              {formBusy ? "Menyimpan..." : "Simpan Key"}
+            </button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-muted">
+            Klik <b>Tes &amp; Cek Model</b> untuk menguji key baru sekaligus melihat model suara yang aktif sebelum disimpan.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HdVoiceCard({
   ttsSummary,
   voiceSettings,
@@ -331,54 +1392,55 @@ function HdVoiceCard({
 }: {
   ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
-  onSaveTts: (patch: Record<string, unknown>) => Promise<TtsAccountSummary | null>;
+  onSaveTts: (
+    patch: Record<string, unknown>
+  ) => Promise<TtsAccountSummary | null>;
   onNotice?: (msg: string) => void;
 }) {
   const isSpeaking = useIsSpeaking();
   const [provider, setProvider] = useState<HdTtsProvider>(ttsSummary.provider);
 
-  // State Gemini TTS
-  const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [clearGeminiPrimary, setClearGeminiPrimary] = useState(false);
-  const [keptGeminiBackups, setKeptGeminiBackups] = useState<number[]>(() =>
-    ttsSummary.maskedGeminiBackupKeys.map((_, idx) => idx)
+  const [geminiModelId, setGeminiModelId] = useState<GeminiTtsModelId>(
+    ttsSummary.geminiModelId
   );
-  const [newGeminiBackups, setNewGeminiBackups] = useState<string[]>([]);
-  const [geminiModelId, setGeminiModelId] = useState<GeminiTtsModelId>(ttsSummary.geminiModelId);
-  const [geminiFemaleVoice, setGeminiFemaleVoice] = useState(ttsSummary.geminiFemaleVoice);
-  const [geminiMaleVoice, setGeminiMaleVoice] = useState(ttsSummary.geminiMaleVoice);
+  const [geminiFemaleVoice, setGeminiFemaleVoice] = useState(
+    ttsSummary.geminiFemaleVoice
+  );
+  const [geminiMaleVoice, setGeminiMaleVoice] = useState(
+    ttsSummary.geminiMaleVoice
+  );
   const [geminiStyle, setGeminiStyle] = useState(ttsSummary.geminiStyle);
 
-  // State ElevenLabs TTS
-  const [apiKey, setApiKey] = useState("");
-  const [clearPrimary, setClearPrimary] = useState(false);
-  const [keptBackupIndexes, setKeptBackupIndexes] = useState<number[]>(() =>
-    ttsSummary.maskedBackupKeys.map((_, idx) => idx)
-  );
-  const [newBackups, setNewBackups] = useState<string[]>([]);
   const [modelId, setModelId] = useState<HdTtsModelId>(ttsSummary.modelId);
   const [femaleVoiceId, setFemaleVoiceId] = useState(ttsSummary.femaleVoiceId);
   const [maleVoiceId, setMaleVoiceId] = useState(ttsSummary.maleVoiceId);
   const [stability, setStability] = useState(ttsSummary.stability);
-  const [similarityBoost, setSimilarityBoost] = useState(ttsSummary.similarityBoost);
-
-  const [saving, setSaving] = useState(false);
-  const [testingSlot, setTestingSlot] = useState<"female" | "male" | null>(null);
-  const [feedback, setFeedback] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [showHdKeys, setShowHdKeys] = useState(false);
-  const [geminiKeyOpen, setGeminiKeyOpen] = useState(
-    () => !ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
+  const [similarityBoost, setSimilarityBoost] = useState(
+    ttsSummary.similarityBoost
   );
 
-  // Tes koneksi API key & deteksi daftar model suara live (seragam dengan menu Pengaturan)
-  const [keyTests, setKeyTests] = useState<Partial<Record<HdTtsProvider, KeyTestState>>>({});
+  const [pendingKeyPatches, setPendingKeyPatches] = useState<
+    Partial<Record<HdTtsProvider, Record<string, unknown> | null>>
+  >({});
+
+  const [saving, setSaving] = useState(false);
+  const [testingSlot, setTestingSlot] = useState<"female" | "male" | null>(
+    null
+  );
+  const [feedback, setFeedback] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
+
   const [detectedModels, setDetectedModels] = useState<
     Partial<Record<HdTtsProvider, TtsModelOption[] | null>>
   >({});
   const [liveRecommended, setLiveRecommended] = useState<
     Partial<Record<HdTtsProvider, string[]>>
   >({});
-  const [modelsBusy, setModelsBusy] = useState<Partial<Record<HdTtsProvider, boolean>>>({});
+  const [modelsBusy, setModelsBusy] = useState<
+    Partial<Record<HdTtsProvider, boolean>>
+  >({});
   const [modelsError, setModelsError] = useState<
     Partial<Record<HdTtsProvider, string | null>>
   >({});
@@ -388,44 +1450,41 @@ function HdVoiceCard({
   const [showModelList, setShowModelList] = useState<
     Partial<Record<HdTtsProvider, boolean>>
   >({});
-  const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectSeqRef = useRef(0);
-
-  useEffect(
-    () => () => {
-      if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
-    },
-    []
-  );
 
   async function detectModelsFor(
     targetProvider: HdTtsProvider,
     opts?: {
-      primaryKey?: string;
-      backups?: string[];
       openDropdown?: boolean;
       silentIfMissingKey?: boolean;
     }
   ) {
-    const primaryVal =
-      opts?.primaryKey ?? (targetProvider === "gemini" ? geminiApiKey : apiKey);
-    const backupsVal =
-      opts?.backups ?? (targetProvider === "gemini" ? newGeminiBackups : newBackups);
-    const clearFlag =
-      targetProvider === "gemini" ? clearGeminiPrimary : clearPrimary;
-    const keptIdxs =
-      targetProvider === "gemini" ? keptGeminiBackups : keptBackupIndexes;
-    const currentModelVal =
-      targetProvider === "gemini" ? geminiModelId : modelId;
+    const pendingPatch = pendingKeyPatches[targetProvider];
+    const typedPrimary =
+      targetProvider === "gemini"
+        ? typeof pendingPatch?.geminiApiKey === "string"
+          ? pendingPatch.geminiApiKey
+          : ""
+        : typeof pendingPatch?.apiKey === "string"
+          ? pendingPatch.apiKey
+          : "";
+    const typedBackups =
+      targetProvider === "gemini"
+        ? Array.isArray(pendingPatch?.newGeminiBackupKeys)
+          ? (pendingPatch.newGeminiBackupKeys as string[])
+          : []
+        : Array.isArray(pendingPatch?.newBackupKeys)
+          ? (pendingPatch.newBackupKeys as string[])
+          : [];
 
     const hasAnyKey =
-      Boolean(primaryVal.trim()) ||
-      backupsVal.some((k) => Boolean(k.trim())) ||
+      Boolean(typedPrimary.trim()) ||
+      typedBackups.some((k) => Boolean(k.trim())) ||
       (targetProvider === "gemini"
-        ? (ttsSummary.hasGeminiKey && !clearFlag) ||
-          keptIdxs.length > 0 ||
+        ? ttsSummary.hasGeminiKey ||
+          ttsSummary.geminiBackupCount > 0 ||
           ttsSummary.hasSharedGeminiKey
-        : (ttsSummary.hasKey && !clearFlag) || keptIdxs.length > 0);
+        : ttsSummary.hasKey || ttsSummary.backupCount > 0);
 
     if (!hasAnyKey) {
       if (!opts?.silentIfMissingKey) {
@@ -433,8 +1492,8 @@ function HdVoiceCard({
           ...prev,
           [targetProvider]:
             targetProvider === "gemini"
-              ? "Isi API key Gemini dulu (di atas atau di menu Setelan)."
-              : "Isi API key ElevenLabs dulu.",
+              ? "Tambahkan API key Gemini dulu (di atas atau di menu Setelan)."
+              : "Tambahkan API key ElevenLabs dulu.",
         }));
         if (opts?.openDropdown) {
           setShowModelList((prev) => ({ ...prev, [targetProvider]: true }));
@@ -443,6 +1502,8 @@ function HdVoiceCard({
       return;
     }
 
+    const currentModelVal =
+      targetProvider === "gemini" ? geminiModelId : modelId;
     const seq = ++detectSeqRef.current;
     setModelsBusy((prev) => ({ ...prev, [targetProvider]: true }));
     setModelsError((prev) => ({ ...prev, [targetProvider]: null }));
@@ -453,10 +1514,8 @@ function HdVoiceCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: targetProvider,
-          apiKey: primaryVal.trim(),
-          backupKeys: backupsVal.map((k) => k.trim()).filter(Boolean),
-          clearStoredPrimary: clearFlag,
-          keepBackupIndexes: keptIdxs,
+          apiKey: typedPrimary.trim(),
+          backupKeys: typedBackups,
           currentModel: currentModelVal.trim(),
         }),
       });
@@ -480,7 +1539,8 @@ function HdVoiceCard({
       const recs = Array.isArray(data.recommended)
         ? (data.recommended as string[])
         : pickDynamicRecommendedTtsModels(fetched, targetProvider);
-      const best = typeof data.bestModel === "string" ? data.bestModel : recs[0] ?? "";
+      const best =
+        typeof data.bestModel === "string" ? data.bestModel : recs[0] ?? "";
 
       setDetectedModels((prev) => ({ ...prev, [targetProvider]: fetched }));
       setLiveRecommended((prev) => ({ ...prev, [targetProvider]: recs }));
@@ -499,7 +1559,7 @@ function HdVoiceCard({
         else setModelId(best);
         setAutoNotices((prev) => ({
           ...prev,
-          [targetProvider]: `Model "${trimmedCur}" sudah tidak tersedia di key ini — diganti otomatis ke "${best}".`,
+          [targetProvider]: `Model "${trimmedCur}" tidak tersedia di key ini — diganti otomatis ke "${best}".`,
         }));
       } else {
         setAutoNotices((prev) => ({ ...prev, [targetProvider]: null }));
@@ -522,130 +1582,31 @@ function HdVoiceCard({
     }
   }
 
-  function scheduleAutoDetect(
-    targetProvider: HdTtsProvider,
-    nextPrimary: string,
-    nextBackups: string[]
-  ) {
-    if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
-    const hasFreshKey =
-      nextPrimary.trim().length >= 12 ||
-      nextBackups.some((b) => b.trim().length >= 12);
-    if (!hasFreshKey) return;
-
-    detectTimerRef.current = setTimeout(() => {
-      void detectModelsFor(targetProvider, {
-        primaryKey: nextPrimary,
-        backups: nextBackups,
-        openDropdown: false,
-        silentIfMissingKey: true,
-      });
-    }, 600);
-  }
-
-  async function handleTestApiKey(targetProvider: HdTtsProvider) {
-    setKeyTests((prev) => ({ ...prev, [targetProvider]: { status: "testing" } }));
-    const primaryVal = targetProvider === "gemini" ? geminiApiKey : apiKey;
-    const backupsVal =
-      targetProvider === "gemini" ? newGeminiBackups : newBackups;
-    const clearFlag =
-      targetProvider === "gemini" ? clearGeminiPrimary : clearPrimary;
-    const keptIdxs =
-      targetProvider === "gemini" ? keptGeminiBackups : keptBackupIndexes;
-    const modelVal =
-      cleanTtsModelId(targetProvider === "gemini" ? geminiModelId : modelId) ||
-      (targetProvider === "gemini"
-        ? DEFAULT_GEMINI_MODEL_ID
-        : DEFAULT_HD_MODEL_ID);
-    const voiceVal =
-      targetProvider === "gemini"
-        ? geminiFemaleVoice.trim()
-        : femaleVoiceId.trim();
-
+  async function applyDirectKeyPatch(
+    patch: Record<string, unknown>,
+    okMessage: string
+  ): Promise<boolean> {
+    setSaving(true);
+    setFeedback(null);
     try {
-      const res = await fetch("/api/tts/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: targetProvider,
-          apiKey: primaryVal.trim(),
-          backupKeys: backupsVal.map((k) => k.trim()).filter(Boolean),
-          clearStoredPrimary: clearFlag,
-          keepBackupIndexes: keptIdxs,
-          modelId: modelVal,
-          voiceId: voiceVal,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.ok) {
-        const sourceNote =
-          data.usedSource === "shared"
-            ? " · key Gemini Setelan"
-            : data.usedKeyNumber > 1
-              ? ` · key ke-${data.usedKeyNumber} dari ${data.totalKeys}`
-              : "";
-        const quotaPart =
-          typeof data.quotaNote === "string" && data.quotaNote
-            ? ` · ${data.quotaNote}`
-            : "";
-        const modelPart =
-          data.healedFrom && data.activeModel
-            ? ` · model otomatis diperbarui ke ${data.activeModel}`
-            : data.activeModel
-              ? ` · ${data.activeModel}`
-              : "";
-
-        if (data.healedFrom && typeof data.activeModel === "string") {
-          if (targetProvider === "gemini") setGeminiModelId(data.activeModel);
-          else setModelId(data.activeModel);
-        }
-
-        setKeyTests((prev) => ({
-          ...prev,
-          [targetProvider]: {
-            status: "ok",
-            message: `Terhubung${sourceNote}${quotaPart}${modelPart}`,
-          },
-        }));
-      } else {
-        setKeyTests((prev) => ({
-          ...prev,
-          [targetProvider]: {
-            status: "fail",
-            message: data.error || "Gagal terhubung ke layanan suara.",
-          },
-        }));
+      const updated = await onSaveTts(patch);
+      if (updated) {
+        invalidateHdAudioCache();
+        setGeminiModelId(updated.geminiModelId);
+        setModelId(updated.modelId);
+        setPendingKeyPatches((prev) => ({ ...prev, [provider]: null }));
+        setFeedback({ kind: "ok", text: okMessage });
+        return true;
       }
-    } catch {
-      setKeyTests((prev) => ({
-        ...prev,
-        [targetProvider]: {
-          status: "fail",
-          message: "Koneksi gagal saat menguji API key.",
-        },
-      }));
-    }
-  }
-
-  async function pasteInto(setter: (val: string) => void, onFilled?: (val: string) => void) {
-    const pasted = await readClipboardText();
-    if (!pasted) {
       setFeedback({
         kind: "err",
-        text: "Clipboard kosong atau belum diizinkan. Salin API key dulu lalu coba lagi.",
+        text: "Gagal memperbarui API key Suara HD.",
       });
-      return;
+      return false;
+    } finally {
+      setSaving(false);
     }
-    setter(pasted);
-    onFilled?.(pasted);
   }
-
-  const totalGeminiBackupSlots = keptGeminiBackups.length + newGeminiBackups.length;
-  const canAddGeminiBackup = totalGeminiBackupSlots < MAX_BACKUP_KEYS;
-
-  const totalBackupSlots = keptBackupIndexes.length + newBackups.length;
-  const canAddBackup = totalBackupSlots < MAX_BACKUP_KEYS;
 
   const effectiveGeminiModel =
     cleanTtsModelId(geminiModelId) || DEFAULT_GEMINI_MODEL_ID;
@@ -653,18 +1614,12 @@ function HdVoiceCard({
 
   const hasPendingChanges =
     provider !== ttsSummary.provider ||
-    Boolean(geminiApiKey.trim()) ||
-    clearGeminiPrimary ||
-    keptGeminiBackups.length !== ttsSummary.maskedGeminiBackupKeys.length ||
-    newGeminiBackups.some((k) => Boolean(k.trim())) ||
+    Boolean(pendingKeyPatches.gemini) ||
+    Boolean(pendingKeyPatches.elevenlabs) ||
     effectiveGeminiModel !== ttsSummary.geminiModelId ||
     geminiFemaleVoice.trim() !== ttsSummary.geminiFemaleVoice ||
     geminiMaleVoice.trim() !== ttsSummary.geminiMaleVoice ||
     geminiStyle.trim() !== ttsSummary.geminiStyle ||
-    Boolean(apiKey.trim()) ||
-    clearPrimary ||
-    keptBackupIndexes.length !== ttsSummary.maskedBackupKeys.length ||
-    newBackups.some((k) => Boolean(k.trim())) ||
     effectiveElevenModel !== ttsSummary.modelId ||
     femaleVoiceId.trim() !== ttsSummary.femaleVoiceId ||
     maleVoiceId.trim() !== ttsSummary.maleVoiceId ||
@@ -696,7 +1651,10 @@ function HdVoiceCard({
       return null;
     }
     if (!cleanVoiceId(femaleVoiceId) || !cleanVoiceId(maleVoiceId)) {
-      setFeedback({ kind: "err", text: "Voice ID ElevenLabs tidak valid (hindari spasi)." });
+      setFeedback({
+        kind: "err",
+        text: "Voice ID ElevenLabs tidak valid (hindari spasi).",
+      });
       return null;
     }
 
@@ -705,14 +1663,12 @@ function HdVoiceCard({
     try {
       const payload: Record<string, unknown> = {
         provider: nextProvider,
-        keepGeminiBackupIndexes: keptGeminiBackups,
-        newGeminiBackupKeys: newGeminiBackups.map((k) => k.trim()).filter(Boolean),
+        ...(pendingKeyPatches.gemini ?? {}),
+        ...(pendingKeyPatches.elevenlabs ?? {}),
         geminiModelId: effectiveGeminiModel,
         geminiFemaleVoice: geminiFemaleVoice.trim(),
         geminiMaleVoice: geminiMaleVoice.trim(),
         geminiStyle: geminiStyle.trim(),
-        keepBackupIndexes: keptBackupIndexes,
-        newBackupKeys: newBackups.map((k) => k.trim()).filter(Boolean),
         modelId: effectiveElevenModel,
         femaleVoiceId: femaleVoiceId.trim(),
         maleVoiceId: maleVoiceId.trim(),
@@ -720,34 +1676,15 @@ function HdVoiceCard({
         similarityBoost,
       };
 
-      if (clearGeminiPrimary && !geminiApiKey.trim()) {
-        payload.clearGeminiApiKey = true;
-      } else if (geminiApiKey.trim()) {
-        payload.geminiApiKey = geminiApiKey.trim();
-      }
-
-      if (clearPrimary && !apiKey.trim()) {
-        payload.clearApiKey = true;
-      } else if (apiKey.trim()) {
-        payload.apiKey = apiKey.trim();
-      }
-
       const updated = await onSaveTts(payload);
       if (updated) {
         invalidateHdAudioCache();
         setProvider(updated.provider);
-        setGeminiApiKey("");
-        setClearGeminiPrimary(false);
-        setNewGeminiBackups([]);
-        setKeptGeminiBackups(updated.maskedGeminiBackupKeys.map((_, idx) => idx));
+        setPendingKeyPatches({});
         setGeminiModelId(updated.geminiModelId);
         setGeminiFemaleVoice(updated.geminiFemaleVoice);
         setGeminiMaleVoice(updated.geminiMaleVoice);
         setGeminiStyle(updated.geminiStyle);
-        setApiKey("");
-        setClearPrimary(false);
-        setNewBackups([]);
-        setKeptBackupIndexes(updated.maskedBackupKeys.map((_, idx) => idx));
         setModelId(updated.modelId);
         setFemaleVoiceId(updated.femaleVoiceId);
         setMaleVoiceId(updated.maleVoiceId);
@@ -755,7 +1692,10 @@ function HdVoiceCard({
           setFeedback({ kind: "ok", text: "Pengaturan Suara HD tersimpan." });
         }
       } else {
-        setFeedback({ kind: "err", text: "Gagal menyimpan pengaturan Suara HD." });
+        setFeedback({
+          kind: "err",
+          text: "Gagal menyimpan pengaturan Suara HD.",
+        });
       }
       return updated;
     } finally {
@@ -809,8 +1749,8 @@ function HdVoiceCard({
         kind: "err",
         text:
           provider === "gemini"
-            ? "Tambahkan API key Gemini di Setelan atau di kolom API key Gemini di bawah dulu."
-            : "Tempel API key ElevenLabs terlebih dulu untuk mencoba suara ElevenLabs.",
+            ? "Tambahkan API key Gemini di Setelan atau di daftar API key Gemini di atas dulu."
+            : "Tambahkan API key ElevenLabs terlebih dulu untuk mencoba suara ElevenLabs.",
       });
       return;
     }
@@ -833,16 +1773,21 @@ function HdVoiceCard({
   }
 
   const geminiReadyNow =
-    (ttsSummary.hasGeminiKey && !clearGeminiPrimary) ||
-    Boolean(geminiApiKey.trim()) ||
+    ttsSummary.hasGeminiKey ||
+    ttsSummary.geminiBackupCount > 0 ||
+    Boolean(pendingKeyPatches.gemini) ||
     ttsSummary.hasSharedGeminiKey;
-  const elevenReadyNow = (ttsSummary.hasKey && !clearPrimary) || Boolean(apiKey.trim());
-  const activeBadgeReady = provider === "gemini" ? geminiReadyNow : elevenReadyNow;
+  const elevenReadyNow =
+    ttsSummary.hasKey ||
+    ttsSummary.backupCount > 0 ||
+    Boolean(pendingKeyPatches.elevenlabs);
+  const activeBadgeReady =
+    provider === "gemini" ? geminiReadyNow : elevenReadyNow;
 
   const badgeLabel = (() => {
     if (!activeBadgeReady) return "Belum diatur";
     if (provider === "gemini") {
-      if ((ttsSummary.hasGeminiKey && !clearGeminiPrimary) || Boolean(geminiApiKey.trim())) {
+      if (ttsSummary.hasGeminiKey || ttsSummary.geminiBackupCount > 0) {
         return `Aktif${ttsSummary.geminiBackupCount ? ` +${ttsSummary.geminiBackupCount}` : ""}`;
       }
       return "Aktif · Key Setelan";
@@ -902,220 +1847,46 @@ function HdVoiceCard({
 
       {provider === "gemini" ? (
         <>
-          {/* API Key Gemini (otomatis ikut Setelan bila sudah ada) */}
-          <div className="rounded-xl border border-line bg-surface-2/60 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setGeminiKeyOpen((v) => !v)}
-                className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-ink"
-              >
-                <span className="min-w-0 flex-1">
-                  {ttsSummary.hasSharedGeminiKey && !ttsSummary.hasGeminiKey
-                    ? "Otomatis memakai API key Gemini dari Setelan (ketuk untuk key terpisah)"
-                    : "API Key Gemini Suara"}
-                </span>
-                <ChevronDownIcon
-                  className={`h-4 w-4 shrink-0 text-muted transition ${geminiKeyOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void handleTestApiKey("gemini")}
-                disabled={keyTests.gemini?.status === "testing"}
-                title="Tes koneksi API key Gemini Suara"
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-line/50 disabled:opacity-45"
-              >
-                <BoltIcon className="h-3.5 w-3.5" />
-                {keyTests.gemini?.status === "testing" ? "Menguji..." : "Tes Key"}
-              </button>
-            </div>
-
-            {keyTests.gemini && (
-              <p
-                className={`mt-1.5 text-xs ${
-                  keyTests.gemini.status === "ok"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : keyTests.gemini.status === "fail"
-                      ? "text-rose-600 dark:text-rose-400"
-                      : "text-ink-soft"
-                }`}
-              >
-                {keyTests.gemini.status === "testing"
-                  ? "Menguji koneksi API key Gemini..."
-                  : keyTests.gemini.status === "ok"
-                    ? `✓ ${keyTests.gemini.message}`
-                    : `✗ ${keyTests.gemini.message}`}
-              </p>
-            )}
-
-            {geminiKeyOpen && (
-              <div className="mt-2.5 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] text-muted">
-                    {ttsSummary.hasSharedGeminiKey
-                      ? "Opsional: isi jika ingin memisahkan kuota suara dari kuota chat."
-                      : "Buat key gratis di Google AI Studio:"}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void pasteInto(setGeminiApiKey, (pasted) => {
-                          setClearGeminiPrimary(false);
-                          scheduleAutoDetect("gemini", pasted, newGeminiBackups);
-                        })
-                      }
-                      className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
-                    >
-                      Tempel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowHdKeys((v) => !v)}
-                      className="text-[11px] font-medium text-ink-soft hover:text-ink"
-                    >
-                      {showHdKeys ? "Sembunyikan" : "Tampilkan"}
-                    </button>
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0 text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
-                    >
-                      Ambil key ↗
-                    </a>
-                  </div>
-                </div>
-
-                {ttsSummary.hasGeminiKey && !clearGeminiPrimary && (
-                  <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs">
-                    <span className="truncate font-mono text-[11px] text-ink-soft">
-                      Key khusus suara: {ttsSummary.maskedGeminiKey}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setClearGeminiPrimary(true)}
-                      className="ml-2 shrink-0 text-[11px] font-medium text-rose-500 hover:underline"
-                    >
-                      Hapus
-                    </button>
-                  </div>
-                )}
-
-                <input
-                  type="text"
-                  value={geminiApiKey}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setGeminiApiKey(val);
-                    if (val.trim()) setClearGeminiPrimary(false);
-                    scheduleAutoDetect("gemini", val, newGeminiBackups);
-                  }}
-                  placeholder={
-                    ttsSummary.hasGeminiKey && !clearGeminiPrimary
-                      ? "Biarkan kosong jika tidak ingin mengganti key..."
-                      : "AIza... (kosongkan untuk ikut key Gemini di Setelan)"
-                  }
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  data-1p-ignore="true"
-                  data-lpignore="true"
-                  className={`w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
-                />
-
-                {keptGeminiBackups.length > 0 && (
-                  <div className="space-y-1 pt-1">
-                    <span className="block text-[11px] font-medium text-muted">
-                      Key cadangan suara Gemini:
-                    </span>
-                    {keptGeminiBackups.map((origIdx, pos) => (
-                      <div
-                        key={origIdx}
-                        className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs"
-                      >
-                        <span className="truncate font-mono text-[11px] text-ink-soft">
-                          #{pos + 1} · {ttsSummary.maskedGeminiBackupKeys[origIdx]}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setKeptGeminiBackups((prev) => prev.filter((i) => i !== origIdx))
-                          }
-                          aria-label="Hapus key cadangan Gemini"
-                          className="rounded p-0.5 text-muted hover:text-rose-500"
-                        >
-                          <TrashIcon className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {newGeminiBackups.map((val, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      value={val}
-                      onChange={(e) => {
-                        const nextList = newGeminiBackups.map((v, i) =>
-                          i === idx ? e.target.value : v
-                        );
-                        setNewGeminiBackups(nextList);
-                        scheduleAutoDetect("gemini", geminiApiKey, nextList);
-                      }}
-                      placeholder={`Key Gemini cadangan #${keptGeminiBackups.length + idx + 1}...`}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      data-1p-ignore="true"
-                      data-lpignore="true"
-                      className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void pasteInto((pasted) => {
-                          const nextList = newGeminiBackups.map((v, i) =>
-                            i === idx ? pasted : v
-                          );
-                          setNewGeminiBackups(nextList);
-                          scheduleAutoDetect("gemini", geminiApiKey, nextList);
-                        })
-                      }
-                      className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
-                    >
-                      Tempel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setNewGeminiBackups((prev) => prev.filter((_, i) => i !== idx))
-                      }
-                      aria-label="Batal tambah key cadangan"
-                      className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-
-                {canAddGeminiBackup && (
-                  <button
-                    type="button"
-                    onClick={() => setNewGeminiBackups((prev) => [...prev, ""])}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-ink"
-                  >
-                    <PlusIcon className="h-3.5 w-3.5" /> Tambah key Gemini cadangan
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <TtsProviderKeySection
+            key="gemini"
+            provider="gemini"
+            hasPrimary={ttsSummary.hasGeminiKey}
+            maskedPrimary={ttsSummary.maskedGeminiKey}
+            maskedBackups={ttsSummary.maskedGeminiBackupKeys}
+            hasSharedFallback={ttsSummary.hasSharedGeminiKey}
+            sharedProviders={ttsSummary.sharedGeminiProviders ?? []}
+            modelId={geminiModelId}
+            defaultModel={DEFAULT_GEMINI_MODEL_ID}
+            voiceId={geminiFemaleVoice}
+            busy={saving}
+            onSelectModel={(next) => {
+              setGeminiModelId(next);
+              setAutoNotices((prev) => ({ ...prev, gemini: null }));
+            }}
+            onSelectAndSaveModel={async (next) => {
+              setGeminiModelId(next);
+              await applyDirectKeyPatch(
+                { geminiModelId: next },
+                `Model Gemini TTS diperbarui ke ${next}.`
+              );
+            }}
+            onOpenModelEditor={() =>
+              void detectModelsFor("gemini", {
+                openDropdown: true,
+                silentIfMissingKey: false,
+              })
+            }
+            onDetectedModelsFromTest={(models, recs) => {
+              setDetectedModels((prev) => ({ ...prev, gemini: models }));
+              setLiveRecommended((prev) => ({ ...prev, gemini: recs }));
+              setModelsError((prev) => ({ ...prev, gemini: null }));
+            }}
+            onPatchKeys={applyDirectKeyPatch}
+            onPendingPatchChange={(patch) =>
+              setPendingKeyPatches((prev) => ({ ...prev, gemini: patch }))
+            }
+            onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
+          />
 
           {/* Model Gemini TTS (Preset Cepat + Deteksi Live + Mode Manual) */}
           <TtsModelSelector
@@ -1239,192 +2010,46 @@ function HdVoiceCard({
         </>
       ) : (
         <>
-          {/* API Key & Cadangan ElevenLabs */}
-          <div className="space-y-2 rounded-xl border border-line bg-surface-2/60 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="text-xs font-semibold text-ink">API Key ElevenLabs</label>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleTestApiKey("elevenlabs")}
-                  disabled={keyTests.elevenlabs?.status === "testing"}
-                  title="Tes koneksi API key ElevenLabs"
-                  className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50 disabled:opacity-45"
-                >
-                  <BoltIcon className="h-3.5 w-3.5" />
-                  {keyTests.elevenlabs?.status === "testing" ? "Menguji..." : "Tes Key"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void pasteInto(setApiKey, (pasted) => {
-                      setClearPrimary(false);
-                      scheduleAutoDetect("elevenlabs", pasted, newBackups);
-                    })
-                  }
-                  className="rounded-lg border border-line bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:bg-line/50"
-                >
-                  Tempel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowHdKeys((v) => !v)}
-                  className="text-[11px] font-medium text-ink-soft hover:text-ink"
-                >
-                  {showHdKeys ? "Sembunyikan" : "Tampilkan"}
-                </button>
-                <a
-                  href="https://elevenlabs.io/app/settings/api-keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] font-medium text-ink-soft underline decoration-dotted hover:text-ink"
-                >
-                  Ambil key gratis ↗
-                </a>
-              </div>
-            </div>
-
-            {keyTests.elevenlabs && (
-              <p
-                className={`text-xs ${
-                  keyTests.elevenlabs.status === "ok"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : keyTests.elevenlabs.status === "fail"
-                      ? "text-rose-600 dark:text-rose-400"
-                      : "text-ink-soft"
-                }`}
-              >
-                {keyTests.elevenlabs.status === "testing"
-                  ? "Menguji koneksi API key ElevenLabs..."
-                  : keyTests.elevenlabs.status === "ok"
-                    ? `✓ ${keyTests.elevenlabs.message}`
-                    : `✗ ${keyTests.elevenlabs.message}`}
-              </p>
-            )}
-
-            {ttsSummary.hasKey && !clearPrimary && (
-              <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs">
-                <span className="truncate font-mono text-[11px] text-ink-soft">
-                  Tersimpan: {ttsSummary.maskedKey}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setClearPrimary(true)}
-                  className="ml-2 shrink-0 text-[11px] font-medium text-rose-500 hover:underline"
-                >
-                  Hapus
-                </button>
-              </div>
-            )}
-
-            <input
-              type="text"
-              value={apiKey}
-              onChange={(e) => {
-                const val = e.target.value;
-                setApiKey(val);
-                if (val.trim()) setClearPrimary(false);
-                scheduleAutoDetect("elevenlabs", val, newBackups);
-              }}
-              placeholder={
-                ttsSummary.hasKey && !clearPrimary
-                  ? "Biarkan kosong jika tidak ingin mengganti key utama..."
-                  : "Tempel xi-api-key ElevenLabs..."
-              }
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              data-1p-ignore="true"
-              data-lpignore="true"
-              className={`w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
-            />
-
-            {keptBackupIndexes.length > 0 && (
-              <div className="space-y-1 pt-1">
-                <span className="block text-[11px] font-medium text-muted">
-                  Key cadangan otomatis (diputar saat kuota key utama habis):
-                </span>
-                {keptBackupIndexes.map((origIdx, pos) => (
-                  <div
-                    key={origIdx}
-                    className="flex items-center justify-between rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs"
-                  >
-                    <span className="truncate font-mono text-[11px] text-ink-soft">
-                      #{pos + 1} · {ttsSummary.maskedBackupKeys[origIdx]}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setKeptBackupIndexes((prev) => prev.filter((i) => i !== origIdx))
-                      }
-                      aria-label="Hapus key cadangan"
-                      className="rounded p-0.5 text-muted hover:text-rose-500"
-                    >
-                      <TrashIcon className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {newBackups.map((val, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={val}
-                  onChange={(e) => {
-                    const nextList = newBackups.map((v, i) =>
-                      i === idx ? e.target.value : v
-                    );
-                    setNewBackups(nextList);
-                    scheduleAutoDetect("elevenlabs", apiKey, nextList);
-                  }}
-                  placeholder={`API key cadangan #${keptBackupIndexes.length + idx + 1}...`}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  data-1p-ignore="true"
-                  data-lpignore="true"
-                  className={`min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none ${showHdKeys ? "" : "masked-key"}`}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    void pasteInto((pasted) => {
-                      const nextList = newBackups.map((v, i) =>
-                        i === idx ? pasted : v
-                      );
-                      setNewBackups(nextList);
-                      scheduleAutoDetect("elevenlabs", apiKey, nextList);
-                    })
-                  }
-                  className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1.5 text-[11px] font-semibold text-ink hover:bg-line/50"
-                >
-                  Tempel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewBackups((prev) => prev.filter((_, i) => i !== idx))}
-                  aria-label="Batal tambah key cadangan"
-                  className="rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink"
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-
-            {canAddBackup && (
-              <button
-                type="button"
-                onClick={() => setNewBackups((prev) => [...prev, ""])}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink-soft hover:text-ink"
-              >
-                <PlusIcon className="h-3.5 w-3.5" /> Tambah API key cadangan
-              </button>
-            )}
-          </div>
+          <TtsProviderKeySection
+            key="elevenlabs"
+            provider="elevenlabs"
+            hasPrimary={ttsSummary.hasKey}
+            maskedPrimary={ttsSummary.maskedKey}
+            maskedBackups={ttsSummary.maskedBackupKeys}
+            hasSharedFallback={false}
+            sharedProviders={[]}
+            modelId={modelId}
+            defaultModel={DEFAULT_HD_MODEL_ID}
+            voiceId={femaleVoiceId}
+            busy={saving}
+            onSelectModel={(next) => {
+              setModelId(next);
+              setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
+            }}
+            onSelectAndSaveModel={async (next) => {
+              setModelId(next);
+              await applyDirectKeyPatch(
+                { modelId: next },
+                `Model ElevenLabs diperbarui ke ${next}.`
+              );
+            }}
+            onOpenModelEditor={() =>
+              void detectModelsFor("elevenlabs", {
+                openDropdown: true,
+                silentIfMissingKey: false,
+              })
+            }
+            onDetectedModelsFromTest={(models, recs) => {
+              setDetectedModels((prev) => ({ ...prev, elevenlabs: models }));
+              setLiveRecommended((prev) => ({ ...prev, elevenlabs: recs }));
+              setModelsError((prev) => ({ ...prev, elevenlabs: null }));
+            }}
+            onPatchKeys={applyDirectKeyPatch}
+            onPendingPatchChange={(patch) =>
+              setPendingKeyPatches((prev) => ({ ...prev, elevenlabs: patch }))
+            }
+            onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
+          />
 
           {/* Model ElevenLabs (Preset Cepat + Deteksi Live + Mode Manual) */}
           <TtsModelSelector

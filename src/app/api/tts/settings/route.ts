@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import {
@@ -16,22 +16,16 @@ import {
   parseTtsConfig,
   toTtsAccountSummary,
 } from "@/lib/hdVoice";
-import { mergePatchedBackupKeys, parseBackupKeys } from "@/lib/providerPool";
+import {
+  cleanBackupKeys,
+  mergePatchedBackupKeys,
+  promoteKeyAtIndex,
+} from "@/lib/providerPool";
+import { loadSharedGeminiKeySummaries } from "@/lib/ttsModelsServer";
 
 export const dynamic = "force-dynamic";
 
 const UNAUTHORIZED = { error: "Kamu belum masuk. Muat ulang halaman lalu masuk lagi." };
-
-async function checkSharedGeminiKey(userId: string): Promise<boolean> {
-  const rows = await db
-    .select({ apiKey: apiProviders.apiKey, backupKeys: apiProviders.backupKeys })
-    .from(apiProviders)
-    .where(and(eq(apiProviders.userId, userId), eq(apiProviders.type, "gemini")));
-
-  return rows.some(
-    (r) => Boolean(r.apiKey?.trim()) || parseBackupKeys(r.backupKeys, r.apiKey).length > 0
-  );
-}
 
 export async function GET() {
   await ensureDb();
@@ -39,27 +33,33 @@ export async function GET() {
   const user = await requireUser();
   if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
-  const [[row], hasSharedGeminiKey] = await Promise.all([
+  const [[row], sharedGeminiProviders] = await Promise.all([
     db
       .select({ ttsConfig: users.ttsConfig })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
-    checkSharedGeminiKey(user.id),
+    loadSharedGeminiKeySummaries(user.id),
   ]);
+
+  const hasSharedGeminiKey = sharedGeminiProviders.length > 0;
 
   if (!row) {
     return NextResponse.json({
       tts: {
         ...DEFAULT_TTS_ACCOUNT_SUMMARY,
         hasSharedGeminiKey,
+        ...(hasSharedGeminiKey ? { sharedGeminiProviders } : {}),
         hasActiveKey: hasSharedGeminiKey,
       },
     });
   }
 
   return NextResponse.json({
-    tts: toTtsAccountSummary(parseTtsConfig(row.ttsConfig), { hasSharedGeminiKey }),
+    tts: toTtsAccountSummary(parseTtsConfig(row.ttsConfig), {
+      hasSharedGeminiKey,
+      sharedGeminiProviders,
+    }),
   });
 }
 
@@ -82,6 +82,8 @@ export async function PATCH(req: Request) {
     geminiBackupKeys?: unknown;
     keepGeminiBackupIndexes?: unknown;
     newGeminiBackupKeys?: unknown;
+    promoteGeminiBackupIndex?: unknown;
+    replaceGeminiBackup?: unknown;
     geminiModelId?: unknown;
     geminiFemaleVoice?: unknown;
     geminiMaleVoice?: unknown;
@@ -92,6 +94,8 @@ export async function PATCH(req: Request) {
     backupKeys?: unknown;
     keepBackupIndexes?: unknown;
     newBackupKeys?: unknown;
+    promoteBackupIndex?: unknown;
+    replaceBackup?: unknown;
     modelId?: unknown;
     femaleVoiceId?: unknown;
     maleVoiceId?: unknown;
@@ -146,52 +150,110 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const [[row], hasSharedGeminiKey] = await Promise.all([
+  const [[row], sharedGeminiProviders] = await Promise.all([
     db
       .select({ ttsConfig: users.ttsConfig })
       .from(users)
       .where(eq(users.id, user.id))
       .limit(1),
-    checkSharedGeminiKey(user.id),
+    loadSharedGeminiKeySummaries(user.id),
   ]);
+  const hasSharedGeminiKey = sharedGeminiProviders.length > 0;
 
   const current = parseTtsConfig(row?.ttsConfig);
 
   // Kunci Gemini khusus suara
   let nextGeminiPrimary = current.geminiApiKey;
+  let baseGeminiBackups = [...current.geminiBackupKeys];
+
+  if (
+    patch.replaceGeminiBackup &&
+    typeof patch.replaceGeminiBackup === "object"
+  ) {
+    const rep = patch.replaceGeminiBackup as { index?: unknown; apiKey?: unknown };
+    const idx = typeof rep.index === "number" ? rep.index : -1;
+    const val = typeof rep.apiKey === "string" ? rep.apiKey.trim() : "";
+    if (idx >= 0 && idx < baseGeminiBackups.length && val) {
+      baseGeminiBackups[idx] = val;
+    }
+  }
+
+  if (typeof patch.promoteGeminiBackupIndex === "number") {
+    const idx = patch.promoteGeminiBackupIndex;
+    const promo = promoteKeyAtIndex(
+      nextGeminiPrimary,
+      baseGeminiBackups,
+      nextGeminiPrimary.trim() ? idx + 1 : idx
+    );
+    if (promo) {
+      nextGeminiPrimary = promo.apiKey;
+      baseGeminiBackups = promo.backupKeys;
+    }
+  }
+
   if (patch.clearGeminiApiKey) {
     nextGeminiPrimary = "";
   } else if (typeof patch.geminiApiKey === "string" && patch.geminiApiKey.trim()) {
     nextGeminiPrimary = patch.geminiApiKey.trim();
   }
 
-  const nextGeminiBackups = mergePatchedBackupKeys(
-    current.geminiBackupKeys,
-    {
-      backupKeys: patch.geminiBackupKeys,
-      keepBackupIndexes: patch.keepGeminiBackupIndexes,
-      newBackupKeys: patch.newGeminiBackupKeys,
-    },
-    nextGeminiPrimary
-  );
+  const nextGeminiBackups =
+    patch.replaceGeminiBackup || typeof patch.promoteGeminiBackupIndex === "number"
+      ? cleanBackupKeys(baseGeminiBackups, nextGeminiPrimary)
+      : mergePatchedBackupKeys(
+          baseGeminiBackups,
+          {
+            backupKeys: patch.geminiBackupKeys,
+            keepBackupIndexes: patch.keepGeminiBackupIndexes,
+            newBackupKeys: patch.newGeminiBackupKeys,
+          },
+          nextGeminiPrimary
+        );
 
   // Kunci ElevenLabs
   let nextPrimary = current.apiKey;
+  let baseBackups = [...current.backupKeys];
+
+  if (patch.replaceBackup && typeof patch.replaceBackup === "object") {
+    const rep = patch.replaceBackup as { index?: unknown; apiKey?: unknown };
+    const idx = typeof rep.index === "number" ? rep.index : -1;
+    const val = typeof rep.apiKey === "string" ? rep.apiKey.trim() : "";
+    if (idx >= 0 && idx < baseBackups.length && val) {
+      baseBackups[idx] = val;
+    }
+  }
+
+  if (typeof patch.promoteBackupIndex === "number") {
+    const idx = patch.promoteBackupIndex;
+    const promo = promoteKeyAtIndex(
+      nextPrimary,
+      baseBackups,
+      nextPrimary.trim() ? idx + 1 : idx
+    );
+    if (promo) {
+      nextPrimary = promo.apiKey;
+      baseBackups = promo.backupKeys;
+    }
+  }
+
   if (patch.clearApiKey) {
     nextPrimary = "";
   } else if (typeof patch.apiKey === "string" && patch.apiKey.trim()) {
     nextPrimary = patch.apiKey.trim();
   }
 
-  const nextBackups = mergePatchedBackupKeys(
-    current.backupKeys,
-    {
-      backupKeys: patch.backupKeys,
-      keepBackupIndexes: patch.keepBackupIndexes,
-      newBackupKeys: patch.newBackupKeys,
-    },
-    nextPrimary
-  );
+  const nextBackups =
+    patch.replaceBackup || typeof patch.promoteBackupIndex === "number"
+      ? cleanBackupKeys(baseBackups, nextPrimary)
+      : mergePatchedBackupKeys(
+          baseBackups,
+          {
+            backupKeys: patch.backupKeys,
+            keepBackupIndexes: patch.keepBackupIndexes,
+            newBackupKeys: patch.newBackupKeys,
+          },
+          nextPrimary
+        );
 
   const merged = normalizeTtsConfig({
     provider: patch.provider !== undefined ? normalizeHdProvider(patch.provider) : current.provider,
@@ -232,5 +294,10 @@ export async function PATCH(req: Request) {
     .set({ ttsConfig: JSON.stringify(merged) })
     .where(eq(users.id, user.id));
 
-  return NextResponse.json({ tts: toTtsAccountSummary(merged, { hasSharedGeminiKey }) });
+  return NextResponse.json({
+    tts: toTtsAccountSummary(merged, {
+      hasSharedGeminiKey,
+      sharedGeminiProviders,
+    }),
+  });
 }
