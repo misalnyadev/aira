@@ -50,8 +50,9 @@ export function isValidPinFormat(pin: string): boolean {
 }
 
 /**
- * Hitung status efektif sambungan kontak berdasarkan persetujuan Admin & Pemilik Karakter.
- * Kontak hanya aktif (`active`) bila KEDUANYA telah menyetujui (`approved`).
+ * Hitung status efektif sambungan kontak berdasarkan persetujuan Pemilik Karakter.
+ * Member dapat saling mengundang lewat PIN tanpa perlu menunggu persetujuan Admin;
+ * sambungan langsung aktif (`active`) begitu Pemilik Karakter menyetujui (`approved`).
  */
 export function effectiveContactState(
   adminStatus: string,
@@ -59,11 +60,7 @@ export function effectiveContactState(
 ): EffectiveContactState {
   if (ownerStatus === "blocked") return "blocked";
   if (adminStatus === "rejected" || ownerStatus === "rejected") return "rejected";
-  if (adminStatus === "approved" && ownerStatus === "approved") return "active";
-  if (adminStatus !== "approved" && ownerStatus !== "approved") {
-    return "pending_both";
-  }
-  if (adminStatus !== "approved") return "pending_admin";
+  if (ownerStatus === "approved") return "active";
   return "pending_owner";
 }
 

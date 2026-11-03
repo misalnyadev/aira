@@ -211,11 +211,11 @@ export function ProfileView({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-app">
-      <div className="top-bar space-y-3 px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-app">
+      <div className="top-bar space-y-3 px-4 pb-3.5 pt-[max(1rem,var(--safe-top))] sm:px-5">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <h1 className="font-display text-xl font-bold tracking-tight text-ink">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-xl font-bold tracking-tight text-ink">
               {tab === "admin"
                 ? "Panel Admin"
                 : tab === "account"
@@ -243,14 +243,14 @@ export function ProfileView({
 
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
         <div
-          className={`mx-auto grid max-w-2xl gap-1 rounded-xl bg-surface-2 p-1 ${
+          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-surface-2 p-1 ${
             effectiveIsAdmin ? "grid-cols-3" : "grid-cols-2"
           }`}
         >
           <button
             type="button"
             onClick={() => selectTab("identity")}
-            className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+            className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "identity"
                 ? "bg-surface text-ink shadow-xs ring-1 ring-line"
                 : "text-ink-soft hover:text-ink"
@@ -262,7 +262,7 @@ export function ProfileView({
           <button
             type="button"
             onClick={() => selectTab("account")}
-            className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+            className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "account"
                 ? "bg-surface text-ink shadow-xs ring-1 ring-line"
                 : "text-ink-soft hover:text-ink"
@@ -275,15 +275,15 @@ export function ProfileView({
             <button
               type="button"
               onClick={() => selectTab("admin")}
-              className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                 tab === "admin"
                   ? "bg-surface text-ink shadow-xs ring-1 ring-line"
                   : "text-ink-soft hover:text-ink"
               }`}
             >
-              <span>Panel Admin</span>
+              <span className="truncate">Panel Admin</span>
               {pendingQuotaRequestsCount > 0 && (
-                <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
+                <span className="shrink-0 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
                   {pendingQuotaRequestsCount}
                 </span>
               )}
@@ -294,7 +294,7 @@ export function ProfileView({
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 pb-[calc(var(--tabbar-space)+1.25rem)] sm:p-6 sm:pb-[calc(var(--tabbar-space)+1.5rem)]"
+        className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3.5 pb-[calc(var(--tabbar-space)+1.25rem)] sm:p-6 sm:pb-[calc(var(--tabbar-space)+1.5rem)]"
       >
         {tab === "identity" && (
           <form

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, ne, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   characterContacts,
@@ -144,17 +144,7 @@ export async function GET() {
           ne(characterContacts.adminStatus, "rejected")
         )
       ),
-    user.isAdmin
-      ? db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(characterContacts)
-          .where(
-            and(
-              eq(characterContacts.adminStatus, "pending"),
-              notInArray(characterContacts.ownerStatus, ["rejected", "blocked"])
-            )
-          )
-      : Promise.resolve([{ count: 0 }]),
+    Promise.resolve([{ count: 0 }]),
     loadActiveContactThreadsForUser(user.id),
   ]);
 

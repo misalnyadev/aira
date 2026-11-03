@@ -1,4 +1,4 @@
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -89,7 +89,7 @@ export async function canReadCharacterMediaKey(
         eq(characterContacts.characterId, meta.characterId),
         eq(characterContacts.ownerUserId, meta.ownerUserId),
         eq(characterContacts.guestUserId, viewerUserId),
-        eq(characterContacts.adminStatus, "approved"),
+        ne(characterContacts.adminStatus, "rejected"),
         eq(characterContacts.ownerStatus, "approved")
       )
     )
@@ -117,7 +117,7 @@ export async function hasActiveContactBetweenUsers(
     .from(characterContacts)
     .where(
       and(
-        eq(characterContacts.adminStatus, "approved"),
+        ne(characterContacts.adminStatus, "rejected"),
         eq(characterContacts.ownerStatus, "approved"),
         or(
           and(
@@ -221,7 +221,7 @@ export async function loadActiveContactThreadsForUser(
     .innerJoin(guestUsers, eq(guestUsers.id, characterContacts.guestUserId))
     .where(
       and(
-        eq(characterContacts.adminStatus, "approved"),
+        ne(characterContacts.adminStatus, "rejected"),
         eq(characterContacts.ownerStatus, "approved"),
         or(
           eq(characterContacts.guestUserId, userId),

@@ -180,7 +180,7 @@ export async function POST(req: Request) {
     )
     .limit(1);
 
-  const initialAdminStatus = user.isAdmin ? "approved" : "pending";
+  const initialAdminStatus = "approved";
 
   if (existing) {
     const state = effectiveContactState(
