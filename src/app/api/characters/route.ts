@@ -20,7 +20,7 @@ import {
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
-import { effectiveCharacterLimit } from "@/lib/quotaRules";
+import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +121,7 @@ export async function GET() {
         reason: characterQuotaRequests.reason,
         status: characterQuotaRequests.status,
         adminNote: characterQuotaRequests.adminNote,
+        discussion: characterQuotaRequests.discussion,
         createdAt: characterQuotaRequests.createdAt,
         resolvedAt: characterQuotaRequests.resolvedAt,
       })
@@ -156,7 +157,12 @@ export async function GET() {
     limit,
     count: Number(count),
     isAdmin: user.isAdmin,
-    latestQuotaRequest: latestReq ?? null,
+    latestQuotaRequest: latestReq
+      ? {
+          ...latestReq,
+          discussion: parseQuotaDiscussion(latestReq.discussion),
+        }
+      : null,
     pendingQuotaRequestsCount: Number(adminPending[0]?.count ?? 0),
     pendingOwnerContactsCount: Number(ownerPendingContacts[0]?.count ?? 0),
     pendingAdminContactsCount: Number(adminPendingContacts[0]?.count ?? 0),

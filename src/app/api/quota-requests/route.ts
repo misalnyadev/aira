@@ -1,10 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { characterQuotaRequests } from "@/db/schema";
+import { characterQuotaRequests, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
-import { validateNewQuotaRequest } from "@/lib/quotaRules";
+import {
+  appendQuotaDiscussionMessage,
+  parseQuotaDiscussion,
+  validateNewQuotaRequest,
+} from "@/lib/quotaRules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,7 +30,12 @@ export async function GET() {
     .limit(1);
 
   return NextResponse.json({
-    request: latest ?? null,
+    request: latest
+      ? {
+          ...latest,
+          discussion: parseQuotaDiscussion(latest.discussion),
+        }
+      : null,
     currentQuota: user.characterQuota,
     isAdmin: user.isAdmin,
   });
@@ -92,7 +102,90 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  return NextResponse.json({ request: created }, { status: 201 });
+  return NextResponse.json(
+    {
+      request: {
+        ...created,
+        discussion: parseQuotaDiscussion(created.discussion),
+      },
+    },
+    { status: 201 }
+  );
+}
+
+/**
+ * PATCH /api/quota-requests
+ * Member membalas pesan atau mengirim informasi tambahan pada pengajuan slot yang masih pending.
+ */
+export async function PATCH(req: Request) {
+  await ensureDb();
+
+  const user = await requireUser();
+  if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Pesan tidak valid." }, { status: 400 });
+  }
+
+  const [existing] = await db
+    .select()
+    .from(characterQuotaRequests)
+    .where(
+      and(
+        eq(characterQuotaRequests.userId, user.id),
+        eq(characterQuotaRequests.status, "pending")
+      )
+    )
+    .orderBy(desc(characterQuotaRequests.createdAt))
+    .limit(1);
+
+  if (!existing) {
+    return NextResponse.json(
+      { error: "Tidak ada pengajuan slot yang sedang menunggu persetujuan." },
+      { status: 404 }
+    );
+  }
+
+  const [profile] = await db
+    .select({
+      displayName: users.displayName,
+      nickname: users.nickname,
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  const senderName =
+    profile?.displayName?.trim() ||
+    profile?.nickname?.trim() ||
+    profile?.email?.split("@")[0] ||
+    user.email.split("@")[0] ||
+    "Member";
+
+  const appended = appendQuotaDiscussionMessage(existing.discussion, {
+    id: randomUUID(),
+    senderRole: "member",
+    senderName,
+    text: (body as { message?: unknown }).message,
+  });
+
+  if (!appended.ok) {
+    return NextResponse.json({ error: appended.error }, { status: 400 });
+  }
+
+  await db
+    .update(characterQuotaRequests)
+    .set({ discussion: appended.serialized })
+    .where(eq(characterQuotaRequests.id, existing.id));
+
+  return NextResponse.json({
+    ok: true,
+    requestId: existing.id,
+    message: appended.message,
+    discussion: appended.next,
+  });
 }
 
 export async function DELETE() {

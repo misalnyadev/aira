@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { QuotaDiscussionMessage } from "@/types/chat";
 import { Avatar } from "./Avatar";
+import { QuotaDiscussionBox } from "./QuotaDiscussionBox";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -51,6 +53,7 @@ type PendingQuotaRow = {
   reason: string;
   status: string;
   adminNote: string;
+  discussion?: QuotaDiscussionMessage[];
   createdAt: string;
   email: string;
   displayName: string;
@@ -66,6 +69,7 @@ type ResolvedQuotaRow = {
   reason: string;
   status: string;
   adminNote: string;
+  discussion?: QuotaDiscussionMessage[];
   createdAt: string;
   resolvedAt: string | null;
   email: string;
@@ -685,6 +689,23 @@ export function AdminPanelSection({
                           </p>
                         )}
 
+                        <QuotaDiscussionBox
+                          viewerRole="admin"
+                          requestId={r.id}
+                          memberLabel={nameLabel}
+                          messages={r.discussion ?? []}
+                          onMessagesChange={(nextMsgs) =>
+                            setPending((prev) =>
+                              prev.map((item) =>
+                                item.id === r.id
+                                  ? { ...item, discussion: nextMsgs }
+                                  : item
+                              )
+                            )
+                          }
+                          onPollRefresh={loadData}
+                        />
+
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-medium text-ink-soft">
                             Slot disetujui jadi:
@@ -991,25 +1012,35 @@ export function AdminPanelSection({
               </button>
 
               {historyOpen && (
-                <div className="min-w-0 space-y-1.5 border-t border-line p-4">
+                <div className="min-w-0 space-y-2 border-t border-line p-4">
                   {resolved.map((h) => (
                     <div
                       key={h.id}
-                      className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-xs"
+                      className="min-w-0 space-y-1.5 rounded-lg bg-surface-2/60 px-3 py-2 text-xs"
                     >
-                      <span className="min-w-0 flex-1 truncate text-ink-soft">
-                        {h.displayName || h.email} · {h.requestedQuota} slot
-                        {h.adminNote ? ` — “${h.adminNote}”` : ""}
-                      </span>
-                      <span
-                        className={`shrink-0 font-semibold ${
-                          h.status === "approved"
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-500"
-                        }`}
-                      >
-                        {h.status === "approved" ? "Disetujui" : "Ditolak"}
-                      </span>
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <span className="min-w-0 flex-1 truncate text-ink-soft">
+                          {h.displayName || h.email} · {h.requestedQuota} slot
+                          {h.adminNote ? ` — “${h.adminNote}”` : ""}
+                        </span>
+                        <span
+                          className={`shrink-0 font-semibold ${
+                            h.status === "approved"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-500"
+                          }`}
+                        >
+                          {h.status === "approved" ? "Disetujui" : "Ditolak"}
+                        </span>
+                      </div>
+                      {h.discussion && h.discussion.length > 0 && (
+                        <QuotaDiscussionBox
+                          viewerRole="admin"
+                          memberLabel={h.displayName || h.email.split("@")[0]}
+                          messages={h.discussion}
+                          readOnly
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
