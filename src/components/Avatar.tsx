@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const PALETTE = [
   "from-neutral-500 to-neutral-400",
   "from-stone-500 to-stone-400",
@@ -23,6 +27,8 @@ export function Avatar({
   size?: number;
   ring?: boolean;
 }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
   const initials = name
     .trim()
     .split(/\s+/)
@@ -32,12 +38,14 @@ export function Avatar({
 
   const style = { width: size, height: size };
 
-  if (src) {
+  if (src && failedSrc !== src) {
     return (
+      /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={src}
         alt={name}
         style={style}
+        onError={() => setFailedSrc(src)}
         className={`shrink-0 rounded-full object-cover ${
           ring ? "ring-2 ring-ink/15 ring-offset-2 ring-offset-surface" : ""
         }`}

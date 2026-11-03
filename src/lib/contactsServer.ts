@@ -118,7 +118,8 @@ export async function hasActiveContactBetweenUsers(
     .where(
       and(
         ne(characterContacts.adminStatus, "rejected"),
-        eq(characterContacts.ownerStatus, "approved"),
+        ne(characterContacts.ownerStatus, "blocked"),
+        ne(characterContacts.ownerStatus, "rejected"),
         or(
           and(
             eq(characterContacts.ownerUserId, userA),

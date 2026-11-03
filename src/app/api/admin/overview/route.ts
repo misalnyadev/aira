@@ -7,6 +7,7 @@ import {
   users,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { withUploaderParam } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { getSignupCodeInfo } from "@/lib/inviteServer";
 import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
@@ -95,6 +96,7 @@ export async function GET() {
   return NextResponse.json({
     users: allUsers.map((u) => ({
       ...u,
+      avatarUrl: withUploaderParam(u.avatarUrl, u.id),
       effectiveLimit: effectiveCharacterLimit({
         isAdmin: u.isAdmin,
         characterQuota: u.characterQuota,
