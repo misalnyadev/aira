@@ -150,7 +150,7 @@ const DDL = [
     "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
     "owner_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
     "guest_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
-    "admin_status" text DEFAULT 'pending' NOT NULL,
+    "admin_status" text DEFAULT 'approved' NOT NULL,
     "owner_status" text DEFAULT 'pending' NOT NULL,
     "ai_auto_reply" boolean DEFAULT true NOT NULL,
     "note" text DEFAULT '' NOT NULL,
@@ -160,6 +160,8 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "character_contacts" ALTER COLUMN "admin_status" SET DEFAULT 'approved'`,
+  sql`UPDATE "character_contacts" SET "admin_status" = 'approved' WHERE "admin_status" = 'pending'`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "character_contacts_char_guest_idx" ON "character_contacts" ("character_id", "guest_user_id")`,
   sql`CREATE INDEX IF NOT EXISTS "character_contacts_owner_idx" ON "character_contacts" ("owner_user_id", "updated_at" DESC)`,
   sql`CREATE INDEX IF NOT EXISTS "character_contacts_guest_idx" ON "character_contacts" ("guest_user_id", "updated_at" DESC)`,

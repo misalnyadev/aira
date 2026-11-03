@@ -4,7 +4,10 @@ import { db } from "@/db";
 import { characterContacts, contactMessages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { effectiveContactState } from "@/lib/contactPin";
-import { serializeContactMessageForViewer } from "@/lib/contactsServer";
+import {
+  ensureInitialContactGreeting,
+  serializeContactMessageForViewer,
+} from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 
 export const dynamic = "force-dynamic";
@@ -41,11 +44,20 @@ export async function GET(
   }
 
   const viewerRole = contact.guestUserId === user.id ? "guest" : "owner";
-  const rows = await db
+  let rows = await db
     .select()
     .from(contactMessages)
     .where(eq(contactMessages.contactId, contact.id))
     .orderBy(asc(contactMessages.createdAt));
+
+  if (rows.length === 0) {
+    await ensureInitialContactGreeting(contact.id, contact.characterId);
+    rows = await db
+      .select()
+      .from(contactMessages)
+      .where(eq(contactMessages.contactId, contact.id))
+      .orderBy(asc(contactMessages.createdAt));
+  }
 
   return NextResponse.json({
     messages: rows.map((r) =>

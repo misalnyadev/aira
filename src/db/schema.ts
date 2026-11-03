@@ -236,8 +236,8 @@ export const characterContacts = pgTable(
     guestUserId: uuid("guest_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** 'pending' | 'approved' | 'rejected' — persetujuan Admin */
-    adminStatus: text("admin_status").notNull().default("pending"),
+    /** 'approved' | 'rejected' — otomatis disetujui saat member saling mengundang */
+    adminStatus: text("admin_status").notNull().default("approved"),
     /** 'pending' | 'approved' | 'rejected' | 'blocked' — kendali pemilik karakter */
     ownerStatus: text("owner_status").notNull().default("pending"),
     /** Jika true, AI karakter membalas otomatis memakai API key pengundang. */

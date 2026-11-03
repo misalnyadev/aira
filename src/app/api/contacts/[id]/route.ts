@@ -67,12 +67,11 @@ export async function PATCH(
   }
 
   if (action === "accept") {
-    const nextAdminStatus = user.isAdmin ? "approved" : row.adminStatus;
     const [updated] = await db
       .update(characterContacts)
       .set({
         ownerStatus: "approved",
-        adminStatus: nextAdminStatus,
+        adminStatus: "approved",
         updatedAt: new Date(),
       })
       .where(eq(characterContacts.id, row.id))

@@ -73,25 +73,6 @@ type ResolvedQuotaRow = {
   nickname: string;
 };
 
-type PendingAdminContactRow = {
-  id: string;
-  characterId: string;
-  characterName: string;
-  characterPin: string | null;
-  ownerUserId: string;
-  ownerEmail: string;
-  ownerDisplayName: string;
-  ownerNickname: string;
-  guestUserId: string;
-  guestEmail: string;
-  guestDisplayName: string;
-  guestNickname: string;
-  adminStatus: string;
-  ownerStatus: string;
-  note: string;
-  createdAt: string;
-};
-
 export function AdminPanelSection({
   currentAdminId,
   onAfterAction,
@@ -106,9 +87,6 @@ export function AdminPanelSection({
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [pending, setPending] = useState<PendingQuotaRow[]>([]);
   const [resolved, setResolved] = useState<ResolvedQuotaRow[]>([]);
-  const [pendingContacts, setPendingContacts] = useState<
-    PendingAdminContactRow[]
-  >([]);
   const [signupInvite, setSignupInvite] = useState<SignupInviteState | null>(
     null
   );
@@ -122,7 +100,6 @@ export function AdminPanelSection({
     "all"
   );
   const [requestsOpen, setRequestsOpen] = useState(false);
-  const [contactsOpen, setContactsOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -144,17 +121,13 @@ export function AdminPanelSection({
     const nextUsers = (data.users ?? []) as AdminUserRow[];
     const nextPending = (data.pendingRequests ?? []) as PendingQuotaRow[];
     const nextResolved = (data.recentResolved ?? []) as ResolvedQuotaRow[];
-    const nextContacts = (data.pendingContacts ??
-      []) as PendingAdminContactRow[];
     const nextInvite = (data.signupInvite ?? null) as SignupInviteState | null;
 
     setUsers(nextUsers);
     setPending(nextPending);
     setResolved(nextResolved);
-    setPendingContacts(nextContacts);
     setSignupInvite(nextInvite);
     if (nextPending.length > 0) setRequestsOpen(true);
-    if (nextContacts.length > 0) setContactsOpen(true);
 
     const quotaMap: Record<string, number> = {};
     for (const r of nextPending) {
@@ -292,40 +265,6 @@ export function AdminPanelSection({
     }
   }
 
-  async function handleResolveContact(
-    cRow: PendingAdminContactRow,
-    action: "approve" | "reject"
-  ) {
-    setBusyId(`contact:${cRow.id}`);
-    setError(null);
-    setFeedback(null);
-    try {
-      const res = await fetch(`/api/admin/contacts/${cRow.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || "Gagal memproses persetujuan kontak.");
-        return;
-      }
-      const guestLabel =
-        cRow.guestDisplayName || cRow.guestNickname || cRow.guestEmail;
-      setFeedback(
-        action === "approve"
-          ? `Sambungan kontak ${guestLabel} → ${cRow.characterName} disetujui.`
-          : `Permintaan kontak ${guestLabel} → ${cRow.characterName} ditolak.`
-      );
-      await loadData();
-      onAfterAction?.();
-    } catch {
-      setError("Koneksi gagal saat memproses persetujuan kontak.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function handleSaveUserQuota(u: AdminUserRow) {
     const nextQuota = draftUserQuota[u.id] ?? u.characterQuota;
     setBusyId(`user:${u.id}`);
@@ -397,31 +336,33 @@ export function AdminPanelSection({
     [users]
   );
 
-  const filteredUsers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return users.filter((u) => {
-      if (roleFilter === "admin" && !u.isAdmin) return false;
-      if (roleFilter === "member" && u.isAdmin) return false;
-      if (!q) return true;
-      return (
-        u.email.toLowerCase().includes(q) ||
-        u.displayName.toLowerCase().includes(q) ||
-        u.nickname.toLowerCase().includes(q)
-      );
-    });
-  }, [users, query, roleFilter]);
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((u) => {
+        if (roleFilter === "admin" && !u.isAdmin) return false;
+        if (roleFilter === "member" && u.isAdmin) return false;
+        const q = query.trim().toLowerCase();
+        if (!q) return true;
+        return (
+          u.email.toLowerCase().includes(q) ||
+          u.displayName.toLowerCase().includes(q) ||
+          u.nickname.toLowerCase().includes(q)
+        );
+      }),
+    [users, query, roleFilter]
+  );
 
   return (
-    <div className="mx-auto max-w-2xl space-y-3.5">
+    <div className="mx-auto w-full min-w-0 max-w-2xl space-y-3.5">
       {/* Header Ringkasan Panel Admin */}
-      <div className="rounded-2xl border border-line bg-surface p-4 shadow-2xs">
+      <div className="min-w-0 rounded-2xl border border-line bg-surface p-4 shadow-2xs">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="text-sm font-bold text-ink">
               Pusat Pengelolaan Admin &amp; Member
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
-              Kelola peran akun, kuota slot karakter tiap member, dan permintaan slot masuk.
+              Kelola kode undangan member, persetujuan kuota slot karakter, dan peran akun.
             </p>
           </div>
           <button
@@ -430,7 +371,7 @@ export function AdminPanelSection({
             disabled={loading || refreshing}
             title="Muat ulang data Admin"
             aria-label="Muat ulang data panel Admin"
-            className="rounded-full bg-surface-2 p-2 text-ink-soft transition hover:bg-line hover:text-ink disabled:opacity-50"
+            className="shrink-0 rounded-full bg-surface-2 p-2 text-ink-soft transition hover:bg-line hover:text-ink disabled:opacity-50"
           >
             <RefreshIcon
               className={`h-4 w-4 ${loading || refreshing ? "animate-spin" : ""}`}
@@ -438,54 +379,46 @@ export function AdminPanelSection({
           </button>
         </div>
 
-        <div className="mt-3.5 grid grid-cols-4 gap-2">
-          <div className="rounded-xl bg-surface-2/70 px-2.5 py-2.5 text-center">
-            <span className="block text-base font-extrabold text-ink">
+        <div className="mt-3.5 grid grid-cols-3 gap-2">
+          <div className="min-w-0 rounded-xl bg-surface-2/70 px-2 py-2.5 text-center">
+            <span className="block truncate text-base font-extrabold text-ink">
               {loading ? "…" : users.length}
             </span>
-            <span className="text-[11px] text-muted">Akun</span>
+            <span className="block truncate text-[11px] text-muted">Akun</span>
           </div>
           <div
-            className={`rounded-xl px-2.5 py-2.5 text-center ${
+            className={`min-w-0 rounded-xl px-2 py-2.5 text-center ${
               pending.length > 0
                 ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
                 : "bg-surface-2/70 text-ink"
             }`}
           >
-            <span className="block text-base font-extrabold">
+            <span className="block truncate text-base font-extrabold">
               {loading ? "…" : pending.length}
             </span>
-            <span className="text-[11px] opacity-80">Req Slot</span>
-          </div>
-          <div
-            className={`rounded-xl px-2.5 py-2.5 text-center ${
-              pendingContacts.length > 0
-                ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
-                : "bg-surface-2/70 text-ink"
-            }`}
-          >
-            <span className="block text-base font-extrabold">
-              {loading ? "…" : pendingContacts.length}
+            <span className="block truncate text-[11px] opacity-80">
+              Req Slot
             </span>
-            <span className="text-[11px] opacity-80">Req PIN</span>
           </div>
-          <div className="rounded-xl bg-surface-2/70 px-2.5 py-2.5 text-center">
-            <span className="block text-base font-extrabold text-ink">
+          <div className="min-w-0 rounded-xl bg-surface-2/70 px-2 py-2.5 text-center">
+            <span className="block truncate text-base font-extrabold text-ink">
               {loading ? "…" : totalCharacters}
             </span>
-            <span className="text-[11px] text-muted">Karakter</span>
+            <span className="block truncate text-[11px] text-muted">
+              Karakter
+            </span>
           </div>
         </div>
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-600 dark:text-rose-300">
+        <p className="break-words rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-600 dark:text-rose-300">
           {error}
         </p>
       )}
 
       {feedback && (
-        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 dark:text-emerald-300">
+        <p className="break-words rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 dark:text-emerald-300">
           ✓ {feedback}
         </p>
       )}
@@ -497,20 +430,20 @@ export function AdminPanelSection({
       ) : (
         <>
           {/* 0. Kode Undangan Pendaftaran Member (Dropdown v) */}
-          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
             <button
               type="button"
               onClick={() => setInviteOpen((v) => !v)}
               aria-expanded={inviteOpen}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <h3 className="text-sm font-bold text-ink">
-                    Kode Undangan Pendaftaran Member
+                    Kode Undangan Pendaftaran
                   </h3>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                       signupInvite?.enabled
                         ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
                         : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
@@ -537,17 +470,19 @@ export function AdminPanelSection({
             </button>
 
             {inviteOpen && (
-              <div className="space-y-3 border-t border-line p-4">
-                <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/50 px-3.5 py-2.5">
+              <div className="min-w-0 space-y-3 border-t border-line p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/50 px-3.5 py-2.5">
                   <div className="min-w-0 flex-1">
                     <span className="block text-[11px] text-muted">
                       Kode undangan aktif saat ini
                     </span>
                     {signupInvite?.enabled && signupInvite.code ? (
-                      <span className="mt-0.5 block truncate font-mono text-sm font-bold tracking-wider text-ink">
+                      <span className="mt-0.5 block break-all font-mono text-sm font-bold tracking-wider text-ink">
                         {showInviteCode
                           ? signupInvite.code
-                          : "•".repeat(Math.min(12, Math.max(6, signupInvite.code.length)))}
+                          : "•".repeat(
+                              Math.min(12, Math.max(6, signupInvite.code.length))
+                            )}
                       </span>
                     ) : (
                       <span className="mt-0.5 block text-xs font-medium text-rose-500">
@@ -592,12 +527,12 @@ export function AdminPanelSection({
                     e.preventDefault();
                     void handlePatchInviteCode("custom");
                   }}
-                  className="space-y-2"
+                  className="min-w-0 space-y-2"
                 >
                   <label className="block text-xs font-medium text-ink-soft">
                     Ganti kode undangan baru (tidak membedakan huruf besar/kecil)
                   </label>
-                  <div className="flex flex-wrap gap-1.5 sm:flex-nowrap">
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
                       value={draftInviteCode}
@@ -608,22 +543,29 @@ export function AdminPanelSection({
                       autoCorrect="off"
                       autoCapitalize="off"
                       spellCheck={false}
-                      className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-ink focus:outline-none"
+                      className="w-full min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-ink focus:outline-none"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setDraftInviteCode(randomInviteSuggestion())}
-                      className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-line/60 hover:text-ink"
-                    >
-                      Acak
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={busyId === "invite" || draftInviteCode.trim().length < 4}
-                      className="shrink-0 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
-                    >
-                      {busyId === "invite" ? "..." : "Simpan"}
-                    </button>
+                    <div className="flex shrink-0 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraftInviteCode(randomInviteSuggestion())
+                        }
+                        className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-line/60 hover:text-ink sm:flex-none"
+                      >
+                        Acak
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={
+                          busyId === "invite" ||
+                          draftInviteCode.trim().length < 4
+                        }
+                        className="flex-1 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50 sm:flex-none"
+                      >
+                        {busyId === "invite" ? "..." : "Simpan"}
+                      </button>
+                    </div>
                   </div>
                 </form>
 
@@ -632,22 +574,24 @@ export function AdminPanelSection({
                     Langsung berlaku tanpa perlu redeploy Vercel.
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {signupInvite?.source !== "env" && signupInvite?.hasEnvDefault && (
-                      <button
-                        type="button"
-                        disabled={busyId === "invite"}
-                        onClick={() => void handlePatchInviteCode("reset_env")}
-                        className="text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:opacity-50"
-                      >
-                        Pakai bawaan Vercel
-                      </button>
-                    )}
+                    {signupInvite?.source !== "env" &&
+                      signupInvite?.hasEnvDefault && (
+                        <button
+                          type="button"
+                          disabled={busyId === "invite"}
+                          onClick={() => void handlePatchInviteCode("reset_env")}
+                          className="text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:opacity-50"
+                        >
+                          Pakai bawaan Vercel
+                        </button>
+                      )}
                     {signupInvite?.enabled && (
                       <button
                         type="button"
                         disabled={busyId === "invite"}
                         onClick={() => {
-                          if (!confirm("Tutup sementara pendaftaran akun baru?")) return;
+                          if (!confirm("Tutup sementara pendaftaran akun baru?"))
+                            return;
                           void handlePatchInviteCode("close");
                         }}
                         className="text-[11px] font-semibold text-rose-500 underline decoration-dotted hover:text-rose-600 disabled:opacity-50"
@@ -662,20 +606,20 @@ export function AdminPanelSection({
           </section>
 
           {/* 1. Permintaan Tambah Slot (Dropdown v) */}
-          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
             <button
               type="button"
               onClick={() => setRequestsOpen((v) => !v)}
               aria-expanded={requestsOpen}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <h3 className="text-sm font-bold text-ink">
                     Permintaan Tambah Slot Karakter
                   </h3>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                       pending.length > 0
                         ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                         : "bg-surface-2 text-muted"
@@ -698,7 +642,7 @@ export function AdminPanelSection({
             </button>
 
             {requestsOpen && (
-              <div className="space-y-2.5 border-t border-line p-4">
+              <div className="min-w-0 space-y-2.5 border-t border-line p-4">
                 {pending.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-center text-xs text-muted">
                     Tidak ada pengajuan tambah slot yang menunggu saat ini.
@@ -714,10 +658,10 @@ export function AdminPanelSection({
                     return (
                       <div
                         key={r.id}
-                        className="space-y-2.5 rounded-xl border border-amber-500/35 bg-amber-500/[0.06] p-3.5"
+                        className="min-w-0 space-y-2.5 rounded-xl border border-amber-500/35 bg-amber-500/[0.06] p-3.5"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-ink">
                               {nameLabel}
                             </p>
@@ -732,7 +676,7 @@ export function AdminPanelSection({
                         </div>
 
                         {r.reason ? (
-                          <p className="rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-soft">
+                          <p className="whitespace-pre-wrap break-words rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-soft">
                             “{r.reason}”
                           </p>
                         ) : (
@@ -786,20 +730,22 @@ export function AdminPanelSection({
                             }))
                           }
                           placeholder="Catatan singkat untuk member (opsional)..."
-                          className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                          className="w-full min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
                         />
 
-                        <div className="flex gap-2">
+                        <div className="flex min-w-0 gap-2">
                           <button
                             type="button"
                             disabled={isBusy}
                             onClick={() =>
                               void handleResolveRequest(r, "approve")
                             }
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+                            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
                           >
-                            <CheckIcon className="h-3.5 w-3.5" />
-                            Setujui ({quotaVal} slot)
+                            <CheckIcon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">
+                              Setujui ({quotaVal} slot)
+                            </span>
                           </button>
                           <button
                             type="button"
@@ -807,125 +753,7 @@ export function AdminPanelSection({
                             onClick={() =>
                               void handleResolveRequest(r, "reject")
                             }
-                            className="inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
-                          >
-                            <XIcon className="h-3.5 w-3.5" />
-                            Tolak
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* 1B. Persetujuan Kontak PIN Karakter (Dropdown v) */}
-          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setContactsOpen((v) => !v)}
-              aria-expanded={contactsOpen}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-ink">
-                    Persetujuan Kontak PIN Karakter
-                  </h3>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
-                      pendingContacts.length > 0
-                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                        : "bg-surface-2 text-muted"
-                    }`}
-                  >
-                    {pendingContacts.length} menunggu
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-ink-soft">
-                  Setujui sambungan kontak antar-akun lewat PIN agar terkontrol
-                </p>
-              </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
-                <ChevronDownIcon
-                  className={`h-4 w-4 transition-transform duration-200 ${
-                    contactsOpen ? "rotate-180 text-ink" : ""
-                  }`}
-                />
-              </span>
-            </button>
-
-            {contactsOpen && (
-              <div className="space-y-2.5 border-t border-line p-4">
-                {pendingContacts.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-center text-xs text-muted">
-                    Tidak ada permintaan sambungan kontak PIN yang menunggu saat ini.
-                  </p>
-                ) : (
-                  pendingContacts.map((c) => {
-                    const guestLabel =
-                      c.guestDisplayName ||
-                      c.guestNickname ||
-                      c.guestEmail.split("@")[0];
-                    const ownerLabel =
-                      c.ownerDisplayName ||
-                      c.ownerNickname ||
-                      c.ownerEmail.split("@")[0];
-                    const isBusy = busyId === `contact:${c.id}`;
-
-                    return (
-                      <div
-                        key={c.id}
-                        className="space-y-2.5 rounded-xl border border-amber-500/35 bg-amber-500/[0.06] p-3.5"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-ink">
-                              {guestLabel}{" "}
-                              <span className="font-normal text-ink-soft">
-                                mengundang
-                              </span>{" "}
-                              {c.characterName}
-                            </p>
-                            <p className="truncate text-xs text-muted">
-                              {c.guestEmail} → pemilik: {ownerLabel}
-                              {c.characterPin ? ` · PIN ${c.characterPin}` : ""}
-                            </p>
-                          </div>
-                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold text-ink ring-1 ring-line">
-                            {c.ownerStatus === "approved"
-                              ? "Pemilik setuju"
-                              : "Menunggu pemilik"}
-                          </span>
-                        </div>
-
-                        {c.note && (
-                          <p className="rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-soft">
-                            “{c.note}”
-                          </p>
-                        )}
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              void handleResolveContact(c, "approve")
-                            }
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
-                          >
-                            <CheckIcon className="h-3.5 w-3.5" />
-                            Setujui Sambungan
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              void handleResolveContact(c, "reject")
-                            }
-                            className="inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
                           >
                             <XIcon className="h-3.5 w-3.5" />
                             Tolak
@@ -940,19 +768,19 @@ export function AdminPanelSection({
           </section>
 
           {/* 2. Daftar Admin & Member (Dropdown v) */}
-          <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
             <button
               type="button"
               onClick={() => setMembersOpen((v) => !v)}
               aria-expanded={membersOpen}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <h3 className="text-sm font-bold text-ink">
                     Daftar Akun Admin &amp; Member
                   </h3>
-                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
+                  <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
                     {users.length} akun
                   </span>
                 </div>
@@ -970,21 +798,21 @@ export function AdminPanelSection({
             </button>
 
             {membersOpen && (
-              <div className="space-y-3 border-t border-line p-4">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="flex flex-1 items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
+              <div className="min-w-0 space-y-3 border-t border-line p-4">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
                     <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Cari nama atau email member..."
-                      className="w-full bg-transparent text-xs text-ink outline-none placeholder:text-muted"
+                      className="w-full min-w-0 bg-transparent text-xs text-ink outline-none placeholder:text-muted"
                     />
                     {query && (
                       <button
                         type="button"
                         onClick={() => setQuery("")}
-                        className="text-muted hover:text-ink"
+                        className="shrink-0 text-muted hover:text-ink"
                       >
                         <XIcon className="h-3.5 w-3.5" />
                       </button>
@@ -1003,7 +831,7 @@ export function AdminPanelSection({
                         key={f.id}
                         type="button"
                         onClick={() => setRoleFilter(f.id)}
-                        className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                        className={`min-w-0 truncate rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                           roleFilter === f.id
                             ? "bg-surface text-ink shadow-2xs"
                             : "text-ink-soft hover:text-ink"
@@ -1020,7 +848,7 @@ export function AdminPanelSection({
                     Tidak ada akun yang cocok dengan pencarian.
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="min-w-0 space-y-2">
                     {filteredUsers.map((u) => {
                       const label =
                         u.displayName || u.nickname || u.email.split("@")[0];
@@ -1034,9 +862,9 @@ export function AdminPanelSection({
                       return (
                         <div
                           key={u.id}
-                          className="rounded-xl border border-line bg-surface-2/30 p-3"
+                          className="min-w-0 rounded-xl border border-line bg-surface-2/30 p-3"
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex min-w-0 items-center gap-2.5">
                             <Avatar name={label} src={u.avatarUrl} size={38} />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
@@ -1044,16 +872,16 @@ export function AdminPanelSection({
                                   {label}
                                 </span>
                                 {u.isAdmin ? (
-                                  <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
+                                  <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
                                     Admin
                                   </span>
                                 ) : (
-                                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                                  <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
                                     Member
                                   </span>
                                 )}
                                 {isSelf && (
-                                  <span className="text-[10.5px] text-muted">
+                                  <span className="shrink-0 text-[10.5px] text-muted">
                                     (kamu)
                                   </span>
                                 )}
@@ -1072,7 +900,7 @@ export function AdminPanelSection({
                                 Akses penuh Admin ({u.effectiveLimit} karakter)
                               </span>
                             ) : (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-[11px] text-ink-soft">
                                   Slot karakter:
                                 </span>
@@ -1138,12 +966,12 @@ export function AdminPanelSection({
 
           {/* 3. Riwayat Keputusan Kuota (Dropdown v) */}
           {resolved.length > 0 && (
-            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+            <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
               <button
                 type="button"
                 onClick={() => setHistoryOpen((v) => !v)}
                 aria-expanded={historyOpen}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+                className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
               >
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-bold text-ink">
@@ -1163,13 +991,13 @@ export function AdminPanelSection({
               </button>
 
               {historyOpen && (
-                <div className="space-y-1.5 border-t border-line p-4">
+                <div className="min-w-0 space-y-1.5 border-t border-line p-4">
                   {resolved.map((h) => (
                     <div
                       key={h.id}
-                      className="flex items-center justify-between gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-xs"
+                      className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-surface-2/60 px-3 py-2 text-xs"
                     >
-                      <span className="min-w-0 truncate text-ink-soft">
+                      <span className="min-w-0 flex-1 truncate text-ink-soft">
                         {h.displayName || h.email} · {h.requestedQuota} slot
                         {h.adminNote ? ` — “${h.adminNote}”` : ""}
                       </span>

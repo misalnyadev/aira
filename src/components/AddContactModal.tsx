@@ -250,7 +250,7 @@ export function AddContactModal({
               className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
             />
             <p className="text-[11px] leading-relaxed text-muted">
-              Sambungan kontak aktif setelah disetujui <b>Admin</b> &amp;{" "}
+              Sambungan kontak langsung aktif setelah disetujui{" "}
               <b>pemilik karakter</b>. Ngobrol memakai API key masing-masing akun.
             </p>
           </form>
