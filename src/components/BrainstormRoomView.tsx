@@ -9,6 +9,15 @@ import { BackIcon, TrashIcon, SpeakerIcon } from "./icons";
 import { useSpeakingMessageId, useIsAudibleSpeaking } from "@/lib/voice";
 import { inferEmotionFromIndonesianText } from "@/lib/callEmotion";
 
+function splitBubbles(content: string): string[] {
+  if (!content) return [];
+  if (!/\[\[\s*NEXT\s*\]\]/i.test(content)) return [content];
+  return content
+    .split(/\s*\[\[\s*NEXT\s*\]\]\s*/gi)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function formatTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -136,6 +145,7 @@ export function BrainstormRoomView({
           {messages.map((m) => {
             const isUser = m.role === "user";
             const char = m.characterId ? memberMap.get(m.characterId) : null;
+            const parts = splitBubbles(m.content);
             return (
               <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                 <div className={`flex max-w-[85%] gap-2 sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -144,48 +154,53 @@ export function BrainstormRoomView({
                       <Avatar name={char.name} src={char.avatarUrl} size={28} />
                     </div>
                   )}
-                  <div>
+                  <div className="space-y-1.5">
                     {!isUser && char && (
                       <p className="mb-1 ml-1 text-[11px] font-semibold text-ink-soft">{char.name}</p>
                     )}
-                    <div
-                      className={`rounded-2xl px-3 py-2 text-sm shadow-xs ${isUser ? "rounded-br-sm bg-bubble-out text-bubble-out-ink" : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"}`}
-                      style={bubblePaint(bubbleStyle, isUser ? "out" : "in")}
-                    >
-                      <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
-                        {m.content}
-                      </p>
-                      <div className="mt-1 flex items-center justify-end gap-2">
-                        <span
-                          className={`text-[11px] ${(isUser ? bubbleStyle.textColorOut : bubbleStyle.textColorIn) ? "opacity-75" : "text-ink-soft/70"}`}
-                          style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}
-                        >
-                          {formatTime(m.createdAt)}
-                        </span>
-                        {!isUser && canSpeak && m.content && (
-                          <button
-                            onClick={() => {
-                              if (speakingId === m.id) onStopSpeaking();
-                              else {
-                                onSpeak(m.content, m.id, m.characterId);
-                              }
-                            }}
-                            className={`rounded-full p-1 transition ${speakingId === m.id && audible ? "bg-ink text-white" : "text-ink-soft hover:bg-surface-2 hover:text-ink"}`}
-                            title="Putar suara karakter"
-                          >
-                            <SpeakerIcon className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        {isUser && (
-                          <button
-                            onClick={() => onCopy(m.content)}
-                            className="text-[11px] text-ink-soft hover:text-ink"
-                          >
-                            Salin
-                          </button>
+                    {parts.map((part, pIdx) => (
+                      <div
+                        key={`${m.id}-${pIdx}`}
+                        className={`rounded-2xl px-3 py-2 text-sm shadow-xs ${isUser ? "rounded-br-sm bg-bubble-out text-bubble-out-ink" : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"}`}
+                        style={bubblePaint(bubbleStyle, isUser ? "out" : "in")}
+                      >
+                        <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
+                          {part}
+                        </p>
+                        {pIdx === parts.length - 1 && (
+                          <div className="mt-1 flex items-center justify-end gap-2">
+                            <span
+                              className={`text-[11px] ${(isUser ? bubbleStyle.textColorOut : bubbleStyle.textColorIn) ? "opacity-75" : "text-ink-soft/70"}`}
+                              style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}
+                            >
+                              {formatTime(m.createdAt)}
+                            </span>
+                            {!isUser && canSpeak && part && (
+                              <button
+                                onClick={() => {
+                                  if (speakingId === `${m.id}-${pIdx}`) onStopSpeaking();
+                                  else {
+                                    onSpeak(part, `${m.id}-${pIdx}`, m.characterId);
+                                  }
+                                }}
+                                className={`rounded-full p-1 transition ${speakingId === `${m.id}-${pIdx}` && audible ? "bg-ink text-white" : "text-ink-soft hover:bg-surface-2 hover:text-ink"}`}
+                                title="Putar suara karakter"
+                              >
+                                <SpeakerIcon className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            {isUser && pIdx === 0 && (
+                              <button
+                                onClick={() => onCopy(m.content)}
+                                className="text-[11px] text-ink-soft hover:text-ink"
+                              >
+                                Salin
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
