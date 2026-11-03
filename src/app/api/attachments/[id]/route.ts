@@ -44,10 +44,9 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   if (r2File) {
     let targetOwnerId = user.id;
     if (requestedOwnerId && requestedOwnerId !== user.id) {
-      const allowed = await hasActiveContactBetweenUsers(
-        user.id,
-        requestedOwnerId
-      );
+      const allowed =
+        user.isAdmin ||
+        (await hasActiveContactBetweenUsers(user.id, requestedOwnerId));
       if (!allowed) return new Response("Not found", { status: 404 });
       targetOwnerId = requestedOwnerId;
     }
@@ -84,7 +83,8 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   }
 
   if (row.userId && row.userId !== user.id) {
-    const allowed = await hasActiveContactBetweenUsers(user.id, row.userId);
+    const allowed =
+      user.isAdmin || (await hasActiveContactBetweenUsers(user.id, row.userId));
     if (!allowed) {
       return new Response("Not found", { status: 404 });
     }
