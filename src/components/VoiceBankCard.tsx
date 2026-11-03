@@ -18,7 +18,7 @@ import {
   stopSpeaking,
   useIsSpeaking,
 } from "@/lib/voice";
-import { TrashIcon } from "./icons";
+import { ChevronDownIcon, TrashIcon } from "./icons";
 
 type SavedClipRow = {
   id: string;
@@ -52,10 +52,14 @@ export function VoiceBankCard({
   userId,
   volume,
   hasActiveKey,
+  open,
+  onToggle,
 }: {
   userId: string;
   volume: number;
   hasActiveKey: boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const isSpeaking = useIsSpeaking();
   const [r2Enabled, setR2Enabled] = useState(false);
@@ -200,28 +204,47 @@ export function VoiceBankCard({
     }
   }
 
-  return (
-    <section className="space-y-3 rounded-2xl border border-line bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-bold text-ink">Bank Rekaman Suara</h2>
-          <p className="text-xs text-ink-soft">
-            Tersimpan di Cloud R2 &amp; lokal perangkat — tetap berbunyi walau tanpa API key
-          </p>
-        </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-            r2Enabled
-              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-              : "bg-surface-2 text-muted"
-          }`}
-        >
-          {r2Enabled ? "Sinkron PC & HP" : "Lokal saja"}
-        </span>
-      </div>
+  const summarySubtitle =
+    cloudCount > 0 || localStats.count > 0
+      ? `Cloud R2: ${cloudCount} klip (${formatBytes(cloudBytes)}) · Perangkat: ${localStats.count} klip`
+      : "Tersimpan di Cloud R2 & perangkat — tetap berbunyi walau tanpa API key";
 
-      {/* Ringkasan Kapasitas */}
-      <div className="grid grid-cols-2 gap-2">
+  return (
+    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-ink">Bank Rekaman Suara</h2>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                r2Enabled
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "bg-surface-2 text-ink-soft"
+              }`}
+            >
+              {r2Enabled ? "Sinkron PC & HP" : "Lokal saja"}
+            </span>
+          </div>
+          <p className="mt-0.5 truncate text-xs text-ink-soft">{summarySubtitle}</p>
+        </div>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+          <ChevronDownIcon
+            className={`h-4 w-4 transition-transform duration-200 ${
+              open ? "rotate-180 text-ink" : ""
+            }`}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="space-y-3 border-t border-line px-4 py-4">
+          {/* Ringkasan Kapasitas */}
+          <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
           <span className="block text-[11px] text-muted">Cloudflare R2 (PC &amp; HP)</span>
           <span className="mt-0.5 block text-xs font-bold text-ink">
@@ -367,6 +390,8 @@ export function VoiceBankCard({
         >
           {note.text}
         </p>
+      )}
+        </div>
       )}
     </section>
   );

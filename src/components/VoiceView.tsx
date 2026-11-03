@@ -91,6 +91,64 @@ function Slider({
   );
 }
 
+function VoiceAccordionCard({
+  title,
+  subtitle,
+  badge,
+  badgeTone = "neutral",
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  badgeTone?: "neutral" | "active";
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-bold text-ink">{title}</h2>
+            {badge && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                  badgeTone === "active"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : "bg-surface-2 text-ink-soft"
+                }`}
+              >
+                {badge}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
+        </div>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+          <ChevronDownIcon
+            className={`h-4 w-4 transition-transform duration-200 ${
+              open ? "rotate-180 text-ink" : ""
+            }`}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-line px-4 py-4">{children}</div>
+      )}
+    </section>
+  );
+}
+
 const ENGINE_OPTIONS: { id: VoiceEngineChoice; label: string; sub: string }[] = [
   { id: "device", label: "Perangkat", sub: "Gratis lokal" },
   { id: "hd_female", label: "HD Perempuan", sub: "Suara HD" },
@@ -1389,6 +1447,8 @@ function HdVoiceCard({
   voiceSettings,
   onSaveTts,
   onNotice,
+  open,
+  onToggle,
 }: {
   ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
@@ -1396,9 +1456,22 @@ function HdVoiceCard({
     patch: Record<string, unknown>
   ) => Promise<TtsAccountSummary | null>;
   onNotice?: (msg: string) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const isSpeaking = useIsSpeaking();
   const [provider, setProvider] = useState<HdTtsProvider>(ttsSummary.provider);
+  const [keyConfigOpen, setKeyConfigOpen] = useState<{
+    gemini: boolean;
+    elevenlabs: boolean;
+  }>(() => ({
+    gemini: !(
+      ttsSummary.hasGeminiKey ||
+      ttsSummary.geminiBackupCount > 0 ||
+      ttsSummary.hasSharedGeminiKey
+    ),
+    elevenlabs: !(ttsSummary.hasKey || ttsSummary.backupCount > 0),
+  }));
 
   const [geminiModelId, setGeminiModelId] = useState<GeminiTtsModelId>(
     ttsSummary.geminiModelId
@@ -1745,12 +1818,13 @@ function HdVoiceCard({
     }
 
     if (!summaryNow.hasActiveKey) {
+      setKeyConfigOpen((prev) => ({ ...prev, [provider]: true }));
       setFeedback({
         kind: "err",
         text:
           provider === "gemini"
-            ? "Tambahkan API key Gemini di Setelan atau di daftar API key Gemini di atas dulu."
-            : "Tambahkan API key ElevenLabs terlebih dulu untuk mencoba suara ElevenLabs.",
+            ? "Tambahkan API key Gemini di Setelan atau buka bagian API Key Gemini di bawah dulu."
+            : "Tambahkan API key ElevenLabs di bagian API Key di bawah terlebih dulu.",
       });
       return;
     }
@@ -1795,437 +1869,487 @@ function HdVoiceCard({
     return `Aktif${ttsSummary.backupCount ? ` +${ttsSummary.backupCount}` : ""}`;
   })();
 
+  const hdSubtitle =
+    provider === "gemini"
+      ? `Gemini TTS · ${geminiFemaleVoice.trim() || "Kore"} (P) & ${geminiMaleVoice.trim() || "Puck"} (L)`
+      : "ElevenLabs · Slot Perempuan & Laki-laki";
+
   return (
-    <section className="space-y-3.5 rounded-2xl border border-line bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-bold text-ink">Suara HD</h2>
-          <p className="text-xs text-ink-soft">
-            {provider === "gemini"
-              ? "Gemini TTS — logat Indonesia natural seperti WaiChat"
-              : "ElevenLabs — mendukung Voice Design & Voice ID kustom"}
-          </p>
+    <VoiceAccordionCard
+      title="Suara HD (Gemini & ElevenLabs)"
+      subtitle={hdSubtitle}
+      badge={badgeLabel}
+      badgeTone={activeBadgeReady ? "active" : "neutral"}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="space-y-3.5">
+        {/* Pilihan Penyedia Suara HD */}
+        <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-surface-2 p-1">
+          <button
+            type="button"
+            onClick={() => void handleSwitchProvider("gemini")}
+            className={`rounded-lg px-3 py-2 text-left transition ${
+              provider === "gemini"
+                ? "bg-surface text-ink shadow-sm ring-1 ring-line"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <span className="block text-xs font-bold">Gemini TTS</span>
+            <span className="block text-[11px] text-muted">Natural Indonesia · Gratis</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSwitchProvider("elevenlabs")}
+            className={`rounded-lg px-3 py-2 text-left transition ${
+              provider === "elevenlabs"
+                ? "bg-surface text-ink shadow-sm ring-1 ring-line"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <span className="block text-xs font-bold">ElevenLabs</span>
+            <span className="block text-[11px] text-muted">Voice Clone &amp; ID</span>
+          </button>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-            activeBadgeReady
-              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-              : "bg-surface-2 text-muted"
-          }`}
-        >
-          {badgeLabel}
-        </span>
-      </div>
 
-      {/* Pilihan Penyedia Suara HD */}
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-surface-2 p-1">
-        <button
-          type="button"
-          onClick={() => void handleSwitchProvider("gemini")}
-          className={`rounded-lg px-3 py-2 text-left transition ${
-            provider === "gemini"
-              ? "bg-surface text-ink shadow-sm ring-1 ring-line"
-              : "text-ink-soft hover:text-ink"
-          }`}
-        >
-          <span className="block text-xs font-bold">Gemini TTS</span>
-          <span className="block text-[11px] text-muted">Natural Indonesia · Gratis</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleSwitchProvider("elevenlabs")}
-          className={`rounded-lg px-3 py-2 text-left transition ${
-            provider === "elevenlabs"
-              ? "bg-surface text-ink shadow-sm ring-1 ring-line"
-              : "text-ink-soft hover:text-ink"
-          }`}
-        >
-          <span className="block text-xs font-bold">ElevenLabs</span>
-          <span className="block text-[11px] text-muted">Voice Clone &amp; ID</span>
-        </button>
-      </div>
-
-      {provider === "gemini" ? (
-        <>
-          <TtsProviderKeySection
-            key="gemini"
-            provider="gemini"
-            hasPrimary={ttsSummary.hasGeminiKey}
-            maskedPrimary={ttsSummary.maskedGeminiKey}
-            maskedBackups={ttsSummary.maskedGeminiBackupKeys}
-            hasSharedFallback={ttsSummary.hasSharedGeminiKey}
-            sharedProviders={ttsSummary.sharedGeminiProviders ?? []}
-            modelId={geminiModelId}
-            defaultModel={DEFAULT_GEMINI_MODEL_ID}
-            voiceId={geminiFemaleVoice}
-            busy={saving}
-            onSelectModel={(next) => {
-              setGeminiModelId(next);
-              setAutoNotices((prev) => ({ ...prev, gemini: null }));
-            }}
-            onSelectAndSaveModel={async (next) => {
-              setGeminiModelId(next);
-              await applyDirectKeyPatch(
-                { geminiModelId: next },
-                `Model Gemini TTS diperbarui ke ${next}.`
-              );
-            }}
-            onOpenModelEditor={() =>
-              void detectModelsFor("gemini", {
-                openDropdown: true,
-                silentIfMissingKey: false,
-              })
-            }
-            onDetectedModelsFromTest={(models, recs) => {
-              setDetectedModels((prev) => ({ ...prev, gemini: models }));
-              setLiveRecommended((prev) => ({ ...prev, gemini: recs }));
-              setModelsError((prev) => ({ ...prev, gemini: null }));
-            }}
-            onPatchKeys={applyDirectKeyPatch}
-            onPendingPatchChange={(patch) =>
-              setPendingKeyPatches((prev) => ({ ...prev, gemini: patch }))
-            }
-            onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
-          />
-
-          {/* Model Gemini TTS (Preset Cepat + Deteksi Live + Mode Manual) */}
-          <TtsModelSelector
-            title="Model Gemini TTS"
-            provider="gemini"
-            value={geminiModelId}
-            defaultModel={DEFAULT_GEMINI_MODEL_ID}
-            presets={GEMINI_TTS_MODELS}
-            detectedModels={detectedModels.gemini ?? null}
-            liveRecommended={liveRecommended.gemini ?? []}
-            modelsBusy={Boolean(modelsBusy.gemini)}
-            modelsError={modelsError.gemini ?? null}
-            autoNotice={autoNotices.gemini ?? null}
-            showList={Boolean(showModelList.gemini)}
-            onToggleList={() => {
-              if (showModelList.gemini) {
-                setShowModelList((prev) => ({ ...prev, gemini: false }));
-              } else {
-                void detectModelsFor("gemini", {
-                  openDropdown: true,
-                  silentIfMissingKey: false,
-                });
-              }
-            }}
-            onRefreshModels={() =>
-              void detectModelsFor("gemini", {
-                openDropdown: true,
-                silentIfMissingKey: false,
-              })
-            }
-            onChange={(next) => {
-              setGeminiModelId(next);
-              setAutoNotices((prev) => ({ ...prev, gemini: null }));
-            }}
-          />
-
-          {/* Gaya Bicara (seperti WaiChat) */}
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-ink">
-              Gaya bicara (opsional)
-            </label>
-            <input
-              type="text"
-              value={geminiStyle}
-              onChange={(e) => setGeminiStyle(e.target.value)}
-              placeholder="mis. bicara santai sehari-hari, hangat, akrab"
-              className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
-            />
-          </div>
-
-          {/* Slot 1 Gemini: Perempuan */}
-          <div className="space-y-2 rounded-xl border border-line p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
-              <button
-                type="button"
-                onClick={() => void handleTestSlot("female")}
-                className="shrink-0 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/50"
-              >
-                {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
-              </button>
+        {provider === "gemini" ? (
+          <>
+            {/* Slot 1 Gemini: Perempuan */}
+            <div className="space-y-2 rounded-xl border border-line p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
+                <button
+                  type="button"
+                  onClick={() => void handleTestSlot("female")}
+                  className="shrink-0 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/50"
+                >
+                  {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {GEMINI_FEMALE_PRESETS.map((p) => {
+                  const active = geminiFemaleVoice.trim() === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setGeminiFemaleVoice(p.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-ink bg-ink text-surface"
+                          : "border-line bg-surface-2 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {p.label} · {p.hint}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {GEMINI_FEMALE_PRESETS.map((p) => {
-                const active = geminiFemaleVoice.trim() === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setGeminiFemaleVoice(p.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      active
-                        ? "border-ink bg-ink text-surface"
-                        : "border-line bg-surface-2 text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {p.label} · {p.hint}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Slot 2 Gemini: Laki-laki */}
-          <div className="space-y-2 rounded-xl border border-line p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
-              <button
-                type="button"
-                onClick={() => void handleTestSlot("male")}
-                className="shrink-0 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/50"
-              >
-                {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
-              </button>
+            {/* Slot 2 Gemini: Laki-laki */}
+            <div className="space-y-2 rounded-xl border border-line p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
+                <button
+                  type="button"
+                  onClick={() => void handleTestSlot("male")}
+                  className="shrink-0 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/50"
+                >
+                  {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {GEMINI_MALE_PRESETS.map((p) => {
+                  const active = geminiMaleVoice.trim() === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setGeminiMaleVoice(p.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-ink bg-ink text-surface"
+                          : "border-line bg-surface-2 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {p.label} · {p.hint}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {GEMINI_MALE_PRESETS.map((p) => {
-                const active = geminiMaleVoice.trim() === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setGeminiMaleVoice(p.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      active
-                        ? "border-ink bg-ink text-surface"
-                        : "border-line bg-surface-2 text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {p.label} · {p.hint}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          <p className="text-[11px] leading-relaxed text-muted">
-            Ingin tiap karakter memakai suara Gemini yang berbeda-beda (mis. <b>Kore</b>,{" "}
-            <b>Aoede</b>, <b>Leda</b>, <b>Puck</b>)? Buka <b>Profil Karakter → Suara karakter → Suara Khusus</b>.
-          </p>
-        </>
-      ) : (
-        <>
-          <TtsProviderKeySection
-            key="elevenlabs"
-            provider="elevenlabs"
-            hasPrimary={ttsSummary.hasKey}
-            maskedPrimary={ttsSummary.maskedKey}
-            maskedBackups={ttsSummary.maskedBackupKeys}
-            hasSharedFallback={false}
-            sharedProviders={[]}
-            modelId={modelId}
-            defaultModel={DEFAULT_HD_MODEL_ID}
-            voiceId={femaleVoiceId}
-            busy={saving}
-            onSelectModel={(next) => {
-              setModelId(next);
-              setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
-            }}
-            onSelectAndSaveModel={async (next) => {
-              setModelId(next);
-              await applyDirectKeyPatch(
-                { modelId: next },
-                `Model ElevenLabs diperbarui ke ${next}.`
-              );
-            }}
-            onOpenModelEditor={() =>
-              void detectModelsFor("elevenlabs", {
-                openDropdown: true,
-                silentIfMissingKey: false,
-              })
-            }
-            onDetectedModelsFromTest={(models, recs) => {
-              setDetectedModels((prev) => ({ ...prev, elevenlabs: models }));
-              setLiveRecommended((prev) => ({ ...prev, elevenlabs: recs }));
-              setModelsError((prev) => ({ ...prev, elevenlabs: null }));
-            }}
-            onPatchKeys={applyDirectKeyPatch}
-            onPendingPatchChange={(patch) =>
-              setPendingKeyPatches((prev) => ({ ...prev, elevenlabs: patch }))
-            }
-            onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
-          />
-
-          {/* Model ElevenLabs (Preset Cepat + Deteksi Live + Mode Manual) */}
-          <TtsModelSelector
-            title="Model ElevenLabs"
-            provider="elevenlabs"
-            value={modelId}
-            defaultModel={DEFAULT_HD_MODEL_ID}
-            presets={HD_TTS_MODELS}
-            detectedModels={detectedModels.elevenlabs ?? null}
-            liveRecommended={liveRecommended.elevenlabs ?? []}
-            modelsBusy={Boolean(modelsBusy.elevenlabs)}
-            modelsError={modelsError.elevenlabs ?? null}
-            autoNotice={autoNotices.elevenlabs ?? null}
-            showList={Boolean(showModelList.elevenlabs)}
-            onToggleList={() => {
-              if (showModelList.elevenlabs) {
-                setShowModelList((prev) => ({ ...prev, elevenlabs: false }));
-              } else {
-                void detectModelsFor("elevenlabs", {
-                  openDropdown: true,
-                  silentIfMissingKey: false,
-                });
-              }
-            }}
-            onRefreshModels={() =>
-              void detectModelsFor("elevenlabs", {
-                openDropdown: true,
-                silentIfMissingKey: false,
-              })
-            }
-            onChange={(next) => {
-              setModelId(next);
-              setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
-            }}
-          />
-
-          {/* Slot 1 ElevenLabs: Perempuan */}
-          <div className="space-y-2 rounded-xl border border-line p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
-              <span className="text-[11px] text-muted">Gratis di Free Tier</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {FEMALE_VOICE_PRESETS.map((p) => {
-                const active = femaleVoiceId.trim() === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setFemaleVoiceId(p.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      active
-                        ? "border-ink bg-ink text-surface"
-                        : "border-line bg-surface-2 text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {p.label} · {p.hint}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex gap-1.5">
+            {/* Gaya Bicara */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-ink">
+                Gaya bicara (opsional)
+              </label>
               <input
                 type="text"
-                value={femaleVoiceId}
-                onChange={(e) => setFemaleVoiceId(e.target.value)}
-                placeholder="Voice ID Perempuan..."
-                className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                value={geminiStyle}
+                onChange={(e) => setGeminiStyle(e.target.value)}
+                placeholder="mis. bicara santai sehari-hari, hangat, akrab"
+                className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
               />
+            </div>
+
+            {/* Sub-lipatan API Key & Model Gemini TTS */}
+            <div className="overflow-hidden rounded-xl border border-line bg-surface-2/30">
               <button
                 type="button"
-                onClick={() => void handleTestSlot("female")}
-                className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-line/50"
+                onClick={() =>
+                  setKeyConfigOpen((prev) => ({ ...prev, gemini: !prev.gemini }))
+                }
+                aria-expanded={keyConfigOpen.gemini}
+                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-surface-2"
               >
-                {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
+                <div className="min-w-0">
+                  <span className="block text-xs font-semibold text-ink">
+                    API Key &amp; Model Gemini TTS
+                  </span>
+                  <span className="block truncate text-[11px] text-muted">
+                    {effectiveGeminiModel} · {badgeLabel}
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`h-4 w-4 shrink-0 text-ink-soft transition-transform duration-200 ${
+                    keyConfigOpen.gemini ? "rotate-180 text-ink" : ""
+                  }`}
+                />
               </button>
-            </div>
-          </div>
 
-          {/* Slot 2 ElevenLabs: Laki-laki */}
-          <div className="space-y-2 rounded-xl border border-line p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
-              <span className="text-[11px] text-muted">Gratis di Free Tier</span>
+              {keyConfigOpen.gemini && (
+                <div className="space-y-3.5 border-t border-line bg-surface p-3.5">
+                  <TtsProviderKeySection
+                    key="gemini"
+                    provider="gemini"
+                    hasPrimary={ttsSummary.hasGeminiKey}
+                    maskedPrimary={ttsSummary.maskedGeminiKey}
+                    maskedBackups={ttsSummary.maskedGeminiBackupKeys}
+                    hasSharedFallback={ttsSummary.hasSharedGeminiKey}
+                    sharedProviders={ttsSummary.sharedGeminiProviders ?? []}
+                    modelId={geminiModelId}
+                    defaultModel={DEFAULT_GEMINI_MODEL_ID}
+                    voiceId={geminiFemaleVoice}
+                    busy={saving}
+                    onSelectModel={(next) => {
+                      setGeminiModelId(next);
+                      setAutoNotices((prev) => ({ ...prev, gemini: null }));
+                    }}
+                    onSelectAndSaveModel={async (next) => {
+                      setGeminiModelId(next);
+                      await applyDirectKeyPatch(
+                        { geminiModelId: next },
+                        `Model Gemini TTS diperbarui ke ${next}.`
+                      );
+                    }}
+                    onOpenModelEditor={() =>
+                      void detectModelsFor("gemini", {
+                        openDropdown: true,
+                        silentIfMissingKey: false,
+                      })
+                    }
+                    onDetectedModelsFromTest={(models, recs) => {
+                      setDetectedModels((prev) => ({ ...prev, gemini: models }));
+                      setLiveRecommended((prev) => ({ ...prev, gemini: recs }));
+                      setModelsError((prev) => ({ ...prev, gemini: null }));
+                    }}
+                    onPatchKeys={applyDirectKeyPatch}
+                    onPendingPatchChange={(patch) =>
+                      setPendingKeyPatches((prev) => ({ ...prev, gemini: patch }))
+                    }
+                    onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
+                  />
+
+                  <TtsModelSelector
+                    title="Model Gemini TTS"
+                    provider="gemini"
+                    value={geminiModelId}
+                    defaultModel={DEFAULT_GEMINI_MODEL_ID}
+                    presets={GEMINI_TTS_MODELS}
+                    detectedModels={detectedModels.gemini ?? null}
+                    liveRecommended={liveRecommended.gemini ?? []}
+                    modelsBusy={Boolean(modelsBusy.gemini)}
+                    modelsError={modelsError.gemini ?? null}
+                    autoNotice={autoNotices.gemini ?? null}
+                    showList={Boolean(showModelList.gemini)}
+                    onToggleList={() => {
+                      if (showModelList.gemini) {
+                        setShowModelList((prev) => ({ ...prev, gemini: false }));
+                      } else {
+                        void detectModelsFor("gemini", {
+                          openDropdown: true,
+                          silentIfMissingKey: false,
+                        });
+                      }
+                    }}
+                    onRefreshModels={() =>
+                      void detectModelsFor("gemini", {
+                        openDropdown: true,
+                        silentIfMissingKey: false,
+                      })
+                    }
+                    onChange={(next) => {
+                      setGeminiModelId(next);
+                      setAutoNotices((prev) => ({ ...prev, gemini: null }));
+                    }}
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {MALE_VOICE_PRESETS.map((p) => {
-                const active = maleVoiceId.trim() === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setMaleVoiceId(p.id)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      active
-                        ? "border-ink bg-ink text-surface"
-                        : "border-line bg-surface-2 text-ink-soft hover:text-ink"
-                    }`}
-                  >
-                    {p.label} · {p.hint}
-                  </button>
-                );
-              })}
+
+            <p className="text-[11px] leading-relaxed text-muted">
+              Tiap karakter juga bisa diatur punya warna suara tersendiri di{" "}
+              <b>Profil Karakter → Suara karakter → Suara Khusus</b>.
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Slot 1 ElevenLabs: Perempuan */}
+            <div className="space-y-2 rounded-xl border border-line p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
+                <span className="text-[11px] text-muted">Gratis di Free Tier</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {FEMALE_VOICE_PRESETS.map((p) => {
+                  const active = femaleVoiceId.trim() === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setFemaleVoiceId(p.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-ink bg-ink text-surface"
+                          : "border-line bg-surface-2 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {p.label} · {p.hint}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={femaleVoiceId}
+                  onChange={(e) => setFemaleVoiceId(e.target.value)}
+                  placeholder="Voice ID Perempuan..."
+                  className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleTestSlot("female")}
+                  className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-line/50"
+                >
+                  {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={maleVoiceId}
-                onChange={(e) => setMaleVoiceId(e.target.value)}
-                placeholder="Voice ID Laki-laki..."
-                className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
-              />
+
+            {/* Slot 2 ElevenLabs: Laki-laki */}
+            <div className="space-y-2 rounded-xl border border-line p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
+                <span className="text-[11px] text-muted">Gratis di Free Tier</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {MALE_VOICE_PRESETS.map((p) => {
+                  const active = maleVoiceId.trim() === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setMaleVoiceId(p.id)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                        active
+                          ? "border-ink bg-ink text-surface"
+                          : "border-line bg-surface-2 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {p.label} · {p.hint}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={maleVoiceId}
+                  onChange={(e) => setMaleVoiceId(e.target.value)}
+                  placeholder="Voice ID Laki-laki..."
+                  className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleTestSlot("male")}
+                  className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-line/50"
+                >
+                  {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-lipatan API Key, Model & Ekspresi ElevenLabs */}
+            <div className="overflow-hidden rounded-xl border border-line bg-surface-2/30">
               <button
                 type="button"
-                onClick={() => void handleTestSlot("male")}
-                className="shrink-0 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-line/50"
+                onClick={() =>
+                  setKeyConfigOpen((prev) => ({
+                    ...prev,
+                    elevenlabs: !prev.elevenlabs,
+                  }))
+                }
+                aria-expanded={keyConfigOpen.elevenlabs}
+                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-surface-2"
               >
-                {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
+                <div className="min-w-0">
+                  <span className="block text-xs font-semibold text-ink">
+                    API Key, Model &amp; Ekspresi ElevenLabs
+                  </span>
+                  <span className="block truncate text-[11px] text-muted">
+                    {effectiveElevenModel} · {badgeLabel}
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`h-4 w-4 shrink-0 text-ink-soft transition-transform duration-200 ${
+                    keyConfigOpen.elevenlabs ? "rotate-180 text-ink" : ""
+                  }`}
+                />
               </button>
-            </div>
-          </div>
 
-          <p className="text-[11px] leading-relaxed text-muted">
-            Selain pilihan cepat di atas, kamu bebas menempel kode <b>Voice ID</b> dari suara kreasi
-            sendiri (<i>Voice Design</i> / <i>My Voices</i>) di akun ElevenLabs.
+              {keyConfigOpen.elevenlabs && (
+                <div className="space-y-3.5 border-t border-line bg-surface p-3.5">
+                  <TtsProviderKeySection
+                    key="elevenlabs"
+                    provider="elevenlabs"
+                    hasPrimary={ttsSummary.hasKey}
+                    maskedPrimary={ttsSummary.maskedKey}
+                    maskedBackups={ttsSummary.maskedBackupKeys}
+                    hasSharedFallback={false}
+                    sharedProviders={[]}
+                    modelId={modelId}
+                    defaultModel={DEFAULT_HD_MODEL_ID}
+                    voiceId={femaleVoiceId}
+                    busy={saving}
+                    onSelectModel={(next) => {
+                      setModelId(next);
+                      setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
+                    }}
+                    onSelectAndSaveModel={async (next) => {
+                      setModelId(next);
+                      await applyDirectKeyPatch(
+                        { modelId: next },
+                        `Model ElevenLabs diperbarui ke ${next}.`
+                      );
+                    }}
+                    onOpenModelEditor={() =>
+                      void detectModelsFor("elevenlabs", {
+                        openDropdown: true,
+                        silentIfMissingKey: false,
+                      })
+                    }
+                    onDetectedModelsFromTest={(models, recs) => {
+                      setDetectedModels((prev) => ({ ...prev, elevenlabs: models }));
+                      setLiveRecommended((prev) => ({ ...prev, elevenlabs: recs }));
+                      setModelsError((prev) => ({ ...prev, elevenlabs: null }));
+                    }}
+                    onPatchKeys={applyDirectKeyPatch}
+                    onPendingPatchChange={(patch) =>
+                      setPendingKeyPatches((prev) => ({ ...prev, elevenlabs: patch }))
+                    }
+                    onFeedbackError={(msg) => setFeedback({ kind: "err", text: msg })}
+                  />
+
+                  <TtsModelSelector
+                    title="Model ElevenLabs"
+                    provider="elevenlabs"
+                    value={modelId}
+                    defaultModel={DEFAULT_HD_MODEL_ID}
+                    presets={HD_TTS_MODELS}
+                    detectedModels={detectedModels.elevenlabs ?? null}
+                    liveRecommended={liveRecommended.elevenlabs ?? []}
+                    modelsBusy={Boolean(modelsBusy.elevenlabs)}
+                    modelsError={modelsError.elevenlabs ?? null}
+                    autoNotice={autoNotices.elevenlabs ?? null}
+                    showList={Boolean(showModelList.elevenlabs)}
+                    onToggleList={() => {
+                      if (showModelList.elevenlabs) {
+                        setShowModelList((prev) => ({ ...prev, elevenlabs: false }));
+                      } else {
+                        void detectModelsFor("elevenlabs", {
+                          openDropdown: true,
+                          silentIfMissingKey: false,
+                        });
+                      }
+                    }}
+                    onRefreshModels={() =>
+                      void detectModelsFor("elevenlabs", {
+                        openDropdown: true,
+                        silentIfMissingKey: false,
+                      })
+                    }
+                    onChange={(next) => {
+                      setModelId(next);
+                      setAutoNotices((prev) => ({ ...prev, elevenlabs: null }));
+                    }}
+                  />
+
+                  <div className="space-y-3 border-t border-line pt-3">
+                    <Slider
+                      label="Stabilitas (makin rendah makin ekspresif)"
+                      value={stability}
+                      min={0.15}
+                      max={0.95}
+                      step={0.05}
+                      display={`${Math.round(stability * 100)}%`}
+                      onChange={setStability}
+                    />
+                    <Slider
+                      label="Kemiripan karakter vokal"
+                      value={similarityBoost}
+                      min={0.2}
+                      max={1}
+                      step={0.05}
+                      display={`${Math.round(similarityBoost * 100)}%`}
+                      onChange={setSimilarityBoost}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] leading-relaxed text-muted">
+              Kamu juga bebas menempel kode <b>Voice ID</b> dari suara kreasi sendiri (
+              <i>Voice Design</i> / <i>My Voices</i>) di akun ElevenLabs.
+            </p>
+          </>
+        )}
+
+        {feedback && (
+          <p
+            className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${
+              feedback.kind === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"
+            }`}
+          >
+            {feedback.text}
           </p>
+        )}
 
-          <details className="rounded-xl border border-line px-3 py-2.5">
-            <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
-              Pengaturan ekspresi ElevenLabs
-            </summary>
-            <div className="mt-3 space-y-3">
-              <Slider
-                label="Stabilitas (makin rendah makin ekspresif)"
-                value={stability}
-                min={0.15}
-                max={0.95}
-                step={0.05}
-                display={`${Math.round(stability * 100)}%`}
-                onChange={setStability}
-              />
-              <Slider
-                label="Kemiripan karakter vokal"
-                value={similarityBoost}
-                min={0.2}
-                max={1}
-                step={0.05}
-                display={`${Math.round(similarityBoost * 100)}%`}
-                onChange={setSimilarityBoost}
-              />
-            </div>
-          </details>
-        </>
-      )}
-
-      {feedback && (
-        <p
-          className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${
-            feedback.kind === "ok"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"
-          }`}
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void persistChanges(false)}
+          className="w-full rounded-xl bg-brand py-2.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-50"
         >
-          {feedback.text}
-        </p>
-      )}
-
-      <button
-        type="button"
-        disabled={saving}
-        onClick={() => void persistChanges(false)}
-        className="w-full rounded-xl bg-brand py-2.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-50"
-      >
-        {saving ? "Menyimpan..." : "Simpan Pengaturan Suara HD"}
-      </button>
-    </section>
+          {saving ? "Menyimpan..." : "Simpan Pengaturan Suara HD"}
+        </button>
+      </div>
+    </VoiceAccordionCard>
   );
 }
 
@@ -2260,6 +2384,22 @@ export function VoiceView({
   );
   const bestVoice = sorted[0] ?? null;
 
+  const [openSections, setOpenSections] = useState<{
+    hd: boolean;
+    bank: boolean;
+    device: boolean;
+    playback: boolean;
+  }>({
+    hd: false,
+    bank: false,
+    device: false,
+    playback: false,
+  });
+
+  function toggleSection(key: keyof typeof openSections) {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   function update(patch: Partial<VoiceSettings>) {
     onChange({ ...settings, ...patch });
   }
@@ -2274,20 +2414,47 @@ export function VoiceView({
 
   const canTestDefault = supported || ttsSummary.hasActiveKey;
 
+  const selectedLocalVoice = useMemo(
+    () =>
+      settings.voiceURI
+        ? sorted.find((v) => v.voiceURI === settings.voiceURI) ?? null
+        : null,
+    [settings.voiceURI, sorted]
+  );
+
+  const localSubtitle = !supported
+    ? "Web Speech API tidak tersedia di browser ini"
+    : selectedLocalVoice
+      ? `${selectedLocalVoice.name} (${selectedLocalVoice.lang})`
+      : bestVoice
+        ? `Otomatis · ${bestVoice.name}`
+        : "Otomatis · Bahasa Indonesia paling natural";
+
+  const localBadge = supported
+    ? indonesianCount > 0
+      ? `${indonesianCount} Indonesia`
+      : `${sorted.length} suara`
+    : undefined;
+
+  const activePreset = VOICE_PRESETS.find((preset) =>
+    isPresetActive(settings, preset)
+  );
+  const playbackSubtitle = `${activePreset ? `${activePreset.label} · ` : ""}Volume ${Math.round(settings.volume * 100)}% · Jeda ${Math.round(settings.pause)} ms`;
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-surface">
-      <div className="top-bar flex items-center justify-between px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
+    <div className="flex h-full min-h-0 w-full flex-col bg-app">
+      <div className="top-bar flex items-center justify-between gap-2 px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <div>
           <h1 className="font-display text-xl font-bold tracking-tight text-ink">Suara</h1>
           <p className="text-xs text-ink-soft">
-            Suara HD Gemini, ElevenLabs &amp; suara lokal perangkat
+            Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
           </p>
         </div>
         {canTestDefault && (
           <button
             type="button"
             onClick={isSpeaking ? stopSpeaking : handleTestDefault}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
               isSpeaking
                 ? "border border-line bg-surface-2 text-ink hover:bg-line/60"
                 : "bg-brand text-brand-ink hover:bg-brand-strong"
@@ -2300,258 +2467,276 @@ export function VoiceView({
 
       <div
         ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto px-5 py-4 pb-[calc(var(--tabbar-space)+4rem)]"
+        className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(var(--tabbar-space)+2rem)] sm:px-6"
       >
-        <div className="mx-auto w-full max-w-2xl space-y-5">
-          {/* Aktifkan */}
-          <div className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line">
-              <SpeakerIcon className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink">Bacakan balasan</span>
-              <span className="block text-xs text-ink-soft">
-                Balasan karakter dibacakan otomatis saat tiba di ruang chat
+        <div className="mx-auto w-full max-w-2xl space-y-3">
+          {/* Kartu Kontrol Cepat Utama */}
+          <section className="space-y-3.5 rounded-2xl border border-line bg-surface p-4 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line">
+                <SpeakerIcon className="h-4 w-4" />
               </span>
+              <div className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink">Bacakan balasan</span>
+                <span className="block text-xs text-ink-soft">
+                  Balasan karakter dibacakan otomatis saat tiba di chat
+                </span>
+              </div>
+              <Switch
+                checked={settings.enabled}
+                onChange={(next) => update({ enabled: next })}
+                label="Bacakan balasan"
+              />
             </div>
-            <Switch
-              checked={settings.enabled}
-              onChange={(next) => update({ enabled: next })}
-              label="Bacakan balasan"
-            />
-          </div>
 
-          {/* Pilihan mesin suara bawaan */}
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Mesin suara bawaan
-              </h2>
-              <span className="text-[11px] text-muted">Bisa diatur per karakter</span>
+            <div className="space-y-2 border-t border-line pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink">
+                  Mesin suara bawaan
+                </span>
+                <span className="text-[11px] text-muted">Bisa diatur per karakter</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ENGINE_OPTIONS.map((opt) => {
+                  const active = settings.engine === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => update({ engine: opt.id })}
+                      className={`rounded-xl border px-2.5 py-2 text-left transition ${
+                        active
+                          ? "border-ink bg-surface-2 text-ink"
+                          : "border-line text-ink-soft hover:bg-surface-2"
+                      }`}
+                    >
+                      <span className="block truncate text-xs font-bold">{opt.label}</span>
+                      <span className="block truncate text-[11px] text-muted">{opt.sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {settings.engine !== "device" && !ttsSummary.hasActiveKey && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/60 px-3 py-2 text-xs text-ink-soft">
+                  <span>
+                    Rekaman di Bank R2 tetap berbunyi tanpa API key; kalimat baru memakai suara perangkat.
+                  </span>
+                  {!openSections.hd && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenSections((prev) => ({ ...prev, hd: true }))
+                      }
+                      className="font-semibold text-ink underline decoration-dotted hover:opacity-80"
+                    >
+                      Atur Suara HD →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {ENGINE_OPTIONS.map((opt) => {
-                const active = settings.engine === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => update({ engine: opt.id })}
-                    className={`rounded-xl border px-2.5 py-2 text-left transition ${
-                      active
-                        ? "border-ink bg-surface-2 text-ink"
-                        : "border-line text-ink-soft hover:bg-surface-2"
-                    }`}
-                  >
-                    <span className="block truncate text-xs font-bold">{opt.label}</span>
-                    <span className="block truncate text-[11px] text-muted">{opt.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {settings.engine !== "device" && !ttsSummary.hasActiveKey && (
-              <p className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs leading-relaxed text-ink-soft">
-                Rekaman yang sudah ada di Bank R2 / lokal tetap berbunyi dengan Suara HD tanpa API
-                key. Untuk merekam kalimat baru, isi API key di kartu Suara HD di bawah (atau di
-                Setelan untuk Gemini) — bila kosong, kalimat baru otomatis memakai suara perangkat.
-              </p>
-            )}
           </section>
 
-          {/* Pengaturan Suara HD */}
+          {/* 1. Pengaturan Suara HD */}
           <HdVoiceCard
             ttsSummary={ttsSummary}
             voiceSettings={settings}
             onSaveTts={onSaveTts}
             onNotice={onNotice}
+            open={openSections.hd}
+            onToggle={() => toggleSection("hd")}
           />
 
-          {/* Bank Rekaman Suara (Sinkron PC & HP via R2 + Cache Lokal) */}
+          {/* 2. Bank Rekaman Suara (Sinkron PC & HP via R2 + Cache Lokal) */}
           <VoiceBankCard
             userId={userId}
             volume={settings.volume}
             hasActiveKey={ttsSummary.hasActiveKey}
+            open={openSections.bank}
+            onToggle={() => toggleSection("bank")}
           />
 
-          {/* Bagian Suara Lokal Perangkat */}
-          <section className="space-y-4 pt-1">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Suara lokal perangkat (Gratis &amp; Cadangan)
-              </h2>
-              {supported && (
-                <span className="text-xs text-muted">
-                  {sorted.length} suara{indonesianCount ? ` · ${indonesianCount} Indonesia` : ""}
-                </span>
+          {/* 3. Suara Lokal Perangkat */}
+          <VoiceAccordionCard
+            title="Suara Lokal Perangkat"
+            subtitle={localSubtitle}
+            badge={localBadge}
+            open={openSections.device}
+            onToggle={() => toggleSection("device")}
+          >
+            <div className="space-y-3.5">
+              {!supported && (
+                <p className="rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
+                  Browser ini belum mendukung suara lokal (Web Speech API). Kamu tetap bisa memakai
+                  Suara HD di atas.
+                </p>
               )}
-            </div>
 
-            {!supported && (
-              <p className="rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
-                Browser ini belum mendukung suara lokal (Web Speech API). Kamu tetap bisa memakai
-                Suara HD di atas.
-              </p>
-            )}
+              {supported && bestVoice && (
+                <div className="rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
+                  <p className="text-xs text-ink-soft">
+                    Paling natural di perangkat ini:{" "}
+                    <span className="font-semibold text-ink">{bestVoice.name}</span>
+                    {isNaturalVoice(bestVoice) ? " (enhanced)" : ""}
+                  </p>
+                  {(settings.voiceURI !== bestVoice.voiceURI || settings.voiceURI === "") && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        update({ voiceURI: bestVoice.voiceURI, rate: 0.95, pitch: 1, pause: 150 })
+                      }
+                      className="mt-2 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+                    >
+                      Pakai suara ini
+                    </button>
+                  )}
+                </div>
+              )}
 
-            {supported && bestVoice && (
-              <div className="rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
-                <p className="text-xs text-ink-soft">
-                  Paling natural di perangkat ini:{" "}
-                  <span className="font-semibold text-ink">{bestVoice.name}</span>
-                  {isNaturalVoice(bestVoice) ? " (enhanced)" : ""}
-                </p>
-                {(settings.voiceURI !== bestVoice.voiceURI || settings.voiceURI === "") && (
+              <details className="rounded-xl border border-line px-3.5 py-2.5">
+                <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
+                  Cara bikin suara lokal iPhone lebih natural
+                </summary>
+                <div className="mt-2 space-y-1.5 text-xs leading-relaxed text-ink-soft">
+                  <p>
+                    <b>iPhone:</b> Pengaturan → Aksesibilitas → Konten Terbaca → Suara → Indonesia,
+                    lalu unduh suara bertanda <i>Enhanced</i>/<i>Premium</i>. Setelah terunduh, suara
+                    itu muncul di daftar bawah dan jauh lebih halus.
+                  </p>
+                  <p>
+                    Suara lokal ini juga dipakai otomatis sebagai <b>cadangan instan</b> bila kuota
+                    API Suara HD sedang habis.
+                  </p>
+                </div>
+              </details>
+
+              {supported && (
+                <div className="overflow-hidden rounded-xl border border-line">
                   <button
                     type="button"
-                    onClick={() =>
-                      update({ voiceURI: bestVoice.voiceURI, rate: 0.95, pitch: 1, pause: 150 })
-                    }
-                    className="mt-2 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
-                  >
-                    Pakai suara ini
-                  </button>
-                )}
-              </div>
-            )}
-
-            <details className="rounded-xl border border-line px-3.5 py-2.5">
-              <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
-                Cara bikin suara lokal iPhone lebih natural
-              </summary>
-              <div className="mt-2 space-y-1.5 text-xs leading-relaxed text-ink-soft">
-                <p>
-                  <b>iPhone:</b> Pengaturan → Aksesibilitas → Konten Terbaca → Suara → Indonesia,
-                  lalu unduh suara bertanda <i>Enhanced</i>/<i>Premium</i>. Setelah terunduh, suara
-                  itu muncul di daftar bawah dan jauh lebih halus.
-                </p>
-                <p>
-                  Suara lokal ini juga dipakai otomatis sebagai <b>cadangan instan</b> bila kuota
-                  API Suara HD sedang habis.
-                </p>
-              </div>
-            </details>
-
-            {supported && (
-              <div className="overflow-hidden rounded-xl border border-line">
-                <button
-                  type="button"
-                  onClick={() => update({ voiceURI: "" })}
-                  className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left transition ${
-                    settings.voiceURI === "" ? "bg-ink/[0.06]" : "hover:bg-surface-2"
-                  }`}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-ink">Otomatis</span>
-                    <span className="block truncate text-xs text-muted">
-                      Utamakan bahasa Indonesia paling natural
-                    </span>
-                  </span>
-                  {settings.voiceURI === "" && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
-                </button>
-
-                {sorted.length > 0 && (
-                  <div className="max-h-60 divide-y divide-line overflow-y-auto border-t border-line">
-                    {sorted.map((v) => {
-                      const active = settings.voiceURI === v.voiceURI;
-                      const natural = isNaturalVoice(v);
-                      return (
-                        <button
-                          type="button"
-                          key={v.voiceURI}
-                          onClick={() => update({ voiceURI: v.voiceURI })}
-                          className={`flex w-full items-center gap-2 px-3.5 py-2 text-left transition ${
-                            active ? "bg-ink/[0.06]" : "hover:bg-surface-2"
-                          }`}
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm text-ink">{v.name}</span>
-                            <span className="block truncate text-[11px] text-muted">{v.lang}</span>
-                          </span>
-                          {natural && (
-                            <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
-                              natural
-                            </span>
-                          )}
-                          {v.localService && !natural && (
-                            <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">
-                              lokal
-                            </span>
-                          )}
-                          {active && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* Preset + slider */}
-          <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Pengaturan pemutaran
-            </h2>
-
-            <div className="grid grid-cols-5 gap-1.5">
-              {VOICE_PRESETS.map((preset) => {
-                const active = isPresetActive(settings, preset);
-                return (
-                  <button
-                    type="button"
-                    key={preset.label}
-                    onClick={() => update({ rate: preset.rate, pitch: preset.pitch })}
-                    className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${
-                      active
-                        ? "border-ink bg-surface-2 text-ink"
-                        : "border-line text-ink-soft hover:bg-surface-2"
+                    onClick={() => update({ voiceURI: "" })}
+                    className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left transition ${
+                      settings.voiceURI === "" ? "bg-ink/[0.06]" : "hover:bg-surface-2"
                     }`}
                   >
-                    {preset.label}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-ink">Otomatis</span>
+                      <span className="block truncate text-xs text-muted">
+                        Utamakan bahasa Indonesia paling natural
+                      </span>
+                    </span>
+                    {settings.voiceURI === "" && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
                   </button>
-                );
-              })}
-            </div>
 
-            <div className="space-y-3 rounded-xl border border-line p-3.5">
-              <Slider
-                label="Volume (HD & lokal)"
-                value={settings.volume}
-                min={0.1}
-                max={1}
-                step={0.05}
-                display={`${Math.round(settings.volume * 100)}%`}
-                onChange={(volume) => update({ volume })}
-              />
-              <Slider
-                label="Jeda antar kalimat / gelembung"
-                value={settings.pause}
-                min={0}
-                max={400}
-                step={20}
-                display={`${Math.round(settings.pause)} ms`}
-                onChange={(pause) => update({ pause })}
-              />
-              <Slider
-                label="Kecepatan (suara lokal)"
-                value={settings.rate}
-                min={0.5}
-                max={1.6}
-                step={0.05}
-                display={`${settings.rate.toFixed(2)}×`}
-                onChange={(rate) => update({ rate })}
-              />
-              <Slider
-                label="Nada (suara lokal)"
-                value={settings.pitch}
-                min={0.5}
-                max={1.6}
-                step={0.05}
-                display={settings.pitch.toFixed(2)}
-                onChange={(pitch) => update({ pitch })}
-              />
+                  {sorted.length > 0 && (
+                    <div className="max-h-60 divide-y divide-line overflow-y-auto border-t border-line">
+                      {sorted.map((v) => {
+                        const active = settings.voiceURI === v.voiceURI;
+                        const natural = isNaturalVoice(v);
+                        return (
+                          <button
+                            type="button"
+                            key={v.voiceURI}
+                            onClick={() => update({ voiceURI: v.voiceURI })}
+                            className={`flex w-full items-center gap-2 px-3.5 py-2 text-left transition ${
+                              active ? "bg-ink/[0.06]" : "hover:bg-surface-2"
+                            }`}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm text-ink">{v.name}</span>
+                              <span className="block truncate text-[11px] text-muted">{v.lang}</span>
+                            </span>
+                            {natural && (
+                              <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
+                                natural
+                              </span>
+                            )}
+                            {v.localService && !natural && (
+                              <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">
+                                lokal
+                              </span>
+                            )}
+                            {active && <CheckIcon className="h-4 w-4 shrink-0 text-ink" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </section>
+          </VoiceAccordionCard>
+
+          {/* 4. Volume, Jeda & Nada Bicara */}
+          <VoiceAccordionCard
+            title="Volume, Jeda & Nada Bicara"
+            subtitle={playbackSubtitle}
+            badge={`${settings.rate.toFixed(2)}×`}
+            open={openSections.playback}
+            onToggle={() => toggleSection("playback")}
+          >
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-5 gap-1.5">
+                {VOICE_PRESETS.map((preset) => {
+                  const active = isPresetActive(settings, preset);
+                  return (
+                    <button
+                      type="button"
+                      key={preset.label}
+                      onClick={() => update({ rate: preset.rate, pitch: preset.pitch })}
+                      className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${
+                        active
+                          ? "border-ink bg-surface-2 text-ink"
+                          : "border-line text-ink-soft hover:bg-surface-2"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-line bg-surface-2/30 p-3.5">
+                <Slider
+                  label="Volume (HD & lokal)"
+                  value={settings.volume}
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  display={`${Math.round(settings.volume * 100)}%`}
+                  onChange={(volume) => update({ volume })}
+                />
+                <Slider
+                  label="Jeda antar kalimat / gelembung"
+                  value={settings.pause}
+                  min={0}
+                  max={400}
+                  step={20}
+                  display={`${Math.round(settings.pause)} ms`}
+                  onChange={(pause) => update({ pause })}
+                />
+                <Slider
+                  label="Kecepatan (suara lokal)"
+                  value={settings.rate}
+                  min={0.5}
+                  max={1.6}
+                  step={0.05}
+                  display={`${settings.rate.toFixed(2)}×`}
+                  onChange={(rate) => update({ rate })}
+                />
+                <Slider
+                  label="Nada (suara lokal)"
+                  value={settings.pitch}
+                  min={0.5}
+                  max={1.6}
+                  step={0.05}
+                  display={settings.pitch.toFixed(2)}
+                  onChange={(pitch) => update({ pitch })}
+                />
+              </div>
+            </div>
+          </VoiceAccordionCard>
         </div>
       </div>
     </div>
