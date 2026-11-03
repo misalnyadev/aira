@@ -116,35 +116,37 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         memoryExtras: brainstormExtras,
       });
 
-      // Ambil 1 bubble pertama atau gabung semua bubble jadi satu pesan per karakter (agar meja rapi)
-      const rawCombined = result.bubbles.join(" [[NEXT]] ");
-      // Ekstrak emosi jika ada mode ekspresi
-      const shouldEmotion = isUsingCallClipsInChat(parseCharacterMedia(character.media));
-      let cleanContent = rawCombined;
-      let emotion: string | null = null;
-      if (shouldEmotion || true) {
-        const parsed = extractCallReplyEmotion(rawCombined);
-        cleanContent = parsed.cleanText;
-        emotion = parsed.emotion as string;
-      }
-      if (!cleanContent.trim()) cleanContent = rawCombined;
-
-      const [saved] = await db
-        .insert(brainstormMessages)
-        .values({
-          roomId,
-          role: "assistant",
-          characterId: character.id,
-          content: cleanContent.trim(),
-          emotion: emotion || null,
-          createdAt: new Date(Date.now() + idx + 1),
+      // Pecah per bubble jadi baris terpisah (biar tampil sebagai gelembung terpisah, bukan [[NEXT]] mentah)
+      const prepared = result.bubbles
+        .map((raw) => {
+          const parsed = extractCallReplyEmotion(raw);
+          const text = (parsed.cleanText || raw).trim();
+          return text ? { content: text, emotion: (parsed.emotion as string) || null } : null;
         })
-        .returning();
+        .filter(Boolean) as { content: string; emotion: string | null }[];
 
-      assistantReplies.push(saved);
+      const toSave = prepared.length ? prepared : [{ content: result.bubbles.join(" ").trim(), emotion: null }];
 
-      // Tambahkan balasan ini ke evolvingHistory agar karakter berikutnya bisa menanggapi
-      evolvingHistory.push({ role: "assistant", content: `[${character.name}]: ${cleanContent.trim()}` });
+      for (let bIdx = 0; bIdx < toSave.length; bIdx++) {
+        const item = toSave[bIdx];
+        const [saved] = await db
+          .insert(brainstormMessages)
+          .values({
+            roomId,
+            role: "assistant",
+            characterId: character.id,
+            content: item.content,
+            emotion: item.emotion,
+            createdAt: new Date(Date.now() + idx * 100 + bIdx + 1),
+          })
+          .returning();
+        assistantReplies.push(saved);
+      }
+
+      // Masukkan semua bubble karakter ini ke evolvingHistory agar giliran berikutnya nyambung konteksnya
+      for (const item of toSave) {
+        evolvingHistory.push({ role: "assistant", content: `[${character.name}]: ${item.content}` });
+      }
     } catch (err) {
       // Jika gagal untuk satu karakter, lanjut ke berikutnya; jangan gagalkan seluruh meja
       // Simpan pesan error ringan
