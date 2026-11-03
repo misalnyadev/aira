@@ -24,6 +24,11 @@ import {
   type CallVisualPhase,
 } from "@/lib/characterMedia";
 import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
+import {
+  getDailyStatus,
+  getWibAmbient,
+  getWibPeriod,
+} from "@/lib/dailyPresence";
 import { ensureMediaUrl } from "@/lib/mediaClient";
 import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
 import { useIsAudibleSpeaking, useSpeakingMessageId } from "@/lib/voice";
@@ -168,6 +173,37 @@ export function ChatWindow({
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
   const backdrop = chatBackgroundProps(background, isDark);
+
+  // Aktivitas harian mengikuti jam WIB — diperbarui tiap menit & saat tab kembali aktif.
+  const [wibNow, setWibNow] = useState(() => new Date());
+  useEffect(() => {
+    const tick = () => setWibNow(new Date());
+    const id = window.setInterval(tick, 60_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+  const wibPeriod = useMemo(() => getWibPeriod(wibNow), [wibNow]);
+  const wibAmbient = useMemo(() => getWibAmbient(wibPeriod, isDark), [wibPeriod, isDark]);
+  const presenceLine = useMemo(
+    () =>
+      getDailyStatus(
+        {
+          id: character.id,
+          name: character.name,
+          shortBio: character.shortBio,
+          personality: (character as unknown as { personality?: string }).personality ?? "",
+          bible: (character as unknown as { bible?: string }).bible ?? "",
+        },
+        wibNow
+      ),
+    [character.id, character.name, character.shortBio, wibNow]
+  );
   const chatMedia = character.media;
   const useCallInChat = isUsingCallClipsInChat(chatMedia);
   const chatCallClips = useMemo(
@@ -385,6 +421,19 @@ export function ChatWindow({
       className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
       style={backdrop.style}
     >
+      {wibAmbient.opacity > 0 && !chatVideoFull && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            zIndex: 0,
+            background: wibAmbient.overlay,
+            opacity: wibAmbient.opacity,
+            transition: "opacity 900ms ease, background 900ms ease",
+          }}
+        />
+      )}
+
       {chatVideoFull &&
         (useCallInChat ? (
           <CallVideoStage
@@ -437,12 +486,15 @@ export function ChatWindow({
                   className={`truncate text-[11px] leading-tight ${
                     isTyping || isSpeaking ? "text-ink" : "text-ink/70"
                   }`}
+                  title={
+                    isTyping || isSpeaking ? undefined : `${presenceLine} · ${wibAmbient.label} WIB`
+                  }
                 >
                   {isTyping
                     ? "sedang mengetik..."
                     : isSpeaking
                       ? "sedang berbicara..."
-                      : character.shortBio || "online"}
+                      : presenceLine}
                 </p>
               </div>
             </button>
@@ -533,12 +585,17 @@ export function ChatWindow({
             <Avatar name={character.name} src={character.avatarUrl} size={40} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
-              <p className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}>
+              <p
+                className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}
+                title={
+                  isTyping || isSpeaking ? undefined : `${presenceLine} · ${wibAmbient.label} WIB`
+                }
+              >
                 {isTyping
                   ? "sedang mengetik..."
                   : isSpeaking
                     ? "sedang berbicara..."
-                    : character.shortBio || "online"}
+                    : presenceLine}
               </p>
             </div>
           </button>

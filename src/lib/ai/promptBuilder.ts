@@ -26,6 +26,8 @@ export type MemoryPromptContext = {
   voiceNoteReply?: boolean;
   /** Konteks Papan "Catatan & Janji Kita" (rencana, ide naskah, link, & target ber-tanggal). */
   sharedNotesBlock?: string;
+  /** Aktivitas & suasana harian karakter saat ini mengikuti jam WIB (untuk konsistensi status). */
+  dailyPresence?: string;
 };
 
 /**
@@ -96,6 +98,14 @@ ${extras.recalledArchive.trim()}
     blocks.push(`=== PAPAN "CATATAN & JANJI KITA" ===
 ${extras.sharedNotesBlock.trim()}
 === AKHIR PAPAN CATATAN ===`);
+  }
+
+  if (extras.dailyPresence?.trim()) {
+    blocks.push(`=== AKTIVITASMU SAAT INI (WIB) ===
+${extras.dailyPresence.trim()}
+
+(Catatan internal status ringan di bawah namamu — pakai sebagai nuansa alami bila relevan, jangan diumumkan kaku.)
+=== AKHIR AKTIVITAS ===`);
   }
 
   if (extras.webContext?.trim() || extras.webSearchActive) {
