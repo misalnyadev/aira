@@ -360,7 +360,7 @@ export function ChatApp() {
     for (let i = 0; i < bubbles.length; i++) {
       setTypingFor(target);
       const plannedVoice = loadVoiceSettings(user.id);
-      if (shouldSpeakReply(target, plannedVoice.enabled)) {
+      if (bubbles[i].isVoiceNote || shouldSpeakReply(target, plannedVoice.enabled)) {
         prefetchSpeech(bubbles[i].content, voiceTargetFor(target, plannedVoice.engine));
       }
       await sleep(typingDelayFor(bubbles[i].content));
@@ -372,6 +372,7 @@ export function ChatApp() {
       if (shouldSpeakReply(target, currentVoice.enabled)) {
         speak(bubbles[i].content, currentVoice, {
           append: i > 0,
+          messageId: bubbles[i].id,
           target: voiceTargetFor(target, currentVoice.engine),
           onFallback: (reason) => showToast(`${reason} Beralih ke suara perangkat.`),
         });
@@ -380,7 +381,11 @@ export function ChatApp() {
     }
   }
 
-  async function handleSend(text: string, imageFile: File | null) {
+  async function handleSend(
+    text: string,
+    imageFile: File | null,
+    isVoiceNote = false
+  ) {
     if (!activeId) return;
     const target = activeId;
     stopSpeaking();
@@ -402,6 +407,7 @@ export function ChatApp() {
     const contactId = parseContactThreadId(target);
     const targetObj = charactersRef.current.find((c) => c.id === target);
     const isOwnerManualSend = targetObj?.threadKind === "owner_contact";
+    const sendAsVoiceNote = Boolean(isVoiceNote && text && !imageUrl);
 
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
@@ -415,6 +421,7 @@ export function ChatApp() {
           : undefined,
       content: text,
       imageUrl,
+      isVoiceNote: sendAsVoiceNote,
       status: "sent",
       createdAt: new Date().toISOString(),
       pending: true,
@@ -434,8 +441,13 @@ export function ChatApp() {
         ? `/api/contacts/${contactId}/chat`
         : "/api/chat";
       const payload = contactId
-        ? { content: text, imageUrl }
-        : { characterId: target, content: text, imageUrl };
+        ? { content: text, imageUrl, isVoiceNote: sendAsVoiceNote }
+        : {
+            characterId: target,
+            content: text,
+            imageUrl,
+            isVoiceNote: sendAsVoiceNote,
+          };
       const res = await api(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -610,10 +622,18 @@ export function ChatApp() {
     fetchCharacters();
   }
 
-  function handleSpeakMessage(text: string) {
-    const resolved = voiceTargetFor(activeId, voice.engine);
+  function handleSpeakMessage(
+    text: string,
+    messageId?: string,
+    role?: "user" | "assistant"
+  ) {
+    const resolved =
+      role === "user"
+        ? ({ kind: "device" } as const)
+        : voiceTargetFor(activeId, voice.engine);
     if (
       !speak(text, voice, {
+        messageId,
         target: resolved,
         onFallback: (reason) => showToast(`${reason} Beralih ke suara perangkat.`),
       })

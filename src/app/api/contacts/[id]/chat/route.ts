@@ -23,8 +23,10 @@ import {
 import { effectiveContactState } from "@/lib/contactPin";
 import { serializeContactMessageForViewer } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
+import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { readImageAsBase64 } from "@/lib/uploads";
+import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
 
 export const dynamic = "force-dynamic";
@@ -48,13 +50,15 @@ export async function POST(
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const { content, imageUrl, callMode } = body as {
+  const { content, imageUrl, callMode, isVoiceNote } = body as {
     content?: string;
     imageUrl?: string | null;
     callMode?: "video" | "audio" | null;
+    isVoiceNote?: boolean;
   };
   const activeCallMode =
     callMode === "video" || callMode === "audio" ? callMode : undefined;
+  const userSentVoiceNote = Boolean(isVoiceNote && !activeCallMode && content?.trim());
 
   if (!content?.trim() && !imageUrl) {
     return NextResponse.json(
@@ -97,6 +101,7 @@ export async function POST(
         senderKind: "owner_manual",
         content: content?.trim() || "",
         imageUrl: imageUrl || null,
+        isVoiceNote: userSentVoiceNote,
       })
       .returning();
 
@@ -130,6 +135,7 @@ export async function POST(
         senderKind: "guest",
         content: content?.trim() || "",
         imageUrl: imageUrl || null,
+        isVoiceNote: userSentVoiceNote,
       })
       .returning();
 
@@ -178,6 +184,7 @@ export async function POST(
       senderKind: "guest",
       content: content?.trim() || "",
       imageUrl: imageUrl || null,
+      isVoiceNote: userSentVoiceNote,
     })
     .returning();
 
@@ -201,6 +208,15 @@ export async function POST(
 
   const cleanUserText =
     content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : "");
+
+  const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
+  const replyAsVoiceNote = shouldReplyWithVoiceNote({
+    mode: charVoiceCfg?.voiceNoteMode,
+    userSentVoiceNote,
+    userText: cleanUserText,
+    hasImage: Boolean(imageUrl),
+    callMode: activeCallMode,
+  });
 
   try {
     let memoryExtras: MemoryPromptContext | undefined;
@@ -239,6 +255,9 @@ export async function POST(
         };
       }
     }
+    if (replyAsVoiceNote) {
+      memoryExtras = { ...memoryExtras, voiceNoteReply: true };
+    }
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(normalizedHistory, guestMessage.id)
@@ -266,7 +285,7 @@ export async function POST(
     const shouldExtractEmotion = Boolean(activeCallMode || chatExpressionMode);
 
     let callEmotion: CallEmotion | undefined;
-    const preparedBubbles: { content: string; emotion?: CallEmotion }[] =
+    let preparedBubbles: { content: string; emotion?: CallEmotion }[] =
       shouldExtractEmotion
         ? result.bubbles
             .map((raw, idx) => {
@@ -276,6 +295,15 @@ export async function POST(
             })
             .filter((item) => item.content.length > 0)
         : result.bubbles.map((raw) => ({ content: raw }));
+
+    if (replyAsVoiceNote && preparedBubbles.length > 1) {
+      const mergedText = preparedBubbles.map((b) => b.content.trim()).join(" ");
+      if (mergedText.length <= 450) {
+        preparedBubbles = [
+          { content: mergedText, emotion: preparedBubbles[0]?.emotion },
+        ];
+      }
+    }
 
     const assistantMessages = [];
     const baseTime = Date.now();
@@ -287,6 +315,7 @@ export async function POST(
           contactId: contact.id,
           senderKind: "character_ai",
           content: item.content,
+          isVoiceNote: replyAsVoiceNote,
           createdAt: new Date(baseTime + i),
         })
         .returning();

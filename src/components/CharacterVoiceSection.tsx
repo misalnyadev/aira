@@ -11,6 +11,10 @@ import {
   type TtsAccountSummary,
 } from "@/lib/hdVoice";
 import {
+  normalizeVoiceNoteMode,
+  type VoiceNoteReplyMode,
+} from "@/lib/voiceNote";
+import {
   VOICE_TEST_TEXT,
   speak,
   stopSpeaking,
@@ -46,6 +50,33 @@ const OPTIONS: { id: UiVoiceChoice; label: string; hint: string }[] = [
 const ALL_GEMINI_PRESETS = [...GEMINI_FEMALE_PRESETS, ...GEMINI_MALE_PRESETS];
 const ALL_ELEVEN_PRESETS = [...FEMALE_VOICE_PRESETS, ...MALE_VOICE_PRESETS];
 
+const VN_MODE_OPTIONS: {
+  id: VoiceNoteReplyMode;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    id: "auto",
+    label: "Otomatis",
+    hint: "Karakter membalas pakai Voice Note saat kamu mengirim pesan suara (🎤).",
+  },
+  {
+    id: "occasional",
+    label: "Sesekali",
+    hint: "Sesekali membalas pakai Voice Note saat obrolan santai + setiap kamu kirim pesan suara.",
+  },
+  {
+    id: "always",
+    label: "Selalu VN",
+    hint: "Semua balasan karakter di ruang chat dikirim sebagai Gelembung Voice Note.",
+  },
+  {
+    id: "off",
+    label: "Teks Saja",
+    hint: "Balasan selalu berupa gelembung teks biasa.",
+  },
+];
+
 function deriveInitialChoice(
   value: CharacterVoiceConfig | null,
   accountProvider: "gemini" | "elevenlabs"
@@ -76,31 +107,42 @@ export function CharacterVoiceSection({
   const initialChoice = deriveInitialChoice(value, ttsSummary.provider);
   const [choice, setChoice] = useState<UiVoiceChoice>(initialChoice);
   const [customId, setCustomId] = useState<string>(value?.customVoiceId ?? "");
+  const [vnMode, setVnMode] = useState<VoiceNoteReplyMode>(
+    normalizeVoiceNoteMode(value?.voiceNoteMode, "auto")
+  );
   const isSpeaking = useIsSpeaking();
 
   const geminiHasKey = ttsSummary.hasGeminiKey || ttsSummary.hasSharedGeminiKey;
   const elevenHasKey = ttsSummary.hasKey;
 
-  function selectChoice(next: UiVoiceChoice) {
-    stopSpeaking();
-    setChoice(next);
+  function buildConfigFor(
+    nextChoice: UiVoiceChoice,
+    nextVn: VoiceNoteReplyMode,
+    overrideCustomId?: string
+  ): CharacterVoiceConfig | null {
+    const vnField = nextVn !== "auto" ? { voiceNoteMode: nextVn } : {};
 
-    if (next === "inherit") {
-      onChange(null);
-      return;
+    if (nextChoice === "inherit") {
+      return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
     }
-    if (next === "device" || next === "hd_female" || next === "hd_male") {
-      onChange({ mode: next });
-      return;
+    if (
+      nextChoice === "device" ||
+      nextChoice === "hd_female" ||
+      nextChoice === "hd_male"
+    ) {
+      return { mode: nextChoice, ...vnField };
     }
 
-    const targetProv = next === "eleven_custom" ? "elevenlabs" : "gemini";
+    const targetProv = nextChoice === "eleven_custom" ? "elevenlabs" : "gemini";
     const defaultPick =
-      targetProv === "gemini" ? ALL_GEMINI_PRESETS[0].id : ALL_ELEVEN_PRESETS[0].id;
-    const currentClean = cleanVoiceId(customId);
-
-    // Bila berpindah antar Gemini <-> ElevenLabs, ganti ke contoh bawaan penyedia baru bila ID lama dari penyedia seberang.
-    const looksLikeGemini = ALL_GEMINI_PRESETS.some((p) => p.id === currentClean);
+      targetProv === "gemini"
+        ? ALL_GEMINI_PRESETS[0].id
+        : ALL_ELEVEN_PRESETS[0].id;
+    const rawId = overrideCustomId ?? customId;
+    const currentClean = cleanVoiceId(rawId);
+    const looksLikeGemini = ALL_GEMINI_PRESETS.some(
+      (p) => p.id === currentClean
+    );
     const nextVoiceId =
       !currentClean ||
       (targetProv === "elevenlabs" && looksLikeGemini) ||
@@ -108,12 +150,28 @@ export function CharacterVoiceSection({
         ? defaultPick
         : currentClean;
 
-    setCustomId(nextVoiceId);
-    onChange({
+    return {
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: nextVoiceId,
-    });
+      ...vnField,
+    };
+  }
+
+  function selectChoice(next: UiVoiceChoice) {
+    stopSpeaking();
+    setChoice(next);
+
+    const built = buildConfigFor(next, vnMode);
+    if (built?.mode === "hd_custom" && built.customVoiceId) {
+      setCustomId(built.customVoiceId);
+    }
+    onChange(built);
+  }
+
+  function selectVnMode(nextVn: VoiceNoteReplyMode) {
+    setVnMode(nextVn);
+    onChange(buildConfigFor(choice, nextVn));
   }
 
   function handlePickPreset(id: string) {
@@ -124,6 +182,7 @@ export function CharacterVoiceSection({
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: id,
+      ...(vnMode !== "auto" ? { voiceNoteMode: vnMode } : {}),
     });
   }
 
@@ -138,6 +197,7 @@ export function CharacterVoiceSection({
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: cleaned,
+      ...(vnMode !== "auto" ? { voiceNoteMode: vnMode } : {}),
     });
     onNotice?.("Suara khusus karakter disimpan.");
   }
@@ -263,6 +323,35 @@ export function CharacterVoiceSection({
           </div>
         </div>
       )}
+
+      {/* Gaya Balasan Gelembung Voice Note (VN) */}
+      <div className="space-y-1.5 border-t border-line pt-3">
+        <span className="block text-xs font-semibold text-ink">
+          🎙️ Gelembung Voice Note (VN) di Chat
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {VN_MODE_OPTIONS.map((opt) => {
+            const active = vnMode === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => selectVnMode(opt.id)}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                  active
+                    ? "border-ink bg-ink text-surface"
+                    : "border-line bg-surface text-ink-soft hover:text-ink"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] leading-relaxed text-muted">
+          {VN_MODE_OPTIONS.find((o) => o.id === vnMode)?.hint}
+        </p>
+      </div>
     </div>
   );
 }

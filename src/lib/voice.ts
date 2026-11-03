@@ -90,6 +90,8 @@ let activeAudioFinish: (() => void) | null = null;
 
 export type SpeakOptions = {
   append?: boolean;
+  /** ID pesan chat yang sedang dibacakan (menggerakkan gelombang Voice Note terkait). */
+  messageId?: string;
   target?: ResolvedVoiceTarget;
   /** Emosi lisan saat panggilan (mengatur intonasi suara Gemini HD). */
   emotion?: CallEmotion;
@@ -766,6 +768,7 @@ export function speak(
     generation += 1;
     pendingSpeech = 0;
     setAudibleSpeakingState(false);
+    setSpeakingMessageId(options.messageId ?? null);
     stopSharedAudio();
     let wasSynthBusy = false;
     if (isSpeechSupported()) {
@@ -792,6 +795,7 @@ export function speak(
   chain = chain.then(async () => {
     try {
       if (currentGeneration !== generation) return;
+      setSpeakingMessageId(options.messageId ?? null);
 
       if (useHd && target.kind === "hd") {
         const clauses = splitTtsClauses(text);
@@ -862,6 +866,7 @@ export function speak(
         if (pendingSpeech === 0) {
           setSpeakingState(false);
           setAudibleSpeakingState(false);
+          setSpeakingMessageId(null);
         }
       }
       options.onEnd?.(completed);
@@ -876,6 +881,7 @@ export function stopSpeaking() {
   blockedSpeech = null;
   setSpeakingState(false);
   setAudibleSpeakingState(false);
+  setSpeakingMessageId(null);
   generation += 1;
   chain = Promise.resolve();
   stopSharedAudio();
@@ -897,6 +903,9 @@ const speakingListeners = new Set<() => void>();
 let audibleSpeaking = false;
 const audibleListeners = new Set<() => void>();
 
+let speakingMessageId: string | null = null;
+const speakingMsgListeners = new Set<() => void>();
+
 function setSpeakingState(next: boolean) {
   if (speaking === next) return;
   speaking = next;
@@ -907,6 +916,12 @@ function setAudibleSpeakingState(next: boolean) {
   if (audibleSpeaking === next) return;
   audibleSpeaking = next;
   for (const listener of audibleListeners) listener();
+}
+
+function setSpeakingMessageId(next: string | null) {
+  if (speakingMessageId === next) return;
+  speakingMessageId = next;
+  for (const listener of speakingMsgListeners) listener();
 }
 
 export function subscribeSpeaking(listener: () => void): () => void {
@@ -941,6 +956,25 @@ export function useIsAudibleSpeaking(): boolean {
     subscribeAudibleSpeaking,
     getAudibleSpeakingSnapshot,
     () => false
+  );
+}
+
+function subscribeSpeakingMessageId(listener: () => void): () => void {
+  speakingMsgListeners.add(listener);
+  return () => {
+    speakingMsgListeners.delete(listener);
+  };
+}
+
+function getSpeakingMessageIdSnapshot(): string | null {
+  return speakingMessageId;
+}
+
+export function useSpeakingMessageId(): string | null {
+  return useSyncExternalStore(
+    subscribeSpeakingMessageId,
+    getSpeakingMessageIdSnapshot,
+    () => null
   );
 }
 

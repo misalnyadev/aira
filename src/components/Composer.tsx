@@ -15,7 +15,7 @@ export function Composer({
   onActivityChange,
   onNotice,
 }: {
-  onSend: (text: string, imageFile: File | null) => void;
+  onSend: (text: string, imageFile: File | null, isVoiceNote?: boolean) => void;
   disabled?: boolean;
   /** Latar transparan kaca untuk mode sembunyikan tulisan chat / bar minimalis. */
   transparent?: boolean;
@@ -33,6 +33,7 @@ export function Composer({
   const [text, setText] = useState("");
   const [focused, setFocused] = useState(false);
   const [multiline, setMultiline] = useState(false);
+  const [voiceNoteArmed, setVoiceNoteArmed] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -94,6 +95,9 @@ export function Composer({
     stopSpeaking();
     dictationOff.current = false;
     dictationBase.current = text.trim();
+    if (!imageFile) {
+      setVoiceNoteArmed(true);
+    }
     dictation.start();
   }
 
@@ -102,6 +106,7 @@ export function Composer({
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+    setVoiceNoteArmed(false);
     onWake?.();
   }
 
@@ -115,11 +120,13 @@ export function Composer({
   function handleSubmit() {
     const trimmed = text.trim();
     if (!trimmed && !imageFile) return;
+    const sendAsVn = Boolean(voiceNoteArmed && trimmed && !imageFile);
     dictationOff.current = true;
     if (dictation.listening) dictation.stop();
     dictationBase.current = "";
-    onSend(trimmed, imageFile);
+    onSend(trimmed, imageFile, sendAsVn);
     setText("");
+    setVoiceNoteArmed(false);
     clearImage();
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -164,6 +171,47 @@ export function Composer({
           </div>
         )}
 
+        {(dictation.listening || (voiceNoteArmed && text.trim())) && !imagePreview && (
+          <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+            <div
+              className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium ${
+                transparent
+                  ? "bg-surface/80 text-ink ring-1 ring-line/65 backdrop-blur-md"
+                  : "bg-surface/90 text-ink ring-1 ring-line/70"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${
+                  dictation.listening
+                    ? "bg-rose-500 animate-pulse"
+                    : voiceNoteArmed
+                      ? "bg-emerald-500"
+                      : "bg-muted"
+                }`}
+              />
+              <span className="truncate">
+                {dictation.listening
+                  ? voiceNoteArmed
+                    ? "Merekam Voice Note…"
+                    : "Mendikte teks…"
+                  : "Siap dikirim sebagai Voice Note"}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setVoiceNoteArmed((v) => !v)}
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                transparent
+                  ? "bg-surface/80 text-ink-soft ring-1 ring-line/65 backdrop-blur-md hover:text-ink"
+                  : "bg-surface/90 text-ink-soft ring-1 ring-line/70 hover:text-ink"
+              }`}
+            >
+              {voiceNoteArmed ? "Ubah ke teks" : "Kirim sbg VN"}
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <input
             ref={fileRef}
@@ -196,7 +244,11 @@ export function Composer({
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               onChange={(e) => {
-                setText(e.target.value);
+                const val = e.target.value;
+                setText(val);
+                if (!val.trim() && !dictation.listening) {
+                  setVoiceNoteArmed(false);
+                }
                 syncSize(e.target);
               }}
               onKeyDown={(e) => {

@@ -21,6 +21,7 @@ import {
   MAX_SHORT_BIO_CHARS,
 } from "@/lib/limits";
 import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
+import { formatVoiceNotePreview } from "@/lib/voiceNote";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,12 @@ export async function GET() {
   const list = await Promise.all(
     rows.map(async (row) => {
       const [lastMsg] = await db
-        .select({ content: messages.content, role: messages.role, imageUrl: messages.imageUrl })
+        .select({
+          content: messages.content,
+          role: messages.role,
+          imageUrl: messages.imageUrl,
+          isVoiceNote: messages.isVoiceNote,
+        })
         .from(messages)
         .where(eq(messages.characterId, row.id))
         .orderBy(desc(messages.createdAt))
@@ -97,7 +103,9 @@ export async function GET() {
         proactiveEnabled: Boolean(row.proactiveEnabled),
         invitePin: row.invitePin ?? null,
         preview: lastMsg
-          ? lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
+          ? lastMsg.isVoiceNote
+            ? formatVoiceNotePreview(lastMsg.content)
+            : lastMsg.content || (lastMsg.imageUrl ? "📷 Foto" : "")
           : "Mulai percakapan baru",
         updatedAt: row.lastAt ?? row.createdAt,
       };

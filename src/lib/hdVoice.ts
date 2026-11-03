@@ -1,4 +1,5 @@
 import { cleanBackupKeys, maskKey } from "./providerPool";
+import { normalizeVoiceNoteMode, type VoiceNoteReplyMode } from "./voiceNote";
 import { speakableText } from "./voiceRules";
 
 /**
@@ -24,6 +25,8 @@ export type CharacterVoiceConfig = {
   /** Penyedia khusus untuk `hd_custom` (`gemini` atau `elevenlabs`); kosong = ikut penyedia akun. */
   customProvider?: HdTtsProvider;
   customVoiceId?: string;
+  /** Gaya balasan Gelembung Voice Note karakter (`auto` bawaan). */
+  voiceNoteMode?: VoiceNoteReplyMode;
 };
 
 /* ------------------------------------------------------------------ */
@@ -413,21 +416,29 @@ export function normalizeCharacterVoice(input: unknown): CharacterVoiceConfig | 
   if (!input || typeof input !== "object") return null;
   const raw = input as Record<string, unknown>;
   const modeRaw = typeof raw.mode === "string" ? (raw.mode as CharacterVoiceMode) : "inherit";
+  const vnMode =
+    raw.voiceNoteMode !== undefined
+      ? normalizeVoiceNoteMode(raw.voiceNoteMode, "auto")
+      : undefined;
+  const vnField = vnMode && vnMode !== "auto" ? { voiceNoteMode: vnMode } : {};
+
   if (!VALID_CHAR_MODES.has(modeRaw) || modeRaw === "inherit") {
-    return null;
+    return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
   }
   if (modeRaw === "hd_custom") {
     const customVoiceId = cleanVoiceId(raw.customVoiceId, "");
-    if (!customVoiceId) return null;
+    if (!customVoiceId) {
+      return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
+    }
     const customProvider =
       raw.customProvider === "gemini" || raw.customProvider === "elevenlabs"
         ? raw.customProvider
         : undefined;
     return customProvider
-      ? { mode: "hd_custom", customProvider, customVoiceId }
-      : { mode: "hd_custom", customVoiceId };
+      ? { mode: "hd_custom", customProvider, customVoiceId, ...vnField }
+      : { mode: "hd_custom", customVoiceId, ...vnField };
   }
-  return { mode: modeRaw };
+  return { mode: modeRaw, ...vnField };
 }
 
 export function parseCharacterVoice(json: string | null | undefined): CharacterVoiceConfig | null {

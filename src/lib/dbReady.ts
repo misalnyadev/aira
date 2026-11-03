@@ -145,6 +145,7 @@ const DDL = [
       AND NOT EXISTS (SELECT 1 FROM "users" WHERE "is_admin" = true)`,
 
   // ---- PIN Karakter & Kontak 2 Arah Antar-Pengguna ----
+  sql`ALTER TABLE "messages" ADD COLUMN IF NOT EXISTS "is_voice_note" boolean DEFAULT false NOT NULL`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_enabled" boolean DEFAULT false NOT NULL`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_last_at" timestamp with time zone`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "invite_pin" text`,
@@ -176,9 +177,11 @@ const DDL = [
     "sender_kind" text NOT NULL,
     "content" text DEFAULT '' NOT NULL,
     "image_url" text,
+    "is_voice_note" boolean DEFAULT false NOT NULL,
     "status" text DEFAULT 'sent' NOT NULL,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "contact_messages" ADD COLUMN IF NOT EXISTS "is_voice_note" boolean DEFAULT false NOT NULL`,
   sql`CREATE INDEX IF NOT EXISTS "contact_messages_contact_idx" ON "contact_messages" ("contact_id", "created_at" ASC)`,
   sql`CREATE TABLE IF NOT EXISTS "app_settings" (
     "key" text PRIMARY KEY NOT NULL,
