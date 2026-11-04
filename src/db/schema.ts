@@ -440,6 +440,23 @@ export const statusComments = pgTable("status_comments", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const statusCommentLikes = pgTable(
+  "status_comment_likes",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => statusComments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("status_comment_likes_comment_user_idx").on(t.commentId, t.userId)]
+);
+
 export const statusViews = pgTable(
   "status_views",
   {

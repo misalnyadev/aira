@@ -57,6 +57,8 @@ type CommentRow = {
   displayName: string | null;
   nickname: string | null;
   avatarUrl: string | null;
+  likeCount: number;
+  likedByMe: boolean;
 };
 
 type CommentReplyTarget = {
@@ -186,6 +188,7 @@ export function StatusView({
 }) {
   const [items, setItems] = useState<StatusItem[]>([]);
   const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
+  const [commentLikeBusyIds, setCommentLikeBusyIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
   const [editingItem, setEditingItem] = useState<StatusItem | null>(null);
@@ -224,6 +227,7 @@ export function StatusView({
   const requestedSharedStatusRef = useRef<string | null>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
   const bookmarkBusyIdsRef = useRef(new Set<string>());
+  const commentLikeBusyIdsRef = useRef(new Set<string>());
   const viewerStoriesRef = useRef<StatusItem[]>([]);
 
   const load = useCallback(async () => {
@@ -495,6 +499,51 @@ export function StatusView({
       commentId: comment.id,
       displayName: comment.displayName || comment.nickname || "pengguna",
     });
+  }
+
+  async function toggleCommentLike(statusId: string, commentId: string) {
+    if (commentLikeBusyIdsRef.current.has(commentId)) return;
+    const current = comments[statusId]?.find((comment) => comment.id === commentId);
+    if (!current) return;
+
+    const nextLiked = !current.likedByMe;
+    const nextCount = Math.max(0, current.likeCount + (nextLiked ? 1 : -1));
+    commentLikeBusyIdsRef.current.add(commentId);
+    setCommentLikeBusyIds((prev) => ({ ...prev, [commentId]: true }));
+    setComments((prev) => ({
+      ...prev,
+      [statusId]: (prev[statusId] || []).map((comment) =>
+        comment.id === commentId ? { ...comment, likedByMe: nextLiked, likeCount: nextCount } : comment
+      ),
+    }));
+
+    try {
+      const res = await fetch(`/api/statuses/${statusId}/comments/${commentId}/like`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.liked !== "boolean" || typeof data?.likeCount !== "number") {
+        throw new Error(data?.error || "Gagal menyukai komentar.");
+      }
+      setComments((prev) => ({
+        ...prev,
+        [statusId]: (prev[statusId] || []).map((comment) =>
+          comment.id === commentId ? { ...comment, likedByMe: data.liked, likeCount: data.likeCount } : comment
+        ),
+      }));
+    } catch {
+      setComments((prev) => ({
+        ...prev,
+        [statusId]: (prev[statusId] || []).map((comment) =>
+          comment.id === commentId ? { ...comment, likedByMe: current.likedByMe, likeCount: current.likeCount } : comment
+        ),
+      }));
+    } finally {
+      commentLikeBusyIdsRef.current.delete(commentId);
+      setCommentLikeBusyIds((prev) => {
+        const next = { ...prev };
+        delete next[commentId];
+        return next;
+      });
+    }
   }
 
   async function sendComment(id: string) {
@@ -1454,8 +1503,15 @@ export function StatusView({
                                   Balas
                                 </button>
                               </div>
-                              <button className="shrink-0 self-start p-1.5 text-white/40">
-                                <IgHeartIcon className="h-4 w-4" />
+                              <button
+                                onClick={() => toggleCommentLike(activeIt.id, c.id)}
+                                aria-label={c.likedByMe ? "Batal suka komentar" : "Sukai komentar"}
+                                aria-pressed={c.likedByMe}
+                                disabled={!!commentLikeBusyIds[c.id]}
+                                className={`shrink-0 self-start inline-flex items-center gap-1 p-1.5 active:scale-90 disabled:opacity-50 ${c.likedByMe ? "text-rose-500" : "text-white/40"}`}
+                              >
+                                <IgHeartIcon filled={c.likedByMe} className="h-4 w-4" />
+                                {c.likeCount > 0 ? <span className="text-[10px] leading-none">{c.likeCount}</span> : null}
                               </button>
                             </div>
                             {replies.map((reply) => (

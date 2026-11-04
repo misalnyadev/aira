@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { characterStatuses, statusComments, users } from "@/db/schema";
+import { characterStatuses, statusCommentLikes, statusComments, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 
@@ -33,7 +33,35 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     .orderBy(asc(statusComments.createdAt))
     .limit(100);
 
-  return NextResponse.json({ comments: rows });
+  const likesByComment = new Map<string, { likeCount: number; likedByMe: boolean }>();
+  if (rows.length > 0) {
+    const likeRows = await db
+      .select({
+        commentId: statusCommentLikes.commentId,
+        likeCount: sql<number>`count(*)::int`,
+        likedByMe: sql<boolean>`bool_or(${statusCommentLikes.userId} = ${user.id})`,
+      })
+      .from(statusCommentLikes)
+      .where(inArray(statusCommentLikes.commentId, rows.map((row) => row.id)))
+      .groupBy(statusCommentLikes.commentId);
+    likeRows.forEach((row) => {
+      likesByComment.set(row.commentId, {
+        likeCount: Number(row.likeCount),
+        likedByMe: Boolean(row.likedByMe),
+      });
+    });
+  }
+
+  const comments = rows.map((row) => {
+    const likes = likesByComment.get(row.id);
+    return {
+      ...row,
+      likeCount: likes?.likeCount ?? 0,
+      likedByMe: likes?.likedByMe ?? false,
+    };
+  });
+
+  return NextResponse.json({ comments });
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
