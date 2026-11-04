@@ -477,13 +477,13 @@ export function StatusView({
                     )}
                   </div>
 
-                  {/* media — full kanan-kiri hitam edge-to-edge */}
-                  <div className="relative w-full bg-black flex items-center justify-center overflow-hidden">
+                  {/* media — full tanpa hitam ala IG: cover, aspect fix */}
+                  <div className="relative w-full overflow-hidden bg-black">
                     {it.mediaType === "image" && it.imageUrl ? (
                       <img
                         src={it.imageUrl}
                         alt=""
-                        className="h-auto w-full max-h-[78vh] min-h-[240px] object-contain bg-black"
+                        className={`block w-full object-cover ${it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`}
                         loading="lazy"
                       />
                     ) : it.mediaType === "video" && it.videoUrl ? (
@@ -494,10 +494,10 @@ export function StatusView({
                         muted
                         loop
                         preload="metadata"
-                        className="h-auto w-full max-h-[78vh] min-h-[300px] bg-black object-contain"
+                        className={`block w-full object-cover ${it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`}
                       />
                     ) : (
-                      <div className="w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10">
+                      <div className={`w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
                         <p className="whitespace-pre-wrap text-center text-[18px] font-semibold leading-relaxed text-white drop-shadow">{it.content || it.caption || "—"}</p>
                       </div>
                     )}
