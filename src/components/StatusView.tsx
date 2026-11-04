@@ -135,6 +135,7 @@ export function StatusView({
   const [reelCommentsFor, setReelCommentsFor] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
@@ -491,34 +492,9 @@ export function StatusView({
             {(reels.length ? reels : items.filter((x) => x.kind === "status")).map((it) => {
               const displayName = it.characterName || it.userDisplayName || it.userNickname || "Anonim";
               const avatar = it.characterAvatar || it.userAvatar || undefined;
-              const isOwn = true; // bisa hapus siapa saja untuk MVP (nanti cek userId)
               return (
                 <article key={it.id} className="bg-surface">
-                  <div className="flex items-center justify-between px-3 py-2.5">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <Avatar name={displayName} src={avatar} size={36} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-sm font-semibold">{displayName}</span>
-                          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">{it.kind === "reel" ? "Reel" : "Story"}</span>
-                        </div>
-                        <div className="text-xs text-muted">
-                          {timeAgo(it.createdAt)} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}
-                        </div>
-                      </div>
-                    </div>
-                    {isOwn ? (
-                      <button onClick={() => handleDelete(it.id)} className="rounded-full p-2 text-muted hover:bg-surface-2" aria-label="Hapus">
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    ) : (
-                      <button className="rounded-full p-2 text-muted" aria-label="Lainnya">
-                        <IgMoreIcon className="h-4 w-4 text-muted" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* media — full tanpa hitam ala IG: cover, aspect fix */}
+                  {/* media + banner transparan ala IG di atas konten */}
                   <div className="relative w-full overflow-hidden bg-black">
                     {it.mediaType === "image" && it.imageUrl ? (
                       <img
@@ -536,6 +512,58 @@ export function StatusView({
                       <div className={`w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
                         <p className="whitespace-pre-wrap text-center text-[18px] font-semibold leading-relaxed text-white drop-shadow">{it.content || it.caption || "—"}</p>
                       </div>
+                    )}
+
+                    {/* Banner transparan IG: avatar + nama di atas konten, burger kanan */}
+                    <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/65 via-black/25 to-transparent px-3 pb-8 pt-2.5">
+                      <div className="pointer-events-auto flex min-w-0 items-center gap-2.5">
+                        <span className="rounded-full bg-white p-[2px] shadow-sm">
+                          <Avatar name={displayName} src={avatar} size={32} />
+                        </span>
+                        <div className="min-w-0 leading-none">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-[13px] font-semibold text-white drop-shadow">{displayName}</span>
+                            <span className="shrink-0 text-[11px] font-normal text-white/80">• {timeAgo(it.createdAt)}</span>
+                          </div>
+                          <div className="truncate text-[11px] text-white/80 drop-shadow">{it.kind === "reel" ? "Reels" : "Status"} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setMenuFor(menuFor === it.id ? null : it.id)}
+                        className="pointer-events-auto -mr-1 rounded-full p-2 text-white active:scale-90"
+                        aria-label="Opsi"
+                      >
+                        <IgMoreIcon className="h-5 w-5 text-white drop-shadow" />
+                      </button>
+                    </div>
+
+                    {/* Popover opsi burger */}
+                    {menuFor === it.id && (
+                      <div className="absolute right-2 top-11 z-20 min-w-[160px] overflow-hidden rounded-2xl border border-line bg-surface py-1 shadow-xl">
+                        <button
+                          onClick={() => {
+                            setMenuFor(null);
+                            handleDelete(it.id);
+                          }}
+                          className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-surface-2"
+                        >
+                          <TrashIcon className="h-4 w-4" /> Hapus
+                        </button>
+                        <button
+                          onClick={() => setMenuFor(null)}
+                          className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm text-ink-soft hover:bg-surface-2"
+                        >
+                          <XIcon className="h-4 w-4" /> Tutup
+                        </button>
+                      </div>
+                    )}
+                    {/* tap backdrop tutup menu */}
+                    {menuFor === it.id && (
+                      <button
+                        aria-label="Tutup menu"
+                        onClick={() => setMenuFor(null)}
+                        className="absolute inset-0 z-10 bg-transparent"
+                      />
                     )}
                   </div>
 
