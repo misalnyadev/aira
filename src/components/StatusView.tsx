@@ -178,8 +178,11 @@ export function StatusView({
   const [fullScreenId, setFullScreenId] = useState<string | null>(null);
   const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
   const [fullMuted, setFullMuted] = useState(true);
+  const [showFullscreenComments, setShowFullscreenComments] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const fsCommentInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -372,6 +375,42 @@ export function StatusView({
     }, 5000);
     return () => clearTimeout(t);
   }, [viewerIdx, stories]);
+
+  // keyboard offset biar input komentar naik kayak IG pas keyboard muncul
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      const off = window.innerHeight - vv.height - vv.offsetTop;
+      setKbOffset(off > 16 ? off : 0);
+    };
+    vv.addEventListener("resize", onResize);
+    vv.addEventListener("scroll", onResize);
+    window.addEventListener("resize", onResize);
+    return () => {
+      vv.removeEventListener("resize", onResize);
+      vv.removeEventListener("scroll", onResize);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  // tutup sheet komentar pas keluar fullscreen
+  useEffect(() => {
+    if (!fullScreenId) setShowFullscreenComments(false);
+  }, [fullScreenId]);
+
+  // preload komentar pas buka sheet fullscreen
+  useEffect(() => {
+    if (!showFullscreenComments || !fullScreenId) return;
+    const id = fullScreenId;
+    if (comments[id] !== undefined) return;
+    fetch(`/api/statuses/${id}/comments`, { cache: "no-store" })
+      .then((r) => r.json().catch(() => null))
+      .then((d) => {
+        if (Array.isArray(d?.comments)) setComments((prev) => ({ ...prev, [id]: d.comments }));
+      })
+      .catch(() => {});
+  }, [showFullscreenComments, fullScreenId]);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
@@ -816,43 +855,45 @@ export function StatusView({
               </button>
             </div>
 
-            {/* speaker kanan-bawah di atas video */}
-            {it.mediaType === "video" && it.videoUrl && (
-              <button
-                onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
-                className="absolute bottom-[158px] right-3 rounded-full bg-black/40 p-2.5 text-white backdrop-blur-md border border-white/15 active:scale-90"
-                aria-label="Suara"
-              >
-                {fullMuted ? <SpeakerOffIcon className="h-5 w-5" /> : <SpeakerIcon className="h-5 w-5" />}
-              </button>
-            )}
-
-            {/* right vertical action bar — hanya fungsi real app */}
-            <div className="absolute bottom-[132px] right-2 flex flex-col items-center gap-4 text-white">
+            {/* right vertical action bar — hanya fungsi real app, naikin biar gak tumpang tindih */}
+            <div className="absolute bottom-[108px] right-2.5 flex flex-col items-center gap-3.5 text-white">
               <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                 <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                   <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
                 </span>
-                <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
+                <span className="text-[11px] font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
               </button>
-              <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+              <button onClick={() => setShowFullscreenComments(true)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                 <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                   <IgCommentIcon className="h-6 w-6 text-white" />
                 </span>
-                <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
+                <span className="text-[11px] font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
               </button>
-              <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan — nanti">
+              <button onClick={() => setShowFullscreenComments(true)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan">
                 <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                   <IgShareIcon className="h-6 w-6 text-white" />
                 </span>
               </button>
-              <button className="flex flex-col items-center gap-1 active:scale-90 opacity-80 drop-shadow" title="Simpan — nanti">
-                <IgBookmarkIcon className="h-6 w-6 text-white drop-shadow" />
+              {it.mediaType === "video" && it.videoUrl ? (
+                <button
+                  onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
+                  className="flex flex-col items-center gap-1 active:scale-90 drop-shadow"
+                  aria-label="Suara"
+                >
+                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                    {fullMuted ? <SpeakerOffIcon className="h-[22px] w-[22px] text-white" /> : <SpeakerIcon className="h-[22px] w-[22px] text-white" />}
+                  </span>
+                </button>
+              ) : null}
+              <button className="flex flex-col items-center gap-1 active:scale-90 opacity-90 drop-shadow" title="Simpan">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgBookmarkIcon className="h-[22px] w-[22px] text-white drop-shadow" />
+                </span>
               </button>
             </div>
 
-            {/* bottom profile + caption overlay di atas video */}
-            <div className="absolute inset-x-0 bottom-[56px] px-3 pb-2 pt-2 text-white">
+            {/* bottom profile + caption overlay di atas video — naikin biar gak mepet input */}
+            <div className="absolute inset-x-0 bottom-[64px] px-3 pb-1 pt-2 text-white">
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white p-[2px] shadow">
                   <Avatar name={displayName} src={avatar} size={28} />
@@ -869,8 +910,11 @@ export function StatusView({
               ) : null}
             </div>
 
-            {/* comment input bar — nempel bawah */}
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10">
+            {/* comment input bar — nempel bawah, naik pas keyboard kayak IG */}
+            <div
+              className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 transition-transform duration-200"
+              style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
+            >
               <input
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
@@ -885,6 +929,71 @@ export function StatusView({
                 <XIcon className="h-4 w-4" />
               </button>
             </div>
+
+            {/* IG-style comment sheet — naik ke atas kayak IMG_1015 */}
+            {showFullscreenComments && (
+              <>
+                <button aria-label="Tutup komentar" onClick={() => setShowFullscreenComments(false)} className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" />
+                <div
+                  className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-[#121212] shadow-2xl transition-transform duration-200"
+                  style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
+                >
+                  <div className="flex shrink-0 justify-center pt-2.5 pb-1">
+                    <span className="h-1 w-10 rounded-full bg-white/25" />
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-3">
+                    <div className="max-h-[42dvh] space-y-3.5 overflow-y-auto py-2">
+                      {(comments[it.id] || []).length === 0 ? (
+                        <div className="py-8 text-center text-sm text-white/50">Belum ada komentar — jadi yang pertama ✨</div>
+                      ) : (
+                        (comments[it.id] || []).map((c) => (
+                          <div key={c.id} className="flex gap-2.5">
+                            <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={32} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-[13px] font-semibold text-white">{c.displayName || c.nickname || "Anonim"}</span>
+                                <span className="text-[11px] text-white/40">{timeAgo(c.createdAt)}</span>
+                              </div>
+                              <div className="text-[13px] leading-snug text-white/90">{c.content}</div>
+                              <button className="mt-1 text-xs font-semibold text-white/40">Balas</button>
+                            </div>
+                            <button className="shrink-0 self-start p-1.5 text-white/40">
+                              <IgHeartIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto py-3 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+                      {["❤️","🙌","🔥","👏","😢","😍","😲","😂"].map((e) => (
+                        <button key={e} onClick={() => setCommentDraft((p) => p + e)} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[18px] active:scale-90 border border-white/10">
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
+                    <div className="flex flex-1 items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1">
+                      <input
+                        value={commentDraft}
+                        onChange={(e) => setCommentDraft(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") sendComment(it.id); }}
+                        placeholder="Apa pendapat Anda tenta..."
+                        className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
+                      />
+                      <button className="shrink-0 p-1 text-white/50" title="Foto">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
+                      </button>
+                      <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
+                    </div>
+                    <button onClick={() => sendComment(it.id)} disabled={!commentDraft.trim()} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40 active:scale-95">
+                      Kirim
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })()}
