@@ -14,6 +14,7 @@ import {
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { findOwnedCharacter } from "@/lib/owned";
+import { withUploaderParam } from "@/lib/contactsServer";
 import { isOwnedStatusKey, presignR2Url, isR2Configured } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
@@ -143,6 +144,7 @@ export async function GET(req: Request) {
 
       return {
         ...r,
+        imageUrl: withUploaderParam(r.imageUrl, r.userId),
         videoUrl,
         likeCount: Number(likeCountRow?.c ?? 0),
         commentCount: Number(commentCountRow?.c ?? 0),

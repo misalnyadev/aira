@@ -1715,17 +1715,12 @@ export function StatusView({
                             type="button"
                             onClick={() => commentPhotoRef.current?.click()}
                             disabled={commentUploadBusy}
-                            className="flex shrink-0 items-center gap-1.5 p-1 text-white/65 disabled:opacity-40"
-                            title="Foto"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 active:bg-white/10 disabled:opacity-40"
                             aria-label="Lampirkan foto"
                           >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
-                            <span className="text-[11px] font-semibold">Foto</span>
+                            <CameraIcon className="h-5 w-5" />
                           </button>
                         )}
-                        {!commentDraft.trim() && commentImage?.statusId !== activeIt.id ? (
-                          <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
-                        ) : null}
                         {commentDraft.trim() || commentImage?.statusId === activeIt.id ? (
                           <button
                             type="button"
