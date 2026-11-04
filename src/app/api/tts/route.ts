@@ -15,6 +15,7 @@ import {
 } from "@/lib/geminiTtsServer";
 import {
   cleanVoiceId,
+  getGeminiStyleForSlot,
   isRotatableTtsStatus,
   parseTtsConfig,
   pickBestAvailableTtsModel,
@@ -230,7 +231,8 @@ export async function POST(req: Request) {
   let voice = "";
   let styleForHash = "";
   if (effectiveProvider === "gemini") {
-    styleForHash = composeGeminiStyle(config.geminiStyle, emotionStyle);
+    const baseStyle = getGeminiStyleForSlot(config, slot === "male" ? "male" : slot === "custom" ? "custom" : "female", (customVoiceId as string) || "");
+    styleForHash = composeGeminiStyle(baseStyle, emotionStyle);
     if (slot === "male") {
       voice = config.geminiMaleVoice;
     } else if (slot === "custom") {
@@ -297,6 +299,7 @@ export async function POST(req: Request) {
           cleanedText,
           voiceName: voice,
           extraStyleHint: emotionStyle,
+          styleSlot: slot === "male" ? "male" : slot === "custom" ? "custom" : "female",
         });
 
   if (!result.ok) {

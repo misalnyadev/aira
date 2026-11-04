@@ -1482,7 +1482,12 @@ function HdVoiceCard({
   const [geminiMaleVoice, setGeminiMaleVoice] = useState(
     ttsSummary.geminiMaleVoice
   );
-  const [geminiStyle, setGeminiStyle] = useState(ttsSummary.geminiStyle);
+  const [geminiFemaleStyle, setGeminiFemaleStyle] = useState(
+    ttsSummary.geminiFemaleStyle || ttsSummary.geminiStyle
+  );
+  const [geminiMaleStyle, setGeminiMaleStyle] = useState(
+    ttsSummary.geminiMaleStyle || ttsSummary.geminiStyle
+  );
 
   const [modelId, setModelId] = useState<HdTtsModelId>(ttsSummary.modelId);
   const [femaleVoiceId, setFemaleVoiceId] = useState(ttsSummary.femaleVoiceId);
@@ -1692,7 +1697,8 @@ function HdVoiceCard({
     effectiveGeminiModel !== ttsSummary.geminiModelId ||
     geminiFemaleVoice.trim() !== ttsSummary.geminiFemaleVoice ||
     geminiMaleVoice.trim() !== ttsSummary.geminiMaleVoice ||
-    geminiStyle.trim() !== ttsSummary.geminiStyle ||
+    geminiFemaleStyle.trim() !== (ttsSummary.geminiFemaleStyle || ttsSummary.geminiStyle) ||
+    geminiMaleStyle.trim() !== (ttsSummary.geminiMaleStyle || ttsSummary.geminiStyle) ||
     effectiveElevenModel !== ttsSummary.modelId ||
     femaleVoiceId.trim() !== ttsSummary.femaleVoiceId ||
     maleVoiceId.trim() !== ttsSummary.maleVoiceId ||
@@ -1741,7 +1747,8 @@ function HdVoiceCard({
         geminiModelId: effectiveGeminiModel,
         geminiFemaleVoice: geminiFemaleVoice.trim(),
         geminiMaleVoice: geminiMaleVoice.trim(),
-        geminiStyle: geminiStyle.trim(),
+        geminiFemaleStyle: geminiFemaleStyle.trim(),
+        geminiMaleStyle: geminiMaleStyle.trim(),
         modelId: effectiveElevenModel,
         femaleVoiceId: femaleVoiceId.trim(),
         maleVoiceId: maleVoiceId.trim(),
@@ -1757,7 +1764,8 @@ function HdVoiceCard({
         setGeminiModelId(updated.geminiModelId);
         setGeminiFemaleVoice(updated.geminiFemaleVoice);
         setGeminiMaleVoice(updated.geminiMaleVoice);
-        setGeminiStyle(updated.geminiStyle);
+        setGeminiFemaleStyle(updated.geminiFemaleStyle || updated.geminiStyle);
+        setGeminiMaleStyle(updated.geminiMaleStyle || updated.geminiStyle);
         setModelId(updated.modelId);
         setFemaleVoiceId(updated.femaleVoiceId);
         setMaleVoiceId(updated.maleVoiceId);
@@ -1980,18 +1988,36 @@ function HdVoiceCard({
               </div>
             </div>
 
-            {/* Gaya Bicara */}
-            <div className="space-y-1">
+            {/* Gaya Bicara per slot — agar tiap karakter punya suara khas */}
+            <div className="space-y-2">
               <label className="block text-xs font-semibold text-ink">
-                Gaya bicara (opsional)
+                Gaya bicara per suara (opsional)
               </label>
-              <input
-                type="text"
-                value={geminiStyle}
-                onChange={(e) => setGeminiStyle(e.target.value)}
-                placeholder="mis. bicara santai sehari-hari, hangat, akrab"
-                className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
-              />
+              <div className="space-y-2">
+                <div>
+                  <span className="mb-1 block text-[11px] font-medium text-ink-soft">Perempuan (Slot 1) — mis. Arissa/Kirana</span>
+                  <input
+                    type="text"
+                    value={geminiFemaleStyle}
+                    onChange={(e) => setGeminiFemaleStyle(e.target.value)}
+                    placeholder="mis. hangat & ramah, senyum di suara, tempo sedang"
+                    className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-[11px] font-medium text-ink-soft">Laki-laki (Slot 2) — mis. Musthzen</span>
+                  <input
+                    type="text"
+                    value={geminiMaleStyle}
+                    onChange={(e) => setGeminiMaleStyle(e.target.value)}
+                    placeholder="mis. tenang & dalam, mantap, bicara jelas"
+                    className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted">
+                Bedakan gaya tiap slot biar tiap karakter punya warna suara khas saat dipakai di Profil Karakter.
+              </p>
             </div>
 
             {/* Sub-lipatan API Key & Model Gemini TTS */}

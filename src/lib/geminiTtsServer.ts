@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, users } from "@/db/schema";
 import {
+  getGeminiStyleForSlot,
   isModernGeminiTtsModel,
   isRotatableTtsStatus,
   pcmToWav,
@@ -86,8 +87,9 @@ export async function synthesizeGeminiAudioForUser(params: {
   cleanedText: string;
   voiceName: string;
   extraStyleHint?: string;
+  styleSlot?: "female" | "male" | "custom";
 }): Promise<GeminiSynthResult> {
-  const { userId, config, cleanedText, voiceName, extraStyleHint } = params;
+  const { userId, config, cleanedText, voiceName, extraStyleHint, styleSlot } = params;
 
   const dedicatedKeys = buildKeyAttempts(
     "gemini",
@@ -122,7 +124,8 @@ export async function synthesizeGeminiAudioForUser(params: {
     };
   }
 
-  const styleText = composeGeminiStyle(config.geminiStyle, extraStyleHint);
+  const baseStyle = styleSlot ? getGeminiStyleForSlot(config, styleSlot, voiceName) : (config.geminiMaleStyle || config.geminiFemaleStyle || config.geminiStyle);
+  const styleText = composeGeminiStyle(baseStyle, extraStyleHint);
   const modelsToTry = [
     ...new Set([
       config.geminiModelId,

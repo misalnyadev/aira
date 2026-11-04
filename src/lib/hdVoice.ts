@@ -87,6 +87,7 @@ export const DEFAULT_GEMINI_MODEL_ID: GeminiTtsModelId = "gemini-3.8-flash-tts";
 export const DEFAULT_GEMINI_FEMALE_VOICE = "Kore";
 export const DEFAULT_GEMINI_MALE_VOICE = "Puck";
 export const MAX_GEMINI_STYLE_CHARS = 180;
+export const MAX_GEMINI_STYLE_PER_SLOT_CHARS = 180;
 
 /* ------------------------------------------------------------------ */
 /* ElevenLabs TTS (opsional — cocok bila punya Voice Clone sendiri)    */
@@ -153,7 +154,10 @@ export type TtsAccountConfig = {
   geminiModelId: GeminiTtsModelId;
   geminiFemaleVoice: string;
   geminiMaleVoice: string;
+  /** Style global per slot — pisah agar tiap karakter bisa punya suara khas. Fallback ke geminiStyle lama. */
   geminiStyle: string;
+  geminiFemaleStyle: string;
+  geminiMaleStyle: string;
   // ElevenLabs TTS
   apiKey: string;
   backupKeys: string[];
@@ -187,6 +191,8 @@ export type TtsAccountSummary = {
   geminiFemaleVoice: string;
   geminiMaleVoice: string;
   geminiStyle: string;
+  geminiFemaleStyle: string;
+  geminiMaleStyle: string;
   // ElevenLabs TTS
   hasKey: boolean;
   maskedKey: string;
@@ -207,6 +213,8 @@ export const DEFAULT_TTS_ACCOUNT_CONFIG: TtsAccountConfig = {
   geminiFemaleVoice: DEFAULT_GEMINI_FEMALE_VOICE,
   geminiMaleVoice: DEFAULT_GEMINI_MALE_VOICE,
   geminiStyle: "",
+  geminiFemaleStyle: "",
+  geminiMaleStyle: "",
   apiKey: "",
   backupKeys: [],
   modelId: DEFAULT_HD_MODEL_ID,
@@ -228,6 +236,8 @@ export const DEFAULT_TTS_ACCOUNT_SUMMARY: TtsAccountSummary = {
   geminiFemaleVoice: DEFAULT_GEMINI_FEMALE_VOICE,
   geminiMaleVoice: DEFAULT_GEMINI_MALE_VOICE,
   geminiStyle: "",
+  geminiFemaleStyle: "",
+  geminiMaleStyle: "",
   hasKey: false,
   maskedKey: "",
   backupCount: 0,
@@ -334,6 +344,8 @@ export function normalizeTtsConfig(input: unknown): TtsAccountConfig {
     geminiFemaleVoice: cleanVoiceId(raw.geminiFemaleVoice, DEFAULT_GEMINI_FEMALE_VOICE),
     geminiMaleVoice: cleanVoiceId(raw.geminiMaleVoice, DEFAULT_GEMINI_MALE_VOICE),
     geminiStyle: cleanStyleText(raw.geminiStyle),
+    geminiFemaleStyle: cleanStyleText(raw.geminiFemaleStyle ?? raw.geminiStyle),
+    geminiMaleStyle: cleanStyleText(raw.geminiMaleStyle ?? raw.geminiStyle),
     apiKey,
     backupKeys,
     modelId: normalizeHdModelId(raw.modelId),
@@ -392,6 +404,8 @@ export function toTtsAccountSummary(
     geminiFemaleVoice: config.geminiFemaleVoice,
     geminiMaleVoice: config.geminiMaleVoice,
     geminiStyle: config.geminiStyle,
+    geminiFemaleStyle: config.geminiFemaleStyle || config.geminiStyle,
+    geminiMaleStyle: config.geminiMaleStyle || config.geminiStyle,
     hasKey: hasElevenKey,
     maskedKey: maskKey(config.apiKey),
     backupCount: config.backupKeys.length,
@@ -402,6 +416,16 @@ export function toTtsAccountSummary(
     stability: config.stability,
     similarityBoost: config.similarityBoost,
   };
+}
+
+export function getGeminiStyleForSlot(config: TtsAccountConfig, slot: "female" | "male" | "custom", fallbackVoice?: string): string {
+  if (slot === "male") return (config.geminiMaleStyle || config.geminiStyle || "").trim();
+  if (slot === "female") return (config.geminiFemaleStyle || config.geminiStyle || "").trim();
+  if (fallbackVoice) {
+    const isMale = ["Puck","Charon","Fenrir","Orus","Iapetus","Enceladus","Umbriel"].some(v => v.toLowerCase()===fallbackVoice.toLowerCase());
+    if (isMale) return (config.geminiMaleStyle || config.geminiStyle || "").trim();
+  }
+  return (config.geminiFemaleStyle || config.geminiStyle || "").trim();
 }
 
 const VALID_CHAR_MODES = new Set<CharacterVoiceMode>([
