@@ -423,10 +423,8 @@ export function IgBookmarkIcon({ className, filled }: { className?: string; fill
 
 export function IgMoreIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <circle cx={6} cy={12} r={1.8} />
-      <circle cx={12} cy={12} r={1.8} />
-      <circle cx={18} cy={12} r={1.8} />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className}>
+      <path d="M5 6.5h14M5 12h10M5 17.5h7" />
     </svg>
   );
 }

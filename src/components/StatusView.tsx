@@ -12,6 +12,7 @@ import {
   CameraIcon,
   FilmIcon,
   PlusIcon,
+  PencilIcon,
   IgHeartIcon,
   IgCommentIcon,
   IgShareIcon,
@@ -161,6 +162,11 @@ export function StatusView({
   const [items, setItems] = useState<StatusItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
+  const [editingItem, setEditingItem] = useState<StatusItem | null>(null);
+  const [editCaption, setEditCaption] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
   const [composeKind, setComposeKind] = useState<"status" | "reel">("status");
   const [composeMedia, setComposeMedia] = useState<"text" | "image" | "video">("text");
   const [composeCharId, setComposeCharId] = useState<string>("");
@@ -349,6 +355,36 @@ export function StatusView({
     } catch {}
   }
 
+  async function handleShare(item: StatusItem) {
+    const displayName = item.characterName || item.userDisplayName || item.userNickname || "Teman";
+    const detail = (item.caption || item.content || "").trim();
+    const mediaUrl = item.videoUrl || item.imageUrl;
+    let shareUrl = window.location.href;
+    if (mediaUrl) {
+      try {
+        shareUrl = new URL(mediaUrl, window.location.origin).toString();
+      } catch {}
+    }
+    const text = [`${displayName} membagikan ${item.kind === "reel" ? "Reel" : "Story"} di StoryTalent.`, detail]
+      .filter(Boolean)
+      .join("\n\n");
+    const title = `${displayName} • StoryTalent`;
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text, url: shareUrl });
+        return;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+      }
+    }
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${text}\n${shareUrl}`)}`;
+    const popup = window.open(whatsappUrl, "_blank");
+    if (popup) popup.opener = null;
+    else window.location.assign(whatsappUrl);
+  }
+
   async function openComments(id: string) {
     setReelCommentsFor((cur) => (cur === id ? null : id));
     if (comments[id]) return;
@@ -386,6 +422,44 @@ export function StatusView({
       const res = await fetch(`/api/statuses/${id}`, { method: "DELETE" });
       if (res.ok) setItems((p) => p.filter((x) => x.id !== id));
     } catch {}
+  }
+
+  function beginEditStatus(item: StatusItem) {
+    setMenuFor(null);
+    setEditingItem(item);
+    setEditCaption(item.caption || "");
+    setEditContent(item.content || "");
+    setEditErr(null);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingItem) return;
+    const content = editContent.trim().slice(0, 700);
+    const caption = editCaption.trim().slice(0, 500);
+    if (editingItem.mediaType === "text" && !content && !caption) {
+      setEditErr("Isi status tidak boleh kosong.");
+      return;
+    }
+
+    setEditBusy(true);
+    setEditErr(null);
+    try {
+      const res = await fetch(`/api/statuses/${editingItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, caption }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Gagal menyimpan perubahan.");
+      setItems((prev) => prev.map((item) => (
+        item.id === editingItem.id ? { ...item, content, caption } : item
+      )));
+      setEditingItem(null);
+    } catch (error) {
+      setEditErr(error instanceof Error ? error.message : "Gagal menyimpan perubahan.");
+    } finally {
+      setEditBusy(false);
+    }
   }
 
   const markStoryViewed = useCallback((story: StatusItem) => {
@@ -795,6 +869,12 @@ export function StatusView({
                     {menuFor === it.id && (
                       <div className="absolute right-2 top-11 z-20 min-w-[160px] overflow-hidden rounded-2xl border border-line bg-surface py-1 shadow-xl">
                         <button
+                          onClick={() => beginEditStatus(it)}
+                          className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-ink hover:bg-surface-2"
+                        >
+                          <PencilIcon className="h-4 w-4" /> Edit
+                        </button>
+                        <button
                           onClick={() => {
                             setMenuFor(null);
                             handleDelete(it.id);
@@ -837,7 +917,7 @@ export function StatusView({
                       <button onClick={() => openComments(it.id)} aria-label="Komentar" className="p-1 active:scale-90">
                         <IgCommentIcon className="h-[24px] w-[24px] text-ink" />
                       </button>
-                      <button onClick={() => openComments(it.id)} aria-label="Bagikan" className="p-1 active:scale-90">
+                      <button onClick={() => handleShare(it)} aria-label="Bagikan" className="p-1 active:scale-90">
                         <IgShareIcon className="h-[24px] w-[24px] text-ink" />
                       </button>
                     </div>
@@ -906,6 +986,72 @@ export function StatusView({
           <div className="h-6" />
         </div>
       </div>
+
+      {editingItem && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 px-0 pb-0 pt-[max(0.5rem,var(--safe-top))] backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={() => { if (!editBusy) setEditingItem(null); }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-edit-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[560px] rounded-t-[24px] border border-line bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl"
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="status-edit-title" className="text-base font-bold text-ink">Edit postingan</h2>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                disabled={editBusy}
+                aria-label="Tutup edit"
+                className="rounded-full p-2 text-ink-soft hover:bg-surface-2 disabled:opacity-50"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {editingItem.mediaType === "text" && (
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value.slice(0, 700))}
+                  placeholder="Isi status..."
+                  rows={5}
+                  className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-ink/30"
+                />
+              )}
+              <textarea
+                value={editCaption}
+                onChange={(e) => setEditCaption(e.target.value.slice(0, 500))}
+                placeholder={editingItem.mediaType === "text" ? "Caption (opsional)" : "Edit caption..."}
+                rows={3}
+                className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-ink/30"
+              />
+              {editErr && <div className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-600">{editErr}</div>}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  disabled={editBusy}
+                  className="flex-1 rounded-full border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={editBusy}
+                  className="flex-1 rounded-full bg-ink px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {editBusy ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Story viewer fullscreen — hanya postingan profil yang dipilih */}
       {viewerIdx !== null && viewerStories[viewerIdx] && (() => {
@@ -1020,10 +1166,29 @@ export function StatusView({
               <button onClick={() => setFullScreenId(null)} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-              <button onClick={() => setMenuFor((prev) => (prev ? null : (activeFsId || fullScreenId) as string))} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
+              <button onClick={() => { const id = activeFsId || fullScreenId; setMenuFor((prev) => prev === id ? null : id); }} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
                 <IgMoreIcon className="h-5 w-5 text-white" />
               </button>
             </div>
+            {menuFor === activeIt.id && (
+              <div
+                className="absolute right-3 z-40 min-w-[160px] overflow-hidden rounded-2xl border border-white/10 bg-[#121212]/95 py-1 text-white shadow-xl backdrop-blur-xl"
+                style={{ top: "calc(var(--safe-top) + 3.75rem)" }}
+              >
+                <button onClick={() => beginEditStatus(activeIt)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm hover:bg-white/10">
+                  <PencilIcon className="h-4 w-4" /> Edit
+                </button>
+                <button
+                  onClick={() => { setMenuFor(null); handleDelete(activeIt.id); }}
+                  className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm text-red-400 hover:bg-white/10"
+                >
+                  <TrashIcon className="h-4 w-4" /> Hapus
+                </button>
+                <button onClick={() => setMenuFor(null)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm text-white/75 hover:bg-white/10">
+                  <XIcon className="h-4 w-4" /> Tutup
+                </button>
+              </div>
+            )}
 
             {/* scroll vertikal snap — swipe atas/bawah ganti status */}
             <div ref={fsScrollRef} onScroll={handleFsScroll} className="h-full w-full overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain" style={{ scrollbarWidth: "none" }}>
@@ -1076,7 +1241,7 @@ export function StatusView({
                         </span>
                         <span className="text-[11px] font-semibold leading-none drop-shadow">{item.commentCount > 0 ? item.commentCount : 0}</span>
                       </button>
-                      <button onClick={() => { setActiveFsId(item.id); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan">
+                      <button onClick={() => handleShare(item)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan">
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                           <IgShareIcon className="h-6 w-6 text-white" />
                         </span>
