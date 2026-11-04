@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { characterStatuses, statusComments, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -20,6 +20,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     .select({
       id: statusComments.id,
       content: statusComments.content,
+      parentCommentId: statusComments.parentCommentId,
       createdAt: statusComments.createdAt,
       userId: statusComments.userId,
       displayName: users.displayName,
@@ -43,10 +44,37 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const [exists] = await db.select({ id: characterStatuses.id }).from(characterStatuses).where(eq(characterStatuses.id, id)).limit(1);
   if (!exists) return NextResponse.json({ error: "Status tidak ditemukan." }, { status: 404 });
 
-  const body = await req.json().catch(() => null);
-  const text = typeof (body as any)?.content === "string" ? (body as any).content.trim().slice(0, 500) : "";
+  const payload = await req.json().catch(() => null);
+  const body = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+  const text = typeof body?.content === "string" ? body.content.trim().slice(0, 500) : "";
   if (!text) return NextResponse.json({ error: "Komentar kosong." }, { status: 400 });
 
-  const [row] = await db.insert(statusComments).values({ statusId: id, userId: user.id, content: text }).returning();
+  const rawParentCommentId = body?.parentCommentId;
+  if (rawParentCommentId !== undefined && rawParentCommentId !== null && typeof rawParentCommentId !== "string") {
+    return NextResponse.json({ error: "Balasan tidak valid." }, { status: 400 });
+  }
+  const parentCommentId = typeof rawParentCommentId === "string" ? rawParentCommentId.trim() || null : null;
+  if (parentCommentId) {
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(parentCommentId)) {
+      return NextResponse.json({ error: "Balasan tidak valid." }, { status: 400 });
+    }
+    const [parent] = await db
+      .select({ id: statusComments.id })
+      .from(statusComments)
+      .where(
+        and(
+          eq(statusComments.id, parentCommentId),
+          eq(statusComments.statusId, id),
+          isNull(statusComments.parentCommentId)
+        )
+      )
+      .limit(1);
+    if (!parent) return NextResponse.json({ error: "Komentar yang dibalas tidak ditemukan." }, { status: 404 });
+  }
+
+  const [row] = await db
+    .insert(statusComments)
+    .values({ statusId: id, userId: user.id, content: text, parentCommentId })
+    .returning();
   return NextResponse.json({ comment: row });
 }

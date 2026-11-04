@@ -1,4 +1,5 @@
 import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { generateCharacterPin } from "@/lib/contactPin";
 
 export const providerTypeValues = ["gemini", "groq", "openrouter", "custom", "grok"] as const;
@@ -432,6 +433,9 @@ export const statusComments = pgTable("status_comments", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  parentCommentId: uuid("parent_comment_id").references((): AnyPgColumn => statusComments.id, {
+    onDelete: "cascade",
+  }),
   content: text("content").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
