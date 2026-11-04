@@ -199,13 +199,11 @@ export function UserIcon({ className }: { className?: string }) {
 }
 
 export function ChatsIcon({ className }: { className?: string }) {
+  // bulat clean tanpa ekor — ala IG DM / modern chat (rounded rect + isi)
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
-      <path
-        d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.3 9.3 0 0 1-3.8-.8L3 21l1.9-4.9A8.2 8.2 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x={3.5} y={5.5} width={17} height={13} rx={6.5} />
+      <path d="M8 11.2h8M8 14.2h5.5" />
     </svg>
   );
 }
