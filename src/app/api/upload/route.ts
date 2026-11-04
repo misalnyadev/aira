@@ -34,8 +34,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const forceProtectedPath = formData.get("protected") === "true";
+  if (forceProtectedPath && file.type === "image/gif") {
+    return NextResponse.json({ error: "GIF belum didukung untuk foto komentar." }, { status: 400 });
+  }
+
   try {
-    const url = await saveUploadedFile(file, user.id);
+    const url = await saveUploadedFile(file, user.id, { forceProtectedPath });
     return NextResponse.json({ url });
   } catch (err) {
     return NextResponse.json(

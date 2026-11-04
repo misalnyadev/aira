@@ -1,7 +1,7 @@
 import path from "path";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { attachments } from "@/db/schema";
+import { attachments, statusComments } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { hasActiveContactBetweenUsers } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
@@ -18,12 +18,26 @@ function fallbackMime(filename: string): string {
   return "image/jpeg";
 }
 
+async function isStatusCommentImage(id: string, ownerUserId: string): Promise<boolean> {
+  const [comment] = await db
+    .select({ id: statusComments.id })
+    .from(statusComments)
+    .where(
+      and(
+        eq(statusComments.imageUrl, `/api/attachments/${id}`),
+        eq(statusComments.userId, ownerUserId)
+      )
+    )
+    .limit(1);
+  return Boolean(comment);
+}
+
 /**
  * Menyajikan gambar milik pengguna dari Cloudflare R2 (`r2-...`) maupun
  * lampiran lama dari tabel `attachments` database (`/api/attachments/{id}`).
  *
- * Hanya pemilik sesi yang boleh membukanya; browser otomatis mengirim cookie sesi
- * pada permintaan `<img src="...">` maupun CSS `background-image`.
+ * Gambar akun tetap dibatasi untuk pemilik/kontak aktif; lampiran komentar status
+ * juga dapat dibaca pengguna yang masuk bila URL-nya dirujuk oleh komentar tersebut.
  */
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -44,8 +58,10 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   if (r2File) {
     let targetOwnerId = user.id;
     if (requestedOwnerId && requestedOwnerId !== user.id) {
+      const isCommentImage = await isStatusCommentImage(id, requestedOwnerId);
       const allowed =
         user.isAdmin ||
+        isCommentImage ||
         (await hasActiveContactBetweenUsers(user.id, requestedOwnerId));
       if (!allowed) return new Response("Not found", { status: 404 });
       targetOwnerId = requestedOwnerId;
@@ -83,8 +99,11 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   }
 
   if (row.userId && row.userId !== user.id) {
+    const isCommentImage = await isStatusCommentImage(id, row.userId);
     const allowed =
-      user.isAdmin || (await hasActiveContactBetweenUsers(user.id, row.userId));
+      user.isAdmin ||
+      isCommentImage ||
+      (await hasActiveContactBetweenUsers(user.id, row.userId));
     if (!allowed) {
       return new Response("Not found", { status: 404 });
     }

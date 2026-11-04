@@ -37,12 +37,15 @@ function mimeFromExt(ext: string): string {
  *    bila R2 aktif di server, sehingga kuota Neon PostgreSQL tetap lega.
  * 2) Disk lokal `public/uploads` (mode self-hosted / dev lokal).
  * 3) Fallback tabel `attachments` di PostgreSQL bila R2 belum diset di serverless.
+ * `forceProtectedPath` melewati disk lokal agar foto komentar selalu melalui
+ * endpoint terlindungi `/api/attachments/...`.
  */
 export async function storeImage(
   buffer: Buffer,
   mimeType: string,
   originalName?: string,
-  userId?: string | null
+  userId?: string | null,
+  options: { forceProtectedPath?: boolean } = {}
 ): Promise<string> {
   if (buffer.length > MAX_ATTACHMENT_BYTES) {
     throw new Error("Ukuran gambar terlalu besar (maksimal 6MB setelah dikompresi).");
@@ -63,13 +66,15 @@ export async function storeImage(
     }
   }
 
-  // 2) Coba tulis ke disk (mode lokal/self-hosted).
-  try {
-    await mkdir(UPLOAD_DIR, { recursive: true });
-    await writeFile(path.join(UPLOAD_DIR, filePart), buffer);
-    return `/uploads/${filePart}`;
-  } catch {
-    // Read-only filesystem (Vercel tanpa R2) -> simpan di database.
+  // 2) Berkas komentar tetap lewat endpoint lampiran terlindungi, bukan URL statis publik.
+  if (!options.forceProtectedPath) {
+    try {
+      await mkdir(UPLOAD_DIR, { recursive: true });
+      await writeFile(path.join(UPLOAD_DIR, filePart), buffer);
+      return `/uploads/${filePart}`;
+    } catch {
+      // Read-only filesystem (Vercel tanpa R2) -> simpan di database.
+    }
   }
 
   // 3) Fallback: simpan sebagai attachment di database.
@@ -86,9 +91,13 @@ export async function storeImage(
   return `/api/attachments/${row.id}`;
 }
 
-export async function saveUploadedFile(file: File, userId?: string | null): Promise<string> {
+export async function saveUploadedFile(
+  file: File,
+  userId?: string | null,
+  options: { forceProtectedPath?: boolean } = {}
+): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
-  return storeImage(Buffer.from(arrayBuffer), file.type, file.name, userId);
+  return storeImage(Buffer.from(arrayBuffer), file.type, file.name, userId, options);
 }
 
 /** Ambil gambar sebagai base64 untuk dikirim ke model AI (vision). */

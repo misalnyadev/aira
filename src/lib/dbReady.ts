@@ -260,10 +260,12 @@ const DDL = [
     "id" uuid PRIMARY KEY NOT NULL,
     "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
     "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "image_url" text,
     "content" text DEFAULT '' NOT NULL,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`ALTER TABLE "status_comments" ADD COLUMN IF NOT EXISTS "parent_comment_id" uuid`,
+  sql`ALTER TABLE "status_comments" ADD COLUMN IF NOT EXISTS "image_url" text`,
   sql`DO $$ BEGIN
     ALTER TABLE "status_comments"
       ADD CONSTRAINT "status_comments_parent_comment_id_fk"
