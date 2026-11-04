@@ -1,4 +1,5 @@
-import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { generateCharacterPin } from "@/lib/contactPin";
 
@@ -489,5 +490,28 @@ export const statusBookmarks = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("status_bookmarks_status_user_idx").on(t.statusId, t.userId)]
+);
+
+export const statusFollows = pgTable(
+  "status_follows",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    followerUserId: uuid("follower_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "cascade" }),
+    targetCharacterId: uuid("target_character_id").references(() => characters.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("status_follows_follower_user_idx").on(t.followerUserId, t.targetUserId),
+    uniqueIndex("status_follows_follower_character_idx").on(t.followerUserId, t.targetCharacterId),
+    check(
+      "status_follows_one_target_check",
+      sql`num_nonnulls(${t.targetUserId}, ${t.targetCharacterId}) = 1`
+    ),
+  ]
 );
 

@@ -6,6 +6,7 @@ import {
   characters,
   statusBookmarks,
   statusComments,
+  statusFollows,
   statusLikes,
   statusViews,
   users,
@@ -79,6 +80,34 @@ export async function GET(req: Request) {
     bookmarks.forEach((bookmark) => bookmarkedStatusIds.add(bookmark.statusId));
   }
 
+  const followedCharacterIds = new Set<string>();
+  const followedUserIds = new Set<string>();
+  const characterIds = [...new Set(rows.map((row) => row.characterId).filter((id): id is string => id !== null))];
+  const userIds = [...new Set(rows.filter((row) => row.characterId === null).map((row) => row.userId))];
+  if (characterIds.length > 0) {
+    const follows = await db
+      .select({ targetCharacterId: statusFollows.targetCharacterId })
+      .from(statusFollows)
+      .where(
+        and(
+          eq(statusFollows.followerUserId, user.id),
+          inArray(statusFollows.targetCharacterId, characterIds)
+        )
+      );
+    follows.forEach((follow) => {
+      if (follow.targetCharacterId) followedCharacterIds.add(follow.targetCharacterId);
+    });
+  }
+  if (userIds.length > 0) {
+    const follows = await db
+      .select({ targetUserId: statusFollows.targetUserId })
+      .from(statusFollows)
+      .where(and(eq(statusFollows.followerUserId, user.id), inArray(statusFollows.targetUserId, userIds)));
+    follows.forEach((follow) => {
+      if (follow.targetUserId) followedUserIds.add(follow.targetUserId);
+    });
+  }
+
   // enrich dengan like/comment counts + likedByMe
   const enriched = await Promise.all(
     rows.map(async (r) => {
@@ -119,6 +148,10 @@ export async function GET(req: Request) {
         commentCount: Number(commentCountRow?.c ?? 0),
         likedByMe: Boolean(liked),
         bookmarkedByMe: bookmarkedStatusIds.has(r.id),
+        followingByMe: r.characterId
+          ? followedCharacterIds.has(r.characterId)
+          : followedUserIds.has(r.userId),
+        canFollow: r.userId !== user.id,
         viewedByMe: Boolean(viewed),
       };
     })
