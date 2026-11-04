@@ -180,9 +180,11 @@ export function StatusView({
   const [fullMuted, setFullMuted] = useState(true);
   const [showFullscreenComments, setShowFullscreenComments] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
+  const [activeFsId, setActiveFsId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const fsCommentInputRef = useRef<HTMLInputElement>(null);
+  const fsScrollRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -426,15 +428,50 @@ export function StatusView({
   // preload komentar pas buka sheet fullscreen
   useEffect(() => {
     if (!showFullscreenComments || !fullScreenId) return;
-    const id = fullScreenId;
-    if (comments[id] !== undefined) return;
+    const id = showFullscreenComments ? (activeFsId || fullScreenId) : fullScreenId;
+    if (!id || comments[id] !== undefined) return;
     fetch(`/api/statuses/${id}/comments`, { cache: "no-store" })
       .then((r) => r.json().catch(() => null))
       .then((d) => {
         if (Array.isArray(d?.comments)) setComments((prev) => ({ ...prev, [id]: d.comments }));
       })
       .catch(() => {});
-  }, [showFullscreenComments, fullScreenId]);
+  }, [showFullscreenComments, fullScreenId, activeFsId]);
+
+  const fsItems = useMemo(() => items, [items]);
+
+  // sinkron activeFsId pas buka fullscreen
+  useEffect(() => {
+    if (fullScreenId) setActiveFsId(fullScreenId);
+    else setActiveFsId(null);
+  }, [fullScreenId]);
+
+  // scroll ke item yang di-tap pas buka fullscreen
+  useEffect(() => {
+    if (!fullScreenId || !fsScrollRef.current) return;
+    const idx = fsItems.findIndex((x) => x.id === fullScreenId);
+    if (idx >= 0) {
+      setTimeout(() => {
+        fsScrollRef.current?.children[idx]?.scrollIntoView({ behavior: "instant" as any });
+      }, 40);
+    }
+  }, [fullScreenId, fsItems]);
+
+  // update activeFsId pas scroll vertikal
+  const handleFsScroll = useCallback(() => {
+    const el = fsScrollRef.current;
+    if (!el) return;
+    const h = el.clientHeight;
+    if (!h) return;
+    const idx = Math.round(el.scrollTop / h);
+    const it = fsItems[idx];
+    if (it && it.id !== activeFsId) {
+      setActiveFsId(it.id);
+      const m = mutedMap[it.id];
+      if (m !== undefined) setFullMuted(m);
+      else setFullMuted(true);
+    }
+  }, [fsItems, activeFsId, mutedMap]);
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
@@ -820,147 +857,126 @@ export function StatusView({
         </div>
       )}
 
-      {/* Fullscreen IG — video beneran penuh layar, UI overlay di atas video */}
+      {/* Fullscreen IG — scroll vertikal pindah status kayak IG, tanpa nama tengah */}
       {fullScreenId && (() => {
-        const it = items.find((x) => x.id === fullScreenId);
-        if (!it) return null;
-        const displayName = it.characterName || it.userDisplayName || it.userNickname || "Anonim";
-        const avatar = it.characterAvatar || it.userAvatar || undefined;
-        const caption = it.caption || it.content || "";
+        if (!fsItems.length) return null;
+        const activeIt = fsItems.find((x) => x.id === (activeFsId || fullScreenId)) || fsItems.find((x) => x.id === fullScreenId) || fsItems[0];
         return (
           <div className="fixed inset-0 z-[60] bg-black overflow-hidden">
-            {/* media full bleed — object-cover nutup layar penuh kayak IG Reels */}
-            <div className="absolute inset-0">
-              {it.mediaType === "image" && it.imageUrl ? (
-                <img
-                  src={it.imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onClick={() => setFullScreenId(null)}
-                />
-              ) : it.mediaType === "video" && it.videoUrl ? (
-                <video
-                  src={it.videoUrl}
-                  autoPlay
-                  loop
-                  playsInline
-                  muted={fullMuted}
-                  controls={false}
-                  className="h-full w-full object-cover"
-                  onClick={(e) => {
-                    const v = e.currentTarget;
-                    if (v.paused) v.play().catch(() => {});
-                    else v.pause();
-                  }}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
-                  <p className="whitespace-pre-wrap text-xl font-semibold text-white">{it.content || it.caption}</p>
-                </div>
-              )}
-            </div>
-
-            {/* gradient atas & bawah biar teks kebaca kayak IG */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
-
-            {/* header overlay — tanpa avatar bulat biar gak dobel sama bawah */}
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[max(0.7rem,var(--safe-top))] pb-3 text-white">
-              <button onClick={() => setFullScreenId(null)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
+            {/* header global — cuma back + opsi */}
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[max(0.7rem,var(--safe-top))] pb-3 text-white z-30 pointer-events-none">
+              <button onClick={() => setFullScreenId(null)} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-              <div className="flex min-w-0 items-center justify-center flex-1 px-2">
-                <span className="truncate text-[14px] font-semibold drop-shadow">{displayName}</span>
-                <span className="shrink-0 text-[11px] text-white/70 ml-1.5">• {timeAgo(it.createdAt)}</span>
-              </div>
-              <button onClick={() => setMenuFor(menuFor === it.id ? null : it.id)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
+              <button onClick={() => setMenuFor((prev) => (prev ? null : (activeFsId || fullScreenId) as string))} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
                 <IgMoreIcon className="h-5 w-5 text-white" />
               </button>
             </div>
 
-            {/* right vertical action bar — naikin lagi biar gak tabrakan sama status yang baru naik */}
-            <div className="absolute bottom-[138px] right-2.5 flex flex-col items-center gap-3.5 text-white">
-              <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
-                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                  <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
-                </span>
-                <span className="text-[11px] font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
-              </button>
-              <button onClick={() => setShowFullscreenComments(true)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
-                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                  <IgCommentIcon className="h-6 w-6 text-white" />
-                </span>
-                <span className="text-[11px] font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
-              </button>
-              <button onClick={() => setShowFullscreenComments(true)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan">
-                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                  <IgShareIcon className="h-6 w-6 text-white" />
-                </span>
-              </button>
-              {it.mediaType === "video" && it.videoUrl ? (
-                <button
-                  onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
-                  className="flex flex-col items-center gap-1 active:scale-90 drop-shadow"
-                  aria-label="Suara"
-                >
-                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                    {fullMuted ? <SpeakerOffIcon className="h-[22px] w-[22px] text-white" /> : <SpeakerIcon className="h-[22px] w-[22px] text-white" />}
-                  </span>
-                </button>
-              ) : null}
-              <button className="flex flex-col items-center gap-1 active:scale-90 opacity-90 drop-shadow" title="Simpan">
-                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                  <IgBookmarkIcon className="h-[22px] w-[22px] text-white drop-shadow" />
-                </span>
-              </button>
+            {/* scroll vertikal snap — swipe atas/bawah ganti status */}
+            <div ref={fsScrollRef} onScroll={handleFsScroll} className="h-full w-full overflow-y-auto snap-y snap-mandatory scrollbar-none overscroll-contain" style={{ scrollbarWidth: "none" }}>
+              {fsItems.map((item) => {
+                const dName = item.characterName || item.userDisplayName || item.userNickname || "Anonim";
+                const av = item.characterAvatar || item.userAvatar || undefined;
+                const cap = item.caption || item.content || "";
+                const isMuted = mutedMap[item.id] ?? true;
+                return (
+                  <div key={item.id} data-id={item.id} className="relative h-[100dvh] w-full snap-start snap-always shrink-0 overflow-hidden bg-black">
+                    {/* media full bleed */}
+                    <div className="absolute inset-0">
+                      {item.mediaType === "image" && item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : item.mediaType === "video" && item.videoUrl ? (
+                        <video
+                          src={item.videoUrl}
+                          autoPlay
+                          loop
+                          playsInline
+                          muted={isMuted}
+                          controls={false}
+                          className="h-full w-full object-cover"
+                          onClick={(e) => {
+                            const v = e.currentTarget;
+                            if (v.paused) v.play().catch(() => {});
+                            else v.pause();
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
+                          <p className="whitespace-pre-wrap text-xl font-semibold text-white">{item.content || item.caption}</p>
+                        </div>
+                      )}
+                    </div>
+                    {/* gradients */}
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                    {/* right vertical action bar per item */}
+                    <div className="absolute bottom-[138px] right-2.5 flex flex-col items-center gap-3.5 text-white">
+                      <button onClick={() => toggleLike(item.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                        <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                          <IgHeartIcon filled={item.likedByMe} className={`h-6 w-6 ${item.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
+                        </span>
+                        <span className="text-[11px] font-semibold leading-none drop-shadow">{item.likeCount > 0 ? item.likeCount : 0}</span>
+                      </button>
+                      <button onClick={() => { setActiveFsId(item.id); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                        <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                          <IgCommentIcon className="h-6 w-6 text-white" />
+                        </span>
+                        <span className="text-[11px] font-semibold leading-none drop-shadow">{item.commentCount > 0 ? item.commentCount : 0}</span>
+                      </button>
+                      <button onClick={() => { setActiveFsId(item.id); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan">
+                        <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                          <IgShareIcon className="h-6 w-6 text-white" />
+                        </span>
+                      </button>
+                      {item.mediaType === "video" && item.videoUrl ? (
+                        <button onClick={() => { const cur = mutedMap[item.id] ?? true; setMutedMap((prev) => ({ ...prev, [item.id]: !cur })); setFullMuted(!cur); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" aria-label="Suara">
+                          <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                            {(mutedMap[item.id] ?? true) ? <SpeakerOffIcon className="h-[22px] w-[22px] text-white" /> : <SpeakerIcon className="h-[22px] w-[22px] text-white" />}
+                          </span>
+                        </button>
+                      ) : null}
+                      <button className="flex flex-col items-center gap-1 active:scale-90 opacity-90 drop-shadow" title="Simpan">
+                        <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                          <IgBookmarkIcon className="h-[22px] w-[22px] text-white drop-shadow" />
+                        </span>
+                      </button>
+                    </div>
+                    {/* bottom profile per item */}
+                    <div className="absolute inset-x-0 bottom-[96px] px-3 pb-2 pt-2 text-white pr-14">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-white p-[2px] shadow">
+                          <Avatar name={dName} src={av} size={28} />
+                        </span>
+                        <span className="text-[13px] font-semibold drop-shadow">{dName}</span>
+                        <span className="text-[11px] text-white/70 drop-shadow">• {item.kind === "reel" ? "Reels" : "Status"} • {timeAgo(item.createdAt)}</span>
+                        <span className="ml-1 rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold">Ikuti</span>
+                      </div>
+                      {(cap?.trim() || (item.content || "").trim()) ? (
+                        <div className="mt-1.5 text-[13px] leading-snug drop-shadow pr-2">
+                          <span className="font-semibold">{dName} </span>
+                          <span className="text-white/90 break-words">{(cap || item.content || "").trim()}</span>
+                          {item.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{item.likeCount} suka</span> : null}
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-[12px] text-white/60 drop-shadow">—</div>
+                      )}
+                      <div className="mt-1 flex items-center gap-1 text-[11px] text-white/70 drop-shadow">
+                        <span>♫</span>
+                        <span className="truncate">{dName} • audio asli</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* bottom profile + caption overlay — naikin lagi biar audio gak kepotong */}
-            <div className="absolute inset-x-0 bottom-[96px] px-3 pb-2 pt-2 text-white pr-14">
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-white p-[2px] shadow">
-                  <Avatar name={displayName} src={avatar} size={28} />
-                </span>
-                <span className="text-[13px] font-semibold drop-shadow">{displayName}</span>
-                <span className="text-[11px] text-white/70 drop-shadow">• {it.kind === "reel" ? "Reels" : "Status"} • {timeAgo(it.createdAt)}</span>
-                <span className="ml-1 rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold">Ikuti</span>
-              </div>
-              {(caption?.trim() || (it.content || "").trim()) ? (
-                <div className="mt-1.5 text-[13px] leading-snug drop-shadow pr-2">
-                  <span className="font-semibold">{displayName} </span>
-                  <span className="text-white/90 break-words">{(caption || it.content || "").trim()}</span>
-                  {it.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{it.likeCount} suka</span> : null}
-                </div>
-              ) : (
-                <div className="mt-1 text-[12px] text-white/60 drop-shadow">—</div>
-              )}
-              <div className="mt-1 flex items-center gap-1 text-[11px] text-white/70 drop-shadow">
-                <span>♫</span>
-                <span className="truncate">{displayName} • audio asli</span>
-              </div>
-            </div>
-
-            {/* comment input bar — tap buka sheet, sheet yang naik pas keyboard (biar gak ketutup) */}
-            <div
-              className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10"
-              style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
-            >
-              <button
-                onClick={() => {
-                  setShowFullscreenComments(true);
-                  setTimeout(() => fsCommentInputRef.current?.focus(), 80);
-                }}
-                className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50"
-              >
+            {/* global comment bar — pakai activeFsId biar komen ke status yang lagi dilihat */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
+              <button onClick={() => { setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
                 Tambahkan komentar...
               </button>
-              <button
-                onClick={() => {
-                  setShowFullscreenComments(true);
-                  setTimeout(() => fsCommentInputRef.current?.focus(), 80);
-                }}
-                className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95"
-              >
+              <button onClick={() => { setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95">
                 Kirim
               </button>
               <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2.5 text-white border border-white/10">
@@ -968,23 +984,20 @@ export function StatusView({
               </button>
             </div>
 
-            {/* IG-style comment sheet — naik ke atas kayak IMG_1015 */}
-            {showFullscreenComments && (
+            {/* sheet komen untuk item aktif */}
+            {showFullscreenComments && activeIt && (
               <>
-                <button aria-label="Tutup komentar" onClick={() => setShowFullscreenComments(false)} className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" />
-                <div
-                  className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-[#121212] shadow-2xl transition-transform duration-200"
-                  style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
-                >
+                <button aria-label="Tutup komentar" onClick={() => setShowFullscreenComments(false)} className="absolute inset-0 bg-black/55 backdrop-blur-[1px] z-30" />
+                <div className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-[#121212] shadow-2xl z-40 transition-transform duration-200" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
                   <div className="flex shrink-0 justify-center pt-2.5 pb-1">
                     <span className="h-1 w-10 rounded-full bg-white/25" />
                   </div>
                   <div className="flex-1 overflow-y-auto px-3">
                     <div className="max-h-[42dvh] space-y-3.5 overflow-y-auto py-2">
-                      {(comments[it.id] || []).length === 0 ? (
+                      {(comments[activeIt.id] || []).length === 0 ? (
                         <div className="py-8 text-center text-sm text-white/50">Belum ada komentar — jadi yang pertama ✨</div>
                       ) : (
-                        (comments[it.id] || []).map((c) => (
+                        (comments[activeIt.id] || []).map((c) => (
                           <div key={c.id} className="flex gap-2.5">
                             <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={32} />
                             <div className="min-w-0 flex-1">
@@ -1018,7 +1031,7 @@ export function StatusView({
                         autoFocus
                         value={commentDraft}
                         onChange={(e) => setCommentDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") sendComment(it.id); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") sendComment(activeIt.id); }}
                         placeholder="Apa pendapat Anda tenta..."
                         className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
                       />
@@ -1027,7 +1040,7 @@ export function StatusView({
                       </button>
                       <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
                     </div>
-                    <button onClick={() => sendComment(it.id)} disabled={!commentDraft.trim()} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40 active:scale-95">
+                    <button onClick={() => sendComment(activeIt.id)} disabled={!commentDraft.trim()} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40 active:scale-95">
                       Kirim
                     </button>
                   </div>
@@ -1037,6 +1050,7 @@ export function StatusView({
           </div>
         );
       })()}
+
     </div>
   );
 }
