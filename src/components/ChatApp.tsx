@@ -86,7 +86,7 @@ function parseContactThreadId(id: string | null | undefined): string | null {
   return raw || null;
 }
 
-export function ChatApp() {
+export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusId?: string | null }) {
   const { user, expire } = useAuth();
   const [voice, setVoice] = useVoiceSettings(user.id);
   const speechSupported = useSpeechSupported();
@@ -98,7 +98,8 @@ export function ChatApp() {
   useKeyboardPan();
   useSpeechUnlock();
 
-  const [view, setView] = useState<AppView>("chats");
+  const [view, setView] = useState<AppView>(initialSharedStatusId ? "status" : "chats");
+  const [sharedStatusId, setSharedStatusId] = useState<string | null>(initialSharedStatusId);
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [contactThreads, setContactThreads] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
@@ -124,6 +125,8 @@ export function ChatApp() {
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  const handleSharedStatusHandled = useCallback(() => setSharedStatusId(null), []);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
@@ -1544,7 +1547,14 @@ export function ChatApp() {
             })()
           )}
 
-          {view === "status" && <StatusView profile={profile} characters={characters} />}
+          {view === "status" && (
+            <StatusView
+              profile={profile}
+              characters={characters}
+              sharedStatusId={sharedStatusId}
+              onSharedStatusHandled={handleSharedStatusHandled}
+            />
+          )}
         </div>
 
         {showMobileTabBar && (

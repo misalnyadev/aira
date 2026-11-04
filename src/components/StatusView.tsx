@@ -155,9 +155,13 @@ function remainingHours(exp: string | null) {
 export function StatusView({
   profile,
   characters,
+  sharedStatusId,
+  onSharedStatusHandled,
 }: {
   profile: UserProfile;
   characters: CharacterSummary[];
+  sharedStatusId?: string | null;
+  onSharedStatusHandled?: () => void;
 }) {
   const [items, setItems] = useState<StatusItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,6 +197,8 @@ export function StatusView({
   const videoRef = useRef<HTMLInputElement>(null);
   const fsCommentInputRef = useRef<HTMLInputElement>(null);
   const fsScrollRef = useRef<HTMLDivElement>(null);
+  const handledSharedStatusRef = useRef<string | null>(null);
+  const requestedSharedStatusRef = useRef<string | null>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
   const viewerStoriesRef = useRef<StatusItem[]>([]);
 
@@ -208,6 +214,38 @@ export function StatusView({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!sharedStatusId || loading || handledSharedStatusRef.current === sharedStatusId) return;
+    const openSharedItem = (sharedItem: StatusItem) => {
+      handledSharedStatusRef.current = sharedStatusId;
+      setFullMuted(mutedMap[sharedItem.id] ?? true);
+      setFullScreenId(sharedItem.id);
+      onSharedStatusHandled?.();
+    };
+
+    const sharedItem = items.find((item) => item.id === sharedStatusId);
+    if (sharedItem) {
+      openSharedItem(sharedItem);
+      return;
+    }
+    if (requestedSharedStatusRef.current === sharedStatusId) return;
+    requestedSharedStatusRef.current = sharedStatusId;
+    fetch(`/api/statuses?id=${encodeURIComponent(sharedStatusId)}`, { cache: "no-store" })
+      .then((res) => res.json().catch(() => null))
+      .then((data) => {
+        const target = Array.isArray(data?.statuses) ? data.statuses[0] as StatusItem | undefined : undefined;
+        if (target) setItems((prev) => prev.some((item) => item.id === target.id) ? prev : [target, ...prev]);
+        else {
+          handledSharedStatusRef.current = sharedStatusId;
+          onSharedStatusHandled?.();
+        }
+      })
+      .catch(() => {
+        handledSharedStatusRef.current = sharedStatusId;
+        onSharedStatusHandled?.();
+      });
+  }, [sharedStatusId, loading, items, mutedMap, onSharedStatusHandled]);
 
   const stories = useMemo(() => items.filter((x) => x.kind === "status"), [items]);
   const storyProfiles = useMemo(() => {
@@ -358,13 +396,9 @@ export function StatusView({
   async function handleShare(item: StatusItem) {
     const displayName = item.characterName || item.userDisplayName || item.userNickname || "Teman";
     const detail = (item.caption || item.content || "").trim();
-    const mediaUrl = item.videoUrl || item.imageUrl;
-    let shareUrl = window.location.href;
-    if (mediaUrl) {
-      try {
-        shareUrl = new URL(mediaUrl, window.location.origin).toString();
-      } catch {}
-    }
+    const appLink = new URL(window.location.href);
+    appLink.searchParams.set("statusId", item.id);
+    const shareUrl = appLink.toString();
     const text = [`${displayName} membagikan ${item.kind === "reel" ? "Reel" : "Story"} di StoryTalent.`, detail]
       .filter(Boolean)
       .join("\n\n");

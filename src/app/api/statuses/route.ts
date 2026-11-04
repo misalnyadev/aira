@@ -22,11 +22,12 @@ function clampText(s: string, max: number) {
   return t.length > max ? t.slice(0, max) : t;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   await ensureDb();
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
 
+  const requestedStatusId = new URL(req.url).searchParams.get("id");
   const now = new Date();
 
   // ambil semua status yang belum kedaluwarsa (status 24j) + reel permanen
@@ -53,10 +54,15 @@ export async function GET() {
     .leftJoin(characters, eq(characters.id, characterStatuses.characterId))
     .leftJoin(users, eq(users.id, characterStatuses.userId))
     .where(
-      or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now))
+      requestedStatusId
+        ? and(
+            or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now)),
+            eq(characterStatuses.id, requestedStatusId)
+          )
+        : or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now))
     )
     .orderBy(desc(characterStatuses.createdAt))
-    .limit(120);
+    .limit(requestedStatusId ? 1 : 120);
 
   // enrich dengan like/comment counts + likedByMe
   const enriched = await Promise.all(
