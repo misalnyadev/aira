@@ -1049,7 +1049,7 @@ export function StatusView({
                   </div>
                   <div className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
-                    <div className="flex flex-1 items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1">
+                    <div className="flex flex-1 items-center gap-1 rounded-full bg-white/10 border border-white/10 pl-3 pr-1 py-1">
                       <input
                         ref={fsCommentInputRef}
                         autoFocus
@@ -1060,7 +1060,7 @@ export function StatusView({
                         className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
                       />
                       {commentDraft.trim() ? (
-                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-2 text-black active:scale-90" aria-label="Kirim komentar">
+                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
                           <SendIcon className="h-5 w-5" />
                         </button>
                       ) : (
