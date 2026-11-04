@@ -1059,10 +1059,18 @@ export function StatusView({
                         placeholder="Apa pendapat Anda tenta..."
                         className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
                       />
-                      <button className="shrink-0 p-1 text-white/50" title="Foto">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
-                      </button>
-                      <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
+                      {commentDraft.trim() ? (
+                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
+                          <SendIcon className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <>
+                          <button className="shrink-0 p-1 text-white/50" title="Foto">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
+                          </button>
+                          <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
+                        </>
+                      )}
                     </div>
                     <button onClick={() => sendComment(activeIt.id)} disabled={!commentDraft.trim()} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40 active:scale-95">
                       Kirim
