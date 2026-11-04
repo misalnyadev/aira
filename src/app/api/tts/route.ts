@@ -196,11 +196,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Permintaan suara tidak valid." }, { status: 400 });
   }
 
-  const { text, slot, provider, customVoiceId, emotion } = body as {
+  const { text, slot, provider, customVoiceId, customStyle, emotion } = body as {
     text?: unknown;
     slot?: "female" | "male" | "custom";
     provider?: unknown;
     customVoiceId?: unknown;
+    customStyle?: unknown;
     emotion?: unknown;
   };
 
@@ -231,7 +232,8 @@ export async function POST(req: Request) {
   let voice = "";
   let styleForHash = "";
   if (effectiveProvider === "gemini") {
-    const baseStyle = getGeminiStyleForSlot(config, slot === "male" ? "male" : slot === "custom" ? "custom" : "female", (customVoiceId as string) || "");
+    const perCharStyle = typeof customStyle === "string" ? customStyle.trim().slice(0,180) : "";
+    const baseStyle = perCharStyle || getGeminiStyleForSlot(config, slot === "male" ? "male" : slot === "custom" ? "custom" : "female", (customVoiceId as string) || "");
     styleForHash = composeGeminiStyle(baseStyle, emotionStyle);
     if (slot === "male") {
       voice = config.geminiMaleVoice;
@@ -300,6 +302,7 @@ export async function POST(req: Request) {
           voiceName: voice,
           extraStyleHint: emotionStyle,
           styleSlot: slot === "male" ? "male" : slot === "custom" ? "custom" : "female",
+          perCharStyle: typeof customStyle === "string" ? customStyle.trim().slice(0,180) : undefined,
         });
 
   if (!result.ok) {

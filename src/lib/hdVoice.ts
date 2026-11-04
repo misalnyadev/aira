@@ -25,6 +25,8 @@ export type CharacterVoiceConfig = {
   /** Penyedia khusus untuk `hd_custom` (`gemini` atau `elevenlabs`); kosong = ikut penyedia akun. */
   customProvider?: HdTtsProvider;
   customVoiceId?: string;
+  /** Gaya bicara khas karakter ini untuk TTS (opsional, max 180). Kosong = ikut gaya slot global. */
+  customStyle?: string;
   /** Gaya balasan Gelembung Voice Note karakter (`auto` bawaan). */
   voiceNoteMode?: VoiceNoteReplyMode;
 };
@@ -449,19 +451,22 @@ export function normalizeCharacterVoice(input: unknown): CharacterVoiceConfig | 
   if (!VALID_CHAR_MODES.has(modeRaw) || modeRaw === "inherit") {
     return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
   }
+  const customStyle = cleanStyleText(raw.customStyle ?? raw.customTtsStyle);
+  const styleField = customStyle ? { customStyle } : {};
   if (modeRaw === "hd_custom") {
     const customVoiceId = cleanVoiceId(raw.customVoiceId, "");
     if (!customVoiceId) {
-      return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
+      return vnField.voiceNoteMode ? { mode: "inherit", ...vnField, ...styleField } : (styleField.customStyle ? { mode: "inherit", ...styleField, ...vnField } as any : null);
     }
     const customProvider =
       raw.customProvider === "gemini" || raw.customProvider === "elevenlabs"
         ? raw.customProvider
         : undefined;
     return customProvider
-      ? { mode: "hd_custom", customProvider, customVoiceId, ...vnField }
-      : { mode: "hd_custom", customVoiceId, ...vnField };
+      ? { mode: "hd_custom", customProvider, customVoiceId, ...styleField, ...vnField }
+      : { mode: "hd_custom", customVoiceId, ...styleField, ...vnField };
   }
+  if (styleField.customStyle) return { mode: modeRaw, ...styleField, ...vnField };
   return { mode: modeRaw, ...vnField };
 }
 
@@ -481,6 +486,7 @@ export type ResolvedVoiceTarget =
       slot: "female" | "male" | "custom";
       customProvider?: HdTtsProvider;
       customVoiceId?: string;
+      customStyle?: string;
     };
 
 /**
@@ -513,6 +519,7 @@ export function resolveVoiceTarget(
       slot: "custom",
       customProvider: characterVoice.customProvider,
       customVoiceId: characterVoice.customVoiceId,
+      ...(characterVoice.customStyle ? { customStyle: characterVoice.customStyle } : {}),
     };
   }
   return { kind: "device" };

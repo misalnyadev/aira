@@ -88,8 +88,9 @@ export async function synthesizeGeminiAudioForUser(params: {
   voiceName: string;
   extraStyleHint?: string;
   styleSlot?: "female" | "male" | "custom";
+  perCharStyle?: string;
 }): Promise<GeminiSynthResult> {
-  const { userId, config, cleanedText, voiceName, extraStyleHint, styleSlot } = params;
+  const { userId, config, cleanedText, voiceName, extraStyleHint, styleSlot, perCharStyle } = params;
 
   const dedicatedKeys = buildKeyAttempts(
     "gemini",
@@ -124,7 +125,7 @@ export async function synthesizeGeminiAudioForUser(params: {
     };
   }
 
-  const baseStyle = styleSlot ? getGeminiStyleForSlot(config, styleSlot, voiceName) : (config.geminiMaleStyle || config.geminiFemaleStyle || config.geminiStyle);
+  const baseStyle = perCharStyle?.trim() || (styleSlot ? getGeminiStyleForSlot(config, styleSlot, voiceName) : (config.geminiMaleStyle || config.geminiFemaleStyle || config.geminiStyle));
   const styleText = composeGeminiStyle(baseStyle, extraStyleHint);
   const modelsToTry = [
     ...new Set([
