@@ -376,3 +376,80 @@ export const brainstormMessages = pgTable("brainstorm_messages", {
   emotion: text("emotion"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Status/Reels ala WA & IG — story 24 jam & feed permanen.
+ * `characterId = null` berarti status milik akun user sendiri,
+ * selain itu milik karakter yang di-own user tersebut.
+ * `kind`: 'status' (hilang 24 jam) | 'reel' (permanen feed)
+ * `mediaType`: 'text' | 'image' | 'video'
+ */
+export const characterStatuses = pgTable("character_statuses", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  characterId: uuid("character_id").references(() => characters.id, {
+    onDelete: "cascade",
+  }),
+  kind: text("kind").notNull().default("status"),
+  mediaType: text("media_type").notNull().default("text"),
+  caption: text("caption").notNull().default(""),
+  content: text("content").notNull().default(""),
+  imageUrl: text("image_url"),
+  videoKey: text("video_key"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const statusLikes = pgTable(
+  "status_likes",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    statusId: uuid("status_id")
+      .notNull()
+      .references(() => characterStatuses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("status_likes_status_user_idx").on(t.statusId, t.userId)]
+);
+
+export const statusComments = pgTable("status_comments", {
+  id: uuid("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  statusId: uuid("status_id")
+    .notNull()
+    .references(() => characterStatuses.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const statusViews = pgTable(
+  "status_views",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    statusId: uuid("status_id")
+      .notNull()
+      .references(() => characterStatuses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("status_views_status_user_idx").on(t.statusId, t.userId)]
+);
+
