@@ -379,6 +379,16 @@ export function NotesBoardIcon({ className }: { className?: string }) {
   );
 }
 
+export function StatusIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} className={className}>
+      <circle cx={12} cy={12} r={8.5} />
+      <circle cx={12} cy={12} r={5.5} />
+      <circle cx={12} cy={12} r={2.2} fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function BrainstormIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} className={className}>
