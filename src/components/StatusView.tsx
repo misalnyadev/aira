@@ -1072,9 +1072,6 @@ export function StatusView({
                         </>
                       )}
                     </div>
-                    <button onClick={() => sendComment(activeIt.id)} disabled={!commentDraft.trim()} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-black disabled:opacity-40 active:scale-95">
-                      Kirim
-                    </button>
                   </div>
                 </div>
               </>
