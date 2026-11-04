@@ -271,6 +271,13 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "status_views_status_user_idx" ON "status_views" ("status_id", "user_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "status_bookmarks" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "status_bookmarks_status_user_idx" ON "status_bookmarks" ("status_id", "user_id")`,
 ];
 
 async function backfillMissingCharacterPins(): Promise<void> {
