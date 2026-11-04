@@ -25,21 +25,18 @@ export function BrainstormView({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-app">
       <div className="top-bar shrink-0 px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-ink text-brand-ink">
-              <BrainstormIcon className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-[15px] font-bold leading-none text-ink">Meja Diskusi</h1>
-              <p className="text-xs text-ink-soft">2–3 karakter brainstorming bareng</p>
-            </div>
+          <div>
+            <h1 className="text-[15px] font-bold leading-none text-ink">Meja Diskusi</h1>
+            <p className="text-xs text-ink-soft">2–3 karakter brainstorming bareng</p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             disabled={characters.length < 2}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:opacity-40"
+            aria-label="Buat meja baru"
+            title="Buat meja baru"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:opacity-40"
           >
-            <PlusIcon className="h-4 w-4" /> Buat Meja
+            <PlusIcon className="h-5 w-5" />
           </button>
         </div>
       </div>
