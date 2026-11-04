@@ -263,7 +263,15 @@ const DDL = [
     "content" text DEFAULT '' NOT NULL,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "status_comments" ADD COLUMN IF NOT EXISTS "parent_comment_id" uuid`,
+  sql`DO $$ BEGIN
+    ALTER TABLE "status_comments"
+      ADD CONSTRAINT "status_comments_parent_comment_id_fk"
+      FOREIGN KEY ("parent_comment_id") REFERENCES "status_comments"("id")
+      ON DELETE cascade ON UPDATE no action;
+  EXCEPTION WHEN duplicate_object THEN null; END $$`,
   sql`CREATE INDEX IF NOT EXISTS "status_comments_status_idx" ON "status_comments" ("status_id", "created_at" ASC)`,
+  sql`CREATE INDEX IF NOT EXISTS "status_comments_parent_idx" ON "status_comments" ("parent_comment_id")`,
   sql`CREATE TABLE IF NOT EXISTS "status_views" (
     "id" uuid PRIMARY KEY NOT NULL,
     "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,

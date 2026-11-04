@@ -51,12 +51,32 @@ type StatusItem = {
 type CommentRow = {
   id: string;
   content: string;
+  parentCommentId: string | null;
   createdAt: string;
   userId: string;
   displayName: string | null;
   nickname: string | null;
   avatarUrl: string | null;
 };
+
+type CommentReplyTarget = {
+  statusId: string;
+  commentId: string;
+  displayName: string;
+};
+
+function groupCommentThreads(rows: CommentRow[]) {
+  const repliesByComment = new Map<string, CommentRow[]>();
+  for (const row of rows) {
+    if (!row.parentCommentId) continue;
+    const replies = repliesByComment.get(row.parentCommentId) || [];
+    replies.push(row);
+    repliesByComment.set(row.parentCommentId, replies);
+  }
+  return rows
+    .filter((row) => !row.parentCommentId)
+    .map((comment) => ({ comment, replies: repliesByComment.get(comment.id) || [] }));
+}
 
 function FeedVideo({
   src,
@@ -188,6 +208,7 @@ export function StatusView({
   const [reelCommentsFor, setReelCommentsFor] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
+  const [replyingTo, setReplyingTo] = useState<CommentReplyTarget | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [fullScreenId, setFullScreenId] = useState<string | null>(null);
   const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
@@ -217,6 +238,12 @@ export function StatusView({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!replyingTo) return;
+    const focusTimer = window.setTimeout(() => fsCommentInputRef.current?.focus(), 80);
+    return () => window.clearTimeout(focusTimer);
+  }, [replyingTo]);
 
   useEffect(() => {
     if (!sharedStatusId || loading || handledSharedStatusRef.current === sharedStatusId) return;
@@ -452,6 +479,7 @@ export function StatusView({
   }
 
   async function openComments(id: string) {
+    setReplyingTo(null);
     setReelCommentsFor((cur) => (cur === id ? null : id));
     if (comments[id]) return;
     try {
@@ -461,19 +489,28 @@ export function StatusView({
     } catch {}
   }
 
+  function beginCommentReply(statusId: string, comment: CommentRow) {
+    setReplyingTo({
+      statusId,
+      commentId: comment.id,
+      displayName: comment.displayName || comment.nickname || "pengguna",
+    });
+  }
+
   async function sendComment(id: string) {
     const t = commentDraft.trim();
     if (!t) return;
-    setCommentDraft("");
+    const replyTarget = replyingTo?.statusId === id ? replyingTo : null;
     try {
       const res = await fetch(`/api/statuses/${id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: t }),
+        body: JSON.stringify({ content: t, parentCommentId: replyTarget?.commentId ?? null }),
       });
       const d = await res.json().catch(() => null);
       if (res.ok && d?.comment) {
-        // reload comments
+        setCommentDraft("");
+        setReplyingTo(null);
         const res2 = await fetch(`/api/statuses/${id}/comments`, { cache: "no-store" });
         const d2 = await res2.json().catch(() => null);
         if (res2.ok && Array.isArray(d2?.comments)) setComments((p) => ({ ...p, [id]: d2.comments }));
@@ -675,6 +712,7 @@ export function StatusView({
     const it = fsItems[idx];
     if (it && it.id !== activeFsId) {
       setActiveFsId(it.id);
+      setReplyingTo(null);
       const m = mutedMap[it.id];
       if (m !== undefined) setFullMuted(m);
       else setFullMuted(true);
@@ -1025,13 +1063,24 @@ export function StatusView({
                         {(comments[it.id] || []).length === 0 ? (
                           <div className="py-2 text-center text-xs text-muted">Belum ada komentar — jadi yang pertama ✨</div>
                         ) : (
-                          (comments[it.id] || []).map((c) => (
-                            <div key={c.id} className="flex gap-2">
-                              <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={24} />
-                              <div className="min-w-0 rounded-2xl bg-white px-3 py-1.5 shadow-sm">
-                                <div className="text-xs font-semibold">{c.displayName || c.nickname || "User"}</div>
-                                <div className="text-sm leading-snug">{c.content}</div>
+                          groupCommentThreads(comments[it.id] || []).map(({ comment: c, replies }) => (
+                            <div key={c.id} className="space-y-1.5">
+                              <div className="flex gap-2">
+                                <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={24} />
+                                <div className="min-w-0 rounded-2xl bg-white px-3 py-1.5 shadow-sm">
+                                  <div className="text-xs font-semibold">{c.displayName || c.nickname || "User"}</div>
+                                  <div className="text-sm leading-snug">{c.content}</div>
+                                </div>
                               </div>
+                              {replies.map((reply) => (
+                                <div key={reply.id} className="ml-7 flex gap-2">
+                                  <Avatar name={reply.displayName || reply.nickname || "User"} src={reply.avatarUrl || undefined} size={22} />
+                                  <div className="min-w-0 rounded-2xl bg-white/80 px-3 py-1.5 shadow-sm">
+                                    <div className="text-xs font-semibold">{reply.displayName || reply.nickname || "User"}</div>
+                                    <div className="text-sm leading-snug">{reply.content}</div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           ))
                         )}
@@ -1308,7 +1357,7 @@ export function StatusView({
                         </span>
                         <span className="text-[11px] font-semibold leading-none drop-shadow">{item.likeCount > 0 ? item.likeCount : 0}</span>
                       </button>
-                      <button onClick={() => { setActiveFsId(item.id); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                      <button onClick={() => { setActiveFsId(item.id); setReplyingTo(null); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                           <IgCommentIcon className="h-6 w-6 text-white" />
                         </span>
@@ -1370,7 +1419,7 @@ export function StatusView({
 
             {/* global comment bar — cuma shortcut ke modal, tanpa Kirim/X karena back < sudah ada di atas */}
             <div className="absolute inset-x-0 bottom-0 flex items-center bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
-              <button onClick={() => { setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
+              <button onClick={() => { setReplyingTo(null); setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
                 Tambahkan komentar...
               </button>
             </div>
@@ -1378,7 +1427,7 @@ export function StatusView({
             {/* sheet komen untuk item aktif */}
             {showFullscreenComments && activeIt && (
               <>
-                <button aria-label="Tutup komentar" onClick={() => setShowFullscreenComments(false)} className="absolute inset-0 bg-black/55 backdrop-blur-[1px] z-30" />
+                <button aria-label="Tutup komentar" onClick={() => { setReplyingTo(null); setShowFullscreenComments(false); }} className="absolute inset-0 bg-black/55 backdrop-blur-[1px] z-30" />
                 <div className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-[#121212] shadow-2xl z-40 transition-transform duration-200" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
                   <div className="flex shrink-0 justify-center pt-2.5 pb-1">
                     <span className="h-1 w-10 rounded-full bg-white/25" />
@@ -1388,20 +1437,39 @@ export function StatusView({
                       {(comments[activeIt.id] || []).length === 0 ? (
                         <div className="py-8 text-center text-sm text-white/50">Belum ada komentar — jadi yang pertama ✨</div>
                       ) : (
-                        (comments[activeIt.id] || []).map((c) => (
-                          <div key={c.id} className="flex gap-2.5">
-                            <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={32} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-[13px] font-semibold text-white">{c.displayName || c.nickname || "Anonim"}</span>
-                                <span className="text-[11px] text-white/40">{timeAgo(c.createdAt)}</span>
+                        groupCommentThreads(comments[activeIt.id] || []).map(({ comment: c, replies }) => (
+                          <div key={c.id} className="space-y-2.5">
+                            <div className="flex gap-2.5">
+                              <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={32} />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="text-[13px] font-semibold text-white">{c.displayName || c.nickname || "Anonim"}</span>
+                                  <span className="text-[11px] text-white/40">{timeAgo(c.createdAt)}</span>
+                                </div>
+                                <div className="text-[13px] leading-snug text-white/90">{c.content}</div>
+                                <button
+                                  onClick={() => beginCommentReply(activeIt.id, c)}
+                                  className="mt-1 text-xs font-semibold text-white/55 active:text-white"
+                                >
+                                  Balas
+                                </button>
                               </div>
-                              <div className="text-[13px] leading-snug text-white/90">{c.content}</div>
-                              <button className="mt-1 text-xs font-semibold text-white/40">Balas</button>
+                              <button className="shrink-0 self-start p-1.5 text-white/40">
+                                <IgHeartIcon className="h-4 w-4" />
+                              </button>
                             </div>
-                            <button className="shrink-0 self-start p-1.5 text-white/40">
-                              <IgHeartIcon className="h-4 w-4" />
-                            </button>
+                            {replies.map((reply) => (
+                              <div key={reply.id} className="ml-8 flex gap-2">
+                                <Avatar name={reply.displayName || reply.nickname || "User"} src={reply.avatarUrl || undefined} size={26} />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-baseline gap-1.5">
+                                    <span className="text-[12px] font-semibold text-white">{reply.displayName || reply.nickname || "Anonim"}</span>
+                                    <span className="text-[10px] text-white/40">{timeAgo(reply.createdAt)}</span>
+                                  </div>
+                                  <div className="text-[13px] leading-snug text-white/85">{reply.content}</div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ))
                       )}
@@ -1414,30 +1482,40 @@ export function StatusView({
                       ))}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                    <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
-                    <div className="flex flex-1 items-center gap-1 rounded-full bg-white/10 border border-white/10 pl-3 pr-1 py-1">
-                      <input
-                        ref={fsCommentInputRef}
-                        autoFocus
-                        value={commentDraft}
-                        onChange={(e) => setCommentDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") sendComment(activeIt.id); }}
-                        placeholder="Apa pendapat Anda tenta..."
-                        className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
-                      />
-                      {commentDraft.trim() ? (
-                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
-                          <SendIcon className="h-5 w-5" />
+                  <div className="flex shrink-0 flex-col border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    {replyingTo?.statusId === activeIt.id ? (
+                      <div className="flex items-center justify-between gap-2 px-1 pb-2 text-xs text-white/60">
+                        <span className="min-w-0 truncate">Membalas kepada <span className="font-semibold text-white/85">{replyingTo.displayName}</span></span>
+                        <button onClick={() => setReplyingTo(null)} aria-label="Batal membalas" className="shrink-0 rounded-full p-1 text-white/55 hover:bg-white/10">
+                          <XIcon className="h-4 w-4" />
                         </button>
-                      ) : (
-                        <>
-                          <button className="shrink-0 p-1 text-white/50" title="Foto">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
+                      </div>
+                    ) : null}
+                    <div className="flex items-center gap-2">
+                      <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
+                      <div className="flex flex-1 items-center gap-1 rounded-full bg-white/10 border border-white/10 pl-3 pr-1 py-1">
+                        <input
+                          ref={fsCommentInputRef}
+                          autoFocus
+                          value={commentDraft}
+                          onChange={(e) => setCommentDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") sendComment(activeIt.id); }}
+                          placeholder={replyingTo?.statusId === activeIt.id ? `Balas ke ${replyingTo.displayName}...` : "Apa pendapat Anda tenta..."}
+                          className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
+                        />
+                        {commentDraft.trim() ? (
+                          <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
+                            <SendIcon className="h-5 w-5" />
                           </button>
-                          <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <button className="shrink-0 p-1 text-white/50" title="Foto">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
+                            </button>
+                            <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
