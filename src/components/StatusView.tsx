@@ -44,6 +44,7 @@ type StatusItem = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  bookmarkedByMe: boolean;
   viewedByMe: boolean;
 };
 
@@ -164,6 +165,7 @@ export function StatusView({
   onSharedStatusHandled?: () => void;
 }) {
   const [items, setItems] = useState<StatusItem[]>([]);
+  const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
   const [editingItem, setEditingItem] = useState<StatusItem | null>(null);
@@ -200,6 +202,7 @@ export function StatusView({
   const handledSharedStatusRef = useRef<string | null>(null);
   const requestedSharedStatusRef = useRef<string | null>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
+  const bookmarkBusyIdsRef = useRef(new Set<string>());
   const viewerStoriesRef = useRef<StatusItem[]>([]);
 
   const load = useCallback(async () => {
@@ -391,6 +394,35 @@ export function StatusView({
         );
       }
     } catch {}
+  }
+
+  async function toggleBookmark(id: string) {
+    if (bookmarkBusyIdsRef.current.has(id)) return;
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+
+    const nextBookmarked = !current.bookmarkedByMe;
+    bookmarkBusyIdsRef.current.add(id);
+    setBookmarkBusyIds((prev) => ({ ...prev, [id]: true }));
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, bookmarkedByMe: nextBookmarked } : item)));
+
+    try {
+      const res = await fetch(`/api/statuses/${id}/bookmark`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.bookmarked !== "boolean") {
+        throw new Error(data?.error || "Gagal menyimpan status.");
+      }
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, bookmarkedByMe: data.bookmarked } : item)));
+    } catch {
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, bookmarkedByMe: current.bookmarkedByMe } : item)));
+    } finally {
+      bookmarkBusyIdsRef.current.delete(id);
+      setBookmarkBusyIds((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   }
 
   async function handleShare(item: StatusItem) {
@@ -955,8 +987,14 @@ export function StatusView({
                         <IgShareIcon className="h-[24px] w-[24px] text-ink" />
                       </button>
                     </div>
-                    <button aria-label="Simpan" className="p-1">
-                      <IgBookmarkIcon className="h-[24px] w-[24px] text-ink" />
+                    <button
+                      onClick={() => toggleBookmark(it.id)}
+                      aria-label={it.bookmarkedByMe ? "Hapus dari tersimpan" : "Simpan"}
+                      aria-pressed={it.bookmarkedByMe}
+                      disabled={!!bookmarkBusyIds[it.id]}
+                      className="p-1 active:scale-90 disabled:opacity-60"
+                    >
+                      <IgBookmarkIcon filled={it.bookmarkedByMe} className="h-[24px] w-[24px] text-ink" />
                     </button>
                   </div>
 
@@ -1288,9 +1326,16 @@ export function StatusView({
                           </span>
                         </button>
                       ) : null}
-                      <button className="flex flex-col items-center gap-1 active:scale-90 opacity-90 drop-shadow" title="Simpan">
+                      <button
+                        onClick={() => toggleBookmark(item.id)}
+                        aria-label={item.bookmarkedByMe ? "Hapus dari tersimpan" : "Simpan"}
+                        aria-pressed={item.bookmarkedByMe}
+                        disabled={!!bookmarkBusyIds[item.id]}
+                        title={item.bookmarkedByMe ? "Hapus dari tersimpan" : "Simpan"}
+                        className="flex flex-col items-center gap-1 active:scale-90 opacity-90 drop-shadow disabled:opacity-60"
+                      >
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                          <IgBookmarkIcon className="h-[22px] w-[22px] text-white drop-shadow" />
+                          <IgBookmarkIcon filled={item.bookmarkedByMe} className="h-[22px] w-[22px] text-white drop-shadow" />
                         </span>
                       </button>
                     </div>

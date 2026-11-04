@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   characterStatuses,
   characters,
+  statusBookmarks,
   statusComments,
   statusLikes,
   statusViews,
@@ -64,6 +65,20 @@ export async function GET(req: Request) {
     .orderBy(desc(characterStatuses.createdAt))
     .limit(requestedStatusId ? 1 : 120);
 
+  const bookmarkedStatusIds = new Set<string>();
+  if (rows.length > 0) {
+    const bookmarks = await db
+      .select({ statusId: statusBookmarks.statusId })
+      .from(statusBookmarks)
+      .where(
+        and(
+          eq(statusBookmarks.userId, user.id),
+          inArray(statusBookmarks.statusId, rows.map((row) => row.id))
+        )
+      );
+    bookmarks.forEach((bookmark) => bookmarkedStatusIds.add(bookmark.statusId));
+  }
+
   // enrich dengan like/comment counts + likedByMe
   const enriched = await Promise.all(
     rows.map(async (r) => {
@@ -103,6 +118,7 @@ export async function GET(req: Request) {
         likeCount: Number(likeCountRow?.c ?? 0),
         commentCount: Number(commentCountRow?.c ?? 0),
         likedByMe: Boolean(liked),
+        bookmarkedByMe: bookmarkedStatusIds.has(r.id),
         viewedByMe: Boolean(viewed),
       };
     })

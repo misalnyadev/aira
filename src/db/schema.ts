@@ -453,3 +453,20 @@ export const statusViews = pgTable(
   (t) => [uniqueIndex("status_views_status_user_idx").on(t.statusId, t.userId)]
 );
 
+export const statusBookmarks = pgTable(
+  "status_bookmarks",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    statusId: uuid("status_id")
+      .notNull()
+      .references(() => characterStatuses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("status_bookmarks_status_user_idx").on(t.statusId, t.userId)]
+);
+
