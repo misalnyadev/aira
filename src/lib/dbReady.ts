@@ -230,6 +230,47 @@ const DDL = [
   )`,
   sql`CREATE INDEX IF NOT EXISTS "brainstorm_messages_room_idx" ON "brainstorm_messages" ("room_id", "created_at" ASC)`,
   sql`CREATE INDEX IF NOT EXISTS "brainstorm_rooms_user_idx" ON "brainstorm_rooms" ("user_id", "updated_at" DESC)`,
+  // ---- Status / Reels (WA Story + IG Reels) ----
+  sql`CREATE TABLE IF NOT EXISTS "character_statuses" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "character_id" uuid REFERENCES "characters"("id") ON DELETE cascade,
+    "kind" text DEFAULT 'status' NOT NULL,
+    "media_type" text DEFAULT 'text' NOT NULL,
+    "caption" text DEFAULT '' NOT NULL,
+    "content" text DEFAULT '' NOT NULL,
+    "image_url" text,
+    "video_key" text,
+    "expires_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "character_statuses_user_idx" ON "character_statuses" ("user_id", "created_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "character_statuses_char_idx" ON "character_statuses" ("character_id", "created_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "character_statuses_kind_idx" ON "character_statuses" ("kind", "created_at" DESC)`,
+  sql`CREATE INDEX IF NOT EXISTS "character_statuses_expires_idx" ON "character_statuses" ("expires_at")`,
+  sql`CREATE TABLE IF NOT EXISTS "status_likes" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "status_likes_status_user_idx" ON "status_likes" ("status_id", "user_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "status_comments" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "content" text DEFAULT '' NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE INDEX IF NOT EXISTS "status_comments_status_idx" ON "status_comments" ("status_id", "created_at" ASC)`,
+  sql`CREATE TABLE IF NOT EXISTS "status_views" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "status_views_status_user_idx" ON "status_views" ("status_id", "user_id")`,
 ];
 
 async function backfillMissingCharacterPins(): Promise<void> {

@@ -128,6 +128,9 @@ export function presignR2Url(
 const SAFE_MEDIA_KEY_RE =
   /^media\/([0-9a-f-]{36})\/([0-9a-f-]{36})\/(chatVideo|callVideo|callAudio)-[0-9a-f-]{36}\.[a-z0-9]{2,5}$/;
 
+const SAFE_STATUS_KEY_RE =
+  /^media\/([0-9a-f-]{36})\/(statusVideo|statusReel)-[0-9a-f-]{36}\.[a-z0-9]{2,5}$/;
+
 const SAFE_TTS_KEY_RE = /^tts\/([0-9a-f-]{36})\/[a-z0-9_-]{6,64}\.(wav|mp3)$/;
 
 const SAFE_IMAGE_FILE_RE = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/;
@@ -142,6 +145,13 @@ export function isOwnedMediaKey(key: string, userId: string): boolean {
   const match = SAFE_MEDIA_KEY_RE.exec(key);
   if (!match) return false;
   return match[1] === userId;
+}
+
+export function isOwnedStatusKey(key: string, userId: string): boolean {
+  if (!key || key.length > 260) return false;
+  const m = SAFE_STATUS_KEY_RE.exec(key);
+  if (!m) return false;
+  return m[1] === userId;
 }
 
 /**
