@@ -171,6 +171,7 @@ export function StatusView({
   const [composeBusy, setComposeBusy] = useState(false);
   const [composeErr, setComposeErr] = useState<string | null>(null);
   const [viewerIdx, setViewerIdx] = useState<number | null>(null);
+  const [viewerProfileKey, setViewerProfileKey] = useState<string | null>(null);
   const [reelCommentsFor, setReelCommentsFor] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
@@ -185,6 +186,7 @@ export function StatusView({
   const videoRef = useRef<HTMLInputElement>(null);
   const fsCommentInputRef = useRef<HTMLInputElement>(null);
   const fsScrollRef = useRef<HTMLDivElement>(null);
+  const viewedStoryIdsRef = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     try {
@@ -211,15 +213,18 @@ export function StatusView({
 
     return Array.from(profiles.entries()).map(([key, profileStories]) => {
       const latestStory = profileStories[0];
-      const firstUnseenStory = profileStories.find((story) => !story.viewedByMe) || latestStory;
       return {
         key,
         story: latestStory,
+        stories: profileStories,
         hasUnseen: profileStories.some((story) => !story.viewedByMe),
-        startIndex: stories.findIndex((story) => story.id === firstUnseenStory.id),
       };
     });
   }, [stories]);
+  const viewerStories = useMemo(
+    () => storyProfiles.find((profileStory) => profileStory.key === viewerProfileKey)?.stories ?? [],
+    [storyProfiles, viewerProfileKey]
+  );
   const reels = useMemo(() => items.filter((x) => x.kind === "reel"), [items]);
 
   async function handleCreate() {
@@ -377,26 +382,48 @@ export function StatusView({
     } catch {}
   }
 
-  function openStoryAt(idx: number) {
-    setViewerIdx(idx);
-    const s = stories[idx];
-    if (s && !s.viewedByMe) {
-      fetch(`/api/statuses/${s.id}`, { method: "POST" }).catch(() => undefined);
-      setItems((prev) => prev.map((x) => (x.id === s.id ? { ...x, viewedByMe: true } : x)));
-    }
-  }
+  const markStoryViewed = useCallback((story: StatusItem) => {
+    if (story.viewedByMe || viewedStoryIdsRef.current.has(story.id)) return;
+    viewedStoryIdsRef.current.add(story.id);
+    fetch(`/api/statuses/${story.id}`, { method: "POST" }).catch(() => undefined);
+    setItems((prev) => prev.map((item) => (item.id === story.id ? { ...item, viewedByMe: true } : item)));
+  }, []);
 
-  // viewer auto advance setelah 5s (foto/teks), video biarkan manual
+  const openStoryProfile = useCallback((profileKey: string) => {
+    const selectedProfile = storyProfiles.find((profileStory) => profileStory.key === profileKey);
+    if (!selectedProfile) return;
+    const unseenIndex = selectedProfile.stories.findIndex((story) => !story.viewedByMe);
+    const startIndex = unseenIndex >= 0 ? unseenIndex : 0;
+    setViewerProfileKey(selectedProfile.key);
+    setViewerIdx(startIndex);
+    markStoryViewed(selectedProfile.stories[startIndex]);
+  }, [storyProfiles, markStoryViewed]);
+
+  const moveStoryTo = useCallback((index: number) => {
+    const story = viewerStories[index];
+    if (!story) {
+      setViewerIdx(null);
+      setViewerProfileKey(null);
+      return;
+    }
+    setViewerIdx(index);
+    markStoryViewed(story);
+  }, [viewerStories, markStoryViewed]);
+
+  // viewer auto advance hanya di dalam profil yang dipilih; video biarkan manual
   useEffect(() => {
     if (viewerIdx === null) return;
-    const cur = stories[viewerIdx];
+    const cur = viewerStories[viewerIdx];
     if (!cur || cur.mediaType === "video") return;
     const t = setTimeout(() => {
-      if (viewerIdx < stories.length - 1) setViewerIdx(viewerIdx + 1);
-      else setViewerIdx(null);
+      if (viewerIdx < viewerStories.length - 1) moveStoryTo(viewerIdx + 1);
+      else {
+        setViewerIdx(null);
+        setViewerProfileKey(null);
+      }
     }, 5000);
     return () => clearTimeout(t);
-  }, [viewerIdx, stories]);
+  }, [viewerIdx, viewerStories, moveStoryTo]);
 
   // keyboard offset biar input naik di atas keyboard — lebih sensitif untuk iPhone
   useEffect(() => {
@@ -525,8 +552,9 @@ export function StatusView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
       <div
-        className="top-bar flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5"
+        className="top-bar sticky top-0 z-30 flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5"
         style={{
           borderBottom: "none",
           backgroundColor: "color-mix(in srgb, var(--surface) 58%, transparent)",
@@ -650,7 +678,6 @@ export function StatusView({
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
         <div className="mx-auto w-full max-w-[560px]">
           {/* Story strip ala IG — empat profil terlihat dalam satu layar */}
           <div className="border-b border-line bg-surface px-2 py-3">
@@ -672,7 +699,7 @@ export function StatusView({
                   const name = s.characterName || s.userDisplayName || s.userNickname || "Kamu";
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
                   return (
-                    <button key={profileStory.key} onClick={() => openStoryAt(profileStory.startIndex)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
+                    <button key={profileStory.key} onClick={() => openStoryProfile(profileStory.key)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
                       <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
                         <span className="block rounded-full bg-surface p-[2px]">
                           <Avatar name={name} src={avatar} size={56} />
@@ -859,64 +886,77 @@ export function StatusView({
         </div>
       </div>
 
-      {/* Story viewer fullscreen ala WA */}
-      {viewerIdx !== null && stories[viewerIdx] && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black">
-          {/* progress */}
-          <div className="flex gap-1 px-2 pt-[max(0.5rem,var(--safe-top))]">
-            {stories.map((_, i) => (
-              <div key={i} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
-                <div className={`h-full bg-white transition-all ${i < (viewerIdx ?? 0) ? "w-full" : i === viewerIdx ? "w-1/2 animate-[pulse_5s_linear]" : "w-0"}`} />
+      {/* Story viewer fullscreen — hanya postingan profil yang dipilih */}
+      {viewerIdx !== null && viewerStories[viewerIdx] && (() => {
+        const currentStory = viewerStories[viewerIdx];
+        const displayName = currentStory.characterName || currentStory.userDisplayName || currentStory.userNickname || "User";
+        const avatar = currentStory.characterAvatar || currentStory.userAvatar || undefined;
+        const closeViewer = () => {
+          setViewerIdx(null);
+          setViewerProfileKey(null);
+        };
+        return (
+          <div className="fixed inset-0 z-50 overflow-hidden bg-black text-white">
+            {currentStory.mediaType === "image" && currentStory.imageUrl ? (
+              <img src={currentStory.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : currentStory.mediaType === "video" && currentStory.videoUrl ? (
+              <video src={currentStory.videoUrl} autoPlay controls playsInline className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-8 py-28 text-center">
+                <p className="whitespace-pre-wrap text-xl font-semibold leading-relaxed text-white drop-shadow-lg">
+                  {currentStory.content || currentStory.caption}
+                </p>
               </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between px-3 py-2 text-white">
-            <div className="flex items-center gap-2">
-              <Avatar
-                name={stories[viewerIdx].characterName || stories[viewerIdx].userDisplayName || "User"}
-                src={(stories[viewerIdx].characterAvatar || stories[viewerIdx].userAvatar) || undefined}
-                size={32}
-              />
-              <div>
-                <div className="text-sm font-semibold">{stories[viewerIdx].characterName || stories[viewerIdx].userDisplayName || "User"}</div>
-                <div className="text-xs opacity-70">{timeAgo(stories[viewerIdx].createdAt)}</div>
+            )}
+
+            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/55 via-transparent to-black/45" />
+
+            <div className="absolute inset-x-0 top-0 z-20 px-2 pt-[max(0.5rem,var(--safe-top))]">
+              <div className="flex gap-1">
+                {viewerStories.map((story, i) => (
+                  <div key={story.id} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
+                    <div className={`h-full bg-white transition-all ${i < viewerIdx ? "w-full" : i === viewerIdx ? "w-1/2 animate-[pulse_5s_linear]" : "w-0"}`} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between px-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Avatar name={displayName} src={avatar} size={32} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{displayName}</div>
+                    <div className="text-xs text-white/75">{timeAgo(currentStory.createdAt)}</div>
+                  </div>
+                </div>
+                <button onClick={closeViewer} className="rounded-full bg-black/30 p-2 backdrop-blur-md" aria-label="Tutup status">
+                  <XIcon className="h-5 w-5" />
+                </button>
               </div>
             </div>
-            <button onClick={() => setViewerIdx(null)} className="rounded-full bg-white/15 p-2">
-              <XIcon className="h-5 w-5" />
-            </button>
-          </div>
 
-          <div className="relative flex flex-1 items-center justify-center p-2">
             <button
-              onClick={() => setViewerIdx((v) => (v !== null && v > 0 ? v - 1 : v))}
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 p-2 text-white"
+              onClick={() => viewerIdx > 0 && moveStoryTo(viewerIdx - 1)}
+              disabled={viewerIdx === 0}
+              className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/25 p-2 text-white backdrop-blur-sm disabled:opacity-35"
+              aria-label="Status sebelumnya"
             >
               ‹
             </button>
             <button
-              onClick={() => setViewerIdx((v) => (v !== null && v < stories.length - 1 ? v + 1 : null))}
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 p-2 text-white"
+              onClick={() => moveStoryTo(viewerIdx + 1)}
+              className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/25 p-2 text-white backdrop-blur-sm"
+              aria-label={viewerIdx === viewerStories.length - 1 ? "Tutup status" : "Status berikutnya"}
             >
               ›
             </button>
 
-            {stories[viewerIdx].mediaType === "image" && stories[viewerIdx].imageUrl ? (
-              <img src={stories[viewerIdx].imageUrl!} alt="" className="max-h-full max-w-full rounded-2xl object-contain" />
-            ) : stories[viewerIdx].mediaType === "video" && stories[viewerIdx].videoUrl ? (
-              <video src={stories[viewerIdx].videoUrl!} autoPlay controls playsInline className="max-h-full max-w-full rounded-2xl" />
-            ) : (
-              <div className="mx-4 rounded-[28px] bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
-                <p className="whitespace-pre-wrap text-xl font-semibold leading-relaxed text-white">
-                  {stories[viewerIdx].content || stories[viewerIdx].caption}
-                </p>
+            {currentStory.caption && currentStory.caption !== currentStory.content && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
+                {currentStory.caption}
               </div>
             )}
           </div>
-
-          <div className="px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 text-center text-sm text-white/80">{stories[viewerIdx].caption || ""}</div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Fullscreen IG — scroll vertikal pindah status kayak IG, tanpa nama tengah */}
       {fullScreenId && (() => {
