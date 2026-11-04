@@ -1316,7 +1316,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                   onSelect={handleSelect}
                   onAddContact={() => setShowAddContact(true)}
                   onOpenSettings={() => handleViewChange("settings")}
-                  onOpenStatus={() => handleViewChange("status")}
                   hasProviders={hasProviders}
                   pendingContactsCount={pendingOwnerContactsCount}
                 />
@@ -1465,6 +1464,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               key={`${profileTab}|${profile.displayName}|${profile.nickname}|${profile.age ?? ""}|${profile.occupation}|${profile.about}|${profile.avatarUrl ?? ""}|${characters.length}|${limit}`}
               profile={profile}
               onSaved={setProfile}
+              onOpenSettings={() => handleViewChange("settings")}
               initialTab={profileTab}
               onTabChange={setProfileTab}
               isAdmin={isAdmin}

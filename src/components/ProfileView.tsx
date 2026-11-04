@@ -49,6 +49,7 @@ function charCount(value: string, max: number) {
 export function ProfileView({
   profile,
   onSaved,
+  onOpenSettings,
   initialTab = "identity",
   onTabChange,
   isAdmin = false,
@@ -68,6 +69,7 @@ export function ProfileView({
 }: {
   profile: UserProfile;
   onSaved: (next: UserProfile) => void;
+  onOpenSettings: () => void;
   initialTab?: ProfileTab;
   onTabChange?: (tab: ProfileTab) => void;
   isAdmin?: boolean;
@@ -272,15 +274,15 @@ export function ProfileView({
                   : "Karakter membaca ini supaya tahu mereka sedang ngobrol sama siapa."}
             </p>
           </div>
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              effectiveIsAdmin
-                ? "bg-ink text-surface"
-                : "bg-surface-2 text-ink-soft ring-1 ring-line"
-            }`}
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line transition hover:bg-surface active:scale-95"
+            title="Buka Setelan"
+            aria-label="Buka Setelan"
           >
-            {effectiveIsAdmin ? "Admin" : "Member"}
-          </span>
+            <SettingsIcon className="h-4.5 w-4.5" />
+          </button>
         </div>
 
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
