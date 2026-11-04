@@ -438,3 +438,23 @@ export function BrainstormIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function MeetupIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <circle cx="12" cy="7.2" r="2.7" />
+      <circle cx="5.1" cy="9.2" r="2" />
+      <circle cx="18.9" cy="9.2" r="2" />
+      <path d="M5.3 20.2a6.7 6.7 0 0 1 13.4 0" />
+      <path d="M1.8 19.2a4.3 4.3 0 0 1 4.8-4.3M22.2 19.2a4.3 4.3 0 0 0-4.8-4.3" />
+    </svg>
+  );
+}
