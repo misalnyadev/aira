@@ -757,7 +757,7 @@ export function StatusView({
         </div>
       )}
 
-      {/* Fullscreen IG Reels — tap konten feed buka fullscreen */}
+      {/* Fullscreen IG — video beneran penuh layar, UI overlay di atas video */}
       {fullScreenId && (() => {
         const it = items.find((x) => x.id === fullScreenId);
         if (!it) return null;
@@ -765,102 +765,103 @@ export function StatusView({
         const avatar = it.characterAvatar || it.userAvatar || undefined;
         const caption = it.caption || it.content || "";
         return (
-          <div className="fixed inset-0 z-[60] flex flex-col bg-black">
-            {/* header — simple sesuai app, bukan dummy Reels/Teman IG */}
-            <div className="flex shrink-0 items-center justify-between px-3 pb-2 pt-[max(0.6rem,var(--safe-top))] text-white">
-              <button onClick={() => setFullScreenId(null)} className="rounded-full bg-white/10 p-1.5 active:scale-90" aria-label="Kembali">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <div className="fixed inset-0 z-[60] bg-black overflow-hidden">
+            {/* media full bleed — object-cover nutup layar penuh kayak IG Reels */}
+            <div className="absolute inset-0">
+              {it.mediaType === "image" && it.imageUrl ? (
+                <img
+                  src={it.imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onClick={() => setFullScreenId(null)}
+                />
+              ) : it.mediaType === "video" && it.videoUrl ? (
+                <video
+                  src={it.videoUrl}
+                  autoPlay
+                  loop
+                  playsInline
+                  muted={fullMuted}
+                  controls={false}
+                  className="h-full w-full object-cover"
+                  onClick={(e) => {
+                    const v = e.currentTarget;
+                    if (v.paused) v.play().catch(() => {});
+                    else v.pause();
+                  }}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
+                  <p className="whitespace-pre-wrap text-xl font-semibold text-white">{it.content || it.caption}</p>
+                </div>
+              )}
+            </div>
+
+            {/* gradient atas & bawah biar teks kebaca kayak IG */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+
+            {/* header overlay */}
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[max(0.7rem,var(--safe-top))] pb-3 text-white">
+              <button onClick={() => setFullScreenId(null)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
               <div className="flex min-w-0 items-center gap-2">
-                <span className="rounded-full bg-white p-[1px]"><Avatar name={displayName} src={avatar} size={20} /></span>
-                <span className="truncate text-[14px] font-semibold">{displayName}</span>
-                <span className="shrink-0 text-[11px] text-white/60">• {timeAgo(it.createdAt)}</span>
+                <span className="rounded-full bg-white p-[1px]"><Avatar name={displayName} src={avatar} size={22} /></span>
+                <span className="truncate text-[14px] font-semibold drop-shadow">{displayName}</span>
+                <span className="shrink-0 text-[11px] text-white/70">• {timeAgo(it.createdAt)}</span>
               </div>
-              <button onClick={() => setMenuFor(menuFor === it.id ? null : it.id)} className="rounded-full p-1.5" aria-label="Opsi">
+              <button onClick={() => setMenuFor(menuFor === it.id ? null : it.id)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
                 <IgMoreIcon className="h-5 w-5 text-white" />
               </button>
             </div>
 
-            {/* stage */}
-            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black">
-              {/* media */}
-              <div className="relative flex h-full w-full max-w-[420px] items-center justify-center">
-                {it.mediaType === "image" && it.imageUrl ? (
-                  <img src={it.imageUrl} alt="" className="h-full max-h-full w-full object-contain" />
-                ) : it.mediaType === "video" && it.videoUrl ? (
-                  <video
-                    src={it.videoUrl}
-                    autoPlay
-                    loop
-                    playsInline
-                    muted={fullMuted}
-                    controls={false}
-                    className="h-full w-full object-contain"
-                    onClick={(e) => {
-                      const v = e.currentTarget;
-                      if (v.paused) v.play().catch(() => {});
-                      else v.pause();
-                    }}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
-                    <p className="whitespace-pre-wrap text-xl font-semibold text-white">{it.content || it.caption}</p>
-                  </div>
-                )}
+            {/* speaker kanan-bawah di atas video */}
+            {it.mediaType === "video" && it.videoUrl && (
+              <button
+                onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
+                className="absolute bottom-[158px] right-3 rounded-full bg-black/40 p-2.5 text-white backdrop-blur-md border border-white/15 active:scale-90"
+                aria-label="Suara"
+              >
+                {fullMuted ? <SpeakerOffIcon className="h-5 w-5" /> : <SpeakerIcon className="h-5 w-5" />}
+              </button>
+            )}
 
-                {/* speaker kanan bawah media — IG style */}
-                {it.mediaType === "video" && it.videoUrl && (
-                  <button
-                    onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
-                    className="absolute bottom-3 right-3 rounded-full bg-black/35 p-2.5 text-white backdrop-blur-md border border-white/15 active:scale-90"
-                    aria-label="Suara"
-                  >
-                    {fullMuted ? <SpeakerOffIcon className="h-5 w-5" /> : <SpeakerIcon className="h-5 w-5" />}
-                  </button>
-                )}
-              </div>
-
-              {/* right vertical action bar — hanya fungsi yang ada di app */}
-              <div className="absolute bottom-[88px] right-2 flex flex-col items-center gap-4 text-white">
-                <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
-                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
-                    <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
-                  </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    openComments(it.id);
-                  }}
-                  className="flex flex-col items-center gap-1 active:scale-90"
-                >
-                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
-                    <IgCommentIcon className="h-6 w-6 text-white" />
-                  </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
-                </button>
-                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90" title="Bagikan — nanti">
-                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
-                    <IgShareIcon className="h-6 w-6 text-white" />
-                  </span>
-                </button>
-                <button className="flex flex-col items-center gap-1 active:scale-90 opacity-80" title="Simpan — nanti">
-                  <IgBookmarkIcon className="h-6 w-6 text-white" />
-                </button>
-              </div>
+            {/* right vertical action bar — hanya fungsi real app */}
+            <div className="absolute bottom-[132px] right-2 flex flex-col items-center gap-4 text-white">
+              <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
+                </span>
+                <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
+              </button>
+              <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgCommentIcon className="h-6 w-6 text-white" />
+                </span>
+                <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
+              </button>
+              <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" title="Bagikan — nanti">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgShareIcon className="h-6 w-6 text-white" />
+                </span>
+              </button>
+              <button className="flex flex-col items-center gap-1 active:scale-90 opacity-80 drop-shadow" title="Simpan — nanti">
+                <IgBookmarkIcon className="h-6 w-6 text-white drop-shadow" />
+              </button>
             </div>
 
-            {/* bottom profile + caption — pakai data real app */}
-            <div className="shrink-0 px-3 pb-2 pt-2 text-white">
+            {/* bottom profile + caption overlay di atas video */}
+            <div className="absolute inset-x-0 bottom-[56px] px-3 pb-2 pt-2 text-white">
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-white p-[2px]">
+                <span className="rounded-full bg-white p-[2px] shadow">
                   <Avatar name={displayName} src={avatar} size={28} />
                 </span>
-                <span className="text-[13px] font-semibold">{displayName}</span>
-                <span className="text-[11px] text-white/60">• {it.kind === "reel" ? "Reels" : "Status"} • {timeAgo(it.createdAt)}</span>
+                <span className="text-[13px] font-semibold drop-shadow">{displayName}</span>
+                <span className="text-[11px] text-white/70 drop-shadow">• {it.kind === "reel" ? "Reels" : "Status"} • {timeAgo(it.createdAt)}</span>
               </div>
               {caption ? (
-                <div className="mt-1.5 text-[13px] leading-snug">
+                <div className="mt-1.5 line-clamp-2 text-[13px] leading-snug drop-shadow">
                   <span className="font-semibold">{displayName} </span>
                   <span className="text-white/90">{caption}</span>
                   {it.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{it.likeCount} suka</span> : null}
@@ -868,19 +869,19 @@ export function StatusView({
               ) : null}
             </div>
 
-            {/* comment input bar */}
-            <div className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
+            {/* comment input bar — nempel bawah */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10">
               <input
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendComment(it.id)}
                 placeholder="Tambahkan komentar..."
-                className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/50 outline-none"
+                className="flex-1 rounded-full bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/10"
               />
-              <button onClick={() => sendComment(it.id)} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black active:scale-95">
+              <button onClick={() => sendComment(it.id)} className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95">
                 Kirim
               </button>
-              <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2 text-white">
+              <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2.5 text-white border border-white/10">
                 <XIcon className="h-4 w-4" />
               </button>
             </div>
