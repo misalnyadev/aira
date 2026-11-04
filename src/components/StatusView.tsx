@@ -505,17 +505,21 @@ export function StatusView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <div className="top-bar flex shrink-0 items-center justify-between gap-2 px-4 pb-3.5 pt-[max(1rem,var(--safe-top))] sm:px-5">
-        <div>
-          <h2 className="font-display text-[17px] font-extrabold tracking-tight">Status</h2>
-          <p className="text-xs text-ink-soft">Story 24 jam & Reels permanen</p>
-        </div>
+      <div className="top-bar flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5">
         <button
+          type="button"
           onClick={() => setShowComposer((v) => !v)}
-          className="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white active:scale-95"
+          aria-label="Buat status"
+          className="flex h-10 w-10 shrink-0 items-center justify-start text-ink active:scale-90"
         >
-          + Buat
+          <PlusIcon className="h-8 w-8" />
         </button>
+        <h1 className="min-w-0 flex-1 text-center font-display text-[21px] font-extrabold tracking-tight text-ink">
+          StoryTalent
+        </h1>
+        <span role="img" aria-label="Notifikasi" className="flex h-10 w-10 shrink-0 items-center justify-end text-ink">
+          <IgHeartIcon className="h-7 w-7" />
+        </span>
       </div>
 
       {showComposer && (
@@ -620,9 +624,9 @@ export function StatusView({
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
         <div className="mx-auto w-full max-w-[560px]">
-          {/* Story bar ala WA */}
+          {/* Story strip ala IG — empat profil terlihat dalam satu layar */}
           <div className="border-b border-line bg-surface px-2 py-3">
-            <div className="flex gap-3 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+            <div className="flex snap-x snap-mandatory gap-0 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
               {loading ? (
                 <div className="px-3 py-6 text-sm text-muted">Memuat...</div>
               ) : stories.length === 0 ? (
@@ -640,14 +644,13 @@ export function StatusView({
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
                   const isUnseen = !s.viewedByMe;
                   return (
-                    <button key={s.id} onClick={() => openStoryAt(idx)} className="flex w-[68px] shrink-0 flex-col items-center gap-1">
+                    <button key={s.id} onClick={() => openStoryAt(idx)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
                       <span className={`rounded-full p-[2px] ${isUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
                         <span className="block rounded-full bg-surface p-[2px]">
-                          <Avatar name={name} src={avatar} size={52} />
+                          <Avatar name={name} src={avatar} size={56} />
                         </span>
                       </span>
-                      <span className="w-full truncate text-center text-[11px] font-medium leading-tight">{name}</span>
-                      <span className="text-[10px] text-muted">{remainingHours(s.expiresAt)}</span>
+                      <span className="w-full truncate text-center text-[12px] font-medium leading-tight">{name}</span>
                     </button>
                   );
                 })
