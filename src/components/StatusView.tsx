@@ -200,6 +200,26 @@ export function StatusView({
   }, [load]);
 
   const stories = useMemo(() => items.filter((x) => x.kind === "status"), [items]);
+  const storyProfiles = useMemo(() => {
+    const profiles = new Map<string, StatusItem[]>();
+    stories.forEach((story) => {
+      const key = story.characterId ? `character:${story.characterId}` : `user:${story.userId}`;
+      const profileStories = profiles.get(key);
+      if (profileStories) profileStories.push(story);
+      else profiles.set(key, [story]);
+    });
+
+    return Array.from(profiles.entries()).map(([key, profileStories]) => {
+      const latestStory = profileStories[0];
+      const firstUnseenStory = profileStories.find((story) => !story.viewedByMe) || latestStory;
+      return {
+        key,
+        story: latestStory,
+        hasUnseen: profileStories.some((story) => !story.viewedByMe),
+        startIndex: stories.findIndex((story) => story.id === firstUnseenStory.id),
+      };
+    });
+  }, [stories]);
   const reels = useMemo(() => items.filter((x) => x.kind === "reel"), [items]);
 
   async function handleCreate() {
@@ -505,7 +525,15 @@ export function StatusView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <div className="top-bar flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5">
+      <div
+        className="top-bar flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5"
+        style={{
+          borderBottom: "none",
+          backgroundColor: "color-mix(in srgb, var(--surface) 58%, transparent)",
+          backdropFilter: "saturate(180%) blur(22px)",
+          WebkitBackdropFilter: "saturate(180%) blur(22px)",
+        }}
+      >
         <button
           type="button"
           onClick={() => setShowComposer((v) => !v)}
@@ -629,7 +657,7 @@ export function StatusView({
             <div className="flex snap-x snap-mandatory gap-0 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
               {loading ? (
                 <div className="px-3 py-6 text-sm text-muted">Memuat...</div>
-              ) : stories.length === 0 ? (
+              ) : storyProfiles.length === 0 ? (
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 border-dashed border-line bg-surface-2">
@@ -639,13 +667,13 @@ export function StatusView({
                   </div>
                 </div>
               ) : (
-                stories.map((s, idx) => {
+                storyProfiles.map((profileStory) => {
+                  const s = profileStory.story;
                   const name = s.characterName || s.userDisplayName || s.userNickname || "Kamu";
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
-                  const isUnseen = !s.viewedByMe;
                   return (
-                    <button key={s.id} onClick={() => openStoryAt(idx)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
-                      <span className={`rounded-full p-[2px] ${isUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
+                    <button key={profileStory.key} onClick={() => openStoryAt(profileStory.startIndex)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
+                      <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
                         <span className="block rounded-full bg-surface p-[2px]">
                           <Avatar name={name} src={avatar} size={56} />
                         </span>
