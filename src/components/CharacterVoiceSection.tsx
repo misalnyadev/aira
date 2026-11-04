@@ -110,6 +110,7 @@ export function CharacterVoiceSection({
   const [vnMode, setVnMode] = useState<VoiceNoteReplyMode>(
     normalizeVoiceNoteMode(value?.voiceNoteMode, "auto")
   );
+  const [charTestFeedback, setCharTestFeedback] = useState<{kind: "ok"|"err"; text: string} | null>(null);
   const isSpeaking = useIsSpeaking();
 
   const geminiHasKey = ttsSummary.hasGeminiKey || ttsSummary.hasSharedGeminiKey;
@@ -205,15 +206,17 @@ export function CharacterVoiceSection({
   function handleTestCustom() {
     if (isSpeaking) {
       stopSpeaking();
+      setCharTestFeedback(null);
       return;
     }
     const cleaned = cleanVoiceId(customId);
     if (!cleaned) {
-      onNotice?.("Pilih atau masukkan suara terlebih dulu.");
+      setCharTestFeedback({kind: "err", text: "Pilih atau masukkan suara terlebih dulu."});
       return;
     }
     const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
     const sample = sampleGreeting?.trim() || VOICE_TEST_TEXT;
+    setCharTestFeedback(null);
     speak(sample, voiceSettings, {
       target: {
         kind: "hd",
@@ -222,8 +225,33 @@ export function CharacterVoiceSection({
         customVoiceId: cleaned,
       },
       allowDeviceFallback: false,
-      onFallback: (reason) => onNotice?.(reason),
+      onFallback: (reason) => setCharTestFeedback({kind: "err", text: reason}),
     });
+    if (targetProv === "gemini" ? ttsSummary.hasGeminiKey || ttsSummary.hasSharedGeminiKey : ttsSummary.hasKey) {
+      setCharTestFeedback({kind: "ok", text: "Memutar tes — cek kuota di Pengaturan Suara (status per key 1/1)."});
+    }
+  }
+
+  function handleTestSlotCurrent() {
+    if (isSpeaking) {
+      stopSpeaking();
+      setCharTestFeedback(null);
+      return;
+    }
+    const sample = sampleGreeting?.trim() || VOICE_TEST_TEXT;
+    let target: any = null;
+    if (choice === "hd_female") target = { kind: "hd", slot: "female" } as const;
+    else if (choice === "hd_male") target = { kind: "hd", slot: "male" } as const;
+    else if (choice === "device") target = { kind: "device" } as const;
+    else return handleTestCustom();
+    setCharTestFeedback(null);
+    speak(sample, voiceSettings, {
+      target,
+      allowDeviceFallback: false,
+      onFallback: (reason) => setCharTestFeedback({kind: "err", text: reason}),
+    });
+    const hasKey = choice === "hd_female" || choice === "hd_male" ? ttsSummary.hasActiveKey : true;
+    if (hasKey) setCharTestFeedback({kind: "ok", text: "Memutar tes — status kuota lihat di Suara → API Key & Model (per key 1/1)."});
   }
 
   const activeHint = OPTIONS.find((o) => o.id === choice)?.hint ?? "";
@@ -270,6 +298,23 @@ export function CharacterVoiceSection({
         <p className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
           {missingKeyNote}
         </p>
+      )}
+
+      {(choice === "hd_female" || choice === "hd_male" || choice === "device") && (
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleTestSlotCurrent}
+            className="inline-flex items-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-surface-2"
+          >
+            {isSpeaking ? "Stop" : "▶ Tes suara ini"}
+          </button>
+          <span className="text-[11px] text-muted">Tes quota & dengar hasil — status lengkap di Suara → API Key (per key 1/1).</span>
+        </div>
+      )}
+
+      {charTestFeedback && (
+        <p className={`rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${charTestFeedback.kind === "ok" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"}`}>{charTestFeedback.text}</p>
       )}
 
       {(choice === "gemini_custom" || choice === "eleven_custom") && (

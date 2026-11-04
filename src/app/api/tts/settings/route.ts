@@ -88,6 +88,8 @@ export async function PATCH(req: Request) {
     geminiFemaleVoice?: unknown;
     geminiMaleVoice?: unknown;
     geminiStyle?: unknown;
+    geminiFemaleStyle?: unknown;
+    geminiMaleStyle?: unknown;
     // ElevenLabs
     apiKey?: string;
     clearApiKey?: boolean;
@@ -273,6 +275,10 @@ export async function PATCH(req: Request) {
         : current.geminiMaleVoice,
     geminiStyle:
       patch.geminiStyle !== undefined ? cleanStyleText(patch.geminiStyle) : current.geminiStyle,
+    geminiFemaleStyle:
+      patch.geminiFemaleStyle !== undefined ? cleanStyleText(patch.geminiFemaleStyle) : current.geminiFemaleStyle || current.geminiStyle,
+    geminiMaleStyle:
+      patch.geminiMaleStyle !== undefined ? cleanStyleText(patch.geminiMaleStyle) : current.geminiMaleStyle || current.geminiStyle,
     apiKey: nextPrimary,
     backupKeys: nextBackups,
     modelId: patch.modelId !== undefined ? normalizeHdModelId(patch.modelId) : current.modelId,
