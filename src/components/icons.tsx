@@ -199,10 +199,10 @@ export function UserIcon({ className }: { className?: string }) {
 }
 
 export function ChatsIcon({ className }: { className?: string }) {
-  // bulat pake ekor sedikit — IG balon chat bener (bukan gepeng rect)
+  // bulat pake ekor dikit — IG bener, tidak daun & tidak gepeng
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H12l-4.5 4.5v-4.5A8.5 8.5 0 0 1 21 11.5Z" />
+      <path d="M12 18H9L6 21l1-3A7.5 7.5 0 0 1 4.5 10.5 7.5 7.5 0 0 1 12 3a7.5 7.5 0 0 1 7.5 7.5A7.5 7.5 0 0 1 12 18Z" />
     </svg>
   );
 }
@@ -396,10 +396,10 @@ export function IgHeartIcon({ className, filled }: { className?: string; filled?
 }
 
 export function IgCommentIcon({ className }: { className?: string }) {
-  // bulat pake ekor sedikit — samain persis kayak ChatsIcon kapsul IG
+  // bulat pake ekor dikit — samain persis kapsul, IG bener
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H12l-4.5 4.5v-4.5A8.5 8.5 0 0 1 21 11.5Z" />
+      <path d="M12 18H9L6 21l1-3A7.5 7.5 0 0 1 4.5 10.5 7.5 7.5 0 0 1 12 3a7.5 7.5 0 0 1 7.5 7.5A7.5 7.5 0 0 1 12 18Z" />
     </svg>
   );
 }
