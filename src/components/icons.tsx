@@ -377,11 +377,12 @@ export function NotesBoardIcon({ className }: { className?: string }) {
 }
 
 export function StatusIcon({ className }: { className?: string }) {
-  // IG reels-style: rounded square + play triangle, tetap outline tipis ala IG
+  // Cincin status/story bergaris putus ala tab Updates WhatsApp.
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" className={className}>
-      <rect x={3.5} y={3.5} width={17} height={17} rx={5} />
-      <path d="M10.2 8.5 16 12l-5.8 3.5V8.5Z" fill="currentColor" stroke="none" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
+      <circle cx={12} cy={12} r={9} strokeDasharray="3.1 2.3" strokeLinecap="round" />
+      <circle cx={12} cy={12} r={5.7} strokeDasharray="2.7 1.9" strokeLinecap="round" />
+      <circle cx={12} cy={12} r={1.4} fill="currentColor" stroke="none" />
     </svg>
   );
 }

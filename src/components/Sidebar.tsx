@@ -5,7 +5,7 @@ import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
-import { PlusIcon, SearchIcon, StatusIcon, XIcon } from "./icons";
+import { PlusIcon, SearchIcon, XIcon } from "./icons";
 
 function formatListTime(iso: string) {
   const d = new Date(iso);
@@ -29,7 +29,6 @@ export function Sidebar({
   onSelect,
   onAddContact,
   onOpenSettings,
-  onOpenStatus,
   hasProviders,
   pendingContactsCount = 0,
 }: {
@@ -39,7 +38,6 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onAddContact: () => void;
   onOpenSettings: () => void;
-  onOpenStatus: () => void;
   hasProviders: boolean;
   pendingContactsCount?: number;
 }) {
@@ -80,15 +78,6 @@ export function Sidebar({
 
         <div className="flex shrink-0 items-center gap-0.5">
           <ThemeQuickToggle className="md:hidden" />
-          <button
-            type="button"
-            onClick={onOpenStatus}
-            className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 active:scale-95"
-            title="Status"
-            aria-label="Buka Status"
-          >
-            <StatusIcon className="h-4 w-4" />
-          </button>
           <button
             type="button"
             onClick={onAddContact}
