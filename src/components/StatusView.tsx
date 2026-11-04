@@ -1060,8 +1060,8 @@ export function StatusView({
                         className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
                       />
                       {commentDraft.trim() ? (
-                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
-                          <SendIcon className="h-3.5 w-3.5" />
+                        <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-2 text-black active:scale-90" aria-label="Kirim komentar">
+                          <SendIcon className="h-5 w-5" />
                         </button>
                       ) : (
                         <>
