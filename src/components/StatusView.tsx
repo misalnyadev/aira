@@ -473,6 +473,36 @@ export function StatusView({
     }
   }, [fsItems, activeFsId, mutedMap]);
 
+  // hanya 1 video on-top yang play di fullscreen, yang lain pause biar gak double suara
+  useEffect(() => {
+    if (!fsScrollRef.current || !activeFsId) return;
+    const container = fsScrollRef.current;
+    const vids = container.querySelectorAll("video");
+    vids.forEach((v) => {
+      const page = v.closest("[data-id]") as HTMLElement | null;
+      const vid = page?.getAttribute("data-id");
+      if (vid === activeFsId) {
+        // yang di layar nyala
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+      }
+    });
+  }, [activeFsId, fullScreenId]);
+
+  // pause video feed di belakang pas fullscreen buka biar gak double sama yang di fullscreen
+  useEffect(() => {
+    if (!fullScreenId) return;
+    // delay biar fullscreen container sudah mount
+    const t = setTimeout(() => {
+      document.querySelectorAll("video").forEach((v) => {
+        if (fsScrollRef.current?.contains(v)) return; // ini video di fullscreen, jangan di-pause di sini
+        v.pause();
+      });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [fullScreenId]);
+
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
       <div className="top-bar flex shrink-0 items-center justify-between gap-2 px-4 pb-3.5 pt-[max(1rem,var(--safe-top))] sm:px-5">
@@ -971,16 +1001,10 @@ export function StatusView({
               })}
             </div>
 
-            {/* global comment bar — pakai activeFsId biar komen ke status yang lagi dilihat */}
-            <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
+            {/* global comment bar — cuma shortcut ke modal, tanpa Kirim/X karena back < sudah ada di atas */}
+            <div className="absolute inset-x-0 bottom-0 flex items-center bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
               <button onClick={() => { setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
                 Tambahkan komentar...
-              </button>
-              <button onClick={() => { setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95">
-                Kirim
-              </button>
-              <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2.5 text-white border border-white/10">
-                <XIcon className="h-4 w-4" />
               </button>
             </div>
 
