@@ -892,37 +892,52 @@ export function StatusView({
               </button>
             </div>
 
-            {/* bottom profile + caption overlay di atas video — naikin biar gak mepet input */}
-            <div className="absolute inset-x-0 bottom-[64px] px-3 pb-1 pt-2 text-white">
+            {/* bottom profile + caption overlay di atas video — judul pasti kelihatan */}
+            <div className="absolute inset-x-0 bottom-[76px] px-3 pb-1 pt-2 text-white pr-14">
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white p-[2px] shadow">
                   <Avatar name={displayName} src={avatar} size={28} />
                 </span>
                 <span className="text-[13px] font-semibold drop-shadow">{displayName}</span>
                 <span className="text-[11px] text-white/70 drop-shadow">• {it.kind === "reel" ? "Reels" : "Status"} • {timeAgo(it.createdAt)}</span>
+                <span className="ml-1 rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold">Ikuti</span>
               </div>
-              {caption ? (
-                <div className="mt-1.5 line-clamp-2 text-[13px] leading-snug drop-shadow">
+              {(caption?.trim() || (it.content || "").trim()) ? (
+                <div className="mt-1.5 text-[13px] leading-snug drop-shadow pr-2">
                   <span className="font-semibold">{displayName} </span>
-                  <span className="text-white/90">{caption}</span>
+                  <span className="text-white/90 break-words">{(caption || it.content || "").trim()}</span>
                   {it.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{it.likeCount} suka</span> : null}
                 </div>
-              ) : null}
+              ) : (
+                <div className="mt-1 text-[12px] text-white/60 drop-shadow">—</div>
+              )}
+              <div className="mt-1 flex items-center gap-1 text-[11px] text-white/70 drop-shadow">
+                <span>♫</span>
+                <span className="truncate">{displayName} • audio asli</span>
+              </div>
             </div>
 
-            {/* comment input bar — nempel bawah, naik pas keyboard kayak IG */}
+            {/* comment input bar — tap buka sheet, sheet yang naik pas keyboard (biar gak ketutup) */}
             <div
-              className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 transition-transform duration-200"
+              className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10"
               style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
             >
-              <input
-                value={commentDraft}
-                onChange={(e) => setCommentDraft(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendComment(it.id)}
-                placeholder="Tambahkan komentar..."
-                className="flex-1 rounded-full bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-white/50 outline-none border border-white/10"
-              />
-              <button onClick={() => sendComment(it.id)} className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95">
+              <button
+                onClick={() => {
+                  setShowFullscreenComments(true);
+                  setTimeout(() => fsCommentInputRef.current?.focus(), 80);
+                }}
+                className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50"
+              >
+                Tambahkan komentar...
+              </button>
+              <button
+                onClick={() => {
+                  setShowFullscreenComments(true);
+                  setTimeout(() => fsCommentInputRef.current?.focus(), 80);
+                }}
+                className="shrink-0 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black active:scale-95"
+              >
                 Kirim
               </button>
               <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2.5 text-white border border-white/10">
@@ -976,6 +991,8 @@ export function StatusView({
                     <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
                     <div className="flex flex-1 items-center gap-1.5 rounded-full bg-white/10 border border-white/10 px-3 py-1">
                       <input
+                        ref={fsCommentInputRef}
+                        autoFocus
                         value={commentDraft}
                         onChange={(e) => setCommentDraft(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") sendComment(it.id); }}
