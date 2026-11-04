@@ -285,17 +285,18 @@ export function StatusView({
   }, [viewerIdx, stories]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-app">
-      <div className="sticky top-0 z-10 border-b border-line bg-surface/90 px-3 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-        <div className="mx-auto flex w-full max-w-[560px] items-center justify-between">
+    <div className="flex h-full min-h-0 w-full flex-col bg-app">
+      <div className="top-bar flex shrink-0 items-center justify-between gap-2 px-4 pb-3.5 pt-[max(1rem,var(--safe-top))] sm:px-5">
+        <div>
           <h2 className="font-display text-[17px] font-extrabold tracking-tight">Status</h2>
-          <button
-            onClick={() => setShowComposer((v) => !v)}
-            className="rounded-full bg-ink px-3.5 py-1.5 text-sm font-semibold text-white active:scale-95"
-          >
-            + Buat
-          </button>
+          <p className="text-xs text-ink-soft">Story 24 jam & Reels permanen</p>
         </div>
+        <button
+          onClick={() => setShowComposer((v) => !v)}
+          className="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white active:scale-95"
+        >
+          + Buat
+        </button>
       </div>
 
       {showComposer && (
@@ -398,7 +399,7 @@ export function StatusView({
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
         <div className="mx-auto w-full max-w-[560px]">
           {/* Story bar ala WA */}
           <div className="border-b border-line bg-surface px-2 py-3">
@@ -551,7 +552,7 @@ export function StatusView({
       {viewerIdx !== null && stories[viewerIdx] && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black">
           {/* progress */}
-          <div className="flex gap-1 px-2 pt-[max(8px,env(safe-area-inset-top))] ">
+          <div className="flex gap-1 px-2 pt-[max(0.5rem,var(--safe-top))]">
             {stories.map((_, i) => (
               <div key={i} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
                 <div className={`h-full bg-white transition-all ${i < (viewerIdx ?? 0) ? "w-full" : i === viewerIdx ? "w-1/2 animate-[pulse_5s_linear]" : "w-0"}`} />
