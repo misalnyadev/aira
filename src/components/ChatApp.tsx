@@ -66,6 +66,7 @@ import { ProfileView, type ProfileTab } from "./ProfileView";
 import { SettingsView } from "./SettingsView";
 import { SharedNotesDrawer } from "./SharedNotesDrawer";
 import { Sidebar } from "./Sidebar";
+import { StatusView } from "./StatusView";
 import { VoiceView } from "./VoiceView";
 import { PlusIcon, SettingsIcon, XIcon } from "./icons";
 
@@ -1542,6 +1543,8 @@ export function ChatApp() {
               );
             })()
           )}
+
+          {view === "status" && <StatusView profile={profile} characters={characters} />}
         </div>
 
         {showMobileTabBar && (
