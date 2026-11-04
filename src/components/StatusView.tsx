@@ -997,7 +997,8 @@ export function StatusView({
             aria-modal="true"
             aria-labelledby="status-edit-title"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[560px] rounded-t-[24px] border border-line bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl"
+            className="max-h-[85dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[24px] border border-line bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-200 sm:rounded-2xl"
+            style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
             <div className="flex items-center justify-between gap-3">
