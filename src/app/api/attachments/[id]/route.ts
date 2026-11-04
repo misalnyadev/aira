@@ -1,7 +1,7 @@
 import path from "path";
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
-import { attachments, characterStatuses, statusComments } from "@/db/schema";
+import { attachments, characterStatuses, characters, statusComments, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { hasActiveContactBetweenUsers } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
@@ -47,12 +47,29 @@ async function isActiveStatusImage(id: string, ownerUserId: string): Promise<boo
   return Boolean(status);
 }
 
+async function isProfileOrCharacterAvatar(id: string, ownerUserId: string): Promise<boolean> {
+  const url = `/api/attachments/${id}`;
+  const [userAvatar, characterAvatar] = await Promise.all([
+    db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, ownerUserId), eq(users.avatarUrl, url)))
+      .limit(1),
+    db
+      .select({ id: characters.id })
+      .from(characters)
+      .where(and(eq(characters.userId, ownerUserId), eq(characters.avatarUrl, url)))
+      .limit(1),
+  ]);
+  return Boolean(userAvatar.length || characterAvatar.length);
+}
+
 /**
  * Menyajikan gambar milik pengguna dari Cloudflare R2 (`r2-...`) maupun
  * lampiran lama dari tabel `attachments` database (`/api/attachments/{id}`).
  *
- * Gambar akun tetap dibatasi untuk pemilik/kontak aktif; lampiran status aktif dan
- * komentar status dapat dibaca pengguna yang masuk bila URL-nya dirujuk di status/komentar.
+ * Avatar profil/karakter dan foto status aktif/komentar dapat dibaca pengguna masuk
+ * bila URL-nya dirujuk pada data tersebut; lampiran lain tetap mengikuti aturan pemilik/kontak aktif.
  */
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -73,14 +90,16 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   if (r2File) {
     let targetOwnerId = user.id;
     if (requestedOwnerId && requestedOwnerId !== user.id) {
-      const [isCommentImage, isStatusImage] = await Promise.all([
+      const [isCommentImage, isStatusImage, isAvatar] = await Promise.all([
         isStatusCommentImage(id, requestedOwnerId),
         isActiveStatusImage(id, requestedOwnerId),
+        isProfileOrCharacterAvatar(id, requestedOwnerId),
       ]);
       const allowed =
         user.isAdmin ||
         isCommentImage ||
         isStatusImage ||
+        isAvatar ||
         (await hasActiveContactBetweenUsers(user.id, requestedOwnerId));
       if (!allowed) return new Response("Not found", { status: 404 });
       targetOwnerId = requestedOwnerId;
@@ -118,14 +137,16 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   }
 
   if (row.userId && row.userId !== user.id) {
-    const [isCommentImage, isStatusImage] = await Promise.all([
+    const [isCommentImage, isStatusImage, isAvatar] = await Promise.all([
       isStatusCommentImage(id, row.userId),
       isActiveStatusImage(id, row.userId),
+      isProfileOrCharacterAvatar(id, row.userId),
     ]);
     const allowed =
       user.isAdmin ||
       isCommentImage ||
       isStatusImage ||
+      isAvatar ||
       (await hasActiveContactBetweenUsers(user.id, row.userId));
     if (!allowed) {
       return new Response("Not found", { status: 404 });

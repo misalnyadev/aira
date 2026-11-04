@@ -145,6 +145,8 @@ export async function GET(req: Request) {
       return {
         ...r,
         imageUrl: withUploaderParam(r.imageUrl, r.userId),
+        characterAvatar: withUploaderParam(r.characterAvatar, r.userId),
+        userAvatar: withUploaderParam(r.userAvatar, r.userId),
         videoUrl,
         likeCount: Number(likeCountRow?.c ?? 0),
         commentCount: Number(commentCountRow?.c ?? 0),
