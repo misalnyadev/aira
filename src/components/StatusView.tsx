@@ -766,17 +766,18 @@ export function StatusView({
         const caption = it.caption || it.content || "";
         return (
           <div className="fixed inset-0 z-[60] flex flex-col bg-black">
-            {/* header ala IG Reels */}
+            {/* header — simple sesuai app, bukan dummy Reels/Teman IG */}
             <div className="flex shrink-0 items-center justify-between px-3 pb-2 pt-[max(0.6rem,var(--safe-top))] text-white">
-              <button onClick={() => setFullScreenId(null)} className="rounded-full p-1.5 active:scale-90" aria-label="Kembali">
+              <button onClick={() => setFullScreenId(null)} className="rounded-full bg-white/10 p-1.5 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-              <div className="flex items-center gap-4 text-[15px]">
-                <span className="font-extrabold">Reels</span>
-                <span className="font-medium text-white/60">Teman</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="rounded-full bg-white p-[1px]"><Avatar name={displayName} src={avatar} size={20} /></span>
+                <span className="truncate text-[14px] font-semibold">{displayName}</span>
+                <span className="shrink-0 text-[11px] text-white/60">• {timeAgo(it.createdAt)}</span>
               </div>
-              <button className="rounded-full p-1.5" aria-label="Kamera">
-                <CameraIcon className="h-6 w-6" />
+              <button onClick={() => setMenuFor(menuFor === it.id ? null : it.id)} className="rounded-full p-1.5" aria-label="Opsi">
+                <IgMoreIcon className="h-5 w-5 text-white" />
               </button>
             </div>
 
@@ -819,58 +820,52 @@ export function StatusView({
                 )}
               </div>
 
-              {/* right vertical action bar */}
+              {/* right vertical action bar — hanya fungsi yang ada di app */}
               <div className="absolute bottom-[88px] right-2 flex flex-col items-center gap-4 text-white">
                 <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
                   <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
                     <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
                   </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 68}</span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 0}</span>
                 </button>
-                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
+                <button
+                  onClick={() => {
+                    openComments(it.id);
+                  }}
+                  className="flex flex-col items-center gap-1 active:scale-90"
+                >
                   <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
                     <IgCommentIcon className="h-6 w-6 text-white" />
                   </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 4}</span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 0}</span>
                 </button>
-                <button className="flex flex-col items-center gap-1 active:scale-90">
-                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
-                    <RefreshIcon className="h-6 w-6 text-white" />
-                  </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">1</span>
-                </button>
-                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
+                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90" title="Bagikan — nanti">
                   <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
                     <IgShareIcon className="h-6 w-6 text-white" />
                   </span>
-                  <span className="text-xs font-semibold leading-none drop-shadow">20</span>
                 </button>
-                <button className="flex flex-col items-center gap-1 active:scale-90">
+                <button className="flex flex-col items-center gap-1 active:scale-90 opacity-80" title="Simpan — nanti">
                   <IgBookmarkIcon className="h-6 w-6 text-white" />
-                  <span className="text-xs font-semibold leading-none drop-shadow">75</span>
                 </button>
               </div>
             </div>
 
-            {/* bottom profile + caption */}
+            {/* bottom profile + caption — pakai data real app */}
             <div className="shrink-0 px-3 pb-2 pt-2 text-white">
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white p-[2px]">
-                  <Avatar name={displayName} src={avatar} size={32} />
+                  <Avatar name={displayName} src={avatar} size={28} />
                 </span>
-                <span className="text-[14px] font-semibold">{displayName}</span>
-                <span className="h-1 w-1 rounded-full bg-white/60" />
-                <span className="text-[12px] font-medium text-white/80">Ikuti</span>
+                <span className="text-[13px] font-semibold">{displayName}</span>
+                <span className="text-[11px] text-white/60">• {it.kind === "reel" ? "Reels" : "Status"} • {timeAgo(it.createdAt)}</span>
               </div>
               {caption ? (
-                <div className="mt-1.5 line-clamp-2 text-[13px] leading-snug">
+                <div className="mt-1.5 text-[13px] leading-snug">
                   <span className="font-semibold">{displayName} </span>
                   <span className="text-white/90">{caption}</span>
+                  {it.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{it.likeCount} suka</span> : null}
                 </div>
               ) : null}
-              <div className="mt-1 flex items-center gap-1 text-xs text-white/70">
-                <span className="inline-block h-3 w-3 rounded-sm bg-white/90" /> Lagu • Audio asli
-              </div>
             </div>
 
             {/* comment input bar */}
