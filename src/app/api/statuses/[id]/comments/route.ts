@@ -85,6 +85,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     return {
       ...row,
       imageUrl: withUploaderParam(row.imageUrl, row.userId),
+      avatarUrl: withUploaderParam(row.avatarUrl, row.userId),
       likeCount: likes?.likeCount ?? 0,
       likedByMe: likes?.likedByMe ?? false,
     };
