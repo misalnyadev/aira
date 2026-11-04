@@ -397,9 +397,11 @@ export function IgHeartIcon({ className, filled }: { className?: string; filled?
 }
 
 export function IgCommentIcon({ className }: { className?: string }) {
+  // bulat tanpa ekor — samain kayak logo kapsul ChatsIcon (IG style)
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H12l-4.5 4.5v-4.5A8.5 8.5 0 0 1 21 11.5Z" />
+      <rect x={3.5} y={5.5} width={17} height={13} rx={6.5} />
+      <path d="M8 11.2h8M8 14.2h5.5" />
     </svg>
   );
 }
