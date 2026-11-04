@@ -53,6 +53,47 @@ type CommentRow = {
   avatarUrl: string | null;
 };
 
+function FeedVideo({ src, aspect }: { src: string; aspect: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // iOS butuh muted + playsInline supaya autoplay boleh
+    el.muted = true;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            el.play().catch(() => {});
+          } else {
+            el.pause();
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src]);
+  return (
+    <video
+      ref={ref}
+      src={src}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      className={`block w-full object-cover ${aspect}`}
+      onClick={(e) => {
+        const v = e.currentTarget;
+        if (v.paused) v.play().catch(() => {});
+        else v.pause();
+      }}
+    />
+  );
+}
+
 function timeAgo(iso: string) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
@@ -487,14 +528,9 @@ export function StatusView({
                         loading="lazy"
                       />
                     ) : it.mediaType === "video" && it.videoUrl ? (
-                      <video
+                      <FeedVideo
                         src={it.videoUrl}
-                        controls
-                        playsInline
-                        muted
-                        loop
-                        preload="metadata"
-                        className={`block w-full object-cover ${it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`}
+                        aspect={it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}
                       />
                     ) : (
                       <div className={`w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
