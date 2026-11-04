@@ -376,21 +376,45 @@ export function StatusView({
     return () => clearTimeout(t);
   }, [viewerIdx, stories]);
 
-  // keyboard offset biar input komentar naik kayak IG pas keyboard muncul
+  // keyboard offset biar input naik di atas keyboard — lebih sensitif untuk iPhone
   useEffect(() => {
-    if (typeof window === "undefined" || !window.visualViewport) return;
-    const vv = window.visualViewport;
-    const onResize = () => {
-      const off = window.innerHeight - vv.height - vv.offsetTop;
-      setKbOffset(off > 16 ? off : 0);
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    const calc = () => {
+      if (vv) {
+        const off = window.innerHeight - vv.height - vv.offsetTop;
+        // iPhone keyboard biasanya 260-350px, kasih threshold 20 biar gak false
+        if (off > 20) setKbOffset(off);
+        else {
+          const ae = document.activeElement as HTMLElement | null;
+          const isInput = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA");
+          if (isInput && off <= 20 && window.innerWidth < 1024) {
+            // fallback estimasi keyboard iPhone biar gak ketutup pas vv lag (120ms)
+            setKbOffset(290);
+          } else {
+            setKbOffset(0);
+          }
+        }
+      } else {
+        setKbOffset(0);
+      }
     };
-    vv.addEventListener("resize", onResize);
-    vv.addEventListener("scroll", onResize);
-    window.addEventListener("resize", onResize);
+    const onFocusIn = () => setTimeout(calc, 120);
+    const onFocusOut = () => setTimeout(() => setKbOffset(0), 120);
+    if (vv) {
+      vv.addEventListener("resize", calc);
+      vv.addEventListener("scroll", calc);
+    }
+    window.addEventListener("resize", calc);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
     return () => {
-      vv.removeEventListener("resize", onResize);
-      vv.removeEventListener("scroll", onResize);
-      window.removeEventListener("resize", onResize);
+      if (vv) {
+        vv.removeEventListener("resize", calc);
+        vv.removeEventListener("scroll", calc);
+      }
+      window.removeEventListener("resize", calc);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
     };
   }, []);
 
@@ -840,23 +864,22 @@ export function StatusView({
             <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
-            {/* header overlay */}
+            {/* header overlay — tanpa avatar bulat biar gak dobel sama bawah */}
             <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[max(0.7rem,var(--safe-top))] pb-3 text-white">
               <button onClick={() => setFullScreenId(null)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="rounded-full bg-white p-[1px]"><Avatar name={displayName} src={avatar} size={22} /></span>
+              <div className="flex min-w-0 items-center justify-center flex-1 px-2">
                 <span className="truncate text-[14px] font-semibold drop-shadow">{displayName}</span>
-                <span className="shrink-0 text-[11px] text-white/70">• {timeAgo(it.createdAt)}</span>
+                <span className="shrink-0 text-[11px] text-white/70 ml-1.5">• {timeAgo(it.createdAt)}</span>
               </div>
               <button onClick={() => setMenuFor(menuFor === it.id ? null : it.id)} className="rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
                 <IgMoreIcon className="h-5 w-5 text-white" />
               </button>
             </div>
 
-            {/* right vertical action bar — hanya fungsi real app, naikin biar gak tumpang tindih */}
-            <div className="absolute bottom-[108px] right-2.5 flex flex-col items-center gap-3.5 text-white">
+            {/* right vertical action bar — naikin lagi biar gak tabrakan sama status yang baru naik */}
+            <div className="absolute bottom-[138px] right-2.5 flex flex-col items-center gap-3.5 text-white">
               <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                 <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                   <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
@@ -892,8 +915,8 @@ export function StatusView({
               </button>
             </div>
 
-            {/* bottom profile + caption overlay di atas video — judul pasti kelihatan */}
-            <div className="absolute inset-x-0 bottom-[76px] px-3 pb-1 pt-2 text-white pr-14">
+            {/* bottom profile + caption overlay — naikin lagi biar audio gak kepotong */}
+            <div className="absolute inset-x-0 bottom-[96px] px-3 pb-2 pt-2 text-white pr-14">
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-white p-[2px] shadow">
                   <Avatar name={displayName} src={avatar} size={28} />
