@@ -437,6 +437,7 @@ export const statusComments = pgTable("status_comments", {
   parentCommentId: uuid("parent_comment_id").references((): AnyPgColumn => statusComments.id, {
     onDelete: "cascade",
   }),
+  imageUrl: text("image_url"),
   content: text("content").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

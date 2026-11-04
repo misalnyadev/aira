@@ -66,6 +66,7 @@ function matchesStatusProfile(
 type CommentRow = {
   id: string;
   content: string;
+  imageUrl: string | null;
   parentCommentId: string | null;
   createdAt: string;
   userId: string;
@@ -80,6 +81,11 @@ type CommentReplyTarget = {
   statusId: string;
   commentId: string;
   displayName: string;
+};
+
+type CommentImageDraft = {
+  statusId: string;
+  url: string;
 };
 
 function groupCommentThreads(rows: CommentRow[]) {
@@ -227,6 +233,9 @@ export function StatusView({
   const [reelCommentsFor, setReelCommentsFor] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
+  const [commentImage, setCommentImage] = useState<CommentImageDraft | null>(null);
+  const [commentUploadBusy, setCommentUploadBusy] = useState(false);
+  const [commentErr, setCommentErr] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<CommentReplyTarget | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [fullScreenId, setFullScreenId] = useState<string | null>(null);
@@ -238,6 +247,7 @@ export function StatusView({
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
   const fsCommentInputRef = useRef<HTMLInputElement>(null);
+  const commentPhotoRef = useRef<HTMLInputElement>(null);
   const fsScrollRef = useRef<HTMLDivElement>(null);
   const handledSharedStatusRef = useRef<string | null>(null);
   const requestedSharedStatusRef = useRef<string | null>(null);
@@ -542,6 +552,8 @@ export function StatusView({
 
   async function openComments(id: string) {
     setReplyingTo(null);
+    setCommentImage(null);
+    setCommentErr(null);
     setReelCommentsFor((cur) => (cur === id ? null : id));
     if (comments[id]) return;
     try {
@@ -557,6 +569,32 @@ export function StatusView({
       commentId: comment.id,
       displayName: comment.displayName || comment.nickname || "pengguna",
     });
+  }
+
+  async function handlePickCommentImage(file: File, statusId: string) {
+    setCommentErr(null);
+    if (!file.type.startsWith("image/") || file.type === "image/gif") {
+      setCommentErr("Pilih foto yang valid. GIF belum didukung.");
+      return;
+    }
+
+    setCommentUploadBusy(true);
+    try {
+      const compressed = await compressImageFile(file, { maxSize: 1280, quality: 0.82 });
+      const formData = new FormData();
+      formData.append("file", compressed, compressed.name || "comment.jpg");
+      formData.append("protected", "true");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.url !== "string") {
+        throw new Error(data?.error || "Gagal mengunggah foto.");
+      }
+      setCommentImage({ statusId, url: data.url });
+    } catch (error) {
+      setCommentErr(error instanceof Error ? error.message : "Gagal mengunggah foto.");
+    } finally {
+      setCommentUploadBusy(false);
+    }
   }
 
   async function toggleCommentLike(statusId: string, commentId: string) {
@@ -606,24 +644,31 @@ export function StatusView({
 
   async function sendComment(id: string) {
     const t = commentDraft.trim();
-    if (!t) return;
+    const imageUrl = commentImage?.statusId === id ? commentImage.url : null;
+    if ((!t && !imageUrl) || commentUploadBusy) return;
     const replyTarget = replyingTo?.statusId === id ? replyingTo : null;
+    setCommentErr(null);
     try {
       const res = await fetch(`/api/statuses/${id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: t, parentCommentId: replyTarget?.commentId ?? null }),
+        body: JSON.stringify({ content: t, imageUrl, parentCommentId: replyTarget?.commentId ?? null }),
       });
       const d = await res.json().catch(() => null);
-      if (res.ok && d?.comment) {
-        setCommentDraft("");
-        setReplyingTo(null);
-        const res2 = await fetch(`/api/statuses/${id}/comments`, { cache: "no-store" });
-        const d2 = await res2.json().catch(() => null);
-        if (res2.ok && Array.isArray(d2?.comments)) setComments((p) => ({ ...p, [id]: d2.comments }));
-        setItems((prev) => prev.map((x) => (x.id === id ? { ...x, commentCount: x.commentCount + 1 } : x)));
+      if (!res.ok || !d?.comment) {
+        setCommentErr(d?.error || "Gagal mengirim komentar.");
+        return;
       }
-    } catch {}
+      setCommentDraft("");
+      setCommentImage((current) => (current?.statusId === id ? null : current));
+      setReplyingTo(null);
+      const res2 = await fetch(`/api/statuses/${id}/comments`, { cache: "no-store" });
+      const d2 = await res2.json().catch(() => null);
+      if (res2.ok && Array.isArray(d2?.comments)) setComments((p) => ({ ...p, [id]: d2.comments }));
+      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, commentCount: x.commentCount + 1 } : x)));
+    } catch {
+      setCommentErr("Gagal mengirim komentar. Coba lagi.");
+    }
   }
 
   async function handleDelete(id: string) {
@@ -820,6 +865,8 @@ export function StatusView({
     if (it && it.id !== activeFsId) {
       setActiveFsId(it.id);
       setReplyingTo(null);
+      setCommentImage(null);
+      setCommentErr(null);
       const m = mutedMap[it.id];
       if (m !== undefined) setFullMuted(m);
       else setFullMuted(true);
@@ -1176,7 +1223,8 @@ export function StatusView({
                                 <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={24} />
                                 <div className="min-w-0 rounded-2xl bg-white px-3 py-1.5 shadow-sm">
                                   <div className="text-xs font-semibold">{c.displayName || c.nickname || "User"}</div>
-                                  <div className="text-sm leading-snug">{c.content}</div>
+                                  {c.content ? <div className="text-sm leading-snug">{c.content}</div> : null}
+                                  {c.imageUrl ? <img src={c.imageUrl} alt="Foto komentar" className="mt-1 max-h-48 max-w-full rounded-xl object-contain" /> : null}
                                 </div>
                               </div>
                               {replies.map((reply) => (
@@ -1184,7 +1232,8 @@ export function StatusView({
                                   <Avatar name={reply.displayName || reply.nickname || "User"} src={reply.avatarUrl || undefined} size={22} />
                                   <div className="min-w-0 rounded-2xl bg-white/80 px-3 py-1.5 shadow-sm">
                                     <div className="text-xs font-semibold">{reply.displayName || reply.nickname || "User"}</div>
-                                    <div className="text-sm leading-snug">{reply.content}</div>
+                                    {reply.content ? <div className="text-sm leading-snug">{reply.content}</div> : null}
+                                    {reply.imageUrl ? <img src={reply.imageUrl} alt="Foto balasan" className="mt-1 max-h-48 max-w-full rounded-xl object-contain" /> : null}
                                   </div>
                                 </div>
                               ))}
@@ -1464,7 +1513,7 @@ export function StatusView({
                         </span>
                         <span className="text-[11px] font-semibold leading-none drop-shadow">{item.likeCount > 0 ? item.likeCount : 0}</span>
                       </button>
-                      <button onClick={() => { setActiveFsId(item.id); setReplyingTo(null); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                      <button onClick={() => { setActiveFsId(item.id); setReplyingTo(null); setCommentImage((current) => current?.statusId === item.id ? current : null); setCommentErr(null); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                           <IgCommentIcon className="h-6 w-6 text-white" />
                         </span>
@@ -1568,7 +1617,8 @@ export function StatusView({
                                   <span className="text-[13px] font-semibold text-white">{c.displayName || c.nickname || "Anonim"}</span>
                                   <span className="text-[11px] text-white/40">{timeAgo(c.createdAt)}</span>
                                 </div>
-                                <div className="text-[13px] leading-snug text-white/90">{c.content}</div>
+                                {c.content ? <div className="text-[13px] leading-snug text-white/90">{c.content}</div> : null}
+                                {c.imageUrl ? <img src={c.imageUrl} alt="Foto komentar" className="mt-1 max-h-[220px] max-w-full rounded-xl object-contain" /> : null}
                                 <button
                                   onClick={() => beginCommentReply(activeIt.id, c)}
                                   className="mt-1 text-xs font-semibold text-white/55 active:text-white"
@@ -1595,7 +1645,8 @@ export function StatusView({
                                     <span className="text-[12px] font-semibold text-white">{reply.displayName || reply.nickname || "Anonim"}</span>
                                     <span className="text-[10px] text-white/40">{timeAgo(reply.createdAt)}</span>
                                   </div>
-                                  <div className="text-[13px] leading-snug text-white/85">{reply.content}</div>
+                                  {reply.content ? <div className="text-[13px] leading-snug text-white/85">{reply.content}</div> : null}
+                                  {reply.imageUrl ? <img src={reply.imageUrl} alt="Foto balasan" className="mt-1 max-h-[220px] max-w-full rounded-xl object-contain" /> : null}
                                 </div>
                               </div>
                             ))}
@@ -1612,6 +1663,33 @@ export function StatusView({
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    <input
+                      ref={commentPhotoRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        if (file) handlePickCommentImage(file, activeIt.id);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                    {commentImage?.statusId === activeIt.id ? (
+                      <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/[0.06] px-2 py-1.5">
+                        <img src={commentImage.url} alt="Pratinjau foto komentar" className="h-12 w-12 rounded-lg object-cover" />
+                        <span className="min-w-0 flex-1 truncate text-xs text-white/65">Foto siap dikirim</span>
+                        <button
+                          type="button"
+                          onClick={() => { setCommentImage(null); setCommentErr(null); }}
+                          aria-label="Hapus foto komentar"
+                          className="shrink-0 rounded-full p-1 text-white/55 hover:bg-white/10"
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : null}
+                    {commentUploadBusy ? <div className="mb-2 px-1 text-xs text-white/55">Mengunggah foto...</div> : null}
+                    {commentErr ? <div role="alert" className="mb-2 px-1 text-xs text-rose-300">{commentErr}</div> : null}
                     {replyingTo?.statusId === activeIt.id ? (
                       <div className="flex items-center justify-between gap-2 px-1 pb-2 text-xs text-white/60">
                         <span className="min-w-0 truncate">Membalas kepada <span className="font-semibold text-white/85">{replyingTo.displayName}</span></span>
@@ -1632,18 +1710,33 @@ export function StatusView({
                           placeholder={replyingTo?.statusId === activeIt.id ? `Balas ke ${replyingTo.displayName}...` : "Apa pendapat Anda tenta..."}
                           className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
                         />
-                        {commentDraft.trim() ? (
-                          <button onClick={() => sendComment(activeIt.id)} className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90" aria-label="Kirim komentar">
+                        {commentImage?.statusId === activeIt.id ? null : (
+                          <button
+                            type="button"
+                            onClick={() => commentPhotoRef.current?.click()}
+                            disabled={commentUploadBusy}
+                            className="flex shrink-0 items-center gap-1.5 p-1 text-white/65 disabled:opacity-40"
+                            title="Foto"
+                            aria-label="Lampirkan foto"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
+                            <span className="text-[11px] font-semibold">Foto</span>
+                          </button>
+                        )}
+                        {!commentDraft.trim() && commentImage?.statusId !== activeIt.id ? (
+                          <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
+                        ) : null}
+                        {commentDraft.trim() || commentImage?.statusId === activeIt.id ? (
+                          <button
+                            type="button"
+                            onClick={() => sendComment(activeIt.id)}
+                            disabled={commentUploadBusy}
+                            className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90 disabled:opacity-50"
+                            aria-label="Kirim komentar"
+                          >
                             <SendIcon className="h-5 w-5" />
                           </button>
-                        ) : (
-                          <>
-                            <button className="shrink-0 p-1 text-white/50" title="Foto">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} className="h-5 w-5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M5 16l4-4 4 4 3-3 3 3"/></svg>
-                            </button>
-                            <button className="shrink-0 rounded bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white/70">GIF</button>
-                          </>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
