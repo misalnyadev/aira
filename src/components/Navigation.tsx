@@ -60,9 +60,9 @@ export function NavRail({
             >
               <span className="relative">
                 {isProfile ? (
-                  <Avatar name={userName} src={profile.avatarUrl} size={24} />
+                  <Avatar name={userName} src={profile.avatarUrl} size={28} />
                 ) : (
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-6 w-6" />
                 )}
                 {showBadge && (
                   <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
@@ -114,7 +114,7 @@ export function MobileTabBar({
               key={id}
               onClick={() => onChange(id)}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
+              className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-full py-2 text-xs font-medium transition duration-200 active:scale-95 ${
                 active
                   ? "bg-ink/[0.09] font-semibold text-ink shadow-xs dark:bg-white/[0.13]"
                   : "text-ink-soft hover:text-ink"
@@ -122,9 +122,9 @@ export function MobileTabBar({
             >
               <span className="relative">
                 {isProfile ? (
-                  <Avatar name={userName} src={profile.avatarUrl} size={22} />
+                  <Avatar name={userName} src={profile.avatarUrl} size={28} />
                 ) : (
-                  <Icon className="h-5 w-5 shrink-0" />
+                  <Icon className="h-7 w-7 shrink-0" />
                 )}
                 {showBadge && (
                   <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
