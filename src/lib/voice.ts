@@ -317,7 +317,11 @@ function resolveClientClipHash(
   let style = "";
 
   if (provider === "gemini") {
-    const baseStyle = activeTtsSummary.geminiStyle.trim();
+    let baseStyle = "";
+    if (target.slot === "custom" && (target as any).customStyle) baseStyle = (target as any).customStyle;
+    else if (target.slot === "male") baseStyle = (activeTtsSummary.geminiMaleStyle || activeTtsSummary.geminiStyle).trim();
+    else if (target.slot === "female") baseStyle = (activeTtsSummary.geminiFemaleStyle || activeTtsSummary.geminiStyle).trim();
+    else baseStyle = (activeTtsSummary.geminiFemaleStyle || activeTtsSummary.geminiStyle).trim();
     const extra = geminiEmotionStyleHint(emotion).trim();
     style = (baseStyle && extra ? `${baseStyle}; ${extra}` : baseStyle || extra).slice(
       0,
@@ -372,6 +376,7 @@ async function fetchHdClauseBlob(
   if (pending) return pending;
 
   const task = (async () => {
+    const customStyleForReq = (target as any).customStyle as string | undefined;
     const res = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -380,6 +385,7 @@ async function fetchHdClauseBlob(
         slot: target.slot,
         provider: target.customProvider,
         customVoiceId: target.customVoiceId,
+        customStyle: customStyleForReq,
         emotion: options.emotion,
       }),
     });

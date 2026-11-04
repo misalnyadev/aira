@@ -107,6 +107,7 @@ export function CharacterVoiceSection({
   const initialChoice = deriveInitialChoice(value, ttsSummary.provider);
   const [choice, setChoice] = useState<UiVoiceChoice>(initialChoice);
   const [customId, setCustomId] = useState<string>(value?.customVoiceId ?? "");
+  const [customStyle, setCustomStyle] = useState<string>(value?.customStyle ?? "");
   const [vnMode, setVnMode] = useState<VoiceNoteReplyMode>(
     normalizeVoiceNoteMode(value?.voiceNoteMode, "auto")
   );
@@ -119,19 +120,22 @@ export function CharacterVoiceSection({
   function buildConfigFor(
     nextChoice: UiVoiceChoice,
     nextVn: VoiceNoteReplyMode,
-    overrideCustomId?: string
+    overrideCustomId?: string,
+    overrideStyle?: string
   ): CharacterVoiceConfig | null {
+    const styleVal = (overrideStyle ?? customStyle).trim().slice(0, 180);
+    const styleField = styleVal ? { customStyle: styleVal } : {};
     const vnField = nextVn !== "auto" ? { voiceNoteMode: nextVn } : {};
 
     if (nextChoice === "inherit") {
-      return vnField.voiceNoteMode ? { mode: "inherit", ...vnField } : null;
+      return styleField.customStyle || vnField.voiceNoteMode ? { mode: "inherit", ...styleField, ...vnField } : null;
     }
     if (
       nextChoice === "device" ||
       nextChoice === "hd_female" ||
       nextChoice === "hd_male"
     ) {
-      return { mode: nextChoice, ...vnField };
+      return { mode: nextChoice, ...styleField, ...vnField };
     }
 
     const targetProv = nextChoice === "eleven_custom" ? "elevenlabs" : "gemini";
@@ -155,6 +159,7 @@ export function CharacterVoiceSection({
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: nextVoiceId,
+      ...styleField,
       ...vnField,
     };
   }
@@ -175,14 +180,22 @@ export function CharacterVoiceSection({
     onChange(buildConfigFor(choice, nextVn));
   }
 
+  function handleStyleChange(nextStyle: string) {
+    setCustomStyle(nextStyle);
+    // debounce save? langsung save agar preview inline
+    onChange(buildConfigFor(choice, vnMode, undefined, nextStyle));
+  }
+
   function handlePickPreset(id: string) {
     stopSpeaking();
     const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
     setCustomId(id);
+    const styleField = customStyle.trim() ? { customStyle: customStyle.trim().slice(0,180) } : {};
     onChange({
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: id,
+      ...styleField,
       ...(vnMode !== "auto" ? { voiceNoteMode: vnMode } : {}),
     });
   }
@@ -194,13 +207,16 @@ export function CharacterVoiceSection({
       return;
     }
     const targetProv = choice === "eleven_custom" ? "elevenlabs" : "gemini";
+    const styleField = customStyle.trim() ? { customStyle: customStyle.trim().slice(0,180) } : {};
     onChange({
       mode: "hd_custom",
       customProvider: targetProv,
       customVoiceId: cleaned,
+      ...styleField,
       ...(vnMode !== "auto" ? { voiceNoteMode: vnMode } : {}),
     });
-    onNotice?.("Suara khusus karakter disimpan.");
+    setCharTestFeedback({kind:"ok", text:"Suara & gaya khas karakter disimpan."});
+    setTimeout(()=> setCharTestFeedback(null), 2500);
   }
 
   function handleTestCustom() {
@@ -365,6 +381,18 @@ export function CharacterVoiceSection({
             >
               {isSpeaking ? "Stop" : "Tes"}
             </button>
+          </div>
+          <div className="space-y-1 pt-1">
+            <label className="block text-[11px] font-semibold text-ink-soft">Gaya bicara khas karakter ini (opsional)</label>
+            <input
+              type="text"
+              value={customStyle}
+              onChange={(e) => handleStyleChange(e.target.value)}
+              placeholder={choice === "gemini_custom" ? "mis. ceria & muda, senyum di suara, tempo ringan" : "mis. hangat & tenang, artikulasi jelas, gaya bercerita"}
+              maxLength={180}
+              className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+            />
+            <p className="text-[10.5px] leading-relaxed text-muted">Dipakai sebagai instruksi gaya saat karakter ini bicara via Gemini/ElevenLabs. Kosongkan = ikut gaya slot global di Suara.</p>
           </div>
         </div>
       )}
