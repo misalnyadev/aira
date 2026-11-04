@@ -45,8 +45,23 @@ type StatusItem = {
   commentCount: number;
   likedByMe: boolean;
   bookmarkedByMe: boolean;
+  followingByMe: boolean;
+  canFollow: boolean;
   viewedByMe: boolean;
 };
+
+function statusProfileKey(item: Pick<StatusItem, "userId" | "characterId">) {
+  return item.characterId ? `character:${item.characterId}` : `user:${item.userId}`;
+}
+
+function matchesStatusProfile(
+  item: Pick<StatusItem, "userId" | "characterId">,
+  profile: Pick<StatusItem, "userId" | "characterId">
+) {
+  return profile.characterId
+    ? item.characterId === profile.characterId
+    : item.characterId === null && item.userId === profile.userId;
+}
 
 type CommentRow = {
   id: string;
@@ -188,6 +203,7 @@ export function StatusView({
 }) {
   const [items, setItems] = useState<StatusItem[]>([]);
   const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
+  const [followBusyKeys, setFollowBusyKeys] = useState<Record<string, boolean>>({});
   const [commentLikeBusyIds, setCommentLikeBusyIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
@@ -227,6 +243,7 @@ export function StatusView({
   const requestedSharedStatusRef = useRef<string | null>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
   const bookmarkBusyIdsRef = useRef(new Set<string>());
+  const followBusyKeysRef = useRef(new Set<string>());
   const commentLikeBusyIdsRef = useRef(new Set<string>());
   const viewerStoriesRef = useRef<StatusItem[]>([]);
 
@@ -451,6 +468,47 @@ export function StatusView({
       setBookmarkBusyIds((prev) => {
         const next = { ...prev };
         delete next[id];
+        return next;
+      });
+    }
+  }
+
+  async function toggleFollow(item: StatusItem) {
+    if (!item.canFollow) return;
+    const key = statusProfileKey(item);
+    if (followBusyKeysRef.current.has(key)) return;
+
+    const nextFollowing = !item.followingByMe;
+    followBusyKeysRef.current.add(key);
+    setFollowBusyKeys((prev) => ({ ...prev, [key]: true }));
+    setItems((prev) =>
+      prev.map((status) =>
+        matchesStatusProfile(status, item) ? { ...status, followingByMe: nextFollowing } : status
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/statuses/${item.id}/follow`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.following !== "boolean") {
+        throw new Error(data?.error || "Gagal memperbarui ikuti.");
+      }
+      setItems((prev) =>
+        prev.map((status) =>
+          matchesStatusProfile(status, item) ? { ...status, followingByMe: data.following } : status
+        )
+      );
+    } catch {
+      setItems((prev) =>
+        prev.map((status) =>
+          matchesStatusProfile(status, item) ? { ...status, followingByMe: item.followingByMe } : status
+        )
+      );
+    } finally {
+      followBusyKeysRef.current.delete(key);
+      setFollowBusyKeys((prev) => {
+        const next = { ...prev };
+        delete next[key];
         return next;
       });
     }
@@ -1445,7 +1503,22 @@ export function StatusView({
                         </span>
                         <span className="text-[13px] font-semibold drop-shadow">{dName}</span>
                         <span className="text-[11px] text-white/70 drop-shadow">• {item.kind === "reel" ? "Reels" : "Status"} • {timeAgo(item.createdAt)}</span>
-                        <span className="ml-1 rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[11px] font-semibold">Ikuti</span>
+                        {item.canFollow ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleFollow(item)}
+                            aria-label={item.followingByMe ? `Berhenti mengikuti ${dName}` : `Ikuti ${dName}`}
+                            aria-pressed={item.followingByMe}
+                            disabled={!!followBusyKeys[statusProfileKey(item)]}
+                            className={`ml-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors disabled:opacity-60 ${
+                              item.followingByMe
+                                ? "border-white/50 bg-white/85 text-black"
+                                : "border-white/30 bg-white/15 text-white"
+                            }`}
+                          >
+                            {item.followingByMe ? "Mengikuti" : "Ikuti"}
+                          </button>
+                        ) : null}
                       </div>
                       {(cap?.trim() || (item.content || "").trim()) ? (
                         <div className="mt-1.5 text-[13px] leading-snug drop-shadow pr-2">
