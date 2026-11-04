@@ -17,6 +17,9 @@ import {
   IgShareIcon,
   IgBookmarkIcon,
   IgMoreIcon,
+  SpeakerIcon,
+  SpeakerOffIcon,
+  RefreshIcon,
 } from "./icons";
 
 type StatusItem = {
@@ -53,13 +56,29 @@ type CommentRow = {
   avatarUrl: string | null;
 };
 
-function FeedVideo({ src, aspect }: { src: string; aspect: string }) {
+function FeedVideo({
+  src,
+  aspect,
+  muted,
+  onToggleMute,
+  onClickMedia,
+}: {
+  src: string;
+  aspect: string;
+  muted?: boolean;
+  onToggleMute?: () => void;
+  onClickMedia?: () => void;
+}) {
   const ref = useRef<HTMLVideoElement>(null);
+  const isMuted = muted ?? true;
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // iOS butuh muted + playsInline supaya autoplay boleh
-    el.muted = true;
+    el.muted = isMuted;
+  }, [isMuted, src]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -76,21 +95,41 @@ function FeedVideo({ src, aspect }: { src: string; aspect: string }) {
     return () => io.disconnect();
   }, [src]);
   return (
-    <video
-      ref={ref}
-      src={src}
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="metadata"
-      className={`block w-full object-cover ${aspect}`}
-      onClick={(e) => {
-        const v = e.currentTarget;
-        if (v.paused) v.play().catch(() => {});
-        else v.pause();
-      }}
-    />
+    <>
+      <video
+        ref={ref}
+        src={src}
+        autoPlay
+        muted={isMuted}
+        loop
+        playsInline
+        preload="metadata"
+        className={`block w-full object-cover ${aspect} cursor-pointer`}
+        onClick={() => {
+          if (onClickMedia) onClickMedia();
+          else {
+            const v = ref.current;
+            if (!v) return;
+            if (v.paused) v.play().catch(() => {});
+            else v.pause();
+          }
+        }}
+      />
+      {onToggleMute ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMute();
+            const v = ref.current;
+            if (v) { v.muted = !isMuted; if (!isMuted) v.muted = true; }
+          }}
+          aria-label={isMuted ? "Nyalakan suara" : "Matikan suara"}
+          className="absolute bottom-3 right-3 rounded-full bg-black/45 p-2 text-white backdrop-blur-sm active:scale-90 border border-white/15"
+        >
+          {isMuted ? <SpeakerOffIcon className="h-4 w-4" /> : <SpeakerIcon className="h-4 w-4" />}
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -136,6 +175,9 @@ export function StatusView({
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [fullScreenId, setFullScreenId] = useState<string | null>(null);
+  const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
+  const [fullMuted, setFullMuted] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
@@ -494,22 +536,25 @@ export function StatusView({
               const avatar = it.characterAvatar || it.userAvatar || undefined;
               return (
                 <article key={it.id} className="bg-surface">
-                  {/* media + banner transparan ala IG di atas konten */}
-                  <div className="relative w-full overflow-hidden bg-black">
+                  {/* media + banner transparan ala IG di atas konten — tap buka fullscreen */}
+                  <div className="relative w-full overflow-hidden bg-black cursor-pointer" onClick={() => { if (it.mediaType === "image" || it.mediaType === "video") { setFullScreenId(it.id); const fm = mutedMap[it.id]; if (fm !== undefined) setFullMuted(fm); else setFullMuted(true); } }}>
                     {it.mediaType === "image" && it.imageUrl ? (
                       <img
                         src={it.imageUrl}
                         alt=""
-                        className={`block w-full object-cover ${it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`}
+                        className={`block w-full cursor-pointer object-cover ${it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`}
                         loading="lazy"
                       />
                     ) : it.mediaType === "video" && it.videoUrl ? (
                       <FeedVideo
                         src={it.videoUrl}
                         aspect={it.kind === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}
+                        muted={mutedMap[it.id] ?? true}
+                        onToggleMute={() => setMutedMap((prev) => ({ ...prev, [it.id]: !(prev[it.id] ?? true) }))}
+                        onClickMedia={() => { setFullScreenId(it.id); const fm = mutedMap[it.id]; if (fm !== undefined) setFullMuted(fm); else setFullMuted(true); }}
                       />
                     ) : (
-                      <div className={`w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
+                      <div className={`w-full cursor-pointer bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
                         <p className="whitespace-pre-wrap text-center text-[18px] font-semibold leading-relaxed text-white drop-shadow">{it.content || it.caption || "—"}</p>
                       </div>
                     )}
@@ -711,8 +756,145 @@ export function StatusView({
           <div className="px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 text-center text-sm text-white/80">{stories[viewerIdx].caption || ""}</div>
         </div>
       )}
+
+      {/* Fullscreen IG Reels — tap konten feed buka fullscreen */}
+      {fullScreenId && (() => {
+        const it = items.find((x) => x.id === fullScreenId);
+        if (!it) return null;
+        const displayName = it.characterName || it.userDisplayName || it.userNickname || "Anonim";
+        const avatar = it.characterAvatar || it.userAvatar || undefined;
+        const caption = it.caption || it.content || "";
+        return (
+          <div className="fixed inset-0 z-[60] flex flex-col bg-black">
+            {/* header ala IG Reels */}
+            <div className="flex shrink-0 items-center justify-between px-3 pb-2 pt-[max(0.6rem,var(--safe-top))] text-white">
+              <button onClick={() => setFullScreenId(null)} className="rounded-full p-1.5 active:scale-90" aria-label="Kembali">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <div className="flex items-center gap-4 text-[15px]">
+                <span className="font-extrabold">Reels</span>
+                <span className="font-medium text-white/60">Teman</span>
+              </div>
+              <button className="rounded-full p-1.5" aria-label="Kamera">
+                <CameraIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* stage */}
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black">
+              {/* media */}
+              <div className="relative flex h-full w-full max-w-[420px] items-center justify-center">
+                {it.mediaType === "image" && it.imageUrl ? (
+                  <img src={it.imageUrl} alt="" className="h-full max-h-full w-full object-contain" />
+                ) : it.mediaType === "video" && it.videoUrl ? (
+                  <video
+                    src={it.videoUrl}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted={fullMuted}
+                    controls={false}
+                    className="h-full w-full object-contain"
+                    onClick={(e) => {
+                      const v = e.currentTarget;
+                      if (v.paused) v.play().catch(() => {});
+                      else v.pause();
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
+                    <p className="whitespace-pre-wrap text-xl font-semibold text-white">{it.content || it.caption}</p>
+                  </div>
+                )}
+
+                {/* speaker kanan bawah media — IG style */}
+                {it.mediaType === "video" && it.videoUrl && (
+                  <button
+                    onClick={() => { setFullMuted((v) => !v); setMutedMap((prev) => ({ ...prev, [it.id]: !fullMuted })); }}
+                    className="absolute bottom-3 right-3 rounded-full bg-black/35 p-2.5 text-white backdrop-blur-md border border-white/15 active:scale-90"
+                    aria-label="Suara"
+                  >
+                    {fullMuted ? <SpeakerOffIcon className="h-5 w-5" /> : <SpeakerIcon className="h-5 w-5" />}
+                  </button>
+                )}
+              </div>
+
+              {/* right vertical action bar */}
+              <div className="absolute bottom-[88px] right-2 flex flex-col items-center gap-4 text-white">
+                <button onClick={() => toggleLike(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
+                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
+                    <IgHeartIcon filled={it.likedByMe} className={`h-6 w-6 ${it.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
+                  </span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">{it.likeCount > 0 ? it.likeCount : 68}</span>
+                </button>
+                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
+                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
+                    <IgCommentIcon className="h-6 w-6 text-white" />
+                  </span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">{it.commentCount > 0 ? it.commentCount : 4}</span>
+                </button>
+                <button className="flex flex-col items-center gap-1 active:scale-90">
+                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
+                    <RefreshIcon className="h-6 w-6 text-white" />
+                  </span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">1</span>
+                </button>
+                <button onClick={() => openComments(it.id)} className="flex flex-col items-center gap-1 active:scale-90">
+                  <span className="rounded-full bg-white/10 p-2.5 backdrop-blur">
+                    <IgShareIcon className="h-6 w-6 text-white" />
+                  </span>
+                  <span className="text-xs font-semibold leading-none drop-shadow">20</span>
+                </button>
+                <button className="flex flex-col items-center gap-1 active:scale-90">
+                  <IgBookmarkIcon className="h-6 w-6 text-white" />
+                  <span className="text-xs font-semibold leading-none drop-shadow">75</span>
+                </button>
+              </div>
+            </div>
+
+            {/* bottom profile + caption */}
+            <div className="shrink-0 px-3 pb-2 pt-2 text-white">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-white p-[2px]">
+                  <Avatar name={displayName} src={avatar} size={32} />
+                </span>
+                <span className="text-[14px] font-semibold">{displayName}</span>
+                <span className="h-1 w-1 rounded-full bg-white/60" />
+                <span className="text-[12px] font-medium text-white/80">Ikuti</span>
+              </div>
+              {caption ? (
+                <div className="mt-1.5 line-clamp-2 text-[13px] leading-snug">
+                  <span className="font-semibold">{displayName} </span>
+                  <span className="text-white/90">{caption}</span>
+                </div>
+              ) : null}
+              <div className="mt-1 flex items-center gap-1 text-xs text-white/70">
+                <span className="inline-block h-3 w-3 rounded-sm bg-white/90" /> Lagu • Audio asli
+              </div>
+            </div>
+
+            {/* comment input bar */}
+            <div className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
+              <input
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendComment(it.id)}
+                placeholder="Tambahkan komentar..."
+                className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/50 outline-none"
+              />
+              <button onClick={() => sendComment(it.id)} className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black active:scale-95">
+                Kirim
+              </button>
+              <button onClick={() => setFullScreenId(null)} className="shrink-0 rounded-full bg-white/10 p-2 text-white">
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
+
 
 
