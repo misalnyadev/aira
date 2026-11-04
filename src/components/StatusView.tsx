@@ -172,6 +172,7 @@ export function StatusView({
   const [composeErr, setComposeErr] = useState<string | null>(null);
   const [viewerIdx, setViewerIdx] = useState<number | null>(null);
   const [viewerProfileKey, setViewerProfileKey] = useState<string | null>(null);
+  const [storyProgress, setStoryProgress] = useState(0);
   const [reelCommentsFor, setReelCommentsFor] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
@@ -187,6 +188,7 @@ export function StatusView({
   const fsCommentInputRef = useRef<HTMLInputElement>(null);
   const fsScrollRef = useRef<HTMLDivElement>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
+  const viewerStoriesRef = useRef<StatusItem[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -225,6 +227,10 @@ export function StatusView({
     () => storyProfiles.find((profileStory) => profileStory.key === viewerProfileKey)?.stories ?? [],
     [storyProfiles, viewerProfileKey]
   );
+  viewerStoriesRef.current = viewerStories;
+  const currentViewerStory = viewerIdx === null ? undefined : viewerStories[viewerIdx];
+  const currentStoryId = currentViewerStory?.id;
+  const currentStoryUsesVideoDuration = currentViewerStory?.mediaType === "video" && Boolean(currentViewerStory.videoUrl);
   const reels = useMemo(() => items.filter((x) => x.kind === "reel"), [items]);
 
   async function handleCreate() {
@@ -396,34 +402,49 @@ export function StatusView({
     const startIndex = unseenIndex >= 0 ? unseenIndex : 0;
     setViewerProfileKey(selectedProfile.key);
     setViewerIdx(startIndex);
+    setStoryProgress(0);
     markStoryViewed(selectedProfile.stories[startIndex]);
   }, [storyProfiles, markStoryViewed]);
 
   const moveStoryTo = useCallback((index: number) => {
-    const story = viewerStories[index];
+    const story = viewerStoriesRef.current[index];
     if (!story) {
       setViewerIdx(null);
       setViewerProfileKey(null);
+      setStoryProgress(0);
       return;
     }
     setViewerIdx(index);
+    setStoryProgress(0);
     markStoryViewed(story);
-  }, [viewerStories, markStoryViewed]);
+  }, [markStoryViewed]);
 
-  // viewer auto advance hanya di dalam profil yang dipilih; video biarkan manual
-  useEffect(() => {
+  const finishCurrentStory = useCallback(() => {
     if (viewerIdx === null) return;
-    const cur = viewerStories[viewerIdx];
-    if (!cur || cur.mediaType === "video") return;
-    const t = setTimeout(() => {
-      if (viewerIdx < viewerStories.length - 1) moveStoryTo(viewerIdx + 1);
-      else {
-        setViewerIdx(null);
-        setViewerProfileKey(null);
+    if (viewerIdx < viewerStories.length - 1) moveStoryTo(viewerIdx + 1);
+    else {
+      setViewerIdx(null);
+      setViewerProfileKey(null);
+      setStoryProgress(0);
+    }
+  }, [viewerIdx, viewerStories.length, moveStoryTo]);
+
+  // foto/teks berjalan 5 detik; video mengikuti currentTime/duration dan selesai saat ended
+  useEffect(() => {
+    if (viewerIdx === null || !currentStoryId || currentStoryUsesVideoDuration) return;
+
+    const startedAt = performance.now();
+    const timer = window.setInterval(() => {
+      const nextProgress = Math.min((performance.now() - startedAt) / 5000, 1);
+      setStoryProgress(nextProgress);
+      if (nextProgress >= 1) {
+        window.clearInterval(timer);
+        finishCurrentStory();
       }
-    }, 5000);
-    return () => clearTimeout(t);
-  }, [viewerIdx, viewerStories, moveStoryTo]);
+    }, 100);
+
+    return () => window.clearInterval(timer);
+  }, [viewerIdx, currentStoryId, currentStoryUsesVideoDuration, finishCurrentStory]);
 
   // keyboard offset biar input naik di atas keyboard — lebih sensitif untuk iPhone
   useEffect(() => {
@@ -894,13 +915,38 @@ export function StatusView({
         const closeViewer = () => {
           setViewerIdx(null);
           setViewerProfileKey(null);
+          setStoryProgress(0);
         };
         return (
           <div className="fixed inset-0 z-50 overflow-hidden bg-black text-white">
             {currentStory.mediaType === "image" && currentStory.imageUrl ? (
               <img src={currentStory.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : currentStory.mediaType === "video" && currentStory.videoUrl ? (
-              <video src={currentStory.videoUrl} autoPlay controls playsInline className="absolute inset-0 h-full w-full object-cover" />
+              <video
+                key={currentStory.id}
+                src={currentStory.videoUrl}
+                autoPlay
+                controls
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  if (Number.isFinite(video.duration) && video.duration > 0) {
+                    setStoryProgress(Math.min(video.currentTime / video.duration, 1));
+                  }
+                }}
+                onTimeUpdate={(e) => {
+                  const video = e.currentTarget;
+                  if (Number.isFinite(video.duration) && video.duration > 0) {
+                    setStoryProgress(Math.min(video.currentTime / video.duration, 1));
+                  }
+                }}
+                onEnded={() => {
+                  setStoryProgress(1);
+                  finishCurrentStory();
+                }}
+                onError={finishCurrentStory}
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-8 py-28 text-center">
                 <p className="whitespace-pre-wrap text-xl font-semibold leading-relaxed text-white drop-shadow-lg">
@@ -915,7 +961,12 @@ export function StatusView({
               <div className="flex gap-1">
                 {viewerStories.map((story, i) => (
                   <div key={story.id} className="h-0.5 flex-1 overflow-hidden rounded bg-white/30">
-                    <div className={`h-full bg-white transition-all ${i < viewerIdx ? "w-full" : i === viewerIdx ? "w-1/2 animate-[pulse_5s_linear]" : "w-0"}`} />
+                    <div
+                      className="h-full bg-white transition-[width] duration-100 ease-linear"
+                      style={{
+                        width: i < viewerIdx ? "100%" : i === viewerIdx ? `${Math.min(storyProgress, 1) * 100}%` : "0%",
+                      }}
+                    />
                   </div>
                 ))}
               </div>
