@@ -380,11 +380,55 @@ export function NotesBoardIcon({ className }: { className?: string }) {
 }
 
 export function StatusIcon({ className }: { className?: string }) {
+  // IG reels-style: rounded square + play triangle, tetap outline tipis ala IG
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} className={className}>
-      <circle cx={12} cy={12} r={8.5} />
-      <circle cx={12} cy={12} r={5.5} />
-      <circle cx={12} cy={12} r={2.2} fill="currentColor" stroke="none" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" className={className}>
+      <rect x={3.5} y={3.5} width={17} height={17} rx={5} />
+      <path d="M10.2 8.5 16 12l-5.8 3.5V8.5Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+// --- IG-style Status/Reels action icons ---
+export function IgHeartIcon({ className, filled }: { className?: string; filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 1.9} className={className}>
+      <path d="M12 20.1 10.6 18.9C6 14.9 3 12.3 3 9.1 3 6 5.5 3.5 8.6 3.5c1.8 0 3.5.9 4.4 2.3.9-1.4 2.6-2.3 4.4-2.3 3.1 0 5.6 2.5 5.6 5.6 0 3.2-3 5.8-7.6 9.8L12 20.1Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IgCommentIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H12l-4.5 4.5v-4.5A8.5 8.5 0 0 1 21 11.5Z" />
+    </svg>
+  );
+}
+
+export function IgShareIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4 20-7Z" />
+    </svg>
+  );
+}
+
+export function IgBookmarkIcon({ className, filled }: { className?: string; filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" className={className}>
+      <path d="M6.5 2.5h11A1.5 1.5 0 0 1 19 4v17l-7-4.5L5 21V4A1.5 1.5 0 0 1 6.5 2.5Z" />
+    </svg>
+  );
+}
+
+export function IgMoreIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx={6} cy={12} r={1.8} />
+      <circle cx={12} cy={12} r={1.8} />
+      <circle cx={18} cy={12} r={1.8} />
     </svg>
   );
 }

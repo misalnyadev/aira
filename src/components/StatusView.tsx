@@ -12,6 +12,11 @@ import {
   CameraIcon,
   FilmIcon,
   PlusIcon,
+  IgHeartIcon,
+  IgCommentIcon,
+  IgShareIcon,
+  IgBookmarkIcon,
+  IgMoreIcon,
 } from "./icons";
 
 type StatusItem = {
@@ -461,17 +466,26 @@ export function StatusView({
                         </div>
                       </div>
                     </div>
-                    {isOwn && (
-                      <button onClick={() => handleDelete(it.id)} className="rounded-full p-2 text-muted hover:bg-surface-2">
+                    {isOwn ? (
+                      <button onClick={() => handleDelete(it.id)} className="rounded-full p-2 text-muted hover:bg-surface-2" aria-label="Hapus">
                         <TrashIcon className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button className="rounded-full p-2 text-muted" aria-label="Lainnya">
+                        <IgMoreIcon className="h-4 w-4 text-muted" />
                       </button>
                     )}
                   </div>
 
-                  {/* media */}
-                  <div className="relative w-full overflow-hidden bg-black">
+                  {/* media — full kanan-kiri hitam edge-to-edge */}
+                  <div className="relative w-full bg-black flex items-center justify-center overflow-hidden">
                     {it.mediaType === "image" && it.imageUrl ? (
-                      <img src={it.imageUrl} alt="" className="max-h-[520px] w-full object-contain" loading="lazy" />
+                      <img
+                        src={it.imageUrl}
+                        alt=""
+                        className="h-auto w-full max-h-[78vh] min-h-[240px] object-contain bg-black"
+                        loading="lazy"
+                      />
                     ) : it.mediaType === "video" && it.videoUrl ? (
                       <video
                         src={it.videoUrl}
@@ -480,32 +494,59 @@ export function StatusView({
                         muted
                         loop
                         preload="metadata"
-                        className="max-h-[560px] w-full bg-black object-contain"
+                        className="h-auto w-full max-h-[78vh] min-h-[300px] bg-black object-contain"
                       />
                     ) : (
-                      <div className="bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10">
+                      <div className="w-full bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10">
                         <p className="whitespace-pre-wrap text-center text-[18px] font-semibold leading-relaxed text-white drop-shadow">{it.content || it.caption || "—"}</p>
                       </div>
                     )}
                   </div>
 
-                  {(it.caption || it.content) && it.mediaType !== "text" && (
-                    <div className="px-3 py-2 text-sm leading-relaxed">
-                      <span className="font-semibold">{displayName} </span>
-                      <span className="text-ink-soft">{it.caption || it.content}</span>
+                  {/* IG-style action bar */}
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleLike(it.id)}
+                        aria-label={it.likedByMe ? "Batal suka" : "Suka"}
+                        className="p-1 active:scale-90 transition"
+                      >
+                        <IgHeartIcon
+                          filled={it.likedByMe}
+                          className={`h-[24px] w-[24px] ${it.likedByMe ? "text-red-500 fill-red-500" : "text-ink"}`}
+                        />
+                      </button>
+                      <button onClick={() => openComments(it.id)} aria-label="Komentar" className="p-1 active:scale-90">
+                        <IgCommentIcon className="h-[24px] w-[24px] text-ink" />
+                      </button>
+                      <button onClick={() => openComments(it.id)} aria-label="Bagikan" className="p-1 active:scale-90">
+                        <IgShareIcon className="h-[24px] w-[24px] text-ink" />
+                      </button>
+                    </div>
+                    <button aria-label="Simpan" className="p-1">
+                      <IgBookmarkIcon className="h-[24px] w-[24px] text-ink" />
+                    </button>
+                  </div>
+
+                  {it.likeCount > 0 && (
+                    <div className="px-3 pb-1 text-[14px] font-semibold leading-none">
+                      {it.likeCount.toLocaleString("id-ID")} suka
                     </div>
                   )}
 
-                  <div className="flex items-center gap-1 px-2 pb-2">
-                    <button
-                      onClick={() => toggleLike(it.id)}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${it.likedByMe ? "bg-pink-500 text-white" : "bg-surface-2 text-ink-soft"}`}
-                    >
-                      <HeartIcon className={`h-4 w-4 ${it.likedByMe ? "fill-white" : ""}`} /> {it.likeCount > 0 ? it.likeCount : "Suka"}
+                  {(it.caption || it.content) && it.mediaType !== "text" ? (
+                    <div className="px-3 pb-1 text-[14px] leading-[18px]">
+                      <span className="font-semibold">{displayName} </span>
+                      <span className="text-ink">{it.caption || it.content}</span>
+                    </div>
+                  ) : null}
+                  {it.commentCount > 0 && reelCommentsFor !== it.id && (
+                    <button onClick={() => openComments(it.id)} className="px-3 pb-1 text-left text-[14px] text-muted">
+                      Lihat {it.commentCount} komentar
                     </button>
-                    <button onClick={() => openComments(it.id)} className="rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-ink-soft">
-                      💬 {it.commentCount > 0 ? it.commentCount : "Komen"}
-                    </button>
+                  )}
+                  <div className="px-3 pb-3 text-[11px] uppercase tracking-wide text-muted">
+                    {timeAgo(it.createdAt)} • {it.kind === "reel" ? "Reels" : "Status"}
                   </div>
 
                   {reelCommentsFor === it.id && (
@@ -610,10 +651,4 @@ export function StatusView({
   );
 }
 
-function HeartIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
-      <path d="M12 20.5s-7-4.2-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10.5c0 5.8-7 10-7 10Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
+
