@@ -1316,7 +1316,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                   onSelect={handleSelect}
                   onAddContact={() => setShowAddContact(true)}
                   onOpenSettings={() => handleViewChange("settings")}
-                  onOpenProfile={() => handleViewChange("profile")}
+                  onOpenStatus={() => handleViewChange("status")}
                   hasProviders={hasProviders}
                   pendingContactsCount={pendingOwnerContactsCount}
                 />
@@ -1561,6 +1561,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           <MobileTabBar
             view={view}
             onChange={handleViewChange}
+            profile={profile}
             profileBadgeCount={isAdmin ? adminTotalPending : 0}
           />
         )}

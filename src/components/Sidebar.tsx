@@ -5,7 +5,7 @@ import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
-import { PlusIcon, SearchIcon, XIcon } from "./icons";
+import { PlusIcon, SearchIcon, StatusIcon, XIcon } from "./icons";
 
 function formatListTime(iso: string) {
   const d = new Date(iso);
@@ -29,7 +29,7 @@ export function Sidebar({
   onSelect,
   onAddContact,
   onOpenSettings,
-  onOpenProfile,
+  onOpenStatus,
   hasProviders,
   pendingContactsCount = 0,
 }: {
@@ -39,7 +39,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onAddContact: () => void;
   onOpenSettings: () => void;
-  onOpenProfile: () => void;
+  onOpenStatus: () => void;
   hasProviders: boolean;
   pendingContactsCount?: number;
 }) {
@@ -56,20 +56,11 @@ export function Sidebar({
     );
   }, [characters, query]);
 
-  const userName = profile.displayName || profile.nickname || "Kamu";
-
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-r border-line bg-surface md:w-[348px] lg:w-[380px]">
       {/* Header */}
       <div className="top-bar flex items-center justify-between gap-2 px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <button
-            onClick={onOpenProfile}
-            aria-label="Profil saya"
-            className="shrink-0 rounded-full transition active:scale-95 md:hidden"
-          >
-            <Avatar name={userName} src={profile.avatarUrl} size={34} />
-          </button>
+        <div className="flex min-w-0 items-center">
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
               <h1 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
@@ -89,6 +80,15 @@ export function Sidebar({
 
         <div className="flex shrink-0 items-center gap-0.5">
           <ThemeQuickToggle className="md:hidden" />
+          <button
+            type="button"
+            onClick={onOpenStatus}
+            className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 active:scale-95"
+            title="Status"
+            aria-label="Buka Status"
+          >
+            <StatusIcon className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={onAddContact}

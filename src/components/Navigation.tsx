@@ -3,7 +3,7 @@
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
-import { BrainstormIcon, ChatsIcon, SettingsIcon, SpeakerIcon, StatusIcon, UserIcon } from "./icons";
+import { BrainstormIcon, ChatsIcon, SettingsIcon, SpeakerIcon, UserIcon } from "./icons";
 
 export type AppView = "chats" | "voice" | "profile" | "settings" | "brainstorm" | "status";
 
@@ -17,7 +17,6 @@ const ITEMS: Item[] = [
   { id: "chats", label: "Chat", Icon: ChatsIcon },
   { id: "brainstorm", label: "Meja", Icon: BrainstormIcon },
   { id: "voice", label: "Suara", Icon: SpeakerIcon },
-  { id: "status", label: "Status", Icon: StatusIcon },
   { id: "profile", label: "Profil", Icon: UserIcon },
   { id: "settings", label: "Setelan", Icon: SettingsIcon },
 ];
@@ -44,20 +43,10 @@ export function NavRail({
       className="hidden h-full w-[74px] shrink-0 flex-col items-center justify-between border-r border-line bg-header py-3 md:flex"
     >
       <div className="flex flex-col items-center gap-1">
-        <button
-          onClick={() => onChange("profile")}
-          title={`Profil: ${userName}`}
-          aria-label="Buka profil saya"
-          className={`mb-2 rounded-full p-0.5 transition active:scale-95 ${
-            view === "profile" ? "ring-2 ring-ink" : "hover:opacity-90"
-          }`}
-        >
-          <Avatar name={userName} src={profile.avatarUrl} size={38} />
-        </button>
-
         {ITEMS.map(({ id, label, Icon }) => {
           const active = view === id;
-          const showBadge = id === "profile" && profileBadgeCount > 0;
+          const isProfile = id === "profile";
+          const showBadge = isProfile && profileBadgeCount > 0;
           return (
             <button
               key={id}
@@ -70,7 +59,11 @@ export function NavRail({
               }`}
             >
               <span className="relative">
-                <Icon className="h-5 w-5" />
+                {isProfile ? (
+                  <Avatar name={userName} src={profile.avatarUrl} size={24} />
+                ) : (
+                  <Icon className="h-5 w-5" />
+                )}
                 {showBadge && (
                   <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
                     {profileBadgeCount > 9 ? "9+" : profileBadgeCount}
@@ -96,12 +89,16 @@ export function NavRail({
 export function MobileTabBar({
   view,
   onChange,
+  profile,
   profileBadgeCount = 0,
 }: {
   view: AppView;
   onChange: (next: AppView) => void;
+  profile: UserProfile;
   profileBadgeCount?: number;
 }) {
+  const userName = profile.displayName || profile.nickname || "Kamu";
+
   return (
     <div className="mobile-tabbar pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.7rem))] md:hidden">
       <nav
@@ -110,7 +107,8 @@ export function MobileTabBar({
       >
         {ITEMS.map(({ id, label, Icon }) => {
           const active = view === id;
-          const showBadge = id === "profile" && profileBadgeCount > 0;
+          const isProfile = id === "profile";
+          const showBadge = isProfile && profileBadgeCount > 0;
           return (
             <button
               key={id}
@@ -123,7 +121,11 @@ export function MobileTabBar({
               }`}
             >
               <span className="relative">
-                <Icon className="h-5 w-5 shrink-0" />
+                {isProfile ? (
+                  <Avatar name={userName} src={profile.avatarUrl} size={22} />
+                ) : (
+                  <Icon className="h-5 w-5 shrink-0" />
+                )}
                 {showBadge && (
                   <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
                     {profileBadgeCount > 9 ? "9+" : profileBadgeCount}
