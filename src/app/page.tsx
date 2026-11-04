@@ -4,7 +4,17 @@ import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const sharedStatusParam = params.statusId;
+  const initialSharedStatusId = Array.isArray(sharedStatusParam)
+    ? sharedStatusParam[0] ?? null
+    : sharedStatusParam ?? null;
+
   /*
    * Sesi diperiksa di server, bukan lewat fetch dari browser.
    * Dengan begitu layar masuk muncul langsung tanpa sempat berkedip
@@ -21,7 +31,7 @@ export default async function HomePage() {
 
   return (
     <AuthGate initialUser={user}>
-      <ChatApp />
+      <ChatApp initialSharedStatusId={initialSharedStatusId} />
     </AuthGate>
   );
 }
