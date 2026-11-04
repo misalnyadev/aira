@@ -272,6 +272,13 @@ const DDL = [
   EXCEPTION WHEN duplicate_object THEN null; END $$`,
   sql`CREATE INDEX IF NOT EXISTS "status_comments_status_idx" ON "status_comments" ("status_id", "created_at" ASC)`,
   sql`CREATE INDEX IF NOT EXISTS "status_comments_parent_idx" ON "status_comments" ("parent_comment_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "status_comment_likes" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "comment_id" uuid NOT NULL REFERENCES "status_comments"("id") ON DELETE cascade,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "status_comment_likes_comment_user_idx" ON "status_comment_likes" ("comment_id", "user_id")`,
   sql`CREATE TABLE IF NOT EXISTS "status_views" (
     "id" uuid PRIMARY KEY NOT NULL,
     "status_id" uuid NOT NULL REFERENCES "character_statuses"("id") ON DELETE cascade,
