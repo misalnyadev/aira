@@ -202,7 +202,7 @@ function ExpandableCaption({
   text,
   className = "",
 }: {
-  author?: string;
+  author: string;
   text: string;
   className?: string;
 }) {
@@ -234,19 +234,19 @@ function ExpandableCaption({
   return (
     <div className={className}>
       {expanded ? (
-        <div className="pointer-events-auto max-h-[40dvh] overflow-y-auto whitespace-pre-wrap break-words">
-          {author ? <span className="font-semibold">{author} </span> : null}
+        <div className="whitespace-pre-wrap break-words">
+          <span className="font-semibold">{author} </span>
           <span>{caption}</span>
           <button
             type="button"
             onClick={() => setExpanded(false)}
             aria-expanded="true"
-            className="ml-1 whitespace-nowrap text-[11px] font-semibold text-white/65 hover:text-white"
+            className="ml-1 whitespace-nowrap font-semibold text-ink-soft hover:text-ink"
           >
             Lebih sedikit
           </button>
         </div>
-      ) : author ? (
+      ) : (
         <div className="flex min-w-0 items-baseline gap-1">
           <span className="max-w-[40%] shrink-0 truncate font-semibold">{author}</span>
           <span ref={captionRef} className="min-w-0 flex-1 truncate">
@@ -257,23 +257,7 @@ function ExpandableCaption({
               type="button"
               onClick={() => setExpanded(true)}
               aria-expanded="false"
-              className="pointer-events-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-white/70 hover:text-white"
-            >
-              Selengkapnya
-            </button>
-          ) : null}
-        </div>
-      ) : (
-        <div className="min-w-0 text-center">
-          <span ref={captionRef} className="block truncate">
-            {caption}
-          </span>
-          {hasOverflow ? (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              aria-expanded="false"
-              className="pointer-events-auto mt-1 whitespace-nowrap text-[11px] font-semibold text-white/70 hover:text-white"
+              className="shrink-0 whitespace-nowrap font-semibold text-ink-soft hover:text-ink"
             >
               Selengkapnya
             </button>
@@ -649,6 +633,14 @@ export function StatusView({
       const d = await res.json().catch(() => null);
       if (res.ok && Array.isArray(d?.comments)) setComments((p) => ({ ...p, [id]: d.comments }));
     } catch {}
+  }
+
+  function openFullscreenComments(id: string) {
+    setActiveFsId(id);
+    setReplyingTo(null);
+    setCommentImage((current) => (current?.statusId === id ? current : null));
+    setCommentErr(null);
+    setShowFullscreenComments(true);
   }
 
   function beginCommentReply(statusId: string, comment: CommentRow) {
@@ -1290,10 +1282,11 @@ export function StatusView({
                   )}
 
                   {(it.caption || it.content) && it.mediaType !== "text" ? (
-                    <div className="truncate px-3 pb-1 text-[14px] leading-[18px]">
-                      <span className="font-semibold">{displayName} </span>
-                      <span className="text-ink">{it.caption || it.content}</span>
-                    </div>
+                    <ExpandableCaption
+                      author={displayName}
+                      text={it.caption || it.content}
+                      className="px-3 pb-1 text-sm leading-[18px] text-ink"
+                    />
                   ) : null}
                   {it.commentCount > 0 && reelCommentsFor !== it.id && (
                     <button onClick={() => openComments(it.id)} className="px-3 pb-1 text-left text-[14px] text-muted">
@@ -1518,11 +1511,9 @@ export function StatusView({
             </button>
 
             {currentStory.caption && currentStory.caption !== currentStory.content ? (
-              <ExpandableCaption
-                key={currentStory.id}
-                text={currentStory.caption}
-                className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow"
-              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 truncate px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
+                {currentStory.caption}
+              </div>
             ) : null}
           </div>
         );
@@ -1611,7 +1602,7 @@ export function StatusView({
                         </span>
                         <span className="text-[11px] font-semibold leading-none drop-shadow">{item.likeCount > 0 ? item.likeCount : 0}</span>
                       </button>
-                      <button onClick={() => { setActiveFsId(item.id); setReplyingTo(null); setCommentImage((current) => current?.statusId === item.id ? current : null); setCommentErr(null); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                      <button onClick={() => openFullscreenComments(item.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
                           <ChatSquareIcon className="h-6 w-6 text-white" />
                         </span>
@@ -1668,13 +1659,17 @@ export function StatusView({
                         ) : null}
                       </div>
                       {(cap?.trim() || (item.content || "").trim()) ? (
-                        <ExpandableCaption
-                          author={dName}
-                          text={cap || item.content || ""}
-                          className="mt-1.5 pr-2 text-[13px] leading-snug drop-shadow"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => openFullscreenComments(item.id)}
+                          aria-label={`Buka komentar untuk postingan ${dName}`}
+                          className="mt-1.5 block w-full truncate pr-2 text-left text-sm leading-snug drop-shadow"
+                        >
+                          <span className="font-semibold">{dName} </span>
+                          <span className="text-white/90">{(cap || item.content || "").trim()}</span>
+                        </button>
                       ) : (
-                        <div className="mt-1 text-[12px] text-white/60 drop-shadow">—</div>
+                        <div className="mt-1 text-sm text-white/60 drop-shadow">—</div>
                       )}
                       <div className="mt-1 flex items-center gap-1 text-[11px] text-white/70 drop-shadow">
                         <span>♫</span>
@@ -1688,7 +1683,7 @@ export function StatusView({
 
             {/* global comment bar — cuma shortcut ke modal, tanpa Kirim/X karena back < sudah ada di atas */}
             <div className="absolute inset-x-0 bottom-0 flex items-center bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
-              <button onClick={() => { setReplyingTo(null); setShowFullscreenComments(true); setTimeout(() => fsCommentInputRef.current?.focus(), 80); }} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
+              <button onClick={() => openFullscreenComments(activeIt.id)} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
                 Tambahkan komentar...
               </button>
             </div>
@@ -1707,10 +1702,10 @@ export function StatusView({
                         <Avatar name={activeAuthor} src={activeAvatar} size={30} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-[13px] font-semibold text-white">{activeAuthor}</span>
+                            <span className="text-sm font-semibold text-white">{activeAuthor}</span>
                             <span className="text-[11px] text-white/40">• {timeAgo(activeIt.createdAt)}</span>
                           </div>
-                          <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-snug text-white/90">
+                          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-white/90">
                             {activeCaption}
                           </p>
                         </div>
