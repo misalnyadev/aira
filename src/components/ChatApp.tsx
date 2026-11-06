@@ -1322,7 +1322,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   if (!loaded) {
     return (
       <div className="app-shell flex items-center justify-center bg-app text-sm text-muted">
-        Memuat heyTalent...
+        Memuat HeyTalent...
       </div>
     );
   }
@@ -1444,7 +1444,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                       )}
 
                       <h2 className="font-display text-3xl font-extrabold tracking-tight text-ink">
-                        heyTalent
+                        HeyTalent
                       </h2>
                       <p className="mx-auto mt-2 max-w-xs text-sm text-ink-soft">
                         Pilih karakter di sebelah kiri untuk mulai ngobrol, atau buat karaktermu
