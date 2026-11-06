@@ -3,7 +3,7 @@
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
-import { ChatsIcon, MeetupIcon, PhoneCallIcon, StatusIcon, UserIcon } from "./icons";
+import { ChatSquareIcon, ChatsIcon, MeetupIcon, PhoneCallIcon, StatusIcon, UserIcon } from "./icons";
 
 export type AppView = "chats" | "calls" | "profile" | "settings" | "brainstorm" | "status";
 
@@ -17,7 +17,7 @@ const ITEMS: Item[] = [
   { id: "status", label: "Story", Icon: StatusIcon },
   { id: "calls", label: "Panggilan", Icon: PhoneCallIcon },
   { id: "brainstorm", label: "MeetUp", Icon: MeetupIcon },
-  { id: "chats", label: "Chat", Icon: ChatsIcon },
+  { id: "chats", label: "Chat", Icon: ChatSquareIcon },
   { id: "profile", label: "Profil", Icon: UserIcon },
 ];
 
