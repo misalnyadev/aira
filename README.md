@@ -70,6 +70,9 @@ git push -u origin main
    | Name | Value |
    |---|---|
    | `DATABASE_URL` | connection string Neon dari Langkah 1 |
+   | `CRON_SECRET` | secret acak untuk pembersihan Story otomatis; buat dengan `openssl rand -hex 32` |
+
+   Simpan `CRON_SECRET` juga di Environment Variables Vercel untuk **Production**. Jangan bagikan nilainya.
 
 5. Klik **Deploy** → tunggu 1–2 menit → **Continue to Dashboard**.
 6. Link aplikasi kamu ada di bagian atas, bentuknya:
@@ -144,15 +147,21 @@ npx next dev -H 0.0.0.0 -p 3000
 
 ## Bagaimana gambar disimpan? (penting untuk Vercel)
 
-Vercel **tidak punya penyimpanan file permanen** (filesystem-nya read-only), jadi aplikasi ini otomatis:
+Vercel **tidak punya penyimpanan file permanen** (filesystem-nya read-only), jadi aplikasi ini otomatis memilih penyimpanan:
 
-- **Di Vercel** → gambar dikompresi di browser (maks. 1280px, JPEG ~82%) lalu disimpan ke tabel `attachments` di database, dan disajikan lewat `/api/attachments/{id}`.
-- **Di lokal/self-hosted** → gambar disimpan sebagai file biasa di `public/uploads/`.
+- **Di Vercel** → jika Cloudflare R2 dikonfigurasi, gambar disimpan di R2 dan disajikan lewat `/api/attachments/r2-...`; jika belum, gambar disimpan di tabel `attachments` pada database.
+- **Di lokal/self-hosted** → gambar disimpan sebagai file di `public/uploads/`, dengan fallback ke tabel `attachments` bila filesystem tidak bisa ditulis.
 
-Keduanya terjadi otomatis tanpa konfigurasi. Efeknya:
-- ✅ Kirim foto, foto profil, dan vision AI tetap jalan di Vercel.
+Efeknya:
+- ✅ Kirim foto, foto profil, dan vision AI tetap jalan.
 - ✅ Upload cepat walau koneksi lambat (gambar sudah dikecilkan di HP/laptop sebelum dikirim).
-- ⚠️ Gunakan kuota storage database seperlunya (paket gratis Neon ±0.5 GB ≈ ribuan foto). Kalau nanti butuh lebih, ganti penyimpanan ke Vercel Blob/Cloudinary dengan mengubah satu file: `src/lib/uploads.ts`.
+- ⚠️ Tanpa R2, gambar memakai kuota storage database (paket gratis Neon ±0.5 GB ≈ ribuan foto).
+
+### Pembersihan Story otomatis
+
+Vercel Cron menjalankan pembersihan harian sekitar pukul **00.00 WIB**. Story yang sudah melewati masa 24 jam dihapus pada jadwal berikutnya (penghapusan fisik dapat terlambat hingga sekitar 24 jam), termasuk video/gambar dan gambar komentar; baris komentar ikut terhapus melalui cascade database. **Reels permanen tidak disentuh.** Jika penghapusan media gagal, baris Story dipertahankan agar bisa dicoba lagi pada jadwal berikutnya.
+
+Atur `CRON_SECRET` di Vercel → **Settings → Environment Variables → Production**. Tanpa secret tersebut, endpoint cron menolak berjalan dan Story tidak dibersihkan. Secret acak dapat dibuat dengan `openssl rand -hex 32`.
 
 ---
 

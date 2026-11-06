@@ -240,7 +240,10 @@ export async function deleteR2Object(key: string): Promise<boolean> {
   if (!isR2Configured()) return false;
   try {
     const url = presignR2Url({ method: "DELETE", key, expiresInSeconds: 120 });
-    const res = await fetch(url, { method: "DELETE" });
+    const res = await fetch(url, {
+      method: "DELETE",
+      signal: AbortSignal.timeout(8_000),
+    });
     return res.ok || res.status === 404;
   } catch {
     return false;
