@@ -173,33 +173,39 @@ export async function readImageAsBase64(
 export async function removeStoredImage(
   url: string | null | undefined,
   userId: string
-): Promise<void> {
-  if (!url || !userId) return;
+): Promise<boolean> {
+  if (!url || !userId) return true;
 
   try {
     if (url.startsWith("/api/attachments/")) {
-      const id = url.split("/").pop();
-      if (!id) return;
+      const id = url.split("?")[0].split("/").pop();
+      if (!id) return false;
 
       const r2File = parseR2AttachmentId(id);
       if (r2File) {
         const r2Key = buildR2ImageKey(userId, r2File);
-        if (r2Key) await deleteR2Object(r2Key);
-        return;
+        return r2Key ? deleteR2Object(r2Key) : false;
       }
 
       await db
         .delete(attachments)
         .where(and(eq(attachments.id, id), eq(attachments.userId, userId)));
-      return;
+      return true;
     }
 
     if (url.startsWith("/uploads/")) {
       const cleanName = path.basename(url);
-      await unlink(path.join(UPLOAD_DIR, cleanName)).catch(() => undefined);
+      try {
+        await unlink(path.join(UPLOAD_DIR, cleanName));
+      } catch (err) {
+        if (!(err && typeof err === "object" && "code" in err && err.code === "ENOENT")) {
+          return false;
+        }
+      }
     }
+    return true;
   } catch {
-    /* best-effort cleanup */
+    return false;
   }
 }
 
