@@ -115,6 +115,7 @@ export function ChatWindow({
   composerVisible = true,
   onScreenTap,
   onBack,
+  backLabel = "Kembali ke daftar chat",
   onOpenProfile,
   onOpenVoice,
   onOpenNotes,
@@ -147,6 +148,7 @@ export function ChatWindow({
   /** Ketukan di layar bersih (dipakai pada mode hide untuk memunculkan/menyembunyikan komposer). */
   onScreenTap?: () => void;
   onBack: () => void;
+  backLabel?: string;
   onOpenProfile: () => void;
   onOpenVoice: () => void;
   onOpenNotes?: () => void;
@@ -465,7 +467,7 @@ export function ChatWindow({
           <button
             onClick={onBack}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
-            aria-label="Kembali ke daftar chat"
+            aria-label={backLabel}
           >
             <BackIcon className="h-6 w-6" />
           </button>
@@ -572,7 +574,7 @@ export function ChatWindow({
           <button
             onClick={onBack}
             className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
-            aria-label="Kembali ke daftar chat"
+            aria-label={backLabel}
           >
             <BackIcon className="h-[30px] w-[30px]" />
           </button>
