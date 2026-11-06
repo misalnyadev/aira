@@ -207,6 +207,22 @@ export function ChatsIcon({ className }: { className?: string }) {
   );
 }
 
+export function ChatSquareIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M7 4.5h10A2.5 2.5 0 0 1 19.5 7v9a2.5 2.5 0 0 1-2.5 2.5h-6l-2.8 2.2v-2.2H7A2.5 2.5 0 0 1 4.5 16V7A2.5 2.5 0 0 1 7 4.5Z" />
+    </svg>
+  );
+}
+
 export function GridIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
