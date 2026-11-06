@@ -781,7 +781,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     characterId: string,
     spokenText: string,
     callMode: "video" | "audio"
-  ): Promise<{ text: string; emotion?: CallEmotion } | null> {
+  ): Promise<{ text: string; emotion?: CallEmotion; error?: string } | null> {
     const trimmed = spokenText.trim();
     if (!trimmed) return null;
 
@@ -830,8 +830,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       });
 
       if (!res.ok) {
-        showToast(data.error || "Gagal mendapatkan balasan panggilan.");
-        return null;
+        return {
+          text: "",
+          error: data.error || "Gagal mendapatkan balasan panggilan.",
+        };
       }
 
       if (data.fallbackUsed && data.providerLabel) {
@@ -857,14 +859,21 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         .filter(Boolean)
         .join(" ")
         .trim();
-      if (!replyLine) return null;
+      if (!replyLine) {
+        return {
+          text: "",
+          error: "Balasan karakter kosong. Coba kirim ulang atau lanjutkan lewat chat.",
+        };
+      }
       return {
         text: replyLine,
         emotion: data.callEmotion as CallEmotion | undefined,
       };
     } catch {
-      showToast("Koneksi terputus saat panggilan. Coba bicara lagi.");
-      return null;
+      return {
+        text: "",
+        error: "Koneksi terputus saat panggilan. Coba bicara lagi.",
+      };
     }
   }
 

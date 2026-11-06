@@ -103,6 +103,7 @@ function cueSlotToEmotion(slot: CallAudioSlot | null): CallEmotion | null {
 export type CallTurnReply = {
   text: string;
   emotion?: CallEmotion;
+  error?: string;
 };
 
 /**
@@ -146,6 +147,7 @@ export function CallOverlay({
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [typedDraft, setTypedDraft] = useState("");
+  const [callError, setCallError] = useState<string | null>(null);
 
   const speaking = useIsSpeaking();
   const audibleSpeaking = useIsAudibleSpeaking();
@@ -496,6 +498,7 @@ export function CallOverlay({
       const sender = onSendTurnRef.current;
       if (!clean || !sender || thinkingRef.current) return;
 
+      setCallError(null);
       clearSilenceTimer();
       clearAutoListenTimer();
       clearSilentExprTimer();
@@ -541,6 +544,7 @@ export function CallOverlay({
       thinkingRef.current = false;
 
       if (!reply || !reply.text) {
+        setCallError(reply?.error || "Balasan belum diterima. Coba bicara lagi.");
         stopCueAudio();
         scheduleAutoListen(450);
         return;
@@ -1054,6 +1058,16 @@ export function CallOverlay({
                 <SendIcon className="h-4 w-4" />
               </button>
             </div>
+          )}
+
+          {callError && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="w-full rounded-2xl bg-black/55 px-3 py-2 text-center text-xs text-rose-100 ring-1 ring-rose-200/20 backdrop-blur-md"
+            >
+              {callError}
+            </p>
           )}
 
           <div className="flex items-center justify-center gap-5 sm:gap-6">
