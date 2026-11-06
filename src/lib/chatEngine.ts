@@ -27,7 +27,11 @@ import {
   pickRelevantArchivedSnippets,
   sanitizeMemorySummary,
 } from "@/lib/characterMemory";
-import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
+import {
+  hasCallExpressionAssets,
+  isUsingCallClipsInMeetup,
+  parseCharacterMedia,
+} from "@/lib/characterMedia";
 import { getDailyPresenceForPrompt } from "@/lib/dailyPresence";
 import { AUTO_MEMORY_BATCH_MIN } from "@/lib/limits";
 import {
@@ -336,10 +340,11 @@ export async function generateBubbles({
       : "audio_call"
     : memoryExtras?.interactionMode ?? "chat";
   const isSharedRoom = interactionMode === "meetup" || interactionMode === "brainstorm";
-  const chatExpressionMode =
-    !callMode &&
-    !isSharedRoom &&
-    isUsingCallClipsInChat(parseCharacterMedia(character.media));
+  const characterMedia = parseCharacterMedia(character.media);
+  const meetupExpressionMode =
+    interactionMode === "meetup" &&
+    isUsingCallClipsInMeetup(characterMedia) &&
+    hasCallExpressionAssets(characterMedia);
   const dailyPresence = isSharedRoom
     ? ""
     : getDailyPresenceForPrompt(
@@ -353,13 +358,13 @@ export async function generateBubbles({
         new Date()
       );
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor || callMode || interactionMode || chatExpressionMode || dailyPresence
+    memoryExtras || sceneAnchor || callMode || interactionMode || meetupExpressionMode || dailyPresence
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
           ...(callMode ? { callMode } : {}),
           interactionMode,
-          ...(chatExpressionMode ? { chatExpressionMode: true } : {}),
+          ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
           dailyPresence,
         }
       : undefined;

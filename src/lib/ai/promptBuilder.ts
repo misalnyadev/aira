@@ -26,8 +26,8 @@ export type MemoryPromptContext = {
   sceneAnchor?: string;
   /** Aktif saat giliran ini berasal dari sambungan telepon / video call 2 arah. */
   callMode?: "video" | "audio";
-  /** Aktif saat ruang chat memakai aset video ekspresi panggilan karakter. */
-  chatExpressionMode?: boolean;
+  /** Aktif saat Tatap Muka memakai klip ekspresi karakter yang tersedia. */
+  meetupExpressionMode?: boolean;
   /** Aktif saat giliran balasan ini dikirim sebagai Gelembung Pesan Suara (Voice Note). */
   voiceNoteReply?: boolean;
   /** Konteks Papan "Catatan & Janji Kita" (rencana, ide naskah, link, & target ber-tanggal). */
@@ -143,12 +143,13 @@ Kanal interaksi saat ini adalah ruang chat teks, bukan telepon atau video call.
 }
 
 export function buildMeetupModeAnchor(): string {
-  return `=== MODE INTERAKSI: MEETUP TATAP MUKA ===
-Kalian hadir langsung di ruang fisik yang sama dan berbicara satu sama lain sebagai orang-orang yang bertemu.
-- Ini bukan chat jarak jauh, telepon, atau video call; jangan menyebut perangkat, layar panggilan, atau sambungan.
-- Kamu bisa menanggapi gestur dan situasi ruangan secara wajar, tetapi jangan mengarang detail yang belum terjadi.
-- Hanya peserta yang disebut berada di ruangan Meetup ini yang hadir secara fisik; rekan Tim 1 lain tidak otomatis ikut.
-=== AKHIR MODE MEETUP ===`;
+  return `=== MODE INTERAKSI SAAT INI: MEETUP TATAP MUKA BERDUA ===
+Saat ini kamu dan pengguna sedang bertemu secara fisik, hanya kalian berdua, di tempat yang sama.
+- Mode ini adalah adegan saat ini dan mengalahkan kanal di pesan-pesan lama. Chat, panggilan suara, dan video call sebelumnya tetap menjadi riwayat yang boleh kamu ingat, tetapi semuanya sudah berlalu; jangan menganggap sambungan panggilan masih aktif atau kalian masih berjauhan.
+- Jika kalian sebelumnya janjian lewat panggilan, tanggapi seolah sekarang kalian sudah bertemu langsung. Ini bukan chat jarak jauh, telepon, atau video call.
+- Tanggapi gestur dan situasi ruangan secara wajar, tetapi jangan mengarang detail, tindakan, lokasi spesifik, atau respons pengguna yang belum terjadi.
+- Tidak ada karakter lain yang ikut hadir secara fisik. Bicaralah langsung sebagai dirimu kepada pengguna.
+=== AKHIR MODE MEETUP TATAP MUKA BERDUA ===`;
 }
 
 export function buildCallModeAnchor(mode: "video" | "audio"): string {
@@ -180,27 +181,13 @@ ATURAN WAJIB BALASAN LISAN & EKSPRESI SAAT PANGGILAN:
 === AKHIR MODE PANGGILAN ===`;
 }
 
-export function buildChatExpressionAnchor(): string {
-  return `=== PENANDA EKSPRESI WAJAH SAAT CHAT ===
-Ruang chat teks menampilkan klip ekspresi wajah singkatmu, bukan sambungan kamera langsung atau video call.
-- Jangan menganggap kamu sedang melihat lawan bicara secara live atau hadir secara fisik dengannya.
-- AWALI setiap bubble balasanmu (termasuk setiap bubble setelah "${BUBBLE_DELIMITER}") dengan TEPAT SATU penanda ekspresi di paling depan yang paling jujur mewakili ekspresi wajahmu pada bubble itu:
-  [NORMAL] = bicara biasa/tenang
-  [SMILE] = tersenyum hangat/senang
-  [LAUGH] = tertawa/bercanda ceria
-  [SHY] = tersipu malu/manis/salah tingkah/sayang
-  [POUT] = cemberut manja/merajuk halus
-  [CONFUSED] = bingung/heran/memastikan maksud
-  [ANGRY] = kesal/protes tegas
-  [SAD] = sedih/terharu/empati lembut
-  [SURPRISED] = kaget/tak menyangka/spontan antusias
-- Contoh satu bubble: "[SMILE] Hehe iya, lagi santai kok."
-- Contoh beberapa bubble:
-  [SURPRISED] Loh seriusan kamu lagi di daerah situ?!
-  ${BUBBLE_DELIMITER}
-  [SMILE] Mampir sini dong sekalian ngopi bareng!
-- Penanda ini otomatis dihapus oleh sistem sebelum pesan tampil — jangan pernah menyebut atau menjelaskan penanda ini di dalam percakapan.
-=== AKHIR PENANDA EKSPRESI ===`;
+export function buildMeetupExpressionAnchor(): string {
+  return `=== EKSPRESI WAJAH SAAT TATAP MUKA ===
+Jika klip ekspresi karakter tersedia, klip itu hanya representasi ekspresimu di adegan ini; kalian tetap hadir secara fisik dan bukan sedang video call.
+- AWALI setiap bubble balasan dengan TEPAT SATU penanda ekspresi yang paling sesuai: [NORMAL], [SMILE], [LAUGH], [SHY], [POUT], [CONFUSED], [ANGRY], [SAD], atau [SURPRISED].
+- Pilih ekspresi dengan jujur sesuai isi bubble; setiap bubble setelah "${BUBBLE_DELIMITER}" juga perlu penanda.
+- Contoh: "[SMILE] Hehe, akhirnya ketemu juga." Jangan pernah menyebut atau menjelaskan penanda ini.
+=== AKHIR EKSPRESI TATAP MUKA ===`;
 }
 
 export function buildVoiceNoteReplyAnchor(withExpressionTag?: boolean): string {
@@ -230,12 +217,10 @@ function extrasAnchor(extras?: MemoryPromptContext): string {
       parts.push(buildTextChatModeAnchor());
     } else if (extras?.interactionMode === "meetup") {
       parts.push(buildMeetupModeAnchor());
-    }
-    if (extras?.chatExpressionMode) {
-      parts.push(buildChatExpressionAnchor());
+      if (extras.meetupExpressionMode) parts.push(buildMeetupExpressionAnchor());
     }
     if (extras?.voiceNoteReply) {
-      parts.push(buildVoiceNoteReplyAnchor(Boolean(extras?.chatExpressionMode)));
+      parts.push(buildVoiceNoteReplyAnchor(Boolean(extras?.meetupExpressionMode)));
     }
   }
   if (!parts.length) return "\n";

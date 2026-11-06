@@ -18,8 +18,8 @@ import {
 } from "@/lib/bubbleStyle";
 import { inferEmotionFromIndonesianText, type CallEmotion } from "@/lib/callEmotion";
 import {
-  isUsingCallClipsInChat,
-  listUniqueChatCallClips,
+  isUsingCallClipsInMeetup,
+  listUniqueMeetupCallClips,
   resolveActiveCallClip,
   type CallVisualPhase,
 } from "@/lib/characterMedia";
@@ -111,6 +111,9 @@ export function ChatWindow({
   voiceEnabled,
   background,
   bubble,
+  visualMode = "chat",
+  sceneLabel,
+  showBackOnDesktop = false,
   composer,
   composerVisible = true,
   onScreenTap,
@@ -137,6 +140,12 @@ export function ChatWindow({
   isSpeaking: boolean;
   canSpeak: boolean;
   voiceEnabled: boolean;
+  /** Chat biasa hanya memakai tema; Tatap Muka juga menampilkan video/ekspresi karakter. */
+  visualMode?: "chat" | "meetup";
+  /** Status adegan yang ditampilkan di header, misalnya kehadiran langsung saat MeetUp. */
+  sceneLabel?: string;
+  /** Tampilkan tombol kembali juga di desktop saat tidak ada daftar percakapan di samping. */
+  showBackOnDesktop?: boolean;
   /** Latar area chat pilihan pengguna; `default` memakai pola bawaan tema. */
   background?: ChatBackground;
   /** Gaya gelembung pesan (khusus karakter atau bawaan akun). */
@@ -206,31 +215,30 @@ export function ChatWindow({
       ),
     [character.id, character.name, character.shortBio, wibNow]
   );
-  const chatMedia = character.media;
-  const useCallInChat = isUsingCallClipsInChat(chatMedia);
+  const chatMedia = visualMode === "meetup" ? character.media : null;
+  const useMeetupExpressions = isUsingCallClipsInMeetup(chatMedia);
   const chatCallClips = useMemo(
-    () => (useCallInChat ? listUniqueChatCallClips(chatMedia) : []),
-    [chatMedia, useCallInChat]
+    () => (useMeetupExpressions ? listUniqueMeetupCallClips(chatMedia) : []),
+    [chatMedia, useMeetupExpressions]
   );
   const callZoom = Math.min(2, Math.max(1, (chatMedia?.callVideoZoom ?? 100) / 100));
   const chatVideo = chatMedia?.chatVideoKey
     ? { videoKey: chatMedia.chatVideoKey, posterUrl: chatMedia.chatVideoPosterUrl }
     : null;
-  const hasChatVisual = useCallInChat ? chatCallClips.length > 0 : Boolean(chatVideo);
+  const hasChatVisual = useMeetupExpressions ? chatCallClips.length > 0 : Boolean(chatVideo);
   const chatVideoFull = Boolean(
     hasChatVisual && ((chatMedia?.chatVideoLayout ?? "tile") === "full" || hideMessages)
   );
 
-  // Siapkan tiket URL klip utama & pembuka Video Call lebih dulu agar 0ms saat tombol ditekan.
+  // Siapkan klip dasar dan mendengarkan lebih dulu untuk ekspresi di Tatap Muka.
   useEffect(() => {
-    const greetKey = chatMedia?.callClips?.greeting?.key;
+    if (!useMeetupExpressions) return;
     const listenKey = chatMedia?.callClips?.listening?.key;
     const idleKey = chatMedia?.callVideoKey;
-    if (greetKey) ensureMediaUrl(greetKey);
     if (listenKey) ensureMediaUrl(listenKey);
     if (idleKey) ensureMediaUrl(idleKey);
   }, [
-    chatMedia?.callClips?.greeting?.key,
+    useMeetupExpressions,
     chatMedia?.callClips?.listening?.key,
     chatMedia?.callVideoKey,
   ]);
@@ -354,8 +362,8 @@ export function ChatWindow({
   }, [activeEmotion, audibleSpeaking, isSpeaking, isTyping, reading, userComposing]);
 
   const activeChatCallClip = useMemo(
-    () => (useCallInChat ? resolveActiveCallClip(chatMedia, chatStagePhase) : null),
-    [chatMedia, chatStagePhase, useCallInChat]
+    () => (useMeetupExpressions ? resolveActiveCallClip(chatMedia, chatStagePhase) : null),
+    [chatMedia, chatStagePhase, useMeetupExpressions]
   );
 
   const { openFor, setOpenFor, startLongPress, cancelLongPress, consumeLongPress } =
@@ -437,7 +445,7 @@ export function ChatWindow({
       )}
 
       {chatVideoFull &&
-        (useCallInChat ? (
+        (useMeetupExpressions ? (
           <CallVideoStage
             clips={chatCallClips}
             activeKey={activeChatCallClip?.key ?? null}
@@ -466,7 +474,7 @@ export function ChatWindow({
         >
           <button
             onClick={onBack}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition active:scale-95 active:opacity-70 md:hidden"
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-6 w-6" />
@@ -489,14 +497,16 @@ export function ChatWindow({
                     isTyping || isSpeaking ? "text-ink" : "text-ink/70"
                   }`}
                   title={
-                    isTyping || isSpeaking ? undefined : `${presenceLine} · ${wibAmbient.label} WIB`
+                    isTyping || isSpeaking || sceneLabel
+                      ? undefined
+                      : `${presenceLine} · ${wibAmbient.label} WIB`
                   }
                 >
                   {isTyping
                     ? "sedang mengetik..."
                     : isSpeaking
                       ? "sedang berbicara..."
-                      : presenceLine}
+                      : sceneLabel ?? presenceLine}
                 </p>
               </div>
             </button>
@@ -573,7 +583,7 @@ export function ChatWindow({
         >
           <button
             onClick={onBack}
-            className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50 md:hidden"
+            className={`shrink-0 p-[5px] text-ink-soft transition active:opacity-50 ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-[30px] w-[30px]" />
@@ -590,14 +600,16 @@ export function ChatWindow({
               <p
                 className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}
                 title={
-                  isTyping || isSpeaking ? undefined : `${presenceLine} · ${wibAmbient.label} WIB`
+                  isTyping || isSpeaking || sceneLabel
+                    ? undefined
+                    : `${presenceLine} · ${wibAmbient.label} WIB`
                 }
               >
                 {isTyping
                   ? "sedang mengetik..."
                   : isSpeaking
                     ? "sedang berbicara..."
-                    : presenceLine}
+                    : sceneLabel ?? presenceLine}
               </p>
             </div>
           </button>
@@ -671,7 +683,7 @@ export function ChatWindow({
       {!hideMessages && hasChatVisual && !chatVideoFull && (
         <div className="px-3 pt-3 sm:px-4">
           <div className="mx-auto w-full max-w-lg">
-            {useCallInChat ? (
+            {useMeetupExpressions ? (
               <ChatCallStagePanel
                 clips={chatCallClips}
                 activeKey={activeChatCallClip?.key ?? null}

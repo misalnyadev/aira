@@ -44,8 +44,8 @@ export const MAX_SHARED_TEAM_MEMBERS = 12;
 /** Batas total catatan relasi Tim 1 dalam satu prompt. */
 export const MAX_SHARED_TEAM_PROMPT_CHARS = 6_000;
 
-/** Batas peserta AI per ruang Tatap Muka (1:1 hingga grup kecil). */
-export const MAX_MEETUP_MEMBERS = 5;
+/** Batas karakter AI per Tatap Muka: tepat satu karakter bersama pengguna. */
+export const MAX_MEETUP_MEMBERS = 1;
 
 /** Batas isian profil pengguna. */
 export const MAX_DISPLAY_NAME_CHARS = 60;

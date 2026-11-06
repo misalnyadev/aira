@@ -150,14 +150,14 @@ export function isValidCallAudioSlot(value: unknown): value is CallAudioSlot {
 }
 
 export type CharacterMedia = {
-  /** Kunci objek R2 untuk klip video saat mengobrol di ruang chat. */
+  /** Kunci objek R2 untuk video latar Tatap Muka. */
   chatVideoKey?: string;
   /** Poster bingkai pertama (`/api/attachments/...` atau `/uploads/...`). */
   chatVideoPosterUrl?: string;
-  /** `tile` = panel 16:9 di atas pesan, `full` = latar penuh ruang chat. */
+  /** `tile` = panel 16:9, `full` = latar penuh saat Tatap Muka. */
   chatVideoLayout?: "tile" | "full";
-  /** Pakai paket klip ekspresi Video Call (`callVideoKey` + `callClips`) secara hidup di ruang chat. */
-  useCallClipsInChat?: boolean;
+  /** Pakai paket klip ekspresi panggilan saat Tatap Muka; default aktif bila aset tersedia. */
+  useCallClipsInMeetup?: boolean;
   /** Kunci objek R2 untuk klip utama / diam (idle) layar video call. */
   callVideoKey?: string;
   /** Poster bingkai pertama klip utama video call. */
@@ -300,12 +300,23 @@ export function normalizeCharacterMedia(
         ? raw.callVideoZoom
         : 100;
     result.callVideoZoom = Math.min(200, Math.max(100, Math.round(zoomRaw)));
-    if (raw.useCallClipsInChat === true) {
-      result.useCallClipsInChat = true;
+
+    // Keep previously enabled clips; ordinary Chat's old off-state should not disable MeetUp.
+    const useCallClipsInMeetup =
+      typeof raw.useCallClipsInMeetup === "boolean"
+        ? raw.useCallClipsInMeetup
+        : raw.useCallClipsInChat === true
+          ? true
+          : undefined;
+    if (useCallClipsInMeetup !== undefined) {
+      result.useCallClipsInMeetup = useCallClipsInMeetup;
     }
   }
 
-  if (chatVideoKey || result.useCallClipsInChat) {
+  if (
+    chatVideoKey ||
+    ((callVideoKey || callClips) && result.useCallClipsInMeetup !== false)
+  ) {
     result.chatVideoLayout = raw.chatVideoLayout === "full" ? "full" : "tile";
   }
 
@@ -368,11 +379,21 @@ export function hasCallVideoAssets(
   return false;
 }
 
-/** Apakah ruang chat biasa aktif memakai paket ekspresi Video Call. */
-export function isUsingCallClipsInChat(
+/** Apakah karakter memiliki klip ekspresi (bukan sekadar video dasar atau sapaan telepon). */
+export function hasCallExpressionAssets(
   media: CharacterMedia | null | undefined
 ): boolean {
-  return Boolean(media?.useCallClipsInChat && hasCallVideoAssets(media));
+  if (!media?.callClips) return false;
+  return CALL_CLIP_SLOTS.some(
+    (slot) => slot !== "greeting" && Boolean(media.callClips?.[slot]?.key)
+  );
+}
+
+/** Apakah Tatap Muka memakai paket ekspresi panggilan yang tersedia. */
+export function isUsingCallClipsInMeetup(
+  media: CharacterMedia | null | undefined
+): boolean {
+  return Boolean(media?.useCallClipsInMeetup !== false && hasCallVideoAssets(media));
 }
 
 /**
@@ -411,10 +432,10 @@ export function listUniqueCallClips(
 }
 
 /**
- * Daftar klip ekspresi Video Call untuk dipakai di ruang Chat (tanpa memuat slot
+ * Daftar klip ekspresi panggilan untuk dipakai saat Tatap Muka (tanpa memuat slot
  * pembuka telepon `greeting` kecuali memang satu-satunya klip yang ada).
  */
-export function listUniqueChatCallClips(
+export function listUniqueMeetupCallClips(
   media: CharacterMedia | null | undefined
 ): CallClipItem[] {
   if (!media) return [];

@@ -18,7 +18,11 @@ import {
   describeTimeAwareness,
   toTimeAwareChatTurns,
 } from "@/lib/characterMemory";
-import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
+import {
+  hasCallExpressionAssets,
+  isUsingCallClipsInMeetup,
+  parseCharacterMedia,
+} from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
@@ -48,15 +52,18 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { characterId, content, imageUrl, callMode, isVoiceNote } = body as {
+  const { characterId, content, imageUrl, callMode, interactionMode, isVoiceNote } = body as {
     characterId?: string;
     content?: string;
     imageUrl?: string | null;
     callMode?: "video" | "audio" | null;
+    interactionMode?: "chat" | "meetup";
     isVoiceNote?: boolean;
   };
   const activeCallMode =
     callMode === "video" || callMode === "audio" ? callMode : undefined;
+  const activeInteractionMode: "chat" | "meetup" =
+    !activeCallMode && interactionMode === "meetup" ? "meetup" : "chat";
   const userSentVoiceNote = Boolean(isVoiceNote && !activeCallMode && content?.trim());
 
   if (!characterId) {
@@ -105,13 +112,16 @@ export async function POST(req: Request) {
   const cleanUserText = content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : "");
 
   const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
-  const replyAsVoiceNote = shouldReplyWithVoiceNote({
-    mode: charVoiceCfg?.voiceNoteMode,
-    userSentVoiceNote,
-    userText: cleanUserText,
-    hasImage: Boolean(imageUrl),
-    callMode: activeCallMode,
-  });
+  const replyAsVoiceNote =
+    activeInteractionMode === "meetup"
+      ? false
+      : shouldReplyWithVoiceNote({
+          mode: charVoiceCfg?.voiceNoteMode,
+          userSentVoiceNote,
+          userText: cleanUserText,
+          hasImage: Boolean(imageUrl),
+          callMode: activeCallMode,
+        });
 
   try {
     const turnNow = new Date();
@@ -140,9 +150,16 @@ export async function POST(req: Request) {
     }).catch(() => "");
     const priorRows = chronologicalHistory.filter((m) => m.id !== userMessage.id);
     const lastPrior = priorRows[priorRows.length - 1] ?? null;
+    const characterMedia = parseCharacterMedia(character.media);
+    const meetupExpressionMode =
+      activeInteractionMode === "meetup" &&
+      isUsingCallClipsInMeetup(characterMedia) &&
+      hasCallExpressionAssets(characterMedia);
 
     const memoryExtras = {
       ...baseExtras,
+      interactionMode: activeInteractionMode,
+      ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
       ...(teamContext ? { teamContext } : {}),
       ...(notesCtx.sharedNotesBlock
         ? {
@@ -171,9 +188,7 @@ export async function POST(req: Request) {
       callMode: activeCallMode,
     });
 
-    const chatExpressionMode =
-      !activeCallMode && isUsingCallClipsInChat(parseCharacterMedia(character.media));
-    const shouldExtractEmotion = Boolean(activeCallMode || chatExpressionMode);
+    const shouldExtractEmotion = Boolean(activeCallMode || meetupExpressionMode);
 
     let callEmotion: CallEmotion | undefined;
     let preparedBubbles: { content: string; emotion?: CallEmotion }[] =

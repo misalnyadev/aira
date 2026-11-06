@@ -4,7 +4,6 @@ import { db } from "@/db";
 import { brainstormMessages, brainstormRoomMembers, brainstormRooms, characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
-import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +21,7 @@ export async function GET() {
       createdAt: brainstormRooms.createdAt,
     })
     .from(brainstormRooms)
-    .where(eq(brainstormRooms.userId, user.id))
+    .where(and(eq(brainstormRooms.userId, user.id), eq(brainstormRooms.mode, "brainstorm")))
     .orderBy(desc(brainstormRooms.updatedAt));
 
   const result = await Promise.all(
@@ -54,7 +53,7 @@ export async function GET() {
       return {
         id: r.id,
         title: r.title,
-        mode: r.mode === "meetup" ? "meetup" : "brainstorm",
+        mode: "brainstorm",
         members: members.map((m) => ({
           characterId: m.characterId,
           name: m.name,
@@ -84,13 +83,16 @@ export async function POST(req: Request) {
     characterIds?: string[];
     mode?: string;
   };
-  const roomMode = mode === "meetup" ? "meetup" : "brainstorm";
-  const minMembers = roomMode === "meetup" ? 1 : 2;
-  const maxMembers = roomMode === "meetup" ? MAX_MEETUP_MEMBERS : 3;
-  const selectionHint = roomMode === "meetup"
-    ? `Pilih 1–${MAX_MEETUP_MEMBERS} karakter untuk Tatap Muka.`
-    : "Pilih 2–3 karakter untuk Brainstorm.";
-  const cleanTitle = title?.trim() || (roomMode === "meetup" ? "MeetUp Baru" : "Meja Diskusi Baru");
+  if (mode === "meetup") {
+    return NextResponse.json(
+      { error: "Tatap Muka sekarang dibuka dengan memilih satu karakter, bukan membuat meja." },
+      { status: 400 }
+    );
+  }
+  const minMembers = 2;
+  const maxMembers = 3;
+  const selectionHint = "Pilih 2–3 karakter untuk Brainstorm.";
+  const cleanTitle = title?.trim() || "Meja Diskusi Baru";
 
   if (!Array.isArray(characterIds) || characterIds.length < minMembers || characterIds.length > maxMembers) {
     return NextResponse.json({ error: selectionHint }, { status: 400 });
@@ -112,7 +114,7 @@ export async function POST(req: Request) {
 
   const [room] = await db
     .insert(brainstormRooms)
-    .values({ userId: user.id, title: cleanTitle.slice(0, 80), mode: roomMode })
+    .values({ userId: user.id, title: cleanTitle.slice(0, 80), mode: "brainstorm" })
     .returning();
 
   for (const cid of unique) {
