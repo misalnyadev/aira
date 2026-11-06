@@ -5,6 +5,7 @@ import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { compressImageFile } from "@/lib/compressImage";
 import { Avatar } from "./Avatar";
+import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import {
   TrashIcon,
   XIcon,
@@ -906,30 +907,35 @@ export function StatusView({
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
       <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
-      <div
-        className="top-bar sticky top-0 z-30 flex shrink-0 items-center gap-2 px-4 pb-2 pt-[max(1rem,var(--safe-top))] sm:px-5"
-        style={{
-          borderBottom: "none",
-          backgroundColor: "color-mix(in srgb, var(--surface) 58%, transparent)",
-          backdropFilter: "saturate(180%) blur(22px)",
-          WebkitBackdropFilter: "saturate(180%) blur(22px)",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setShowComposer((v) => !v)}
-          aria-label="Buat status"
-          className="flex h-10 w-10 shrink-0 items-center justify-start text-ink active:scale-90"
-        >
-          <PlusIcon className="h-8 w-8" />
-        </button>
-        <h1 className="min-w-0 flex-1 text-center font-display text-[21px] font-extrabold tracking-tight text-ink">
-          StoryTalent
-        </h1>
-        <span role="img" aria-label="Notifikasi" className="flex h-10 w-10 shrink-0 items-center justify-end text-ink">
-          <IgHeartIcon className="h-7 w-7" />
-        </span>
-      </div>
+        <MenuHeader
+          title="StoryTalent"
+          description="Cerita dan reels terbaru"
+          className="sticky top-0 z-30"
+          style={{
+            borderBottom: "none",
+            backgroundColor: "color-mix(in srgb, var(--surface) 58%, transparent)",
+            backdropFilter: "saturate(180%) blur(22px)",
+            WebkitBackdropFilter: "saturate(180%) blur(22px)",
+          }}
+          actions={
+            <>
+              <span
+                role="img"
+                aria-label="Notifikasi"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line"
+              >
+                <IgHeartIcon className="h-5 w-5" />
+              </span>
+              <MenuHeaderIconButton
+                onClick={() => setShowComposer((value) => !value)}
+                aria-label="Buat status"
+                title="Buat status"
+              >
+                <PlusIcon className="h-5 w-5" />
+              </MenuHeaderIconButton>
+            </>
+          }
+        />
 
       {showComposer && (
         <div className="border-b border-line bg-surface p-3">

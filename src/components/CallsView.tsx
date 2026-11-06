@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CharacterSummary } from "@/types/chat";
 import { Avatar } from "./Avatar";
+import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import { PlusIcon, RefreshIcon, SearchIcon, XIcon } from "./icons";
 
 function formatListTime(iso: string) {
@@ -66,34 +67,30 @@ export function CallsView({
 
   return (
     <main className="flex h-full min-h-0 w-full flex-col bg-app">
-      <header className="top-bar flex items-center justify-between gap-3 px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
-        <div className="min-w-0">
-          <h1 className="font-display text-xl font-bold tracking-tight text-ink">Panggilan</h1>
-          <p className="text-xs text-ink-soft">Chat 2 arah dengan karakter milikmu</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={onRefresh}
-            aria-label="Segarkan daftar chat"
-            title="Segarkan daftar chat"
-            className="rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
-          >
-            <RefreshIcon className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onManageContacts}
-            aria-label="Kelola kontak karakter"
-            title="Kelola kontak karakter"
-            className="rounded-full bg-brand p-2 text-brand-ink transition hover:bg-brand-strong active:scale-95"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
+      <MenuHeader
+        title="Panggilan"
+        description="Chat 2 arah dengan karakter milikmu"
+        actions={
+          <>
+            <MenuHeaderIconButton
+              onClick={onRefresh}
+              aria-label="Segarkan daftar chat"
+              title="Segarkan daftar chat"
+            >
+              <RefreshIcon className="h-5 w-5" />
+            </MenuHeaderIconButton>
+            <MenuHeaderIconButton
+              onClick={onManageContacts}
+              aria-label="Kelola kontak karakter"
+              title="Kelola kontak karakter"
+            >
+              <PlusIcon className="h-5 w-5" />
+            </MenuHeaderIconButton>
+          </>
+        }
+      />
 
-      <div className="px-4 pb-3 sm:px-6">
+      <div className="px-4 pb-3 pt-2.5 sm:px-5">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
