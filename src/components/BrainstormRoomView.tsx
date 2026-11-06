@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import type { BrainstormMessage, CharacterSummary } from "@/types/chat";
+import type {
+  BrainstormMessage,
+  BrainstormRoomMode,
+  CharacterSummary,
+} from "@/types/chat";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import { bubblePaint, bubbleInk, DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
 import { Avatar } from "./Avatar";
@@ -26,6 +30,7 @@ function formatTime(iso: string) {
 
 export function BrainstormRoomView({
   roomTitle,
+  mode,
   members,
   messages,
   isTyping,
@@ -42,6 +47,7 @@ export function BrainstormRoomView({
   canSpeak,
 }: {
   roomTitle: string;
+  mode: BrainstormRoomMode;
   members: { characterId: string; name: string; avatarUrl: string | null; shortBio: string }[];
   messages: BrainstormMessage[];
   isTyping: boolean;
@@ -91,7 +97,11 @@ export function BrainstormRoomView({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ink">{roomTitle}</p>
           <p className="truncate text-xs text-ink-soft">
-            {isTyping ? typingLabel || "sedang diskusi..." : members.map((m) => m.name).join(" · ")}
+            {isTyping
+              ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : "sedang diskusi...")
+              : mode === "meetup"
+                ? "Tatap Muka · ruang yang sama"
+                : members.map((m) => m.name).join(" · ")}
           </p>
         </div>
         <div className="flex -space-x-2">
@@ -136,9 +146,15 @@ export function BrainstormRoomView({
         <div className="mx-auto w-full max-w-3xl space-y-3">
           {messages.length === 0 && !isTyping && (
             <div className="py-10 text-center">
-              <p className="text-sm font-semibold text-ink">Mulai diskusi di meja ini</p>
+              <p className="text-sm font-semibold text-ink">
+                {mode === "meetup" ? "Mulai pertemuan tatap muka" : "Mulai diskusi di meja ini"}
+              </p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                Tulis topik atau pertanyaan — {members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.
+                {mode === "meetup"
+                  ? members.length === 1
+                    ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
+                    : `Kamu dan ${members.map((m) => m.name).join(", ")} berada di ruangan yang sama. Mereka akan menanggapi bergiliran.`
+                  : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
               </p>
             </div>
           )}
@@ -225,7 +241,7 @@ export function BrainstormRoomView({
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Tanya ${members.map((m) => m.name).join(", ")}...`}
+            placeholder={mode === "meetup" ? "Bicara langsung..." : `Tanya ${members.map((m) => m.name).join(", ")}...`}
             rows={1}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -247,7 +263,9 @@ export function BrainstormRoomView({
           </button>
         </div>
         <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[11px] text-muted">
-          Setiap pesanmu akan ditanggapi bergantian oleh {members.length} karakter.
+          {mode === "meetup"
+            ? `Tatap Muka · ${members.length} karakter hadir di ruangan ini. Catatan dan Memori Tim 1 yang diizinkan menjadi konteks.`
+            : `Setiap pesanmu akan ditanggapi bergantian oleh ${members.length} karakter.`}
         </p>
       </div>
     </div>

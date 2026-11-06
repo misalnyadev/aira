@@ -8,6 +8,8 @@ import {
   MAX_BIBLE_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
+  MAX_SHARED_TEAM_MEMORY_CHARS,
+  MAX_TEAM_ROLE_CHARS,
 } from "@/lib/limits";
 import { Avatar } from "./Avatar";
 import { AvatarCropModal } from "./AvatarCropModal";
@@ -50,6 +52,9 @@ export function CharacterModal({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [shortBio, setShortBio] = useState(initial?.shortBio ?? "");
+  const [teamRole, setTeamRole] = useState(initial?.teamRole ?? "");
+  const [sharedTeamMemory, setSharedTeamMemory] = useState(initial?.sharedTeamMemory ?? "");
+  const [shareTeamMemory, setShareTeamMemory] = useState(initial?.shareTeamMemory ?? false);
   const [personality, setPersonality] = useState(initial?.personality ?? "");
   const [bible, setBible] = useState(initial?.bible ?? "");
   const [greeting, setGreeting] = useState(initial?.greeting ?? "");
@@ -189,6 +194,12 @@ export function CharacterModal({
     setError(null);
     if (!name.trim()) return setError("Nama karakter wajib diisi.");
     if (!personality.trim()) return setError("Deskripsi kepribadian wajib diisi.");
+    if (teamRole.length > MAX_TEAM_ROLE_CHARS) {
+      return setError(`Peran Tim 1 maksimal ${MAX_TEAM_ROLE_CHARS} karakter.`);
+    }
+    if (sharedTeamMemory.length > MAX_SHARED_TEAM_MEMORY_CHARS) {
+      return setError(`Catatan Tim 1 maksimal ${MAX_SHARED_TEAM_MEMORY_CHARS} karakter.`);
+    }
     if (bible.length > MAX_BIBLE_CHARS) {
       return setError(
         `Bible terlalu panjang: ${bible.length.toLocaleString("id-ID")} dari maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.`
@@ -200,6 +211,9 @@ export function CharacterModal({
       const payload = {
         name,
         shortBio,
+        teamRole,
+        sharedTeamMemory,
+        shareTeamMemory,
         personality,
         bible,
         greeting,
@@ -330,6 +344,56 @@ export function CharacterModal({
               className={FIELD}
             />
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+            <div>
+              <p className="text-xs font-semibold text-ink">Memori Tim 1</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                Semua karakter di akunmu masuk Tim 1 secara default. Catatan relasi yang dibagikan membantu mereka saling mengenal.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Peran di tim</label>
+              <input
+                value={teamRole}
+                onChange={(e) => setTeamRole(e.target.value)}
+                placeholder="Mis. koordinator talent"
+                maxLength={MAX_TEAM_ROLE_CHARS}
+                className={FIELD}
+              />
+              <p className="mt-1 text-[11px]">{charCount(teamRole, MAX_TEAM_ROLE_CHARS)}</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Memori bersama & relasi Tim 1
+              </label>
+              <textarea
+                value={sharedTeamMemory}
+                onChange={(e) => setSharedTeamMemory(e.target.value)}
+                placeholder="Mis. Alya adalah rekan dekat Dimas; Dimas senior di tim dan sering membantu Alya saat syuting."
+                maxLength={MAX_SHARED_TEAM_MEMORY_CHARS}
+                rows={3}
+                className={`${FIELD} resize-none`}
+              />
+              <p className="mt-1 text-[11px]">
+                {charCount(sharedTeamMemory, MAX_SHARED_TEAM_MEMORY_CHARS)}
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-xs text-ink-soft">
+              <input
+                type="checkbox"
+                checked={shareTeamMemory}
+                onChange={(e) => setShareTeamMemory(e.target.checked)}
+                className="mt-0.5 accent-ink"
+              />
+              <span>
+                Boleh bawa konteks Tim 1 saat karakter ini diundang pengguna lain.
+              </span>
+            </label>
+            <p className="text-[11px] leading-relaxed text-muted">
+              Riwayat chat, Buku Ingatan pribadi, dan Papan Catatan & Janji tetap milik masing-masing pengguna dan tidak ikut dibagikan.
+            </p>
           </div>
 
           <div>

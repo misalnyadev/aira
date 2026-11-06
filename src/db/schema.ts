@@ -130,6 +130,12 @@ export const characters = pgTable("characters", {
   memoryThroughAt: timestamp("memory_through_at", { withTimezone: true }),
   /** Kapan `memory_summary` terakhir kali diperbarui. */
   memoryUpdatedAt: timestamp("memory_updated_at", { withTimezone: true }),
+  /** Peran karakter di Tim 1 pemiliknya; boleh dibagikan bila konteks tim diaktifkan. */
+  teamRole: text("team_role").notNull().default(""),
+  /** Catatan inti tentang rekan/relasi tim yang berbeda dari memori chat privat. */
+  sharedTeamMemory: text("shared_team_memory").notNull().default(""),
+  /** Izin agar peran, roster, dan catatan Tim 1 ikut saat karakter diundang pengguna lain. */
+  shareTeamMemory: boolean("share_team_memory").notNull().default(false),
   /** Aktifkan akses browsing internet & pembaca link URL pada karakter ini. */
   browsingEnabled: boolean("browsing_enabled").notNull().default(false),
   /** Aktifkan inisiatif karakter menyapa duluan secara alami saat chat dibuka setelah jeda lama. */
@@ -330,7 +336,7 @@ export const appSettings = pgTable("app_settings", {
 });
 
 /**
- * Meja Diskusi (Brainstorm Room) — ruang brainstorm 2–3 karakter milik satu pengguna.
+ * Ruang MeetUp milik satu pengguna: Brainstorm atau Tatap Muka teks.
  */
 export const brainstormRooms = pgTable("brainstorm_rooms", {
   id: uuid("id")
@@ -340,6 +346,8 @@ export const brainstormRooms = pgTable("brainstorm_rooms", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull().default(""),
+  /** 'brainstorm' (legacy) | 'meetup' (tatap muka teks dalam satu ruangan). */
+  mode: text("mode").notNull().default("brainstorm"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

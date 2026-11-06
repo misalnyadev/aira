@@ -6,6 +6,9 @@ import { requireUser } from "@/lib/auth";
 import { extractCallReplyEmotion } from "@/lib/callEmotion";
 import { buildBrainstormAnchor } from "@/lib/brainstormEngine";
 import { buildMemoryExtrasForTurn, generateBubbles, loadUserChatSettings, pickProviderCandidates } from "@/lib/chatEngine";
+import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
+import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
+import { buildTeamMemoryContext } from "@/lib/teamMemory";
 import { toUserFacingError } from "@/lib/ai";
 import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
@@ -34,7 +37,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .where(eq(brainstormRoomMembers.roomId, roomId))
     .orderBy(asc(brainstormRoomMembers.createdAt));
 
-  if (members.length < 2) return NextResponse.json({ error: "Meja butuh minimal 2 karakter." }, { status: 400 });
+  const roomMode: "meetup" | "brainstorm" = room.mode === "meetup" ? "meetup" : "brainstorm";
+  const minMembers = roomMode === "meetup" ? 1 : 2;
+  const maxMembers = roomMode === "meetup" ? MAX_MEETUP_MEMBERS : 3;
+  if (members.length < minMembers || members.length > maxMembers) {
+    return NextResponse.json(
+      { error: roomMode === "meetup" ? `MeetUp ini perlu 1–${MAX_MEETUP_MEMBERS} karakter.` : "Brainstorm perlu 2–3 karakter." },
+      { status: 400 }
+    );
+  }
 
   const charRows = members.map((m) => m.characters);
 
@@ -80,15 +91,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       continue;
     }
     try {
-      const anchor = buildBrainstormAnchor(memberInfos, character.name);
+      const anchor = buildBrainstormAnchor(memberInfos, character.name, roomMode);
       // Sedikit variasi: beri tahu urutan giliran
-      const turnHint = `Giliranmu ke-${idx + 1} dari ${charRows.length} di meja ini.`;
+      const turnHint = `Giliranmu ke-${idx + 1} dari ${charRows.length} karakter di ruangan ini.`;
 
-      // Bangun memory extras ringan (opsional) — tidak perlu browsing di brainstorm untuk hemat waktu
+      // Bangun memory extras ringan (opsional) — tidak perlu browsing untuk ruang bersama.
       let memoryExtras = undefined;
       if (character.memoryEnabled) {
         try {
-          // Gunakan helper tapi tanpa archive search berat; buat minimal
           memoryExtras = await buildMemoryExtrasForTurn({
             character,
             chronologicalHistory: [] as any,
@@ -97,8 +107,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           });
         } catch {}
       }
+      const teamContext = await buildTeamMemoryContext({
+        ownerUserId: user.id,
+        currentCharacterId: character.id,
+      }).catch(() => "");
+      const notesContext = roomMode === "meetup"
+        ? await captureAndBuildSharedNotesContext({
+            scope: { characterId: character.id, scopeUserId: user.id },
+            enableAutoCapture: false,
+          }).catch(() => null)
+        : null;
       const brainstormExtras = {
         ...memoryExtras,
+        interactionMode: roomMode,
+        ...(teamContext ? { teamContext } : {}),
+        ...(notesContext?.sharedNotesBlock ? { sharedNotesBlock: notesContext.sharedNotesBlock } : {}),
         sceneAnchor: [memoryExtras?.sceneAnchor, anchor, turnHint].filter(Boolean).join("\n\n"),
       };
 

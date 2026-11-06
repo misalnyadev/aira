@@ -5,11 +5,17 @@ export const BUBBLE_DELIMITER = "[[NEXT]]";
 
 type Character = typeof characters.$inferSelect;
 
+export type CharacterInteractionMode = "chat" | "audio_call" | "video_call" | "meetup" | "brainstorm";
+
 export type MemoryPromptContext = {
   /** Deskripsi waktu WIB saat ini & selisih sejak pesan terakhir. */
   timeAwareness?: string;
   /** Buku Ingatan Jangka Panjang yang tersimpan di database karakter. */
   memorySummary?: string;
+  /** Memori Tim 1 yang dibagikan; tidak mencakup riwayat chat/catatan privat. */
+  teamContext?: string;
+  /** Kanal interaksi eksplisit agar adegan tidak disimpulkan dari isi pesan. */
+  interactionMode?: CharacterInteractionMode;
   /** Kutipan asli obrolan lama ber-tanggal yang cocok dengan pertanyaan saat ini. */
   recalledArchive?: string;
   /** Hasil pembacaan link URL atau pencarian internet saat fitur browsing karakter aktif. */
@@ -86,6 +92,10 @@ Cara memakainya:
 === AKHIR BUKU INGATAN ===`);
   }
 
+  if (extras.teamContext?.trim()) {
+    blocks.push(extras.teamContext.trim());
+  }
+
   if (extras.recalledArchive?.trim()) {
     blocks.push(`=== KUTIPAN ARSIP OBROLAN LAMA YANG TERKAIT ===
 ${extras.recalledArchive.trim()}
@@ -123,6 +133,24 @@ ${webBody}Cara memakainya:
   return blocks.length ? `\n${blocks.join("\n\n")}\n` : "";
 }
 
+export function buildTextChatModeAnchor(): string {
+  return `=== MODE INTERAKSI: CHAT TEKS ===
+Kanal interaksi saat ini adalah ruang chat teks, bukan telepon atau video call.
+- Tanpa arahan adegan yang jelas dari pengguna atau riwayat, jangan anggap kalian hadir secara fisik di tempat yang sama dan jangan mengaku sedang melihat atau mendengar lawan bicara secara langsung.
+- Jika pengguna sedang membangun adegan/peran tertentu, ikuti lokasi dan kesinambungan adegannya; kanal komunikasinya tetap chat teks kecuali mode panggilan atau Meetup dinyatakan secara eksplisit.
+- Balas natural sebagai karakter dalam chat dan jangan menyebut panggilan yang tidak sedang berlangsung.
+=== AKHIR MODE CHAT TEKS ===`;
+}
+
+export function buildMeetupModeAnchor(): string {
+  return `=== MODE INTERAKSI: MEETUP TATAP MUKA ===
+Kalian hadir langsung di ruang fisik yang sama dan berbicara satu sama lain sebagai orang-orang yang bertemu.
+- Ini bukan chat jarak jauh, telepon, atau video call; jangan menyebut perangkat, layar panggilan, atau sambungan.
+- Kamu bisa menanggapi gestur dan situasi ruangan secara wajar, tetapi jangan mengarang detail yang belum terjadi.
+- Hanya peserta yang disebut berada di ruangan Meetup ini yang hadir secara fisik; rekan Tim 1 lain tidak otomatis ikut.
+=== AKHIR MODE MEETUP ===`;
+}
+
 export function buildCallModeAnchor(mode: "video" | "audio"): string {
   const label =
     mode === "video"
@@ -154,7 +182,8 @@ ATURAN WAJIB BALASAN LISAN & EKSPRESI SAAT PANGGILAN:
 
 export function buildChatExpressionAnchor(): string {
   return `=== PENANDA EKSPRESI WAJAH SAAT CHAT ===
-Layar ruang chat sedang menampilkan video ekspresi wajahmu secara langsung.
+Ruang chat teks menampilkan klip ekspresi wajah singkatmu, bukan sambungan kamera langsung atau video call.
+- Jangan menganggap kamu sedang melihat lawan bicara secara live atau hadir secara fisik dengannya.
 - AWALI setiap bubble balasanmu (termasuk setiap bubble setelah "${BUBBLE_DELIMITER}") dengan TEPAT SATU penanda ekspresi di paling depan yang paling jujur mewakili ekspresi wajahmu pada bubble itu:
   [NORMAL] = bicara biasa/tenang
   [SMILE] = tersenyum hangat/senang
@@ -187,9 +216,21 @@ function extrasAnchor(extras?: MemoryPromptContext): string {
   if (extras?.sceneAnchor?.trim()) {
     parts.push(extras.sceneAnchor.trim());
   }
-  if (extras?.callMode === "video" || extras?.callMode === "audio") {
-    parts.push(buildCallModeAnchor(extras.callMode));
+  const callMode =
+    extras?.callMode ??
+    (extras?.interactionMode === "video_call"
+      ? "video"
+      : extras?.interactionMode === "audio_call"
+        ? "audio"
+        : undefined);
+  if (callMode === "video" || callMode === "audio") {
+    parts.push(buildCallModeAnchor(callMode));
   } else {
+    if (extras?.interactionMode === "chat") {
+      parts.push(buildTextChatModeAnchor());
+    } else if (extras?.interactionMode === "meetup") {
+      parts.push(buildMeetupModeAnchor());
+    }
     if (extras?.chatExpressionMode) {
       parts.push(buildChatExpressionAnchor());
     }

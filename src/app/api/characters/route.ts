@@ -19,6 +19,8 @@ import {
   MAX_GREETING_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
+  MAX_SHARED_TEAM_MEMORY_CHARS,
+  MAX_TEAM_ROLE_CHARS,
 } from "@/lib/limits";
 import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
 import { formatVoiceNotePreview } from "@/lib/voiceNote";
@@ -62,6 +64,8 @@ export async function GET() {
       media: characters.media,
       voiceConfig: characters.voiceConfig,
       memoryEnabled: characters.memoryEnabled,
+      teamRole: characters.teamRole,
+      shareTeamMemory: characters.shareTeamMemory,
       browsingEnabled: characters.browsingEnabled,
       proactiveEnabled: characters.proactiveEnabled,
       invitePin: characters.invitePin,
@@ -99,6 +103,8 @@ export async function GET() {
         media: parseCharacterMedia(row.media),
         voiceConfig: parseCharacterVoice(row.voiceConfig),
         memoryEnabled: Boolean(row.memoryEnabled),
+        teamRole: row.teamRole,
+        shareTeamMemory: Boolean(row.shareTeamMemory),
         browsingEnabled: Boolean(row.browsingEnabled),
         proactiveEnabled: Boolean(row.proactiveEnabled),
         invitePin: row.invitePin ?? null,
@@ -188,7 +194,19 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { name, avatarUrl, shortBio, personality, greeting, bible, providerId, model } = body as {
+  const {
+    name,
+    avatarUrl,
+    shortBio,
+    personality,
+    greeting,
+    bible,
+    providerId,
+    model,
+    teamRole,
+    sharedTeamMemory,
+    shareTeamMemory,
+  } = body as {
     name?: string;
     avatarUrl?: string;
     shortBio?: string;
@@ -197,6 +215,9 @@ export async function POST(req: Request) {
     bible?: string;
     providerId?: string | null;
     model?: string | null;
+    teamRole?: string;
+    sharedTeamMemory?: string;
+    shareTeamMemory?: boolean;
   };
 
   if (!name?.trim()) {
@@ -238,6 +259,18 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  if ((teamRole ?? "").trim().length > MAX_TEAM_ROLE_CHARS) {
+    return NextResponse.json(
+      { error: `Peran Tim 1 maksimal ${MAX_TEAM_ROLE_CHARS} karakter.` },
+      { status: 400 }
+    );
+  }
+  if ((sharedTeamMemory ?? "").trim().length > MAX_SHARED_TEAM_MEMORY_CHARS) {
+    return NextResponse.json(
+      { error: `Catatan Tim 1 maksimal ${MAX_SHARED_TEAM_MEMORY_CHARS.toLocaleString("id-ID")} karakter.` },
+      { status: 400 }
+    );
+  }
   if ((bible ?? "").trim().length > MAX_BIBLE_CHARS) {
     return NextResponse.json(
       { error: `Bible maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.` },
@@ -255,6 +288,9 @@ export async function POST(req: Request) {
       personality: personality.trim(),
       bible: (bible ?? "").trim(),
       greeting: (greeting ?? "").trim(),
+      teamRole: (teamRole ?? "").trim(),
+      sharedTeamMemory: (sharedTeamMemory ?? "").trim(),
+      shareTeamMemory: shareTeamMemory === true,
       providerId: providerId || null,
       model: model?.trim() || null,
     })
