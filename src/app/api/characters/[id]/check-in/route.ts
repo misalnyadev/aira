@@ -3,7 +3,6 @@ import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { extractCallReplyEmotion, type CallEmotion } from "@/lib/callEmotion";
 import {
   buildMemoryExtrasForTurn,
   generateBubbles,
@@ -15,7 +14,6 @@ import {
   describeTimeAwareness,
   toTimeAwareChatTurns,
 } from "@/lib/characterMemory";
-import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
@@ -182,21 +180,9 @@ export async function POST(
     });
 
     const trimmedBubbles = result.bubbles.slice(0, MAX_PROACTIVE_BUBBLES);
-    const chatExpressionMode = isUsingCallClipsInChat(
-      parseCharacterMedia(character.media)
-    );
-
-    const prepared: { content: string; emotion?: CallEmotion }[] =
-      chatExpressionMode
-        ? trimmedBubbles
-            .map((raw) => {
-              const parsed = extractCallReplyEmotion(raw);
-              return { content: parsed.cleanText, emotion: parsed.emotion };
-            })
-            .filter((item) => item.content.length > 0)
-        : trimmedBubbles
-            .map((raw) => ({ content: raw.trim() }))
-            .filter((item) => item.content.length > 0);
+    const prepared = trimmedBubbles
+      .map((raw) => ({ content: raw.trim() }))
+      .filter((item) => item.content.length > 0);
 
     if (!prepared.length) {
       await db
@@ -220,9 +206,7 @@ export async function POST(
           createdAt: new Date(baseTime + i),
         })
         .returning();
-      assistantMessages.push(
-        item.emotion ? { ...row, emotion: item.emotion } : row
-      );
+      assistantMessages.push(row);
     }
 
     return NextResponse.json({

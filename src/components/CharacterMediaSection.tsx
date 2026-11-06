@@ -5,6 +5,7 @@ import {
   CALL_AUDIO_SLOTS,
   CALL_CLIP_SLOTS,
   DEFAULT_CALL_AUDIO_PACK,
+  isUsingCallClipsInMeetup,
   type CallAudioSlot,
   type CallAudios,
   type CallClipSlot,
@@ -256,9 +257,11 @@ export function CharacterMediaSection({
     }
     if (!cleaned.callVideoKey && nextClipCount === 0) {
       delete cleaned.callVideoZoom;
-      delete cleaned.useCallClipsInChat;
+      delete cleaned.useCallClipsInMeetup;
+    } else {
+      cleaned.useCallClipsInMeetup = cleaned.useCallClipsInMeetup ?? true;
     }
-    if (!cleaned.chatVideoKey && !cleaned.useCallClipsInChat) {
+    if (!cleaned.chatVideoKey && !cleaned.useCallClipsInMeetup) {
       delete cleaned.chatVideoLayout;
     }
     if (
@@ -503,7 +506,7 @@ export function CharacterMediaSection({
     if (slot === "chatVideo") {
       delete next.chatVideoKey;
       delete next.chatVideoPosterUrl;
-      if (!next.useCallClipsInChat) {
+      if (!isUsingCallClipsInMeetup(next)) {
         delete next.chatVideoLayout;
       }
     } else {
@@ -514,17 +517,17 @@ export function CharacterMediaSection({
     if (previous) void removeCharacterMediaKey(previous);
   }
 
-  function toggleUseCallClipsInChat() {
+  function toggleUseCallClipsInMeetup() {
     if (!hasAnyCallVideo || !media) return;
-    const next: CharacterMedia = { ...media };
-    if (media.useCallClipsInChat) {
-      delete next.useCallClipsInChat;
-      if (!next.chatVideoKey) {
-        delete next.chatVideoLayout;
-      }
-    } else {
-      next.useCallClipsInChat = true;
+    const useExpressions = !isUsingCallClipsInMeetup(media);
+    const next: CharacterMedia = {
+      ...media,
+      useCallClipsInMeetup: useExpressions,
+    };
+    if (useExpressions) {
       next.chatVideoLayout = media.chatVideoLayout ?? "tile";
+    } else if (!next.chatVideoKey) {
+      delete next.chatVideoLayout;
     }
     emitOrNull(next);
   }
@@ -538,19 +541,21 @@ export function CharacterMediaSection({
     if (previous) void removeCharacterMediaKey(previous);
   }
 
-  const useCallInChat = Boolean(hasAnyCallVideo && media?.useCallClipsInChat);
-  const showChatLayoutSelector = Boolean(media?.chatVideoKey || useCallInChat);
+  const useCallInMeetup = Boolean(
+    hasAnyCallVideo && media?.useCallClipsInMeetup !== false
+  );
+  const showMeetupLayoutSelector = Boolean(media?.chatVideoKey || useCallInMeetup);
 
   return (
     <div className="space-y-2">
       <MediaRow
-        label="Video saat chat"
+        label="Video latar Tatap Muka"
         hint={
-          useCallInChat
-            ? "Sedang memakai ekspresi dari aset video call."
-            : media?.chatVideoKey
-              ? "Khusus ruang chat (tidak dipakai di video call)."
-              : "Adegan khusus ruang chat."
+          media?.chatVideoKey
+            ? useCallInMeetup
+              ? "Latar alternatif jika aset video panggilan dinonaktifkan."
+              : "Ditampilkan saat Tatap Muka; Chat biasa hanya memakai tema."
+            : "Unggah latar khusus Tatap Muka; Chat biasa tetap memakai tema."
         }
         active={Boolean(media?.chatVideoKey)}
         thumb={media?.chatVideoPosterUrl}
@@ -564,38 +569,38 @@ export function CharacterMediaSection({
       <div className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-ink">
-            Gunakan aset video call saat chat
+            Gunakan aset video call saat Tatap Muka
           </p>
           <p className="text-[12px] leading-snug text-muted">
             {!hasAnyCallVideo
-              ? "Unggah klip video call dulu untuk menampilkan ekspresi di chat."
-              : useCallInChat
-                ? "Ekspresi diam, dengar, mikir, & bicara ikut hidup di ruang chat."
-                : "Tampilkan ekspresi hidup dari klip video call langsung saat chat."}
+              ? "Unggah video atau klip ekspresi panggilan dulu untuk memakainya saat Tatap Muka."
+              : useCallInMeetup
+                ? "Video dan ekspresi panggilan dipakai saat MeetUp; Chat biasa tetap bertema teks."
+                : "MeetUp memakai video latar di atas, jika tersedia."}
           </p>
         </div>
         <button
           type="button"
           role="switch"
-          aria-checked={useCallInChat}
-          aria-label="Gunakan aset video call saat chat"
+          aria-checked={useCallInMeetup}
+          aria-label="Gunakan aset video call saat Tatap Muka"
           disabled={!hasAnyCallVideo || busy !== null}
-          onClick={toggleUseCallClipsInChat}
+          onClick={toggleUseCallClipsInMeetup}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-45 ${
-            useCallInChat ? "bg-emerald-500" : "bg-line"
+            useCallInMeetup ? "bg-emerald-500" : "bg-line"
           }`}
         >
           <span
             className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-              useCallInChat ? "translate-x-5" : "translate-x-0.5"
+              useCallInMeetup ? "translate-x-5" : "translate-x-0.5"
             }`}
           />
         </button>
       </div>
 
-      {showChatLayoutSelector && media && (
+      {showMeetupLayoutSelector && media && (
         <div className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
-          <span className="text-xs font-medium text-ink-soft">Tampilan video chat</span>
+          <span className="text-xs font-medium text-ink-soft">Tampilan video Tatap Muka</span>
           <div className="flex gap-0.5 rounded-full bg-surface-2 p-0.5">
             {[
               { id: "tile" as const, label: "Panel atas" },
@@ -697,7 +702,7 @@ export function CharacterMediaSection({
         <div className="rounded-xl border border-line px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-ink-soft">
-              {useCallInChat ? "Zoom video call & chat" : "Zoom video call"}
+              {useCallInMeetup ? "Zoom video call & Tatap Muka" : "Zoom video call"}
             </span>
             <span className="text-xs font-semibold text-ink">{zoom}%</span>
           </div>
@@ -716,7 +721,7 @@ export function CharacterMediaSection({
             className="mt-1 w-full accent-ink"
           />
           <p className="mt-1 text-[12px] leading-snug text-muted">
-            Perbesar bila ada bingkai hitam di tepi video, supaya layar panggilan penuh.
+            Perbesar bila ada bingkai hitam di tepi; pengaturan ini berlaku untuk panggilan dan Tatap Muka.
           </p>
         </div>
       )}

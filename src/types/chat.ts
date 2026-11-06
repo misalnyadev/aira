@@ -163,6 +163,7 @@ export type OutgoingContactItem = {
   updatedAt: string;
 };
 
+/** `meetup` is kept for legacy rows; new Tatap Muka uses the character chat history. */
 export type BrainstormRoomMode = "brainstorm" | "meetup";
 
 export type BrainstormMemberSummary = {

@@ -336,7 +336,8 @@ export const appSettings = pgTable("app_settings", {
 });
 
 /**
- * Ruang MeetUp milik satu pengguna: Brainstorm atau Tatap Muka teks.
+ * Ruang Brainstorm milik satu pengguna. Baris mode `meetup` hanya dipertahankan untuk data lama;
+ * Tatap Muka baru memakai riwayat `messages` per karakter.
  */
 export const brainstormRooms = pgTable("brainstorm_rooms", {
   id: uuid("id")
@@ -346,7 +347,7 @@ export const brainstormRooms = pgTable("brainstorm_rooms", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull().default(""),
-  /** 'brainstorm' (legacy) | 'meetup' (tatap muka teks dalam satu ruangan). */
+  /** 'brainstorm' | 'meetup' (legacy; tidak dipakai oleh MeetUp baru). */
   mode: text("mode").notNull().default("brainstorm"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

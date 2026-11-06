@@ -1,12 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type {
-  BrainstormRoomMode,
-  BrainstormRoomSummary,
-  CharacterSummary,
-} from "@/types/chat";
-import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
+import { useState } from "react";
+import type { BrainstormRoomSummary, CharacterSummary } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import { BrainstormIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
@@ -14,123 +9,184 @@ import { BrainstormIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
 export function BrainstormView({
   rooms,
   characters,
+  onOpenMeetup,
   onOpenRoom,
-  onCreateRoom,
+  onCreateBrainstorm,
   onDeleteRoom,
   onNeedCharacters,
 }: {
   rooms: BrainstormRoomSummary[];
   characters: CharacterSummary[];
+  onOpenMeetup: (characterId: string) => void;
   onOpenRoom: (id: string) => void;
-  onCreateRoom: (title: string, characterIds: string[], mode: BrainstormRoomMode) => Promise<boolean>;
+  onCreateBrainstorm: (title: string, characterIds: string[]) => Promise<boolean>;
   onDeleteRoom: (id: string) => void;
   onNeedCharacters: () => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const brainstormRooms = rooms.filter((room) => room.mode === "brainstorm");
+  const canBrainstorm = characters.length >= 2;
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-app">
       <MenuHeader
-        title="Meja Diskusi"
-        description="Brainstorm atau Meetup tatap muka bersama karakter"
+        title="MeetUp"
+        description="Pilih satu karakter untuk tatap muka, atau buat meja Brainstorm"
         actions={
           <MenuHeaderIconButton
             onClick={() => setShowCreate(true)}
-            disabled={characters.length === 0}
-            aria-label="Buat meja baru"
-            title="Buat meja baru"
+            disabled={!canBrainstorm}
+            aria-label="Buat meja Brainstorm"
+            title={canBrainstorm ? "Buat meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
           >
             <PlusIcon className="h-5 w-5" />
           </MenuHeaderIconButton>
         }
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-[calc(var(--tabbar-space)+1rem)] md:px-4">
-        {characters.length === 0 ? (
-          <div className="mx-auto max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
-            <p className="text-sm font-semibold text-ink">Buat karakter untuk memulai MeetUp</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Tatap Muka bisa dimulai berdua dengan satu karakter; Brainstorm atau pertemuan grup butuh lebih banyak karakter.
+      <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-3 py-4 pb-[calc(var(--tabbar-space)+1rem)] md:px-4">
+        <section className="mx-auto w-full max-w-[900px]">
+          <div className="mb-3">
+            <h2 className="text-sm font-bold text-ink">Tatap Muka</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              Pilih satu karakter. Kalian berdua melanjutkan riwayat Chat dan Panggilan yang sama.
             </p>
-            <button
-              onClick={onNeedCharacters}
-              className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
-            >
-              Buat Karakter
-            </button>
           </div>
-        ) : rooms.length === 0 ? (
-          <div className="mx-auto max-w-md py-10 text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-surface-2">
-              <BrainstormIcon className="h-7 w-7 text-ink-soft" />
-            </div>
-            <h3 className="mt-3 text-sm font-semibold text-ink">Belum ada meja</h3>
-            <p className="mx-auto mt-1 max-w-xs text-sm text-ink-soft">
-              Pilih Brainstorm untuk diskusi kelompok, atau Tatap Muka untuk bertemu satu karakter berdua maupun berkumpul dengan grup kecil.
-            </p>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
-            >
-              Buat Meja Pertama
-            </button>
-          </div>
-        ) : (
-          <div className="mx-auto w-full max-w-[720px] space-y-2.5">
-            {rooms.map((r) => (
+
+          {characters.length === 0 ? (
+            <div className="rounded-2xl border border-line bg-surface p-5 text-center">
+              <p className="text-sm font-semibold text-ink">Belum ada karakter untuk diajak bertemu</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+                Buat karakter dulu, lalu pilih satu untuk memulai pertemuan berdua.
+              </p>
               <button
-                key={r.id}
-                onClick={() => onOpenRoom(r.id)}
-                className="group flex w-full items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3 text-left transition hover:bg-surface-2 active:scale-[0.99]"
+                onClick={onNeedCharacters}
+                className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
               >
-                <div className="flex -space-x-2">
-                  {r.members.slice(0, 3).map((m) => (
-                    <div key={m.characterId} className="rounded-full ring-2 ring-surface">
-                      <Avatar name={m.name} src={m.avatarUrl} size={36} />
-                    </div>
-                  ))}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-ink">
-                    <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                      {r.mode === "meetup" ? "Tatap Muka" : "Brainstorm"}
-                    </span>
-                    <span className="truncate">{r.title}</span>
-                  </p>
-                  <p className="truncate text-xs text-ink-soft">
-                    {r.members.map((m) => m.name).join(" · ")} · {r.messageCount} pesan
-                  </p>
-                  <p className="truncate text-xs text-muted">{r.preview}</p>
-                </div>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm("Hapus meja ini beserta obrolannya?")) onDeleteRoom(r.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.stopPropagation();
-                      if (confirm("Hapus meja ini beserta obrolannya?")) onDeleteRoom(r.id);
-                    }
-                  }}
-                  className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
-                  aria-label="Hapus meja"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </div>
+                Buat Karakter
               </button>
-            ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+              {characters.map((character) => (
+                <button
+                  key={character.id}
+                  type="button"
+                  onClick={() => onOpenMeetup(character.id)}
+                  className="rounded-2xl border border-line bg-surface p-3.5 text-left transition hover:bg-surface-2 active:scale-[0.99]"
+                  aria-label={`Ajak ${character.name} bertemu tatap muka`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar name={character.name} src={character.avatarUrl} size={48} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">
+                        {character.shortBio || "Karakter pribadimu"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted">Hanya kamu dan {character.name}</span>
+                    <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
+                      Ajak bertemu
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mx-auto w-full max-w-[900px]">
+          <div className="mb-3">
+            <h2 className="text-sm font-bold text-ink">Brainstorm</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              Meja diskusi 2–3 karakter, terpisah dari pertemuan Tatap Muka.
+            </p>
           </div>
-        )}
+
+          {brainstormRooms.length === 0 ? (
+            <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-2">
+                <BrainstormIcon className="h-6 w-6 text-ink-soft" />
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-ink">
+                {canBrainstorm ? "Belum ada meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
+              </h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+                {canBrainstorm
+                  ? "Buat meja untuk meminta beberapa karakter menanggapi topik secara bergiliran."
+                  : characters.length === 0
+                    ? "Buat karakter untuk memulai Tatap Muka. Brainstorm memerlukan setidaknya dua karakter."
+                    : "Tatap Muka sudah bisa dimulai dengan satu karakter. Untuk Brainstorm, tambahkan karakter lagi."}
+              </p>
+              {canBrainstorm ? (
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
+                >
+                  Buat Meja Pertama
+                </button>
+              ) : characters.length > 0 ? (
+                <button
+                  onClick={onNeedCharacters}
+                  className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
+                >
+                  Tambah Karakter
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {brainstormRooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-surface-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onOpenRoom(room.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <div className="flex -space-x-2">
+                      {room.members.slice(0, 3).map((member) => (
+                        <div key={member.characterId} className="rounded-full ring-2 ring-surface">
+                          <Avatar name={member.name} src={member.avatarUrl} size={36} />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{room.title}</p>
+                      <p className="truncate text-xs text-ink-soft">
+                        {room.members.map((member) => member.name).join(" · ")} · {room.messageCount} pesan
+                      </p>
+                      <p className="truncate text-xs text-muted">{room.preview}</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Hapus meja ini beserta obrolannya?")) onDeleteRoom(room.id);
+                    }}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
+                    aria-label={`Hapus meja ${room.title}`}
+                    title="Hapus meja"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {showCreate && (
         <CreateBrainstormModal
           characters={characters}
           onClose={() => setShowCreate(false)}
-          onCreate={async (title, ids, mode) => {
-            const ok = await onCreateRoom(title, ids, mode);
+          onCreate={async (title, ids) => {
+            const ok = await onCreateBrainstorm(title, ids);
             if (ok) setShowCreate(false);
             return ok;
           }}
@@ -147,38 +203,30 @@ function CreateBrainstormModal({
 }: {
   characters: CharacterSummary[];
   onClose: () => void;
-  onCreate: (title: string, characterIds: string[], mode: BrainstormRoomMode) => Promise<boolean>;
+  onCreate: (title: string, characterIds: string[]) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState("");
-  const [mode, setMode] = useState<BrainstormRoomMode>(characters.length >= 2 ? "brainstorm" : "meetup");
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const maxPicked = mode === "meetup" ? MAX_MEETUP_MEMBERS : 3;
-  const minPicked = mode === "meetup" ? 1 : 2;
-
-  function chooseMode(next: BrainstormRoomMode) {
-    setMode(next);
-    if (next === "brainstorm") setPicked((prev) => prev.slice(0, 3));
-  }
 
   function toggle(id: string) {
     setPicked((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= maxPicked) return prev;
+      if (prev.includes(id)) return prev.filter((value) => value !== id);
+      if (prev.length >= 3) return prev;
       return [...prev, id];
     });
   }
 
   async function handleCreate() {
-    if (picked.length < minPicked) {
-      setError(mode === "meetup" ? "Pilih minimal 1 karakter." : "Pilih minimal 2 karakter.");
+    if (picked.length < 2) {
+      setError("Pilih minimal 2 karakter untuk Brainstorm.");
       return;
     }
     setBusy(true);
     setError(null);
-    const fallbackTitle = `${mode === "meetup" ? "MeetUp" : "Brainstorm"} — ${picked.length} karakter`;
-    const ok = await onCreate(title.trim() || fallbackTitle, picked, mode);
+    const fallbackTitle = `Brainstorm — ${picked.length} karakter`;
+    const ok = await onCreate(title.trim() || fallbackTitle, picked);
     if (!ok) setError("Gagal membuat meja. Coba lagi.");
     setBusy(false);
   }
@@ -190,13 +238,20 @@ function CreateBrainstormModal({
     >
       <div
         className="pop-in flex max-h-[min(86dvh,100%)] min-h-0 w-full max-w-md flex-col rounded-3xl border border-line bg-surface shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="font-display text-[15px] font-bold text-ink">Buat Meja Baru</h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-ink-soft hover:bg-surface-2 hover:text-ink">
+          <div>
+            <h2 className="font-display text-[15px] font-bold text-ink">Buat Meja Brainstorm</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">Pilih 2–3 karakter untuk berdiskusi.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1.5 text-ink-soft hover:bg-surface-2 hover:text-ink"
+            aria-label="Tutup"
+          >
             <XIcon className="h-5 w-5" />
           </button>
         </div>
@@ -205,64 +260,35 @@ function CreateBrainstormModal({
           <label className="text-xs font-semibold text-muted">Judul meja (opsional)</label>
           <input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="mis. Brainstorm Naskah atau Pertemuan Tim 1"
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="mis. Brainstorm Naskah"
             className="mt-1.5 w-full rounded-2xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-ink/20"
             maxLength={80}
           />
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => chooseMode("brainstorm")}
-              disabled={characters.length < 2}
-              aria-pressed={mode === "brainstorm"}
-              className={`rounded-2xl border px-3 py-2.5 text-left transition disabled:opacity-40 ${mode === "brainstorm" ? "border-ink bg-ink/[0.06] text-ink dark:bg-white/[0.08]" : "border-line text-ink-soft hover:bg-surface-2"}`}
-            >
-              <span className="block text-sm font-semibold">Brainstorm</span>
-              <span className="mt-0.5 block text-[11px]">2–3 karakter menanggapi bergiliran</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => chooseMode("meetup")}
-              aria-pressed={mode === "meetup"}
-              className={`rounded-2xl border px-3 py-2.5 text-left transition ${mode === "meetup" ? "border-ink bg-ink/[0.06] text-ink dark:bg-white/[0.08]" : "border-line text-ink-soft hover:bg-surface-2"}`}
-            >
-              <span className="block text-sm font-semibold">Tatap Muka</span>
-              <span className="mt-0.5 block text-[11px]">1–{MAX_MEETUP_MEMBERS} karakter hadir di ruangan</span>
-            </button>
-          </div>
-
-          <p className="mt-4 text-xs font-semibold text-muted">
-            {mode === "meetup" ? "Pilih karakter yang hadir langsung" : "Pilih 2–3 karakter untuk diskusi"}
-          </p>
-          <p className="text-[11px] text-muted">Terpilih {picked.length}/{maxPicked}</p>
-          {mode === "meetup" && (
-            <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
-              Percakapan memakai tampilan teks seperti chat; karakter akan sadar kalian hadir di ruang yang sama. Tidak ada mode telepon atau video.
-            </p>
-          )}
+          <p className="mt-4 text-xs font-semibold text-muted">Pilih 2–3 karakter</p>
+          <p className="text-[11px] text-muted">Terpilih {picked.length}/{Math.min(characters.length, 3)}</p>
           <div className="mt-2 space-y-2">
-            {characters.map((c) => {
-              const active = picked.includes(c.id);
+            {characters.map((character) => {
+              const active = picked.includes(character.id);
               return (
                 <button
-                  key={c.id}
-                  onClick={() => toggle(c.id)}
+                  key={character.id}
+                  type="button"
+                  onClick={() => toggle(character.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
                     active ? "border-ink bg-ink/[0.06] dark:bg-white/[0.08]" : "border-line bg-surface hover:bg-surface-2"
                   }`}
+                  aria-pressed={active}
                 >
-                  <Avatar name={c.name} src={c.avatarUrl} size={40} />
+                  <Avatar name={character.name} src={character.avatarUrl} size={40} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{c.name}</p>
-                    <p className="truncate text-xs text-ink-soft">
-                      {mode === "meetup" && c.teamRole ? c.teamRole : c.shortBio || "Tanpa bio"}
-                    </p>
+                    <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+                    <p className="truncate text-xs text-ink-soft">{character.shortBio || "Tanpa bio"}</p>
                   </div>
-                  <div className={`grid h-6 w-6 place-items-center rounded-full border text-xs font-bold ${active ? "border-ink bg-ink text-white dark:bg-white dark:text-black" : "border-line text-muted"}`}>
+                  <span className={`grid h-6 w-6 place-items-center rounded-full border text-xs font-bold ${active ? "border-ink bg-ink text-white dark:bg-white dark:text-black" : "border-line text-muted"}`}>
                     {active ? "✓" : "+"}
-                  </div>
+                  </span>
                 </button>
               );
             })}
@@ -274,13 +300,13 @@ function CreateBrainstormModal({
         <div className="shrink-0 border-t border-line px-5 py-3">
           <button
             onClick={handleCreate}
-            disabled={busy || picked.length < minPicked}
+            disabled={busy || picked.length < 2}
             className="w-full rounded-full bg-brand py-3 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98] disabled:opacity-40"
           >
-            {busy ? "Membuat..." : `Buat ${mode === "meetup" ? "MeetUp" : "Brainstorm"} (${picked.length} karakter)`}
+            {busy ? "Membuat..." : `Buat Meja (${picked.length} karakter)`}
           </button>
           <p className="mt-2 text-center text-[11px] text-muted">
-            {mode === "meetup" ? "Hanya karakter terpilih yang hadir di ruangan." : "Tip: pilih karakter dengan gaya bicara berbeda biar diskusinya berwarna."}
+            Tiap karakter menanggapi bergiliran; diskusi grup tidak mengubah riwayat Tatap Muka.
           </p>
         </div>
       </div>

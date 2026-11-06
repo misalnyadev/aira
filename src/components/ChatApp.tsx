@@ -38,7 +38,7 @@ import {
   type SharedNoteKind,
 } from "@/lib/sharedNotes";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
-import type { BrainstormMessage, BrainstormRoomMode, BrainstormRoomSummary } from "@/types/chat";
+import type { BrainstormMessage, BrainstormRoomSummary } from "@/types/chat";
 import {
   loadVoiceSettings,
   prefetchSpeech,
@@ -153,6 +153,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   // Brainstorm Room state
   const [brainstormRooms, setBrainstormRooms] = useState<BrainstormRoomSummary[]>([]);
   const [activeBrainstormId, setActiveBrainstormId] = useState<string | null>(null);
+  const [activeMeetupCharacterId, setActiveMeetupCharacterId] = useState<string | null>(null);
   const [brainstormMessages, setBrainstormMessages] = useState<Record<string, BrainstormMessage[]>>({});
   const [brainstormTyping, setBrainstormTyping] = useState<string | null>(null);
   const [brainstormTypingLabel, setBrainstormTypingLabel] = useState<string | null>(null);
@@ -490,14 +491,13 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   async function handleCreateBrainstorm(
     title: string,
-    characterIds: string[],
-    mode: BrainstormRoomMode
+    characterIds: string[]
   ): Promise<boolean> {
     try {
       const res = await api("/api/brainstorm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, characterIds, mode }),
+        body: JSON.stringify({ title, characterIds, mode: "brainstorm" }),
       });
       if (!res.ok) return false;
       await fetchBrainstormRooms();
@@ -524,9 +524,20 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   function handleOpenBrainstorm(roomId: string) {
+    setActiveMeetupCharacterId(null);
     setActiveBrainstormId(roomId);
     setView("brainstorm");
     fetchBrainstormMessages(roomId);
+  }
+
+  function handleOpenMeetup(characterId: string) {
+    if (activeId !== characterId) stopSpeaking();
+    setChatOriginView("chats");
+    setActiveBrainstormId(null);
+    setActiveMeetupCharacterId(characterId);
+    setActiveId(characterId);
+    setView("brainstorm");
+    if (!messagesMap[characterId]) void fetchMessages(characterId);
   }
 
   async function handleSendBrainstorm(text: string) {
@@ -640,6 +651,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       setActiveId(null);
     }
     setChatOriginView("chats");
+    setActiveMeetupCharacterId(null);
     setView(next);
     if (next === "chats") setMobileShowChat(false);
     if (next === "calls") void fetchCharacters();
@@ -700,6 +712,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   ) {
     if (!activeId) return;
     const target = activeId;
+    const interactionMode =
+      view === "brainstorm" && activeMeetupCharacterId === target ? "meetup" : undefined;
     stopSpeaking();
 
     let imageUrl: string | null = null;
@@ -759,6 +773,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             content: text,
             imageUrl,
             isVoiceNote: sendAsVoiceNote,
+            ...(interactionMode ? { interactionMode } : {}),
           };
       const res = await api(endpoint, {
         method: "POST",
@@ -1005,11 +1020,17 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     if (!activeId || typingFor === activeId) return;
 
     const target = activeId;
+    const interactionMode =
+      view === "brainstorm" && activeMeetupCharacterId === target ? "meetup" : "chat";
     stopSpeaking();
     setTypingFor(target);
 
     try {
-      const res = await api(`/api/characters/${target}/regenerate`, { method: "POST" });
+      const res = await api(`/api/characters/${target}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interactionMode }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -1075,6 +1096,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       setActiveId(null);
       setMobileShowChat(false);
     }
+    if (activeMeetupCharacterId === id) setActiveMeetupCharacterId(null);
     fetchCharacters();
   }
 
@@ -1202,6 +1224,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   })();
 
   const activeCharacter = allThreads.find((c) => c.id === activeId) ?? null;
+  const activeMeetupCharacter =
+    characters.find((character) => character.id === activeMeetupCharacterId) ?? null;
   const activeBubble = activeCharacter?.bubbleStyle ?? bubbleStyle;
   const isHiddenMode = Boolean(activeBubble.hideMessages);
   const composerRevealed = Boolean(
@@ -1216,11 +1240,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         : undefined,
     [callCharacter, voice.engine, ttsSummary.hasActiveKey]
   );
-  const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
   const chatOpenedFromCalls = view === "chats" && chatOriginView === "calls";
   const navigationView: AppView = chatOpenedFromCalls ? "calls" : view;
-  const showMobileTabBar = !(view === "chats" && mobileShowChat) && !(view === "brainstorm" && Boolean(activeBrainstormId));
+  const showMobileTabBar =
+    !(view === "chats" && mobileShowChat) &&
+    !(view === "brainstorm" && Boolean(activeBrainstormId || activeMeetupCharacterId));
 
   useEffect(() => {
     if (!isHiddenMode || !composerRevealed || composerBusy) return;
@@ -1357,6 +1382,79 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
+  function renderCharacterConversation(
+    character: CharacterSummary,
+    options: {
+      mode: "chat" | "meetup";
+      onBack: () => void;
+      backLabel: string;
+    }
+  ) {
+    const isMeetup = options.mode === "meetup";
+    const characterBubble = character.bubbleStyle ?? bubbleStyle;
+    const characterHidden = Boolean(characterBubble.hideMessages);
+    return (
+      <ChatWindow
+        character={character}
+        messages={messagesMap[character.id] ?? []}
+        isTyping={typingFor === character.id}
+        isSpeaking={isSpeaking}
+        canSpeak={speechSupported || ttsSummary.hasActiveKey}
+        voiceEnabled={voice.enabled}
+        background={character.chatBackground ?? chatBackground}
+        bubble={characterBubble}
+        visualMode={options.mode}
+        sceneLabel={isMeetup ? "Tatap Muka · kalian berdua hadir langsung" : undefined}
+        showBackOnDesktop={isMeetup}
+        composerVisible={!characterHidden || peekCharId === character.id}
+        onScreenTap={characterHidden ? handleHiddenScreenTap : undefined}
+        onBack={options.onBack}
+        backLabel={options.backLabel}
+        onOpenProfile={() => openProfile(character.id)}
+        onOpenVoice={() => {
+          setFocusVoiceSettings(true);
+          handleViewChange("settings");
+        }}
+        onOpenNotes={() => handleOpenNotes(character.id)}
+        activeNotesCount={(notesMap[character.id] ?? []).filter((note) => !note.done).length}
+        hasDueTodayNote={(notesMap[character.id] ?? []).some((note) => {
+          const status = getNoteDueStatus(note.dueDate, note.done);
+          return status === "today" || status === "overdue";
+        })}
+        onToggleHideChat={handleToggleHideChat}
+        onVideoCall={
+          !isMeetup && character.threadKind !== "owner_contact"
+            ? () => setCall({ characterId: character.id, mode: "video" })
+            : undefined
+        }
+        onAudioCall={
+          !isMeetup && character.threadKind !== "owner_contact"
+            ? () => setCall({ characterId: character.id, mode: "audio" })
+            : undefined
+        }
+        onImageClick={(url) => setLightbox(url)}
+        onCopyMessage={handleCopyMessage}
+        onSpeakMessage={handleSpeakMessage}
+        onStopSpeaking={stopSpeaking}
+        onDeleteMessage={handleDeleteMessage}
+        onRegenerate={handleRegenerate}
+        composer={
+          <Composer
+            key={character.id}
+            onSend={handleSend}
+            disabled={typingFor === character.id}
+            transparent={Boolean(characterBubble.minimalBars || characterBubble.hideMessages)}
+            blurOnSend={characterHidden}
+            onSent={() => setPeekCharId(null)}
+            onWake={() => setPeekCharId(character.id)}
+            onActivityChange={setComposerBusy}
+            onNotice={showToast}
+          />
+        }
+      />
+    );
+  }
+
   if (!loaded) {
     return (
       <div className="app-shell flex items-center justify-center bg-app text-sm text-muted">
@@ -1398,77 +1496,13 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
               <div className={`${chatOpenedFromCalls || mobileShowChat ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col md:flex`}>
                 {activeCharacter ? (
-                  <ChatWindow
-                    character={activeCharacter}
-                    messages={activeMessages}
-                    isTyping={typingFor === activeId}
-                    isSpeaking={isSpeaking}
-                    canSpeak={speechSupported || ttsSummary.hasActiveKey}
-                    voiceEnabled={voice.enabled}
-                    background={activeCharacter.chatBackground ?? chatBackground}
-                    bubble={activeBubble}
-                    composerVisible={composerVisible}
-                    onScreenTap={isHiddenMode ? handleHiddenScreenTap : undefined}
-                    onBack={handleChatBack}
-                    backLabel={
-                      chatOpenedFromCalls ? "Kembali ke Panggilan" : "Kembali ke daftar chat"
-                    }
-                    onOpenProfile={() => openProfile(activeCharacter.id)}
-                    onOpenVoice={() => {
-                      setFocusVoiceSettings(true);
-                      handleViewChange("settings");
-                    }}
-                    onOpenNotes={() => handleOpenNotes(activeCharacter.id)}
-                    activeNotesCount={
-                      (notesMap[activeCharacter.id] ?? []).filter(
-                        (n) => !n.done
-                      ).length
-                    }
-                    hasDueTodayNote={(notesMap[activeCharacter.id] ?? []).some(
-                      (n) => {
-                        const st = getNoteDueStatus(n.dueDate, n.done);
-                        return st === "today" || st === "overdue";
-                      }
-                    )}
-                    onToggleHideChat={handleToggleHideChat}
-                    onVideoCall={
-                      activeCharacter.threadKind === "owner_contact"
-                        ? undefined
-                        : () =>
-                            setCall({
-                              characterId: activeCharacter.id,
-                              mode: "video",
-                            })
-                    }
-                    onAudioCall={
-                      activeCharacter.threadKind === "owner_contact"
-                        ? undefined
-                        : () =>
-                            setCall({
-                              characterId: activeCharacter.id,
-                              mode: "audio",
-                            })
-                    }
-                    onImageClick={(url) => setLightbox(url)}
-                    onCopyMessage={handleCopyMessage}
-                    onSpeakMessage={handleSpeakMessage}
-                    onStopSpeaking={stopSpeaking}
-                    onDeleteMessage={handleDeleteMessage}
-                    onRegenerate={handleRegenerate}
-                    composer={
-                      <Composer
-                        key={activeCharacter.id}
-                        onSend={handleSend}
-                        disabled={typingFor === activeId}
-                        transparent={Boolean(activeBubble.minimalBars || activeBubble.hideMessages)}
-                        blurOnSend={isHiddenMode}
-                        onSent={() => setPeekCharId(null)}
-                        onWake={() => setPeekCharId(activeCharacter.id)}
-                        onActivityChange={setComposerBusy}
-                        onNotice={showToast}
-                      />
-                    }
-                  />
+                  renderCharacterConversation(activeCharacter, {
+                    mode: "chat",
+                    onBack: handleChatBack,
+                    backLabel: chatOpenedFromCalls
+                      ? "Kembali ke Panggilan"
+                      : "Kembali ke daftar chat",
+                  })
                 ) : (
                   <div className="dot-grid relative flex h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-app px-5 py-10 text-center">
                     <div className="fade-in w-full max-w-md">
@@ -1587,12 +1621,13 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             />
           )}
 
-          {view === "brainstorm" && !activeBrainstormId && (
+          {view === "brainstorm" && !activeBrainstormId && !activeMeetupCharacterId && (
             <BrainstormView
               rooms={brainstormRooms}
               characters={characters}
+              onOpenMeetup={handleOpenMeetup}
               onOpenRoom={handleOpenBrainstorm}
-              onCreateRoom={handleCreateBrainstorm}
+              onCreateBrainstorm={handleCreateBrainstorm}
               onDeleteRoom={handleDeleteBrainstorm}
               onNeedCharacters={() => {
                 setProfileTab("account");
@@ -1629,6 +1664,17 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                 />
               );
             })()
+          )}
+
+          {view === "brainstorm" && activeMeetupCharacterId && activeMeetupCharacter && (
+            renderCharacterConversation(activeMeetupCharacter, {
+              mode: "meetup",
+              onBack: () => {
+                stopSpeaking();
+                setActiveMeetupCharacterId(null);
+              },
+              backLabel: "Kembali ke daftar karakter",
+            })
           )}
 
           {view === "status" && (

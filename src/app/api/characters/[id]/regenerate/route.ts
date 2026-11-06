@@ -17,7 +17,11 @@ import {
   describeTimeAwareness,
   toTimeAwareChatTurns,
 } from "@/lib/characterMemory";
-import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
+import {
+  hasCallExpressionAssets,
+  isUsingCallClipsInMeetup,
+  parseCharacterMedia,
+} from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
@@ -38,18 +42,26 @@ export const maxDuration = 60;
  * pengguna sendiri tidak disentuh. Jadi hasilnya persis seperti kalau dia
  * mengirim ulang pesan yang sama, tanpa pesan dobel di riwayat.
  */
-export async function POST(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   await ensureDb();
 
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
 
+  const body = (await req.json().catch(() => null)) as { interactionMode?: string } | null;
+  const interactionMode: "chat" | "meetup" =
+    body?.interactionMode === "meetup" ? "meetup" : "chat";
   const { id } = await context.params;
 
   const character = await findOwnedCharacter(id, user.id);
   if (!character) {
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
   }
+  const characterMedia = parseCharacterMedia(character.media);
+  const meetupExpressionMode =
+    interactionMode === "meetup" &&
+    isUsingCallClipsInMeetup(characterMedia) &&
+    hasCallExpressionAssets(characterMedia);
 
   const all = await db
     .select()
@@ -86,12 +98,15 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
   const cleanUserText = lastUser.content || (lastUser.imageUrl ? "(mengirim foto tanpa teks)" : "");
 
   const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
-  const replyAsVoiceNote = shouldReplyWithVoiceNote({
-    mode: charVoiceCfg?.voiceNoteMode,
-    userSentVoiceNote: Boolean(lastUser.isVoiceNote),
-    userText: cleanUserText,
-    hasImage: Boolean(lastUser.imageUrl),
-  });
+  const replyAsVoiceNote =
+    interactionMode === "meetup"
+      ? false
+      : shouldReplyWithVoiceNote({
+          mode: charVoiceCfg?.voiceNoteMode,
+          userSentVoiceNote: Boolean(lastUser.isVoiceNote),
+          userText: cleanUserText,
+          hasImage: Boolean(lastUser.imageUrl),
+        });
 
   try {
     const turnNow = new Date();
@@ -115,21 +130,20 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     });
     const lastPrior = chronologicalPrior[chronologicalPrior.length - 1] ?? null;
 
-    const memoryExtras =
-      replyAsVoiceNote || notesCtx.sharedNotesBlock
+    const memoryExtras = {
+      ...baseExtras,
+      interactionMode,
+      ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
+      ...(notesCtx.sharedNotesBlock
         ? {
-            ...baseExtras,
-            ...(notesCtx.sharedNotesBlock
-              ? {
-                  sharedNotesBlock: notesCtx.sharedNotesBlock,
-                  timeAwareness:
-                    baseExtras?.timeAwareness ||
-                    describeTimeAwareness(turnNow, lastPrior?.createdAt ?? null),
-                }
-              : {}),
-            ...(replyAsVoiceNote ? { voiceNoteReply: true } : {}),
+            sharedNotesBlock: notesCtx.sharedNotesBlock,
+            timeAwareness:
+              baseExtras?.timeAwareness ||
+              describeTimeAwareness(turnNow, lastPrior?.createdAt ?? null),
           }
-        : baseExtras;
+        : {}),
+      ...(replyAsVoiceNote ? { voiceNoteReply: true } : {}),
+    };
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(chronologicalPrior, lastUser.id)
@@ -146,11 +160,8 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       memoryExtras,
     });
 
-    const chatExpressionMode = isUsingCallClipsInChat(
-      parseCharacterMedia(character.media)
-    );
     let preparedBubbles: { content: string; emotion?: CallEmotion }[] =
-      chatExpressionMode
+      meetupExpressionMode
         ? result.bubbles
             .map((raw) => {
               const parsed = extractCallReplyEmotion(raw);

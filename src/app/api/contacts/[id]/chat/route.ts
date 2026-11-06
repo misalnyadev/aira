@@ -10,10 +10,6 @@ import {
   toTimeAwareChatTurns,
 } from "@/lib/characterMemory";
 import {
-  isUsingCallClipsInChat,
-  parseCharacterMedia,
-} from "@/lib/characterMedia";
-import {
   NO_PROVIDER_ERROR,
   generateBubbles,
   loadUserChatSettings,
@@ -336,10 +332,7 @@ export async function POST(
       callMode: activeCallMode,
     });
 
-    const chatExpressionMode =
-      !activeCallMode &&
-      isUsingCallClipsInChat(parseCharacterMedia(character.media));
-    const shouldExtractEmotion = Boolean(activeCallMode || chatExpressionMode);
+    const shouldExtractEmotion = Boolean(activeCallMode);
 
     let callEmotion: CallEmotion | undefined;
     let preparedBubbles: { content: string; emotion?: CallEmotion }[] =

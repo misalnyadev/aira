@@ -10,7 +10,6 @@ import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
 import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
 import { buildTeamMemoryContext } from "@/lib/teamMemory";
 import { toUserFacingError } from "@/lib/ai";
-import { isUsingCallClipsInChat, parseCharacterMedia } from "@/lib/characterMedia";
 import { ensureDb } from "@/lib/dbReady";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +23,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id: roomId } = await ctx.params;
   const [room] = await db.select().from(brainstormRooms).where(eq(brainstormRooms.id, roomId)).limit(1);
   if (!room || room.userId !== user.id) return NextResponse.json({ error: "Meja tidak ditemukan." }, { status: 404 });
+  if (room.mode === "meetup") {
+    return NextResponse.json(
+      { error: "MeetUp sekarang memakai riwayat chat karakter dan tidak lagi memakai ruang terpisah." },
+      { status: 410 }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const { content, imageUrl } = (body ?? {}) as { content?: string; imageUrl?: string | null };
