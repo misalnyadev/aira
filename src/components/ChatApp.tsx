@@ -781,9 +781,26 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     characterId: string,
     spokenText: string,
     callMode: "video" | "audio"
-  ): Promise<{ text: string; emotion?: CallEmotion; error?: string } | null> {
+  ): Promise<{ text: string; emotion?: CallEmotion; error?: string; endCall?: boolean } | null> {
     const trimmed = spokenText.trim();
     if (!trimmed) return null;
+
+    const appendQuotaErrorToChat = (errorText: string) => {
+      const errorMessage: ChatMessage = {
+        id: `temp-call-error-${Date.now()}`,
+        characterId,
+        role: "assistant",
+        content: errorText,
+        imageUrl: null,
+        status: "error",
+        createdAt: new Date().toISOString(),
+        isCallError: true,
+      };
+      setMessagesMap((prev) => ({
+        ...prev,
+        [characterId]: [...(prev[characterId] ?? []), errorMessage],
+      }));
+    };
 
     const tempId = `temp-call-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
@@ -830,10 +847,19 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       });
 
       if (!res.ok) {
-        return {
-          text: "",
-          error: data.error || "Gagal mendapatkan balasan panggilan.",
-        };
+        const errorText =
+          typeof data.error === "string"
+            ? data.error
+            : "Gagal mendapatkan balasan panggilan.";
+        const quotaOrCreditError =
+          /quota|kuota|credit|kredit|saldo|limit|resource_exhausted|insufficient|(?:^|\D)(?:402|429)(?:\D|$)/i.test(
+            errorText
+          );
+        if (quotaOrCreditError) {
+          appendQuotaErrorToChat(errorText);
+          return { text: "", error: errorText, endCall: true };
+        }
+        return { text: "", error: errorText };
       }
 
       if (data.fallbackUsed && data.providerLabel) {

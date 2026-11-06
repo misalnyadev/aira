@@ -758,6 +758,11 @@ export function ChatWindow({
                       } ${m.pending ? "opacity-60" : ""}`}
                       style={bubblePaint(bubbleStyle, m.role === "user" ? "out" : "in")}
                     >
+                      {m.isCallError && (
+                        <span className="mb-0.5 block text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">
+                          Info kuota API
+                        </span>
+                      )}
                       {character.threadKind === "owner_contact" &&
                         m.senderKind === "character_ai" && (
                           <span className="mb-0.5 block text-[10.5px] font-semibold opacity-70">

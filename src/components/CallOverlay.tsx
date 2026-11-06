@@ -104,6 +104,7 @@ export type CallTurnReply = {
   text: string;
   emotion?: CallEmotion;
   error?: string;
+  endCall?: boolean;
 };
 
 /**
@@ -543,6 +544,12 @@ export function CallOverlay({
       setThinking(false);
       thinkingRef.current = false;
 
+      if (reply?.endCall) {
+        setCallError(null);
+        onClose();
+        return;
+      }
+
       if (!reply || !reply.text) {
         setCallError(reply?.error || "Balasan belum diterima. Coba bicara lagi.");
         stopCueAudio();
@@ -626,6 +633,7 @@ export function CallOverlay({
       clearThinkingCueTimer,
       finishGreetingClipWait,
       mode,
+      onClose,
       playCueSlot,
       scheduleAutoListen,
       stopCueAudio,
