@@ -13,9 +13,9 @@ import {
   CameraIcon,
   FilmIcon,
   PlusIcon,
+  ChatSquareIcon,
   PencilIcon,
   IgHeartIcon,
-  IgCommentIcon,
   IgShareIcon,
   IgBookmarkIcon,
   IgMoreIcon,
@@ -1179,7 +1179,7 @@ export function StatusView({
                         />
                       </button>
                       <button onClick={() => openComments(it.id)} aria-label="Komentar" className="p-1 active:scale-90">
-                        <IgCommentIcon className="h-[24px] w-[24px] text-ink" />
+                        <ChatSquareIcon className="h-[24px] w-[24px] text-ink" />
                       </button>
                       <button onClick={() => handleShare(it)} aria-label="Bagikan" className="p-1 active:scale-90">
                         <IgShareIcon className="h-[24px] w-[24px] text-ink" />
@@ -1521,7 +1521,7 @@ export function StatusView({
                       </button>
                       <button onClick={() => { setActiveFsId(item.id); setReplyingTo(null); setCommentImage((current) => current?.statusId === item.id ? current : null); setCommentErr(null); setShowFullscreenComments(true); }} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
                         <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
-                          <IgCommentIcon className="h-6 w-6 text-white" />
+                          <ChatSquareIcon className="h-6 w-6 text-white" />
                         </span>
                         <span className="text-[11px] font-semibold leading-none drop-shadow">{item.commentCount > 0 ? item.commentCount : 0}</span>
                       </button>
