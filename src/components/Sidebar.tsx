@@ -5,6 +5,7 @@ import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
+import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import { PlusIcon, SearchIcon, XIcon } from "./icons";
 
 function formatListTime(iso: string) {
@@ -57,43 +58,31 @@ export function Sidebar({
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-r border-line bg-surface md:w-[348px] lg:w-[380px]">
       {/* Header */}
-      <div className="top-bar flex items-center justify-between gap-2 px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
-        <div className="flex min-w-0 items-center">
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-2">
-              <h1 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
-                HeyTalent
-              </h1>
-              <span className="text-[11px] font-medium text-muted">
-                {characters.length} kontak
-              </span>
-            </div>
-            {(profile.nickname || profile.displayName) && (
-              <p className="truncate text-[11px] text-ink-soft md:hidden">
-                hai, {profile.nickname || profile.displayName}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-0.5">
-          <ThemeQuickToggle className="md:hidden" />
-          <button
-            type="button"
-            onClick={onAddContact}
-            className="relative rounded-full bg-brand p-2 text-brand-ink transition hover:bg-brand-strong active:scale-95"
-            title="Tambah & kelola kontak karakter (PIN)"
-            aria-label="Tambah & kelola kontak karakter"
-          >
-            <PlusIcon className="h-4 w-4" />
-            {pendingContactsCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
-                {pendingContactsCount > 9 ? "9+" : pendingContactsCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+      <MenuHeader
+        title="HeyTalent"
+        description={`${characters.length} kontak${
+          profile.nickname || profile.displayName
+            ? ` · hai, ${profile.nickname || profile.displayName}`
+            : ""
+        }`}
+        actions={
+          <>
+            <ThemeQuickToggle className="md:hidden" />
+            <MenuHeaderIconButton
+              onClick={onAddContact}
+              title="Tambah & kelola kontak karakter (PIN)"
+              aria-label="Tambah & kelola kontak karakter"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {pendingContactsCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
+                  {pendingContactsCount > 9 ? "9+" : pendingContactsCount}
+                </span>
+              )}
+            </MenuHeaderIconButton>
+          </>
+        }
+      />
 
       {/* Pencarian */}
       <div className="px-3 pb-2.5 pt-2.5">

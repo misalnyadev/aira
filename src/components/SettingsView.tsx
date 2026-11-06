@@ -21,6 +21,7 @@ import type { VoiceSettings } from "@/lib/voice";
 import { useAuth } from "./AuthGate";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
+import { MenuHeader } from "./MenuHeader";
 import { Switch } from "./Switch";
 import { ThemeSegmented } from "./ThemeToggle";
 import { VoiceView } from "./VoiceView";
@@ -673,12 +674,10 @@ export function SettingsView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <div className="top-bar px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
-        <h1 className="font-display text-xl font-bold tracking-tight text-ink">Setelan</h1>
-        <p className="text-xs text-ink-soft">
-          Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
-        </p>
-      </div>
+      <MenuHeader
+        title="Setelan"
+        description="Atur tampilan, chat, suara, dan akunmu"
+      />
 
       <div
         ref={scrollAreaRef}

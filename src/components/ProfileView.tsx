@@ -18,6 +18,7 @@ import { AdminPanelSection } from "./AdminPanelSection";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { AvatarCropModal } from "./AvatarCropModal";
+import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import {
   CameraIcon,
   ChatsIcon,
@@ -256,35 +257,33 @@ export function ProfileView({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-app">
-      <div className="top-bar space-y-3 px-4 pb-3.5 pt-[max(1rem,var(--safe-top))] sm:px-5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-xl font-bold tracking-tight text-ink">
-              {tab === "admin"
-                ? "Panel Admin"
-                : tab === "account"
-                  ? "Pengelolaan Akun"
-                  : "Profil saya"}
-            </h1>
-            <p className="text-xs text-ink-soft">
-              {tab === "admin"
-                ? "Kelola akun member, peran, dan persetujuan kuota karakter."
-                : tab === "account"
-                  ? "Status keanggotaan, kuota slot karakter, dan sesi akunmu."
-                  : "Karakter membaca ini supaya tahu mereka sedang ngobrol sama siapa."}
-            </p>
-          </div>
-          <button
-            type="button"
+      <MenuHeader
+        title={
+          tab === "admin"
+            ? "Panel Admin"
+            : tab === "account"
+              ? "Pengelolaan Akun"
+              : "Profil saya"
+        }
+        description={
+          tab === "admin"
+            ? "Kelola akun member, peran, dan persetujuan kuota karakter."
+            : tab === "account"
+              ? "Status keanggotaan, kuota slot karakter, dan sesi akunmu."
+              : "Karakter membaca ini supaya tahu mereka sedang ngobrol sama siapa."
+        }
+        actions={
+          <MenuHeaderIconButton
             onClick={onOpenSettings}
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line transition hover:bg-surface active:scale-95"
             title="Buka Setelan"
             aria-label="Buka Setelan"
           >
-            <SettingsIcon className="h-4.5 w-4.5" />
-          </button>
-        </div>
+            <SettingsIcon className="h-5 w-5" />
+          </MenuHeaderIconButton>
+        }
+      />
 
+      <div className="shrink-0 px-4 pb-3 pt-2 sm:px-5">
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
         <div
           className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-surface-2 p-1 ${
