@@ -197,6 +197,93 @@ function remainingHours(exp: string | null) {
   return `${h}j lagi`;
 }
 
+function ExpandableCaption({
+  author,
+  text,
+  className = "",
+}: {
+  author?: string;
+  text: string;
+  className?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const captionRef = useRef<HTMLSpanElement>(null);
+  const caption = text.trim();
+
+  useEffect(() => {
+    if (expanded) return;
+    const element = captionRef.current;
+    if (!element) return;
+
+    const measureOverflow = () => {
+      setHasOverflow(element.scrollWidth > element.clientWidth + 1);
+    };
+    const frame = window.requestAnimationFrame(measureOverflow);
+    const observer = new ResizeObserver(measureOverflow);
+    observer.observe(element);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [author, expanded, caption]);
+
+  if (!caption) return null;
+
+  return (
+    <div className={className}>
+      {expanded ? (
+        <div className="pointer-events-auto max-h-[40dvh] overflow-y-auto whitespace-pre-wrap break-words">
+          {author ? <span className="font-semibold">{author} </span> : null}
+          <span>{caption}</span>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-expanded="true"
+            className="ml-1 whitespace-nowrap text-[11px] font-semibold text-white/65 hover:text-white"
+          >
+            Lebih sedikit
+          </button>
+        </div>
+      ) : author ? (
+        <div className="flex min-w-0 items-baseline gap-1">
+          <span className="max-w-[40%] shrink-0 truncate font-semibold">{author}</span>
+          <span ref={captionRef} className="min-w-0 flex-1 truncate">
+            {caption}
+          </span>
+          {hasOverflow ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-expanded="false"
+              className="pointer-events-auto shrink-0 whitespace-nowrap text-[11px] font-semibold text-white/70 hover:text-white"
+            >
+              Selengkapnya
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="min-w-0 text-center">
+          <span ref={captionRef} className="block truncate">
+            {caption}
+          </span>
+          {hasOverflow ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-expanded="false"
+              className="pointer-events-auto mt-1 whitespace-nowrap text-[11px] font-semibold text-white/70 hover:text-white"
+            >
+              Selengkapnya
+            </button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StatusView({
   profile,
   characters,
@@ -1430,11 +1517,13 @@ export function StatusView({
               ›
             </button>
 
-            {currentStory.caption && currentStory.caption !== currentStory.content && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 truncate px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
-                {currentStory.caption}
-              </div>
-            )}
+            {currentStory.caption && currentStory.caption !== currentStory.content ? (
+              <ExpandableCaption
+                key={currentStory.id}
+                text={currentStory.caption}
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow"
+              />
+            ) : null}
           </div>
         );
       })()}
@@ -1443,6 +1532,9 @@ export function StatusView({
       {fullScreenId && (() => {
         if (!fsItems.length) return null;
         const activeIt = fsItems.find((x) => x.id === (activeFsId || fullScreenId)) || fsItems.find((x) => x.id === fullScreenId) || fsItems[0];
+        const activeAuthor = activeIt.characterName || activeIt.userDisplayName || activeIt.userNickname || "Anonim";
+        const activeAvatar = activeIt.characterAvatar || activeIt.userAvatar || undefined;
+        const activeCaption = (activeIt.caption || activeIt.content || "").trim();
         return (
           <div className="fixed inset-0 z-[60] bg-black overflow-hidden">
             {/* header global — cuma back + opsi */}
@@ -1576,11 +1668,11 @@ export function StatusView({
                         ) : null}
                       </div>
                       {(cap?.trim() || (item.content || "").trim()) ? (
-                        <div className="mt-1.5 truncate text-[13px] leading-snug drop-shadow pr-2">
-                          <span className="font-semibold">{dName} </span>
-                          <span className="text-white/90">{(cap || item.content || "").trim()}</span>
-                          {item.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{item.likeCount} suka</span> : null}
-                        </div>
+                        <ExpandableCaption
+                          author={dName}
+                          text={cap || item.content || ""}
+                          className="mt-1.5 pr-2 text-[13px] leading-snug drop-shadow"
+                        />
                       ) : (
                         <div className="mt-1 text-[12px] text-white/60 drop-shadow">—</div>
                       )}
@@ -1610,6 +1702,20 @@ export function StatusView({
                     <span className="h-1 w-10 rounded-full bg-white/25" />
                   </div>
                   <div className="flex-1 overflow-y-auto px-3">
+                    {activeCaption ? (
+                      <div className="mb-2 flex gap-2.5 border-b border-white/10 pb-3 pt-2">
+                        <Avatar name={activeAuthor} src={activeAvatar} size={30} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-[13px] font-semibold text-white">{activeAuthor}</span>
+                            <span className="text-[11px] text-white/40">• {timeAgo(activeIt.createdAt)}</span>
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-snug text-white/90">
+                            {activeCaption}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="max-h-[42dvh] space-y-3.5 overflow-y-auto py-2">
                       {(comments[activeIt.id] || []).length === 0 ? (
                         <div className="py-8 text-center text-sm text-white/50">Belum ada komentar — jadi yang pertama ✨</div>
