@@ -16,11 +16,14 @@ import { readClipboardText } from "@/lib/clipboard";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import type { ChatBackground } from "@/lib/chatBackground";
+import type { TtsAccountSummary } from "@/lib/hdVoice";
+import type { VoiceSettings } from "@/lib/voice";
 import { useAuth } from "./AuthGate";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { Switch } from "./Switch";
 import { ThemeSegmented } from "./ThemeToggle";
+import { VoiceView } from "./VoiceView";
 import {
   BoltIcon,
   CheckIcon,
@@ -98,6 +101,12 @@ function SettingsAccordionCard({
 
 export function SettingsView({
   providers,
+  voiceSettings,
+  onVoiceChange,
+  ttsSummary,
+  onSaveTts,
+  onVoiceNotice,
+  openVoiceInitially = false,
   autoFallback,
   onAutoFallbackChange,
   chatBackground,
@@ -109,6 +118,12 @@ export function SettingsView({
   onOpenAccountManagement,
 }: {
   providers: ProviderSummary[];
+  voiceSettings: VoiceSettings;
+  onVoiceChange: (next: VoiceSettings) => void;
+  ttsSummary: TtsAccountSummary;
+  onSaveTts: (patch: Record<string, unknown>) => Promise<TtsAccountSummary | null>;
+  onVoiceNotice?: (message: string) => void;
+  openVoiceInitially?: boolean;
   autoFallback: boolean;
   onAutoFallbackChange: (next: boolean) => void;
   chatBackground: ChatBackground;
@@ -125,11 +140,13 @@ export function SettingsView({
     providers: boolean;
     appearance: boolean;
     bubbles: boolean;
+    voice: boolean;
     account: boolean;
   }>(() => ({
     providers: providers.length === 0,
     appearance: false,
     bubbles: false,
+    voice: openVoiceInitially,
     account: false,
   }));
   const [editing, setEditing] = useState<ProviderSummary | null>(null);
@@ -736,7 +753,25 @@ export function SettingsView({
             </div>
           </SettingsAccordionCard>
 
-          {/* 3. Provider AI & API Key */}
+          {/* Suara */}
+          <SettingsAccordionCard
+            title="Suara"
+            subtitle="Bacakan balasan, Suara HD, bank rekaman, dan suara lokal"
+            open={openSections.voice}
+            onToggle={() => toggleSection("voice")}
+          >
+            <VoiceView
+              embedded
+              userId={user.id}
+              settings={voiceSettings}
+              onChange={onVoiceChange}
+              ttsSummary={ttsSummary}
+              onSaveTts={onSaveTts}
+              onNotice={onVoiceNotice}
+            />
+          </SettingsAccordionCard>
+
+          {/* 4. Provider AI & API Key */}
           <SettingsAccordionCard
             title="Provider AI & API Key"
             subtitle={providerSubtitle}

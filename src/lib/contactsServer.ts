@@ -329,6 +329,7 @@ export async function loadActiveContactThreadsForUser(
         sourceCharacterId: r.characterId,
         threadKind: "owner_contact" as const,
         partnerName: guestLabel,
+        contactCharacterName: r.charName,
         aiAutoReply: Boolean(r.aiAutoReply),
         name: `${guestLabel} · ${r.charName}`,
         avatarUrl:
