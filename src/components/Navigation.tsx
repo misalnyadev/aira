@@ -5,7 +5,7 @@ import { Avatar } from "./Avatar";
 import { ThemeQuickToggle } from "./ThemeToggle";
 import { ChatsIcon, MeetupIcon, PhoneCallIcon, StatusIcon, UserIcon } from "./icons";
 
-export type AppView = "chats" | "voice" | "profile" | "settings" | "brainstorm" | "status";
+export type AppView = "chats" | "calls" | "profile" | "settings" | "brainstorm" | "status";
 
 type Item = {
   id: AppView;
@@ -15,7 +15,7 @@ type Item = {
 
 const ITEMS: Item[] = [
   { id: "status", label: "Story", Icon: StatusIcon },
-  { id: "voice", label: "Suara", Icon: PhoneCallIcon },
+  { id: "calls", label: "Panggilan", Icon: PhoneCallIcon },
   { id: "brainstorm", label: "MeetUp", Icon: MeetupIcon },
   { id: "chats", label: "Chat", Icon: ChatsIcon },
   { id: "profile", label: "Profil", Icon: UserIcon },

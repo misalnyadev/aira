@@ -56,6 +56,8 @@ export type CharacterSummary = {
   sourceCharacterId?: string;
   /** Nama lawan bicara (pemilik karakter / tamu pengundang). */
   partnerName?: string;
+  /** Nama karakter yang terhubung pada utas kontak 2 arah. */
+  contactCharacterName?: string;
   /** Apakah balasan AI otomatis sedang aktif pada utas kontak ini. */
   aiAutoReply?: boolean;
   preview: string;

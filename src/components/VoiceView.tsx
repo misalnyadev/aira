@@ -2386,6 +2386,7 @@ export function VoiceView({
   ttsSummary,
   onSaveTts,
   onNotice,
+  embedded = false,
 }: {
   userId: string;
   settings: VoiceSettings;
@@ -2393,12 +2394,13 @@ export function VoiceView({
   ttsSummary: TtsAccountSummary;
   onSaveTts: (patch: Record<string, unknown>) => Promise<TtsAccountSummary | null>;
   onNotice?: (msg: string) => void;
+  embedded?: boolean;
 }) {
   const supported = useSpeechSupported();
   const voices = useVoices();
   const isSpeaking = useIsSpeaking();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  useKeepFieldVisible(scrollAreaRef, true);
+  useKeepFieldVisible(scrollAreaRef, !embedded);
 
   // Hentikan contoh suara saat berpindah ke tab lain.
   useEffect(() => () => stopSpeaking(), []);
@@ -2468,34 +2470,48 @@ export function VoiceView({
   const playbackSubtitle = `${activePreset ? `${activePreset.label} · ` : ""}Volume ${Math.round(settings.volume * 100)}% · Jeda ${Math.round(settings.pause)} ms`;
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-app">
-      <div className="top-bar flex items-center justify-between gap-2 px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
-        <div>
-          <h1 className="font-display text-xl font-bold tracking-tight text-ink">Suara</h1>
-          <p className="text-xs text-ink-soft">
-            Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
-          </p>
+    <div className={embedded ? "w-full" : "flex h-full min-h-0 w-full flex-col bg-app"}>
+      {(!embedded || canTestDefault) && (
+        <div
+          className={
+            embedded
+              ? "mb-3 flex justify-end"
+              : "top-bar flex items-center justify-between gap-2 px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]"
+          }
+        >
+          {!embedded && (
+            <div>
+              <h1 className="font-display text-xl font-bold tracking-tight text-ink">Suara</h1>
+              <p className="text-xs text-ink-soft">
+                Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
+              </p>
+            </div>
+          )}
+          {canTestDefault && (
+            <button
+              type="button"
+              onClick={isSpeaking ? stopSpeaking : handleTestDefault}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                isSpeaking
+                  ? "border border-line bg-surface-2 text-ink hover:bg-line/60"
+                  : "bg-brand text-brand-ink hover:bg-brand-strong"
+              }`}
+            >
+              {isSpeaking ? "Hentikan" : "Coba suara"}
+            </button>
+          )}
         </div>
-        {canTestDefault && (
-          <button
-            type="button"
-            onClick={isSpeaking ? stopSpeaking : handleTestDefault}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-              isSpeaking
-                ? "border border-line bg-surface-2 text-ink hover:bg-line/60"
-                : "bg-brand text-brand-ink hover:bg-brand-strong"
-            }`}
-          >
-            {isSpeaking ? "Hentikan" : "Coba suara"}
-          </button>
-        )}
-      </div>
+      )}
 
       <div
         ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(var(--tabbar-space)+2rem)] sm:px-6"
+        className={
+          embedded
+            ? "w-full"
+            : "flex-1 overflow-y-auto px-4 py-4 pb-[calc(var(--tabbar-space)+2rem)] sm:px-6"
+        }
       >
-        <div className="mx-auto w-full max-w-2xl space-y-3">
+        <div className={embedded ? "space-y-3" : "mx-auto w-full max-w-2xl space-y-3"}>
           {/* Kartu Kontrol Cepat Utama */}
           <section className="space-y-3.5 rounded-2xl border border-line bg-surface p-4 shadow-2xs">
             <div className="flex items-center gap-3">

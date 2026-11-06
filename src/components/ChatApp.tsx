@@ -56,6 +56,7 @@ import { Avatar } from "./Avatar";
 import { BrainstormRoomView } from "./BrainstormRoomView";
 import { BrainstormView } from "./BrainstormView";
 import { CallOverlay } from "./CallOverlay";
+import { CallsView } from "./CallsView";
 import { type MemoryPatch } from "./CharacterMemorySection";
 import { CharacterModal } from "./CharacterModal";
 import { CharacterProfileModal } from "./CharacterProfileModal";
@@ -67,7 +68,6 @@ import { SettingsView } from "./SettingsView";
 import { SharedNotesDrawer } from "./SharedNotesDrawer";
 import { Sidebar } from "./Sidebar";
 import { StatusView } from "./StatusView";
-import { VoiceView } from "./VoiceView";
 import { PlusIcon, SettingsIcon, XIcon } from "./icons";
 
 function sleep(ms: number) {
@@ -121,6 +121,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const [pendingAdminContactsCount, setPendingAdminContactsCount] =
     useState<number>(0);
   const [profileTab, setProfileTab] = useState<ProfileTab>("identity");
+  const [focusVoiceSettings, setFocusVoiceSettings] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
@@ -620,8 +621,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   function handleViewChange(next: AppView) {
     if (next !== "chats") stopSpeaking();
+    if (next !== "settings") setFocusVoiceSettings(false);
     setView(next);
     if (next === "chats") setMobileShowChat(false);
+    if (next === "calls") void fetchCharacters();
   }
 
   function handleSelect(id: string) {
@@ -1374,7 +1377,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                       setMobileShowChat(false);
                     }}
                     onOpenProfile={() => openProfile(activeCharacter.id)}
-                    onOpenVoice={() => handleViewChange("voice")}
+                    onOpenVoice={() => {
+                      setFocusVoiceSettings(true);
+                      handleViewChange("settings");
+                    }}
                     onOpenNotes={() => handleOpenNotes(activeCharacter.id)}
                     activeNotesCount={
                       (notesMap[activeCharacter.id] ?? []).filter(
@@ -1483,14 +1489,13 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             </>
           )}
 
-          {view === "voice" && (
-            <VoiceView
-              userId={user.id}
-              settings={voice}
-              onChange={setVoice}
-              ttsSummary={ttsSummary}
-              onSaveTts={handleSaveTts}
-              onNotice={showToast}
+          {view === "calls" && (
+            <CallsView
+              threads={contactThreads}
+              activeId={activeId}
+              onSelect={handleSelect}
+              onManageContacts={() => setShowAddContact(true)}
+              onRefresh={() => void fetchCharacters()}
             />
           )}
 
@@ -1522,6 +1527,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           {view === "settings" && (
             <SettingsView
               providers={providers}
+              voiceSettings={voice}
+              onVoiceChange={setVoice}
+              ttsSummary={ttsSummary}
+              onSaveTts={handleSaveTts}
+              onVoiceNotice={showToast}
+              openVoiceInitially={focusVoiceSettings}
               autoFallback={autoFallback}
               onAutoFallbackChange={setAutoFallback}
               chatBackground={chatBackground}
