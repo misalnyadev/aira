@@ -1203,7 +1203,7 @@ export function StatusView({
                   )}
 
                   {(it.caption || it.content) && it.mediaType !== "text" ? (
-                    <div className="px-3 pb-1 text-[14px] leading-[18px]">
+                    <div className="truncate px-3 pb-1 text-[14px] leading-[18px]">
                       <span className="font-semibold">{displayName} </span>
                       <span className="text-ink">{it.caption || it.content}</span>
                     </div>
@@ -1431,7 +1431,7 @@ export function StatusView({
             </button>
 
             {currentStory.caption && currentStory.caption !== currentStory.content && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 truncate px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
                 {currentStory.caption}
               </div>
             )}
@@ -1576,9 +1576,9 @@ export function StatusView({
                         ) : null}
                       </div>
                       {(cap?.trim() || (item.content || "").trim()) ? (
-                        <div className="mt-1.5 text-[13px] leading-snug drop-shadow pr-2">
+                        <div className="mt-1.5 truncate text-[13px] leading-snug drop-shadow pr-2">
                           <span className="font-semibold">{dName} </span>
-                          <span className="text-white/90 break-words">{(cap || item.content || "").trim()}</span>
+                          <span className="text-white/90">{(cap || item.content || "").trim()}</span>
                           {item.likeCount > 0 ? <span className="ml-2 text-white/60 text-xs">{item.likeCount} suka</span> : null}
                         </div>
                       ) : (
