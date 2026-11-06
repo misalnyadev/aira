@@ -12,8 +12,8 @@ const display = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Aisherly — AI Chat",
-  description: "Ngobrol natural dengan karakter AI kustom",
+  title: "HeyTalent | AI Chat with Personality",
+  description: "Ngobrol natural dengan persona AI yang penuh karakter",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
