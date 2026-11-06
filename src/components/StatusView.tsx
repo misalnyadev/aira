@@ -235,21 +235,21 @@ function ExpandableCaption({
     <div className={className}>
       {expanded ? (
         <div className="whitespace-pre-wrap break-words">
-          <span className="font-semibold">{author} </span>
-          <span>{caption}</span>
+          <span className="font-medium">{author} </span>
+          <span className="font-normal">{caption}</span>
           <button
             type="button"
             onClick={() => setExpanded(false)}
             aria-expanded="true"
-            className="ml-1 whitespace-nowrap font-semibold text-ink-soft hover:text-ink"
+            className="ml-1 whitespace-nowrap font-medium text-ink-soft hover:text-ink"
           >
             Lebih sedikit
           </button>
         </div>
       ) : (
         <div className="flex min-w-0 items-baseline gap-1">
-          <span className="max-w-[40%] shrink-0 truncate font-semibold">{author}</span>
-          <span ref={captionRef} className="min-w-0 flex-1 truncate">
+          <span className="max-w-[40%] shrink-0 truncate font-medium">{author}</span>
+          <span ref={captionRef} className="min-w-0 flex-1 truncate font-normal">
             {caption}
           </span>
           {hasOverflow ? (
@@ -257,7 +257,7 @@ function ExpandableCaption({
               type="button"
               onClick={() => setExpanded(true)}
               aria-expanded="false"
-              className="shrink-0 whitespace-nowrap font-semibold text-ink-soft hover:text-ink"
+              className="shrink-0 whitespace-nowrap font-medium text-ink-soft hover:text-ink"
             >
               Selengkapnya
             </button>
@@ -1665,8 +1665,8 @@ export function StatusView({
                           aria-label={`Buka komentar untuk postingan ${dName}`}
                           className="mt-1.5 block w-full truncate pr-2 text-left text-sm leading-snug drop-shadow"
                         >
-                          <span className="font-semibold">{dName} </span>
-                          <span className="text-white/90">{(cap || item.content || "").trim()}</span>
+                          <span className="font-medium">{dName} </span>
+                          <span className="font-normal text-white/90">{(cap || item.content || "").trim()}</span>
                         </button>
                       ) : (
                         <div className="mt-1 text-sm text-white/60 drop-shadow">—</div>
@@ -1702,10 +1702,10 @@ export function StatusView({
                         <Avatar name={activeAuthor} src={activeAvatar} size={30} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm font-semibold text-white">{activeAuthor}</span>
+                            <span className="text-sm font-medium text-white">{activeAuthor}</span>
                             <span className="text-[11px] text-white/40">• {timeAgo(activeIt.createdAt)}</span>
                           </div>
-                          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-white/90">
+                          <p className="mt-1 whitespace-pre-wrap break-words text-sm font-normal leading-relaxed text-white/90">
                             {activeCaption}
                           </p>
                         </div>
