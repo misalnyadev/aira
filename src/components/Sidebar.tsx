@@ -56,7 +56,7 @@ export function Sidebar({
   }, [characters, query]);
 
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col border-r border-line bg-surface md:w-[348px] lg:w-[380px]">
+    <aside className="flex h-full min-h-0 w-full flex-col border-r border-line bg-app md:w-[348px] lg:w-[380px]">
       {/* Header */}
       <MenuHeader
         title="HeyTalent"
@@ -121,7 +121,7 @@ export function Sidebar({
       )}
 
       {/* Daftar chat */}
-      <div className="flex-1 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
+      <div className="flex-1 divide-y divide-line/70 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-muted">
             {characters.length === 0
@@ -135,7 +135,7 @@ export function Sidebar({
               <button
                 key={c.id}
                 onClick={() => onSelect(c.id)}
-                className={`group mb-0.5 flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
+                className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
                   active ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2"
                 }`}
               >
