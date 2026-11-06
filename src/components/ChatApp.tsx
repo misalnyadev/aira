@@ -122,6 +122,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     useState<number>(0);
   const [profileTab, setProfileTab] = useState<ProfileTab>("identity");
   const [focusVoiceSettings, setFocusVoiceSettings] = useState(false);
+  const [chatOriginView, setChatOriginView] = useState<"chats" | "calls">("chats");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>({});
   const [typingFor, setTypingFor] = useState<string | null>(null);
@@ -163,6 +164,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
   }, [characters, contactThreads]);
+  const chatThreads = useMemo(
+    () => allThreads.filter((thread) => thread.threadKind !== "owner_contact"),
+    [allThreads]
+  );
 
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
@@ -622,6 +627,15 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   function handleViewChange(next: AppView) {
     if (next !== "chats") stopSpeaking();
     if (next !== "settings") setFocusVoiceSettings(false);
+    if (
+      next === "chats" &&
+      contactThreads.some(
+        (thread) => thread.id === activeId && thread.threadKind === "owner_contact"
+      )
+    ) {
+      setActiveId(null);
+    }
+    setChatOriginView("chats");
     setView(next);
     if (next === "chats") setMobileShowChat(false);
     if (next === "calls") void fetchCharacters();
@@ -629,10 +643,25 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   function handleSelect(id: string) {
     if (id !== activeId) stopSpeaking();
+    const selectedThread = allThreads.find((thread) => thread.id === id);
+    setChatOriginView(
+      selectedThread?.threadKind === "owner_contact" ? "calls" : "chats"
+    );
     setView("chats");
     setActiveId(id);
     setMobileShowChat(true);
     if (!messagesMap[id]) fetchMessages(id);
+  }
+
+  function handleChatBack() {
+    const returnToCalls = chatOriginView === "calls";
+    setChatOriginView("chats");
+    stopSpeaking();
+    setMobileShowChat(false);
+    if (returnToCalls) {
+      setView("calls");
+      void fetchCharacters();
+    }
   }
 
   async function deliverAssistantBubbles(target: string, bubbles: ChatMessage[]) {
@@ -1185,6 +1214,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   );
   const activeMessages = activeId ? messagesMap[activeId] ?? [] : [];
   const hasProviders = providers.some((p) => p.hasKey || p.type === "custom");
+  const chatOpenedFromCalls = view === "chats" && chatOriginView === "calls";
+  const navigationView: AppView = chatOpenedFromCalls ? "calls" : view;
   const showMobileTabBar = !(view === "chats" && mobileShowChat) && !(view === "brainstorm" && Boolean(activeBrainstormId));
 
   useEffect(() => {
@@ -1336,7 +1367,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   return (
     <div className="app-shell flex bg-app text-ink">
       <NavRail
-        view={view}
+        view={navigationView}
         onChange={handleViewChange}
         profile={profile}
         profileBadgeCount={isAdmin ? adminTotalPending : 0}
@@ -1346,20 +1377,22 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         <div className="flex min-h-0 flex-1">
           {view === "chats" && (
             <>
-              <div className={`${mobileShowChat ? "hidden" : "flex"} min-h-0 w-full md:w-auto md:flex`}>
-                <Sidebar
-                  characters={allThreads}
-                  activeId={activeId}
-                  profile={profile}
-                  onSelect={handleSelect}
-                  onAddContact={() => setShowAddContact(true)}
-                  onOpenSettings={() => handleViewChange("settings")}
-                  hasProviders={hasProviders}
-                  pendingContactsCount={pendingOwnerContactsCount}
-                />
-              </div>
+              {!chatOpenedFromCalls && (
+                <div className={`${mobileShowChat ? "hidden" : "flex"} min-h-0 w-full md:w-auto md:flex`}>
+                  <Sidebar
+                    characters={chatThreads}
+                    activeId={activeId}
+                    profile={profile}
+                    onSelect={handleSelect}
+                    onAddContact={() => setShowAddContact(true)}
+                    onOpenSettings={() => handleViewChange("settings")}
+                    hasProviders={hasProviders}
+                    pendingContactsCount={pendingOwnerContactsCount}
+                  />
+                </div>
+              )}
 
-              <div className={`${mobileShowChat ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col md:flex`}>
+              <div className={`${chatOpenedFromCalls || mobileShowChat ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col md:flex`}>
                 {activeCharacter ? (
                   <ChatWindow
                     character={activeCharacter}
@@ -1372,10 +1405,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                     bubble={activeBubble}
                     composerVisible={composerVisible}
                     onScreenTap={isHiddenMode ? handleHiddenScreenTap : undefined}
-                    onBack={() => {
-                      stopSpeaking();
-                      setMobileShowChat(false);
-                    }}
+                    onBack={handleChatBack}
+                    backLabel={
+                      chatOpenedFromCalls ? "Kembali ke Panggilan" : "Kembali ke daftar chat"
+                    }
                     onOpenProfile={() => openProfile(activeCharacter.id)}
                     onOpenVoice={() => {
                       setFocusVoiceSettings(true);
@@ -1605,7 +1638,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
         {showMobileTabBar && (
           <MobileTabBar
-            view={view}
+            view={navigationView}
             onChange={handleViewChange}
             profile={profile}
             profileBadgeCount={isAdmin ? adminTotalPending : 0}
