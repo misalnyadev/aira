@@ -12,7 +12,7 @@ const display = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "HeyTalent | AI Chat",
+  title: "heyTalent",
   description: "Ngobrol dengan persona AI yang punya kepribadian unik.",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "HeyTalent",
+    title: "heyTalent",
   },
   formatDetection: {
     telephone: false,
