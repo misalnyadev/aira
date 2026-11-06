@@ -26,9 +26,6 @@ function formatPreview(thread: CharacterSummary) {
   const preview = thread.preview.trim();
   const partnerName = thread.partnerName?.trim();
 
-  if (partnerName && preview.startsWith(`${partnerName}:`)) {
-    return preview.slice(partnerName.length + 1).trim() || "Pesan";
-  }
   if (partnerName && preview === `Kontak baru dengan ${partnerName}`) {
     return "Mulai obrolan 2 arah";
   }
@@ -163,15 +160,12 @@ export function CallsView({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-semibold text-ink">
-                          {thread.partnerName || thread.name}
+                          {thread.name}
                         </p>
                         <time className="shrink-0 text-[11px] text-muted">
                           {formatListTime(thread.updatedAt)}
                         </time>
                       </div>
-                      <p className="mt-0.5 truncate text-[11px] font-medium text-ink-soft">
-                        Karakter · {thread.contactCharacterName || "Karakter milikmu"}
-                      </p>
                       <p className="mt-0.5 truncate text-xs text-muted">{formatPreview(thread)}</p>
                     </div>
                   </button>
