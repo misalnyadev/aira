@@ -62,7 +62,7 @@ export function Sidebar({
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
               <h1 className="truncate font-display text-lg font-extrabold tracking-tight text-ink">
-                HeyTalent<span className="text-muted">.</span>
+                heyTalent
               </h1>
               <span className="text-[11px] font-medium text-muted">
                 {characters.length} kontak
