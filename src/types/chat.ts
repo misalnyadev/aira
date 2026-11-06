@@ -96,6 +96,8 @@ export type ChatMessage = {
   createdAt: string;
   pending?: boolean;
   emotion?: CallEmotion;
+  /** Pesan diagnostik panggilan yang hanya muncul di UI chat dan tidak disimpan ke server. */
+  isCallError?: boolean;
   /** Asal pengirim pada ruang obrolan kontak 2 arah. */
   senderKind?: "guest" | "character_ai" | "owner_manual";
 };
