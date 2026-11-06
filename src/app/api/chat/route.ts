@@ -24,6 +24,7 @@ import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
 import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
+import { buildTeamMemoryContext } from "@/lib/teamMemory";
 import { readImageAsBase64 } from "@/lib/uploads";
 import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 
@@ -133,24 +134,26 @@ export async function POST(req: Request) {
       primaryProviderType: candidates[0]?.type,
       now: turnNow,
     });
+    const teamContext = await buildTeamMemoryContext({
+      ownerUserId: user.id,
+      currentCharacterId: character.id,
+    }).catch(() => "");
     const priorRows = chronologicalHistory.filter((m) => m.id !== userMessage.id);
     const lastPrior = priorRows[priorRows.length - 1] ?? null;
 
-    const memoryExtras =
-      replyAsVoiceNote || notesCtx.sharedNotesBlock
+    const memoryExtras = {
+      ...baseExtras,
+      ...(teamContext ? { teamContext } : {}),
+      ...(notesCtx.sharedNotesBlock
         ? {
-            ...baseExtras,
-            ...(notesCtx.sharedNotesBlock
-              ? {
-                  sharedNotesBlock: notesCtx.sharedNotesBlock,
-                  timeAwareness:
-                    baseExtras?.timeAwareness ||
-                    describeTimeAwareness(turnNow, lastPrior?.createdAt ?? null),
-                }
-              : {}),
-            ...(replyAsVoiceNote ? { voiceNoteReply: true } : {}),
+            sharedNotesBlock: notesCtx.sharedNotesBlock,
+            timeAwareness:
+              baseExtras?.timeAwareness ||
+              describeTimeAwareness(turnNow, lastPrior?.createdAt ?? null),
           }
-        : baseExtras;
+        : {}),
+      ...(replyAsVoiceNote ? { voiceNoteReply: true } : {}),
+    };
 
     const historyTurns = character.memoryEnabled
       ? toTimeAwareChatTurns(chronologicalHistory, userMessage.id)

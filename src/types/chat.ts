@@ -42,6 +42,10 @@ export type CharacterSummary = {
   voiceConfig: CharacterVoiceConfig | null;
   /** Apakah ingatan jangka panjang & kesadaran waktu aktif pada karakter ini. */
   memoryEnabled: boolean;
+  /** Peran karakter dalam Tim 1 pemiliknya. */
+  teamRole: string;
+  /** Apakah konteks Tim 1 boleh dibawa saat karakter diundang pengguna lain. */
+  shareTeamMemory: boolean;
   /** Apakah akses browsing internet & pembaca link aktif pada karakter ini. */
   browsingEnabled: boolean;
   /** Apakah sapaan duluan otomatis (Proactive Check-In) aktif pada karakter ini. */
@@ -80,6 +84,9 @@ export type CharacterDetail = {
   media: CharacterMedia | null;
   voiceConfig: CharacterVoiceConfig | null;
   memoryEnabled: boolean;
+  teamRole: string;
+  sharedTeamMemory: string;
+  shareTeamMemory: boolean;
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
@@ -156,6 +163,8 @@ export type OutgoingContactItem = {
   updatedAt: string;
 };
 
+export type BrainstormRoomMode = "brainstorm" | "meetup";
+
 export type BrainstormMemberSummary = {
   characterId: string;
   name: string;
@@ -166,6 +175,7 @@ export type BrainstormMemberSummary = {
 export type BrainstormRoomSummary = {
   id: string;
   title: string;
+  mode: BrainstormRoomMode;
   members: BrainstormMemberSummary[];
   preview: string;
   updatedAt: string;

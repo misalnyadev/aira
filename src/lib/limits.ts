@@ -32,6 +32,21 @@ export const MAX_GREETING_CHARS = 1_000;
 /** Batas status singkat di bawah nama karakter. */
 export const MAX_SHORT_BIO_CHARS = 120;
 
+/** Batas label peran karakter di Tim 1. */
+export const MAX_TEAM_ROLE_CHARS = 120;
+
+/** Batas catatan hubungan tim yang bisa dibagikan bersama karakter. */
+export const MAX_SHARED_TEAM_MEMORY_CHARS = 2_000;
+
+/** Batas roster tim yang disertakan di prompt agar konteks tidak membengkak. */
+export const MAX_SHARED_TEAM_MEMBERS = 12;
+
+/** Batas total catatan relasi Tim 1 dalam satu prompt. */
+export const MAX_SHARED_TEAM_PROMPT_CHARS = 6_000;
+
+/** Batas peserta AI per ruang Tatap Muka (1:1 hingga grup kecil). */
+export const MAX_MEETUP_MEMBERS = 5;
+
 /** Batas isian profil pengguna. */
 export const MAX_DISPLAY_NAME_CHARS = 60;
 export const MAX_NICKNAME_CHARS = 30;

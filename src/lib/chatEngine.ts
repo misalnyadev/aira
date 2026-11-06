@@ -330,24 +330,35 @@ export async function generateBubbles({
   callMode?: "video" | "audio";
 }): Promise<GenerateBubblesResult> {
   const sceneAnchor = buildSceneContinuityAnchor(history, userText);
+  const interactionMode = callMode
+    ? callMode === "video"
+      ? "video_call"
+      : "audio_call"
+    : memoryExtras?.interactionMode ?? "chat";
+  const isSharedRoom = interactionMode === "meetup" || interactionMode === "brainstorm";
   const chatExpressionMode =
-    !callMode && isUsingCallClipsInChat(parseCharacterMedia(character.media));
-  const dailyPresence = getDailyPresenceForPrompt(
-    {
-      id: character.id,
-      name: character.name,
-      shortBio: character.shortBio ?? "",
-      personality: character.personality ?? "",
-      bible: character.bible ?? "",
-    },
-    new Date()
-  );
+    !callMode &&
+    !isSharedRoom &&
+    isUsingCallClipsInChat(parseCharacterMedia(character.media));
+  const dailyPresence = isSharedRoom
+    ? ""
+    : getDailyPresenceForPrompt(
+        {
+          id: character.id,
+          name: character.name,
+          shortBio: character.shortBio ?? "",
+          personality: character.personality ?? "",
+          bible: character.bible ?? "",
+        },
+        new Date()
+      );
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor || callMode || chatExpressionMode || dailyPresence
+    memoryExtras || sceneAnchor || callMode || interactionMode || chatExpressionMode || dailyPresence
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
           ...(callMode ? { callMode } : {}),
+          interactionMode,
           ...(chatExpressionMode ? { chatExpressionMode: true } : {}),
           dailyPresence,
         }

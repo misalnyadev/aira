@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { brainstormMessages, brainstormRoomMembers, brainstormRooms, characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export async function GET() {
     .select({
       id: brainstormRooms.id,
       title: brainstormRooms.title,
+      mode: brainstormRooms.mode,
       updatedAt: brainstormRooms.updatedAt,
       createdAt: brainstormRooms.createdAt,
     })
@@ -52,6 +54,7 @@ export async function GET() {
       return {
         id: r.id,
         title: r.title,
+        mode: r.mode === "meetup" ? "meetup" : "brainstorm",
         members: members.map((m) => ({
           characterId: m.characterId,
           name: m.name,
@@ -76,15 +79,25 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { title, characterIds } = body as { title?: string; characterIds?: string[] };
-  const cleanTitle = title?.trim() || "Meja Diskusi Baru";
+  const { title, characterIds, mode } = body as {
+    title?: string;
+    characterIds?: string[];
+    mode?: string;
+  };
+  const roomMode = mode === "meetup" ? "meetup" : "brainstorm";
+  const minMembers = roomMode === "meetup" ? 1 : 2;
+  const maxMembers = roomMode === "meetup" ? MAX_MEETUP_MEMBERS : 3;
+  const selectionHint = roomMode === "meetup"
+    ? `Pilih 1–${MAX_MEETUP_MEMBERS} karakter untuk Tatap Muka.`
+    : "Pilih 2–3 karakter untuk Brainstorm.";
+  const cleanTitle = title?.trim() || (roomMode === "meetup" ? "MeetUp Baru" : "Meja Diskusi Baru");
 
-  if (!Array.isArray(characterIds) || characterIds.length < 2 || characterIds.length > 3) {
-    return NextResponse.json({ error: "Pilih 2–3 karakter untuk meja diskusi." }, { status: 400 });
+  if (!Array.isArray(characterIds) || characterIds.length < minMembers || characterIds.length > maxMembers) {
+    return NextResponse.json({ error: selectionHint }, { status: 400 });
   }
   const unique = [...new Set(characterIds.map((s) => String(s).trim()).filter(Boolean))];
-  if (unique.length < 2 || unique.length > 3) {
-    return NextResponse.json({ error: "Pilih 2–3 karakter yang berbeda." }, { status: 400 });
+  if (unique.length < minMembers || unique.length > maxMembers) {
+    return NextResponse.json({ error: selectionHint }, { status: 400 });
   }
 
   // Pastikan semua karakter milik user
@@ -99,7 +112,7 @@ export async function POST(req: Request) {
 
   const [room] = await db
     .insert(brainstormRooms)
-    .values({ userId: user.id, title: cleanTitle.slice(0, 80) })
+    .values({ userId: user.id, title: cleanTitle.slice(0, 80), mode: roomMode })
     .returning();
 
   for (const cid of unique) {

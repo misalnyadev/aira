@@ -38,7 +38,7 @@ import {
   type SharedNoteKind,
 } from "@/lib/sharedNotes";
 import { EMPTY_PROFILE, type UserProfile } from "@/lib/userProfile";
-import type { BrainstormMessage, BrainstormRoomSummary } from "@/types/chat";
+import type { BrainstormMessage, BrainstormRoomMode, BrainstormRoomSummary } from "@/types/chat";
 import {
   loadVoiceSettings,
   prefetchSpeech,
@@ -488,12 +488,16 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  async function handleCreateBrainstorm(title: string, characterIds: string[]): Promise<boolean> {
+  async function handleCreateBrainstorm(
+    title: string,
+    characterIds: string[],
+    mode: BrainstormRoomMode
+  ): Promise<boolean> {
     try {
       const res = await api("/api/brainstorm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, characterIds }),
+        body: JSON.stringify({ title, characterIds, mode }),
       });
       if (!res.ok) return false;
       await fetchBrainstormRooms();
@@ -1604,6 +1608,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               return (
                 <BrainstormRoomView
                   roomTitle={room.title}
+                  mode={room.mode}
                   members={room.members}
                   messages={brainstormMessages[activeBrainstormId] ?? []}
                   isTyping={brainstormTyping === activeBrainstormId}

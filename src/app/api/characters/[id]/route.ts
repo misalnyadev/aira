@@ -18,6 +18,8 @@ import {
   MAX_MEMORY_SUMMARY_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
+  MAX_SHARED_TEAM_MEMORY_CHARS,
+  MAX_TEAM_ROLE_CHARS,
 } from "@/lib/limits";
 import { findOwnedCharacter } from "@/lib/owned";
 import { deleteR2Object } from "@/lib/r2";
@@ -44,6 +46,9 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     media: parseCharacterMedia(row.media),
     voiceConfig: parseCharacterVoice(row.voiceConfig),
     memoryEnabled: Boolean(row.memoryEnabled),
+    teamRole: row.teamRole,
+    sharedTeamMemory: row.sharedTeamMemory,
+    shareTeamMemory: Boolean(row.shareTeamMemory),
     memorySummary: row.memorySummary ?? "",
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
     browsingEnabled: Boolean(row.browsingEnabled),
@@ -92,6 +97,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     voiceConfig,
     memoryEnabled,
     memorySummary,
+    teamRole,
+    sharedTeamMemory,
+    shareTeamMemory,
     browsingEnabled,
     proactiveEnabled,
   } = body as {
@@ -109,6 +117,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     voiceConfig?: unknown | null;
     memoryEnabled?: boolean;
     memorySummary?: string;
+    teamRole?: string;
+    sharedTeamMemory?: string;
+    shareTeamMemory?: boolean;
     browsingEnabled?: boolean;
     proactiveEnabled?: boolean;
   };
@@ -128,6 +139,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (shortBio !== undefined && shortBio.trim().length > MAX_SHORT_BIO_CHARS) {
     return NextResponse.json(
       { error: `Status singkat maksimal ${MAX_SHORT_BIO_CHARS} karakter.` },
+      { status: 400 }
+    );
+  }
+  if (teamRole !== undefined && teamRole.trim().length > MAX_TEAM_ROLE_CHARS) {
+    return NextResponse.json(
+      { error: `Peran Tim 1 maksimal ${MAX_TEAM_ROLE_CHARS} karakter.` },
+      { status: 400 }
+    );
+  }
+  if (
+    sharedTeamMemory !== undefined &&
+    sharedTeamMemory.trim().length > MAX_SHARED_TEAM_MEMORY_CHARS
+  ) {
+    return NextResponse.json(
+      { error: `Catatan Tim 1 maksimal ${MAX_SHARED_TEAM_MEMORY_CHARS.toLocaleString("id-ID")} karakter.` },
       { status: 400 }
     );
   }
@@ -154,6 +180,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl || null;
   if (shortBio !== undefined) updates.shortBio = shortBio.trim();
   if (personality !== undefined) updates.personality = personality.trim();
+  if (teamRole !== undefined) updates.teamRole = teamRole.trim();
+  if (sharedTeamMemory !== undefined) updates.sharedTeamMemory = sharedTeamMemory.trim();
+  if (typeof shareTeamMemory === "boolean") updates.shareTeamMemory = shareTeamMemory;
   if (greeting !== undefined) updates.greeting = greeting.trim();
   if (bible !== undefined) updates.bible = bible.trim();
   if (providerId !== undefined) updates.providerId = providerId || null;

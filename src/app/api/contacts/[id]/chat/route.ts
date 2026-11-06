@@ -26,6 +26,7 @@ import { ensureDb } from "@/lib/dbReady";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import { MAX_HISTORY_MESSAGES } from "@/lib/limits";
 import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
+import { buildTeamMemoryContext } from "@/lib/teamMemory";
 import { readImageAsBase64 } from "@/lib/uploads";
 import { shouldReplyWithVoiceNote } from "@/lib/voiceNote";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
@@ -302,6 +303,14 @@ export async function POST(
           memoryExtras?.timeAwareness ||
           describeTimeAwareness(now, lastPrior?.createdAt ?? null),
       };
+    }
+    const teamContext = await buildTeamMemoryContext({
+      ownerUserId: contact.ownerUserId,
+      currentCharacterId: character.id,
+      sharedOnly: true,
+    }).catch(() => "");
+    if (teamContext) {
+      memoryExtras = { ...memoryExtras, teamContext };
     }
     if (replyAsVoiceNote) {
       memoryExtras = { ...memoryExtras, voiceNoteReply: true };
