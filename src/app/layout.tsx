@@ -12,20 +12,21 @@ const display = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "HeyTalent | AI Chat with Personality",
-  description: "Ngobrol natural dengan persona AI yang penuh karakter",
+  title: "HeyTalent | AI Chat",
+  description: "Ngobrol dengan persona AI yang punya kepribadian unik.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Aisherly",
+    title: "HeyTalent",
   },
   formatDetection: {
     telephone: false,
