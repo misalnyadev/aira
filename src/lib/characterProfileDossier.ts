@@ -1,17 +1,22 @@
 import { validateCharacterSkillPortfolio, type CharacterSkill } from "./characterSkills";
 import {
   MAX_BIBLE_CHARS,
+  MAX_GREETING_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHARED_TEAM_MEMORY_CHARS,
+  MAX_SHORT_BIO_CHARS,
   MAX_TEAM_ROLE_CHARS,
 } from "./limits";
 
 export type CharacterProfileDossier = {
   name?: string;
+  shortBio?: string;
+  greeting?: string;
   skillPortfolio?: CharacterSkill[];
   teamRole?: string;
   sharedTeamMemory?: string;
   personality?: string;
+  bible?: string;
 };
 
 export type CharacterProfileDossierResult =
@@ -79,6 +84,14 @@ export function parseCharacterProfileDossier(rawText: string): CharacterProfileD
     data.name = record.name.trim();
   }
 
+  const shortBio = readOptionalText(record, "shortBio", "Status singkat", MAX_SHORT_BIO_CHARS);
+  if (!shortBio.ok) return { ok: false, error: shortBio.error };
+  if (shortBio.present) data.shortBio = shortBio.value;
+
+  const greeting = readOptionalText(record, "greeting", "Pesan pembuka", MAX_GREETING_CHARS);
+  if (!greeting.ok) return { ok: false, error: greeting.error };
+  if (greeting.present) data.greeting = greeting.value;
+
   if (hasOwn(record, "skillPortfolio")) {
     const skills = validateCharacterSkillPortfolio(record.skillPortfolio);
     if (!skills.ok) return { ok: false, error: skills.error };
@@ -107,15 +120,22 @@ export function parseCharacterProfileDossier(rawText: string): CharacterProfileD
   if (!personality.ok) return { ok: false, error: personality.error };
   if (personality.present) data.personality = personality.value;
 
+  const bible = readOptionalText(record, "bible", "Bible karakter", MAX_BIBLE_CHARS);
+  if (!bible.ok) return { ok: false, error: bible.error };
+  if (bible.present) data.bible = bible.value;
+
   const hasImportableField =
+    hasOwn(record, "shortBio") ||
+    hasOwn(record, "greeting") ||
     hasOwn(record, "skillPortfolio") ||
     hasOwn(record, "teamRole") ||
     hasOwn(record, "sharedTeamMemory") ||
-    hasOwn(record, "personality");
+    hasOwn(record, "personality") ||
+    hasOwn(record, "bible");
   if (!hasImportableField) {
     return {
       ok: false,
-      error: "Dossier belum berisi skillPortfolio, teamRole, sharedTeamMemory, atau personality.",
+      error: "Dossier belum memuat field profil, tim, kepribadian, atau bible yang bisa diimpor.",
     };
   }
 

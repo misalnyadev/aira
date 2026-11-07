@@ -238,6 +238,8 @@ export function CharacterModal({
       }
 
       const replacing: string[] = [];
+      if (dossier.shortBio !== undefined && shortBio.trim()) replacing.push("Status singkat");
+      if (dossier.greeting !== undefined && greeting.trim()) replacing.push("Pesan pembuka");
       if (dossier.skillPortfolio !== undefined && skillPortfolio.length) {
         replacing.push("Keahlian & layanan");
       }
@@ -248,6 +250,7 @@ export function CharacterModal({
       if (dossier.personality !== undefined && personality.trim()) {
         replacing.push("Kepribadian & latar belakang");
       }
+      if (dossier.bible !== undefined && bible.trim()) replacing.push("Bible peran");
       if (replacing.length && !window.confirm(`Impor akan mengganti ${replacing.join(", ")} di formulir. Lanjutkan?`)) {
         return;
       }
@@ -256,6 +259,14 @@ export function CharacterModal({
       if (dossier.name && !currentName) {
         setName(dossier.name);
         importedFields.push("nama");
+      }
+      if (dossier.shortBio !== undefined) {
+        setShortBio(dossier.shortBio);
+        importedFields.push("status singkat");
+      }
+      if (dossier.greeting !== undefined) {
+        setGreeting(dossier.greeting);
+        importedFields.push("pesan pembuka");
       }
       if (dossier.skillPortfolio !== undefined) {
         setSkillPortfolio(dossier.skillPortfolio);
@@ -272,6 +283,10 @@ export function CharacterModal({
       if (dossier.personality !== undefined) {
         setPersonality(dossier.personality);
         importedFields.push("kepribadian & latar belakang");
+      }
+      if (dossier.bible !== undefined) {
+        setBible(dossier.bible);
+        importedFields.push("Bible peran");
       }
 
       setDossierImportFeedback({
@@ -449,9 +464,9 @@ export function CharacterModal({
               <div>
                 <p className="text-xs font-semibold text-ink">Impor dossier karakter</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
-                  Satu berkas JSON per karakter. Field yang ada di berkas menggantikan isian
-                  formulir; field yang tidak ada tetap. Izin berbagi Tim 1 tidak diubah. Tinjau
-                  hasilnya sebelum menyimpan.
+                  Satu berkas JSON per karakter; boleh memuat Bible, kepribadian, portofolio,
+                  dan konteks tim sekaligus. Field yang tidak ada tetap. Izin berbagi Tim 1 tidak
+                  diubah. Tinjau hasilnya sebelum menyimpan.
                 </p>
               </div>
               <button
@@ -479,12 +494,15 @@ export function CharacterModal({
               </summary>
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-relaxed text-muted">{`{
   "name": "Nama karakter (harus cocok)",
+  "shortBio": "Status singkat",
+  "greeting": "Pesan pembuka",
   "skillPortfolio": [
     { "title": "Nama keahlian", "description": "Layanan yang ditawarkan" }
   ],
   "teamRole": "Peran di Tim 1",
   "sharedTeamMemory": "Relasi dan konteks bersama",
-  "personality": "Kepribadian dan latar belakang"
+  "personality": "Kepribadian dan latar belakang",
+  "bible": "Teks Bible lengkap"
 }`}</pre>
             </details>
             {dossierImportFeedback && (
