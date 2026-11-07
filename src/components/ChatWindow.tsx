@@ -43,8 +43,9 @@ import {
 import {
   BackIcon,
   CheckIcon,
-  ChevronDownIcon,
   DoubleCheckIcon,
+  EyeIcon,
+  EyeOffIcon,
   NotesBoardIcon,
   PhoneCallIcon,
   SpeakerIcon,
@@ -116,6 +117,7 @@ export function ChatWindow({
   composer,
   composerVisible = true,
   onScreenTap,
+  onToggleHideChat,
   onBack,
   backLabel = "Kembali ke daftar chat",
   onOpenProfile,
@@ -154,6 +156,8 @@ export function ChatWindow({
   composerVisible?: boolean;
   /** Ketukan di layar bersih (dipakai pada mode hide untuk memunculkan/menyembunyikan komposer). */
   onScreenTap?: () => void;
+  /** Mengubah visibilitas pesan, khusus mode Tatap Muka. */
+  onToggleHideChat?: () => void;
   onBack: () => void;
   backLabel?: string;
   onOpenProfile: () => void;
@@ -175,7 +179,8 @@ export function ChatWindow({
   onRegenerate: () => void;
 }) {
   const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
-  const hideMessages = Boolean(bubbleStyle.hideMessages);
+  const hideMessages = visualMode === "meetup" && Boolean(bubbleStyle.hideMessages);
+  const canToggleHideMessages = visualMode === "meetup" && Boolean(onToggleHideChat);
   const minimalBars = Boolean(bubbleStyle.minimalBars);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -714,7 +719,13 @@ export function ChatWindow({
               setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
             }}
             className={`flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
-              !atBottom ? "pb-12 sm:pb-12" : ""
+              !atBottom
+                ? canToggleHideMessages
+                  ? "pb-24 sm:pb-24"
+                  : "pb-12 sm:pb-12"
+                : canToggleHideMessages
+                  ? "pb-12 sm:pb-12"
+                  : ""
             } ${
               minimalBars
                 ? "[-webkit-mask-image:linear-gradient(to_bottom,transparent,black_16px)] [mask-image:linear-gradient(to_bottom,transparent,black_16px)]"
@@ -892,7 +903,11 @@ export function ChatWindow({
         )}
 
         {!hideMessages && !atBottom && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 sm:px-4">
+          <div
+            className={`pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4 ${
+              canToggleHideMessages ? "bottom-14" : "bottom-2"
+            }`}
+          >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <button
                 type="button"
@@ -902,9 +917,35 @@ export function ChatWindow({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
               >
-                <ChevronDownIcon className="h-5 w-5" />
+                <span aria-hidden="true" className="-translate-y-0.5 text-[18px] font-semibold leading-none">
+                  v
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+        {canToggleHideMessages && (
+          <div
+            className={`pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 transition-opacity sm:px-4 ${
+              composerVisible ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <div className="mx-auto flex w-full max-w-3xl justify-end">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleHideChat?.();
+                }}
+                disabled={!composerVisible}
+                aria-label={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
+                aria-pressed={hideMessages}
+                title={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95 disabled:pointer-events-none"
+              >
+                {hideMessages ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
           </div>

@@ -204,16 +204,19 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   /**
-   * Balasan karakter dibacakan bila suara otomatis hidup ATAU bila tulisan chat
-   * sedang disembunyikan (agar obrolan tetap terdengar walau tanpa gelembung),
-   * selama pengguna tidak sedang merekam dikte mikrofon.
+   * Balasan karakter dibacakan bila suara otomatis hidup ATAU bila tulisan
+   * Tatap Muka sedang disembunyikan, selama pengguna tidak sedang mendikte.
    */
   function shouldSpeakReply(targetId: string, voiceEnabled: boolean): boolean {
     if (isDictating() || activeIdRef.current !== targetId) return false;
     if (voiceEnabled) return true;
     const charObj = charactersRef.current.find((c) => c.id === targetId);
     const effective = charObj?.bubbleStyle ?? bubbleStyleRef.current;
-    return Boolean(effective.hideMessages);
+    return Boolean(
+      view === "brainstorm" &&
+        activeMeetupCharacterId === targetId &&
+        effective.hideMessages
+    );
   }
 
   // Hentikan suara saat keluar dari akun atau sesi berakhir.
@@ -526,6 +529,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   function handleOpenBrainstorm(roomId: string) {
+    setPeekCharId(null);
     setActiveMeetupCharacterId(null);
     setActiveBrainstormId(roomId);
     setView("brainstorm");
@@ -534,6 +538,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   function handleOpenMeetup(characterId: string) {
     if (activeId !== characterId) stopSpeaking();
+    setPeekCharId(null);
     setChatOriginView("chats");
     setActiveBrainstormId(null);
     setActiveMeetupCharacterId(characterId);
@@ -654,6 +659,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
     setChatOriginView("chats");
     setActiveMeetupCharacterId(null);
+    setPeekCharId(null);
     setView(next);
     if (next === "chats") setMobileShowChat(false);
     if (next === "calls") void fetchCharacters();
@@ -661,6 +667,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   function handleSelect(id: string) {
     if (id !== activeId) stopSpeaking();
+    setPeekCharId(null);
     const selectedThread = allThreads.find((thread) => thread.id === id);
     setChatOriginView(
       selectedThread?.threadKind === "owner_contact" ? "calls" : "chats"
@@ -1228,10 +1235,17 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const activeCharacter = allThreads.find((c) => c.id === activeId) ?? null;
   const activeMeetupCharacter =
     characters.find((character) => character.id === activeMeetupCharacterId) ?? null;
-  const activeBubble = activeCharacter?.bubbleStyle ?? bubbleStyle;
-  const isHiddenMode = Boolean(activeBubble.hideMessages);
+  const isMeetupConversation = view === "brainstorm" && Boolean(activeMeetupCharacterId);
+  const activeBubble = isMeetupConversation
+    ? activeMeetupCharacter?.bubbleStyle ?? bubbleStyle
+    : activeCharacter?.bubbleStyle ?? bubbleStyle;
+  const isHiddenMode = Boolean(
+    isMeetupConversation &&
+      activeMeetupCharacter?.id === activeMeetupCharacterId &&
+      activeBubble.hideMessages
+  );
   const composerRevealed = Boolean(
-    isHiddenMode && activeCharacter && peekCharId === activeCharacter.id
+    isHiddenMode && activeMeetupCharacterId && peekCharId === activeMeetupCharacterId
   );
   const composerVisible = !isHiddenMode || composerRevealed;
   const callCharacter = call ? (allThreads.find((c) => c.id === call.characterId) ?? null) : null;
@@ -1354,16 +1368,25 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     api,
   ]);
 
-  function handleHiddenScreenTap() {
-    if (!activeCharacter || !isHiddenMode) return;
+  function handleHiddenScreenTap(characterId: string) {
+    if (activeMeetupCharacterId !== characterId || !isHiddenMode) return;
     if (composerVisible) {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
       setPeekCharId(null);
     } else {
-      setPeekCharId(activeCharacter.id);
+      setPeekCharId(characterId);
     }
+  }
+
+  function handleToggleHideChat(character: CharacterSummary) {
+    const characterBubble = character.bubbleStyle ?? bubbleStyle;
+    setPeekCharId(null);
+    void handleCharacterBubble(character.id, {
+      ...characterBubble,
+      hideMessages: !characterBubble.hideMessages,
+    });
   }
 
   function renderCharacterConversation(
@@ -1376,7 +1399,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   ) {
     const isMeetup = options.mode === "meetup";
     const characterBubble = character.bubbleStyle ?? bubbleStyle;
-    const characterHidden = Boolean(characterBubble.hideMessages);
+    const characterHidden = isMeetup && Boolean(characterBubble.hideMessages);
     return (
       <ChatWindow
         key={character.id}
@@ -1392,7 +1415,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         sceneLabel={isMeetup ? "Tatap Muka · kalian berdua hadir langsung" : undefined}
         showBackOnDesktop={isMeetup}
         composerVisible={!characterHidden || peekCharId === character.id}
-        onScreenTap={characterHidden ? handleHiddenScreenTap : undefined}
+        onScreenTap={characterHidden ? () => handleHiddenScreenTap(character.id) : undefined}
+        onToggleHideChat={isMeetup ? () => handleToggleHideChat(character) : undefined}
         onBack={options.onBack}
         backLabel={options.backLabel}
         onOpenProfile={() => openProfile(character.id)}
@@ -1427,7 +1451,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             key={character.id}
             onSend={handleSend}
             disabled={typingFor === character.id}
-            transparent={Boolean(characterBubble.minimalBars || characterBubble.hideMessages)}
+            transparent={Boolean(characterBubble.minimalBars || characterHidden)}
             blurOnSend={characterHidden}
             onSent={() => setPeekCharId(null)}
             onWake={() => setPeekCharId(character.id)}
@@ -1657,6 +1681,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               mode: "meetup",
               onBack: () => {
                 stopSpeaking();
+                setPeekCharId(null);
                 setActiveMeetupCharacterId(null);
               },
               backLabel: "Kembali ke daftar karakter",
