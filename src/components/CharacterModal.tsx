@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CharacterDetail, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
 import { parseBibleFile } from "@/lib/characterBible";
+import { parseCharacterProfileDossier } from "@/lib/characterProfileDossier";
 import { OWNER_PROFILE_SHARE_OPTIONS, type OwnerProfileShareField } from "@/lib/characterInvite";
 import {
   MAX_CHARACTER_SKILLS,
@@ -81,8 +82,13 @@ export function CharacterModal({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<string | null>(null);
+  const [dossierImportFeedback, setDossierImportFeedback] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
+  const dossierFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -199,6 +205,82 @@ export function CharacterModal({
         ? `Bible diimpor. Sekalian terisi: ${filled.join(", ")}.`
         : "Bible diimpor."
     );
+  }
+
+  async function handleCharacterDossierFile(file: File) {
+    setDossierImportFeedback(null);
+    setError(null);
+
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      setDossierImportFeedback({ kind: "err", text: "Dossier karakter harus berformat .json." });
+      return;
+    }
+
+    try {
+      const result = parseCharacterProfileDossier(await file.text());
+      if (!result.ok) {
+        setDossierImportFeedback({ kind: "err", text: result.error });
+        return;
+      }
+
+      const dossier = result.data;
+      const currentName = name.trim();
+      if (
+        dossier.name &&
+        currentName &&
+        dossier.name.toLowerCase() !== currentName.toLowerCase()
+      ) {
+        setDossierImportFeedback({
+          kind: "err",
+          text: `Dossier ini untuk “${dossier.name}”, sedangkan formulir sedang membuka “${currentName}”.`,
+        });
+        return;
+      }
+
+      const replacing: string[] = [];
+      if (dossier.skillPortfolio !== undefined && skillPortfolio.length) {
+        replacing.push("Keahlian & layanan");
+      }
+      if (dossier.teamRole !== undefined && teamRole.trim()) replacing.push("Peran Tim 1");
+      if (dossier.sharedTeamMemory !== undefined && sharedTeamMemory.trim()) {
+        replacing.push("Memori bersama Tim 1");
+      }
+      if (dossier.personality !== undefined && personality.trim()) {
+        replacing.push("Kepribadian & latar belakang");
+      }
+      if (replacing.length && !window.confirm(`Impor akan mengganti ${replacing.join(", ")} di formulir. Lanjutkan?`)) {
+        return;
+      }
+
+      const importedFields: string[] = [];
+      if (dossier.name && !currentName) {
+        setName(dossier.name);
+        importedFields.push("nama");
+      }
+      if (dossier.skillPortfolio !== undefined) {
+        setSkillPortfolio(dossier.skillPortfolio);
+        importedFields.push("keahlian & layanan");
+      }
+      if (dossier.teamRole !== undefined) {
+        setTeamRole(dossier.teamRole);
+        importedFields.push("peran Tim 1");
+      }
+      if (dossier.sharedTeamMemory !== undefined) {
+        setSharedTeamMemory(dossier.sharedTeamMemory);
+        importedFields.push("Memori bersama Tim 1");
+      }
+      if (dossier.personality !== undefined) {
+        setPersonality(dossier.personality);
+        importedFields.push("kepribadian & latar belakang");
+      }
+
+      setDossierImportFeedback({
+        kind: "ok",
+        text: `Dimuat: ${importedFields.join(", ")}. Periksa hasilnya lalu simpan perubahan.`,
+      });
+    } catch {
+      setDossierImportFeedback({ kind: "err", text: "Berkas dossier tidak dapat dibaca." });
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -360,6 +442,64 @@ export function CharacterModal({
               className={FIELD}
             />
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
+          </div>
+
+          <div className="space-y-2.5 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-ink">Impor dossier karakter</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                  Satu berkas JSON per karakter. Field yang ada di berkas menggantikan isian
+                  formulir; field yang tidak ada tetap. Izin berbagi Tim 1 tidak diubah. Tinjau
+                  hasilnya sebelum menyimpan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => dossierFileRef.current?.click()}
+                className="shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-surface-2"
+              >
+                Pilih JSON
+              </button>
+              <input
+                ref={dossierFileRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleCharacterDossierFile(file);
+                  event.target.value = "";
+                }}
+              />
+            </div>
+            <details className="rounded-xl bg-surface px-3 py-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-ink-soft">
+                Contoh format dossier
+              </summary>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-relaxed text-muted">{`{
+  "name": "Nama karakter (harus cocok)",
+  "skillPortfolio": [
+    { "title": "Nama keahlian", "description": "Layanan yang ditawarkan" }
+  ],
+  "teamRole": "Peran di Tim 1",
+  "sharedTeamMemory": "Relasi dan konteks bersama",
+  "personality": "Kepribadian dan latar belakang"
+}`}</pre>
+            </details>
+            {dossierImportFeedback && (
+              <p
+                aria-live="polite"
+                className={`rounded-lg px-2.5 py-2 text-[11px] leading-relaxed ${
+                  dossierImportFeedback.kind === "ok"
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "bg-rose-500/10 text-rose-600 dark:text-rose-300"
+                }`}
+              >
+                {dossierImportFeedback.kind === "ok" ? "✓ " : "✗ "}
+                {dossierImportFeedback.text}
+              </p>
+            )}
           </div>
 
           <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
