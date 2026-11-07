@@ -50,7 +50,9 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     providerId: row.providerId,
     model: row.model,
     chatBackground: parseOptionalChatBackground(row.chatBackground),
+    meetupBackground: parseOptionalChatBackground(row.meetupBackground),
     bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
+    meetupBubbleStyle: parseOptionalBubbleStyle(row.meetupBubbleStyle),
     media: parseCharacterMedia(row.media),
     voiceConfig: parseCharacterVoice(row.voiceConfig),
     memoryEnabled: Boolean(row.memoryEnabled),
@@ -103,7 +105,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     providerId,
     model,
     chatBackground,
+    meetupBackground,
     bubbleStyle,
+    meetupBubbleStyle,
     media,
     voiceConfig,
     memoryEnabled,
@@ -126,7 +130,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     providerId?: string | null;
     model?: string | null;
     chatBackground?: unknown | null;
+    meetupBackground?: unknown | null;
     bubbleStyle?: unknown | null;
+    meetupBubbleStyle?: unknown | null;
     media?: unknown | null;
     voiceConfig?: unknown | null;
     memoryEnabled?: boolean;
@@ -241,9 +247,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     updates.chatBackground =
       chatBackground === null ? null : JSON.stringify(normalizeChatBackground(chatBackground));
   }
+  if ("meetupBackground" in body) {
+    updates.meetupBackground =
+      meetupBackground === null ? null : JSON.stringify(normalizeChatBackground(meetupBackground));
+  }
   if ("bubbleStyle" in body) {
     updates.bubbleStyle =
       bubbleStyle === null ? null : JSON.stringify(normalizeBubbleStyle(bubbleStyle));
+  }
+  if ("meetupBubbleStyle" in body) {
+    updates.meetupBubbleStyle =
+      meetupBubbleStyle === null
+        ? null
+        : JSON.stringify(normalizeBubbleStyle(meetupBubbleStyle));
   }
   if ("media" in body) {
     const cleaned = media === null ? null : normalizeCharacterMedia(media, user.id);

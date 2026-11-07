@@ -36,10 +36,14 @@ export type CharacterSummary = {
   greeting: string;
   /** Ada bible peran atau tidak — dipakai untuk menandai 📖 di daftar. */
   hasBible: boolean;
-  /** Latar khusus karakter; `null` berarti ikut latar bawaan akun. */
+  /** Latar Chat khusus karakter; `null` berarti ikut latar Chat bawaan akun. */
   chatBackground: ChatBackground | null;
-  /** Gaya gelembung khusus karakter; `null` berarti ikut gelembung bawaan akun. */
+  /** Latar Tatap Muka khusus karakter; `null` berarti ikut latar Tatap Muka bawaan akun. */
+  meetupBackground: ChatBackground | null;
+  /** Gaya gelembung Chat khusus karakter; `null` berarti ikut gelembung Chat bawaan akun. */
   bubbleStyle: BubbleStyle | null;
+  /** Gaya gelembung Tatap Muka khusus karakter; `null` berarti ikut bawaan akun. */
+  meetupBubbleStyle: BubbleStyle | null;
   /** Media karakter (video chat, video call, suara telepon). */
   media: CharacterMedia | null;
   /** Pilihan suara khusus karakter; `null` berarti ikut mesin bawaan akun. */
@@ -87,7 +91,9 @@ export type CharacterDetail = {
   providerId: string | null;
   model: string | null;
   chatBackground: ChatBackground | null;
+  meetupBackground: ChatBackground | null;
   bubbleStyle: BubbleStyle | null;
+  meetupBubbleStyle: BubbleStyle | null;
   media: CharacterMedia | null;
   voiceConfig: CharacterVoiceConfig | null;
   memoryEnabled: boolean;

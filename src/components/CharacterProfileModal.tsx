@@ -19,6 +19,7 @@ export function CharacterProfileModal({
   character,
   providerLabel,
   bubbleFallback,
+  meetupBubbleFallback,
   ttsSummary,
   voiceSettings,
   onClose,
@@ -27,6 +28,8 @@ export function CharacterProfileModal({
   onDelete,
   onBackgroundChange,
   onBubbleChange,
+  onMeetupBackgroundChange,
+  onMeetupBubbleChange,
   onVoiceChange,
   onMediaChange,
   onMemoryChange,
@@ -35,6 +38,7 @@ export function CharacterProfileModal({
   character: CharacterDetail;
   providerLabel: string;
   bubbleFallback: BubbleStyle;
+  meetupBubbleFallback: BubbleStyle;
   ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
   onClose: () => void;
@@ -43,6 +47,8 @@ export function CharacterProfileModal({
   onDelete: () => void;
   onBackgroundChange: (next: ChatBackground | null) => void;
   onBubbleChange: (next: BubbleStyle | null) => void;
+  onMeetupBackgroundChange: (next: ChatBackground | null) => void;
+  onMeetupBubbleChange: (next: BubbleStyle | null) => void;
   onVoiceChange: (next: CharacterVoiceConfig | null) => void;
   onMediaChange: (next: CharacterMedia | null) => void;
   onMemoryChange: (next: MemoryPatch) => void;
@@ -148,7 +154,7 @@ export function CharacterProfileModal({
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Latar chat
+              Latar Chat
             </h4>
             <ChatBackgroundPicker
               allowInherit
@@ -159,13 +165,38 @@ export function CharacterProfileModal({
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Tampilan & gelembung chat
+              Tampilan Chat
             </h4>
             <BubbleStyleControls
               allowInherit
+              mode="chat"
               value={character.bubbleStyle}
               fallback={bubbleFallback}
               onChange={onBubbleChange}
+            />
+          </div>
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Latar Tatap Muka
+            </h4>
+            <ChatBackgroundPicker
+              allowInherit
+              value={character.meetupBackground}
+              onChange={onMeetupBackgroundChange}
+            />
+          </div>
+
+          <div className="mt-5">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Tampilan Tatap Muka
+            </h4>
+            <BubbleStyleControls
+              allowInherit
+              mode="meetup"
+              value={character.meetupBubbleStyle}
+              fallback={meetupBubbleFallback}
+              onChange={onMeetupBubbleChange}
             />
           </div>
 

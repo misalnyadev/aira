@@ -147,7 +147,7 @@ export function ChatWindow({
   sceneLabel?: string;
   /** Tampilkan tombol kembali juga di desktop saat tidak ada daftar percakapan di samping. */
   showBackOnDesktop?: boolean;
-  /** Latar area chat pilihan pengguna; `default` memakai pola bawaan tema. */
+  /** Latar khusus mode yang sedang dibuka; `default` memakai pola bawaan tema. */
   background?: ChatBackground;
   /** Gaya gelembung pesan (khusus karakter atau bawaan akun). */
   bubble?: BubbleStyle;

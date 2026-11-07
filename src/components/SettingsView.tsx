@@ -112,8 +112,12 @@ export function SettingsView({
   onAutoFallbackChange,
   chatBackground,
   onChatBackgroundChange,
+  meetupBackground,
+  onMeetupBackgroundChange,
   bubbleStyle,
   onBubbleStyleChange,
+  meetupBubbleStyle,
+  onMeetupBubbleStyleChange,
   onChanged,
   isAdmin,
   onOpenAccountManagement,
@@ -129,8 +133,12 @@ export function SettingsView({
   onAutoFallbackChange: (next: boolean) => void;
   chatBackground: ChatBackground;
   onChatBackgroundChange: (next: ChatBackground) => void;
+  meetupBackground: ChatBackground;
+  onMeetupBackgroundChange: (next: ChatBackground) => void;
   bubbleStyle: BubbleStyle;
   onBubbleStyleChange: (next: BubbleStyle) => void;
+  meetupBubbleStyle: BubbleStyle;
+  onMeetupBubbleStyleChange: (next: BubbleStyle) => void;
   onChanged: () => Promise<void>;
   isAdmin?: boolean;
   onOpenAccountManagement?: () => void;
@@ -141,12 +149,14 @@ export function SettingsView({
     providers: boolean;
     appearance: boolean;
     bubbles: boolean;
+    meetupAppearance: boolean;
     voice: boolean;
     account: boolean;
   }>(() => ({
     providers: providers.length === 0,
     appearance: false,
     bubbles: false,
+    meetupAppearance: false,
     voice: openVoiceInitially,
     account: false,
   }));
@@ -170,6 +180,10 @@ export function SettingsView({
   const [bgError, setBgError] = useState<string | null>(null);
   const [bubbleBusy, setBubbleBusy] = useState(false);
   const [bubbleError, setBubbleError] = useState<string | null>(null);
+  const [meetupBgBusy, setMeetupBgBusy] = useState(false);
+  const [meetupBgError, setMeetupBgError] = useState<string | null>(null);
+  const [meetupBubbleBusy, setMeetupBubbleBusy] = useState(false);
+  const [meetupBubbleError, setMeetupBubbleError] = useState<string | null>(null);
 
   // Pemilih & detektor otomatis model hidup dari API key provider
   const [models, setModels] = useState<ModelOption[] | null>(null);
@@ -641,6 +655,52 @@ export function SettingsView({
     }
   }
 
+  async function handleMeetupBackgroundChange(next: ChatBackground) {
+    const previous = meetupBackground;
+    setMeetupBgError(null);
+    onMeetupBackgroundChange(next);
+    setMeetupBgBusy(true);
+    try {
+      const res = await fetch("/api/appearance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meetupBackground: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan latar Tatap Muka.");
+      if (data.meetupBackground) onMeetupBackgroundChange(data.meetupBackground);
+    } catch (err) {
+      onMeetupBackgroundChange(previous);
+      setMeetupBgError(err instanceof Error ? err.message : "Gagal menyimpan latar Tatap Muka.");
+    } finally {
+      setMeetupBgBusy(false);
+    }
+  }
+
+  async function handleMeetupBubbleStyleChange(next: BubbleStyle) {
+    const previous = meetupBubbleStyle;
+    setMeetupBubbleError(null);
+    onMeetupBubbleStyleChange(next);
+    setMeetupBubbleBusy(true);
+    try {
+      const res = await fetch("/api/appearance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meetupBubbleStyle: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan tampilan Tatap Muka.");
+      if (data.meetupBubbleStyle) onMeetupBubbleStyleChange(data.meetupBubbleStyle);
+    } catch (err) {
+      onMeetupBubbleStyleChange(previous);
+      setMeetupBubbleError(
+        err instanceof Error ? err.message : "Gagal menyimpan tampilan Tatap Muka."
+      );
+    } finally {
+      setMeetupBubbleBusy(false);
+    }
+  }
+
   async function handleToggleAutoFallback(next: boolean) {
     const previous = autoFallback;
     onAutoFallbackChange(next);
@@ -665,8 +725,8 @@ export function SettingsView({
       ? "Tambahkan minimal satu API key untuk mulai ngobrol"
       : `${providers.length} provider tersimpan · ${defaultProvider.label} (${defaultProvider.model})`;
   const bubbleSubtitle = bubbleStyle.glass
-    ? `Efek kaca aktif (${bubbleStyle.opacity}%)`
-    : "Gaya gelembung standar, warna pesan, & bar tipis";
+    ? `Chat · efek kaca aktif (${bubbleStyle.opacity}%)`
+    : "Chat · warna pesan, efek kaca, & bar tampilan";
 
   function toggleSection(key: keyof typeof openSections) {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -686,8 +746,8 @@ export function SettingsView({
         <div className="mx-auto w-full max-w-2xl space-y-3">
           {/* 1. Tema & Latar Chat */}
           <SettingsAccordionCard
-            title="Tema & Latar Chat"
-            subtitle="Mode terang/gelap & wallpaper ruang obrolan"
+            title="Tema Aplikasi & Latar Chat"
+            subtitle="Mode terang/gelap global & wallpaper khusus Chat"
             open={openSections.appearance}
             onToggle={() => toggleSection("appearance")}
           >
@@ -723,9 +783,9 @@ export function SettingsView({
             </div>
           </SettingsAccordionCard>
 
-          {/* 2. Gaya Gelembung Pesan */}
+          {/* 2. Tampilan gelembung Chat */}
           <SettingsAccordionCard
-            title="Gaya Gelembung Pesan"
+            title="Gaya Gelembung Chat"
             subtitle={bubbleSubtitle}
             open={openSections.bubbles}
             onToggle={() => toggleSection("bubbles")}
@@ -741,6 +801,7 @@ export function SettingsView({
               </div>
 
               <BubbleStyleControls
+                mode="chat"
                 value={bubbleStyle}
                 onChange={handleBubbleStyleChange}
                 disabled={bubbleBusy}
@@ -752,7 +813,62 @@ export function SettingsView({
             </div>
           </SettingsAccordionCard>
 
-          {/* Suara */}
+          {/* 3. Tampilan Tatap Muka */}
+          <SettingsAccordionCard
+            title="Tampilan Tatap Muka"
+            subtitle="Latar dan gelembung khusus sesi Tatap Muka"
+            open={openSections.meetupAppearance}
+            onToggle={() => toggleSection("meetupAppearance")}
+          >
+            <div className="space-y-4">
+              <div className="rounded-xl border border-line px-3.5 py-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block text-sm font-medium text-ink">Latar Tatap Muka</span>
+                    <span className="block text-[11px] text-muted">
+                      Bawaan akun untuk semua karakter
+                    </span>
+                  </div>
+                  {meetupBgBusy && (
+                    <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
+                  )}
+                </div>
+                <ChatBackgroundPicker
+                  value={meetupBackground}
+                  onChange={handleMeetupBackgroundChange}
+                  disabled={meetupBgBusy}
+                />
+                {meetupBgError && (
+                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{meetupBgError}</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-line px-3.5 py-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block text-sm font-medium text-ink">Gelembung Tatap Muka</span>
+                    <span className="block text-[11px] text-muted">
+                      Bawaan akun untuk semua karakter
+                    </span>
+                  </div>
+                  {meetupBubbleBusy && (
+                    <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
+                  )}
+                </div>
+                <BubbleStyleControls
+                  mode="meetup"
+                  value={meetupBubbleStyle}
+                  onChange={handleMeetupBubbleStyleChange}
+                  disabled={meetupBubbleBusy}
+                />
+                {meetupBubbleError && (
+                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{meetupBubbleError}</p>
+                )}
+              </div>
+            </div>
+          </SettingsAccordionCard>
+
+          {/* 4. Suara */}
           <SettingsAccordionCard
             title="Suara"
             subtitle="Bacakan balasan, Suara HD, bank rekaman, dan suara lokal"
@@ -770,7 +886,7 @@ export function SettingsView({
             />
           </SettingsAccordionCard>
 
-          {/* 4. Provider AI & API Key */}
+          {/* 5. Provider AI & API Key */}
           <SettingsAccordionCard
             title="Provider AI & API Key"
             subtitle={providerSubtitle}
