@@ -105,6 +105,7 @@ const DDL = [
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "shared_team_memory" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "share_team_memory" boolean NOT NULL DEFAULT false`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "share_owner_profile_fields" text NOT NULL DEFAULT '[]'`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "skill_portfolio" text NOT NULL DEFAULT '[]'`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "browsing_enabled" boolean NOT NULL DEFAULT false`,
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,

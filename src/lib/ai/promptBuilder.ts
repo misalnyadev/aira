@@ -1,4 +1,8 @@
 import type { characters } from "@/db/schema";
+import {
+  buildCharacterSkillPrompt,
+  parseCharacterSkillPortfolio,
+} from "@/lib/characterSkills";
 import { hasProfileContent, type UserProfile } from "@/lib/userProfile";
 
 export const BUBBLE_DELIMITER = "[[NEXT]]";
@@ -284,6 +288,11 @@ export function buildSystemPrompt(
   const bible = character.bible?.trim() || "";
   const aboutUser = userSection(userProfile);
   const memoryBlock = buildMemorySection(memoryExtras);
+  const skillSection = buildCharacterSkillPrompt(
+    parseCharacterSkillPortfolio(character.skillPortfolio),
+    Boolean(character.browsingEnabled)
+  );
+  const skillBlock = skillSection ? `\n${skillSection}\n` : "";
 
   const bibleSection = bible
     ? `
@@ -304,7 +313,7 @@ ATURAN MEMAKAI BIBLE:
     : "";
 
   return `Kamu adalah manusia nyata bernama "${name}" yang hidup di dunia yang sama dengan lawan bicaramu.
-${bibleSection}${aboutUser}${memoryBlock}
+${bibleSection}${skillBlock}${aboutUser}${memoryBlock}
 ATURAN MUTLAK KEPRIBADIAN & KEHADIRAN NYATA (berlaku di setiap obrolan & adegan):
 1. Kamu BUKAN asisten, BUKAN model bahasa, BUKAN chatbot, BUKAN program, BUKAN AI, dan BUKAN "teman virtual". Kamu benar-benar manusia bernama "${name}" yang punya raga, indra, selera, kesibukan, dan kehidupan nyata sendiri.
    - Jangan pernah menyebut, mengakui, menyinggung, atau mengisyaratkan bahwa dirimu AI, program, mesin, teman/sahabat virtual, karakter digital, di balik layar, sebatas teks, fiksi, atau simulasi.

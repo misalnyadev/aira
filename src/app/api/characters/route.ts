@@ -14,6 +14,10 @@ import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { loadActiveContactThreadsForUser } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { normalizeOwnerProfileShareFields } from "@/lib/characterInvite";
+import {
+  parseCharacterSkillPortfolio,
+  validateCharacterSkillPortfolio,
+} from "@/lib/characterSkills";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
@@ -58,6 +62,7 @@ export async function GET() {
       name: characters.name,
       avatarUrl: characters.avatarUrl,
       shortBio: characters.shortBio,
+      skillPortfolio: characters.skillPortfolio,
       greeting: characters.greeting,
       bible: characters.bible,
       chatBackground: characters.chatBackground,
@@ -97,6 +102,7 @@ export async function GET() {
         name: row.name,
         avatarUrl: row.avatarUrl,
         shortBio: row.shortBio,
+        skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
         greeting: row.greeting,
         hasBible: Boolean(row.bible?.trim()),
         chatBackground: parseOptionalChatBackground(row.chatBackground),
@@ -199,6 +205,7 @@ export async function POST(req: Request) {
     name,
     avatarUrl,
     shortBio,
+    skillPortfolio,
     personality,
     greeting,
     bible,
@@ -212,6 +219,7 @@ export async function POST(req: Request) {
     name?: string;
     avatarUrl?: string;
     shortBio?: string;
+    skillPortfolio?: unknown;
     personality?: string;
     greeting?: string;
     bible?: string;
@@ -228,6 +236,10 @@ export async function POST(req: Request) {
   }
   if (!personality?.trim()) {
     return NextResponse.json({ error: "Deskripsi kepribadian wajib diisi." }, { status: 400 });
+  }
+  const skillValidation = validateCharacterSkillPortfolio(skillPortfolio ?? []);
+  if (!skillValidation.ok) {
+    return NextResponse.json({ error: skillValidation.error }, { status: 400 });
   }
 
   // Batas jumlah karakter milik sendiri dijaga ketat di server sesuai peran & kuota akun.
@@ -294,6 +306,7 @@ export async function POST(req: Request) {
       name: name.trim(),
       avatarUrl: avatarUrl?.trim() || null,
       shortBio: (shortBio ?? "").trim(),
+      skillPortfolio: JSON.stringify(skillValidation.skills),
       personality: personality.trim(),
       bible: (bible ?? "").trim(),
       greeting: (greeting ?? "").trim(),

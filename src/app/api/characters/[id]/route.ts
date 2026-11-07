@@ -12,6 +12,10 @@ import {
 import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import { normalizeOwnerProfileShareFields, parseOwnerProfileShareFields } from "@/lib/characterInvite";
+import {
+  parseCharacterSkillPortfolio,
+  validateCharacterSkillPortfolio,
+} from "@/lib/characterSkills";
 import { normalizeCharacterVoice, parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
@@ -37,6 +41,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     name: row.name,
     avatarUrl: row.avatarUrl,
     shortBio: row.shortBio,
+    skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
     personality: row.personality,
     bible: row.bible,
     greeting: row.greeting,
@@ -88,6 +93,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     name,
     avatarUrl,
     shortBio,
+    skillPortfolio,
     personality,
     greeting,
     bible,
@@ -109,6 +115,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     name?: string;
     avatarUrl?: string | null;
     shortBio?: string;
+    skillPortfolio?: unknown;
     personality?: string;
     greeting?: string;
     bible?: string;
@@ -167,6 +174,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       { status: 400 }
     );
   }
+  const skillValidation =
+    skillPortfolio === undefined ? null : validateCharacterSkillPortfolio(skillPortfolio);
+  if (skillValidation && !skillValidation.ok) {
+    return NextResponse.json({ error: skillValidation.error }, { status: 400 });
+  }
   if (bible !== undefined && bible.trim().length > MAX_BIBLE_CHARS) {
     return NextResponse.json(
       { error: `Bible maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.` },
@@ -189,6 +201,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (name !== undefined) updates.name = name.trim();
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl || null;
   if (shortBio !== undefined) updates.shortBio = shortBio.trim();
+  if (skillValidation?.ok) updates.skillPortfolio = JSON.stringify(skillValidation.skills);
   if (personality !== undefined) updates.personality = personality.trim();
   if (teamRole !== undefined) updates.teamRole = teamRole.trim();
   if (sharedTeamMemory !== undefined) updates.sharedTeamMemory = sharedTeamMemory.trim();

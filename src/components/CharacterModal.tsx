@@ -6,6 +6,13 @@ import { compressImageFile } from "@/lib/compressImage";
 import { parseBibleFile } from "@/lib/characterBible";
 import { OWNER_PROFILE_SHARE_OPTIONS, type OwnerProfileShareField } from "@/lib/characterInvite";
 import {
+  MAX_CHARACTER_SKILLS,
+  MAX_SKILL_DESCRIPTION_CHARS,
+  MAX_SKILL_TITLE_CHARS,
+  validateCharacterSkillPortfolio,
+  type CharacterSkill,
+} from "@/lib/characterSkills";
+import {
   MAX_BIBLE_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
@@ -53,6 +60,7 @@ export function CharacterModal({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [shortBio, setShortBio] = useState(initial?.shortBio ?? "");
+  const [skillPortfolio, setSkillPortfolio] = useState<CharacterSkill[]>(initial?.skillPortfolio ?? []);
   const [teamRole, setTeamRole] = useState(initial?.teamRole ?? "");
   const [sharedTeamMemory, setSharedTeamMemory] = useState(initial?.sharedTeamMemory ?? "");
   const [shareTeamMemory, setShareTeamMemory] = useState(initial?.shareTeamMemory ?? false);
@@ -209,12 +217,15 @@ export function CharacterModal({
         `Bible terlalu panjang: ${bible.length.toLocaleString("id-ID")} dari maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.`
       );
     }
+    const skillValidation = validateCharacterSkillPortfolio(skillPortfolio);
+    if (!skillValidation.ok) return setError(skillValidation.error);
 
     setBusy(true);
     try {
       const payload = {
         name,
         shortBio,
+        skillPortfolio: skillValidation.skills,
         teamRole,
         sharedTeamMemory,
         shareTeamMemory,
@@ -349,6 +360,69 @@ export function CharacterModal({
               className={FIELD}
             />
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+            <div>
+              <p className="text-xs font-semibold text-ink">Keahlian & layanan</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                Atur hal yang bisa dibantu karakter ini. Contoh: Musthzen—IT & produksi, Arissa—menulis & analisis, Kirana—komunikasi & bisnis. Portofolio tampil di pratinjau undangan dan menjadi konteks saat ia berbicara; ini bukan klaim sertifikasi atau izin otomatis memakai alat.
+              </p>
+            </div>
+            {skillPortfolio.map((skill, index) => (
+              <div key={index} className="space-y-2 rounded-xl border border-line bg-surface p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold text-ink-soft">
+                    Keahlian {index + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSkillPortfolio((prev) => prev.filter((_, i) => i !== index))}
+                    aria-label={`Hapus keahlian ${index + 1}`}
+                    className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-ink"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  value={skill.title}
+                  onChange={(event) =>
+                    setSkillPortfolio((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, title: event.target.value } : item
+                      )
+                    )
+                  }
+                  placeholder="Mis. IT infrastructure & support"
+                  maxLength={MAX_SKILL_TITLE_CHARS}
+                  aria-label={`Nama keahlian ${index + 1}`}
+                  className={FIELD}
+                />
+                <textarea
+                  value={skill.description}
+                  onChange={(event) =>
+                    setSkillPortfolio((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, description: event.target.value } : item
+                      )
+                    )
+                  }
+                  placeholder="Mis. Dukungan jaringan, server, dan troubleshooting perangkat."
+                  maxLength={MAX_SKILL_DESCRIPTION_CHARS}
+                  rows={2}
+                  aria-label={`Deskripsi keahlian ${index + 1}`}
+                  className={`${FIELD} resize-none`}
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              disabled={skillPortfolio.length >= MAX_CHARACTER_SKILLS}
+              onClick={() => setSkillPortfolio((prev) => [...prev, { title: "", description: "" }])}
+              className="w-full rounded-xl border border-dashed border-line px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              + Tambah keahlian ({skillPortfolio.length}/{MAX_CHARACTER_SKILLS})
+            </button>
           </div>
 
           <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
