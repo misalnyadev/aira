@@ -1354,24 +1354,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     api,
   ]);
 
-  function handleToggleHideChat() {
-    if (!activeCharacter) return;
-    const base = activeCharacter.bubbleStyle ?? bubbleStyle;
-    const nextHidden = !Boolean(base.hideMessages);
-    setPeekCharId(null);
-    if (parseContactThreadId(activeCharacter.id)) {
-      setContactThreads((prev) =>
-        prev.map((c) =>
-          c.id === activeCharacter.id
-            ? { ...c, bubbleStyle: { ...base, hideMessages: nextHidden } }
-            : c
-        )
-      );
-      return;
-    }
-    void handleCharacterBubble(activeCharacter.id, { ...base, hideMessages: nextHidden });
-  }
-
   function handleHiddenScreenTap() {
     if (!activeCharacter || !isHiddenMode) return;
     if (composerVisible) {
@@ -1397,6 +1379,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     const characterHidden = Boolean(characterBubble.hideMessages);
     return (
       <ChatWindow
+        key={character.id}
         character={character}
         messages={messagesMap[character.id] ?? []}
         isTyping={typingFor === character.id}
@@ -1423,7 +1406,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           const status = getNoteDueStatus(note.dueDate, note.done);
           return status === "today" || status === "overdue";
         })}
-        onToggleHideChat={handleToggleHideChat}
         onVideoCall={
           !isMeetup && character.threadKind !== "owner_contact"
             ? () => setCall({ characterId: character.id, mode: "video" })
@@ -1644,6 +1626,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               if (!room) return null;
               return (
                 <BrainstormRoomView
+                  key={activeBrainstormId}
                   roomTitle={room.title}
                   mode={room.mode}
                   sceneCanonical={room.sceneCanonical}
