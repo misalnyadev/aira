@@ -82,6 +82,7 @@ const DDL = [
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bible" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "owner_relationship" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "display_name" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nickname" text NOT NULL DEFAULT ''`,

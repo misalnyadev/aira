@@ -109,6 +109,8 @@ export const characters = pgTable("characters", {
    * Kalau terisi, isinya jadi acuan utama di atas ringkasan kepribadian.
    */
   bible: text("bible").notNull().default(""),
+  /** Relasi khusus karakter dengan pemiliknya; hanya dimasukkan ke prompt saat pemilik yang berbicara. */
+  ownerRelationship: text("owner_relationship").notNull().default(""),
   greeting: text("greeting").notNull().default(""),
   providerId: uuid("provider_id").references(() => apiProviders.id, {
     onDelete: "set null",

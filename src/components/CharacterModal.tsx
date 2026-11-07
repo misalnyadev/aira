@@ -15,6 +15,7 @@ import {
 } from "@/lib/characterSkills";
 import {
   MAX_BIBLE_CHARS,
+  MAX_OWNER_RELATIONSHIP_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
   MAX_SHARED_TEAM_MEMORY_CHARS,
@@ -70,6 +71,7 @@ export function CharacterModal({
   );
   const [personality, setPersonality] = useState(initial?.personality ?? "");
   const [bible, setBible] = useState(initial?.bible ?? "");
+  const [ownerRelationship, setOwnerRelationship] = useState(initial?.ownerRelationship ?? "");
   const [greeting, setGreeting] = useState(initial?.greeting ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initial?.avatarUrl ?? null);
   const [cropSource, setCropSource] = useState<File | string | null>(null);
@@ -247,6 +249,9 @@ export function CharacterModal({
       if (dossier.sharedTeamMemory !== undefined && sharedTeamMemory.trim()) {
         replacing.push("Memori bersama Tim 1");
       }
+      if (dossier.ownerRelationship !== undefined && ownerRelationship.trim()) {
+        replacing.push("Hubungan dengan pemilik");
+      }
       if (dossier.personality !== undefined && personality.trim()) {
         replacing.push("Kepribadian & latar belakang");
       }
@@ -280,6 +285,10 @@ export function CharacterModal({
         setSharedTeamMemory(dossier.sharedTeamMemory);
         importedFields.push("Memori bersama Tim 1");
       }
+      if (dossier.ownerRelationship !== undefined) {
+        setOwnerRelationship(dossier.ownerRelationship);
+        importedFields.push("hubungan dengan pemilik");
+      }
       if (dossier.personality !== undefined) {
         setPersonality(dossier.personality);
         importedFields.push("kepribadian & latar belakang");
@@ -309,6 +318,9 @@ export function CharacterModal({
     if (sharedTeamMemory.length > MAX_SHARED_TEAM_MEMORY_CHARS) {
       return setError(`Catatan Tim 1 maksimal ${MAX_SHARED_TEAM_MEMORY_CHARS} karakter.`);
     }
+    if (ownerRelationship.length > MAX_OWNER_RELATIONSHIP_CHARS) {
+      return setError(`Hubungan dengan pemilik maksimal ${MAX_OWNER_RELATIONSHIP_CHARS} karakter.`);
+    }
     if (bible.length > MAX_BIBLE_CHARS) {
       return setError(
         `Bible terlalu panjang: ${bible.length.toLocaleString("id-ID")} dari maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.`
@@ -325,6 +337,7 @@ export function CharacterModal({
         skillPortfolio: skillValidation.skills,
         teamRole,
         sharedTeamMemory,
+        ownerRelationship,
         shareTeamMemory,
         shareOwnerProfileFields,
         personality,
@@ -465,8 +478,8 @@ export function CharacterModal({
                 <p className="text-xs font-semibold text-ink">Impor dossier karakter</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                   Satu berkas JSON per karakter; boleh memuat Bible, kepribadian, portofolio,
-                  dan konteks tim sekaligus. Field yang tidak ada tetap. Izin berbagi Tim 1 tidak
-                  diubah. Tinjau hasilnya sebelum menyimpan.
+                  hubungan dengan pemilik, dan konteks tim. Field yang tidak ada tetap. Izin berbagi
+                  Tim 1 tidak diubah. Tinjau hasilnya sebelum menyimpan.
                 </p>
               </div>
               <button
@@ -501,6 +514,7 @@ export function CharacterModal({
   ],
   "teamRole": "Peran di Tim 1",
   "sharedTeamMemory": "Relasi dan konteks bersama",
+  "ownerRelationship": "Hubungan khusus dengan pemilik akun",
   "personality": "Kepribadian dan latar belakang",
   "bible": "Teks Bible lengkap"
 }`}</pre>
@@ -581,6 +595,27 @@ export function CharacterModal({
             >
               + Tambah keahlian ({skillPortfolio.length}/{MAX_CHARACTER_SKILLS})
             </button>
+          </div>
+
+          <div className="space-y-2 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-ink">
+                Hubungan dengan pemilik
+              </label>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                Jelaskan hubungan khusus karakter ini denganmu. Hanya dipakai saat pemilik akun berbicara dengan karakter ini; tidak masuk Memori Tim 1 atau sesi undangan. Selaraskan dengan Bible dan jangan masukkan hal sensitif yang tak ingin diproses model.
+              </p>
+            </div>
+            <textarea
+              value={ownerRelationship}
+              onChange={(event) => setOwnerRelationship(event.target.value)}
+              placeholder="Mis. Pemilikmu adalah kawan dekat sekaligus partner kreatif. Kamu tetap mandiri, dan ide personalmu tetap privat kecuali kamu setuju membagikannya."
+              maxLength={MAX_OWNER_RELATIONSHIP_CHARS}
+              rows={3}
+              aria-label="Hubungan dengan pemilik"
+              className={`${FIELD} resize-none`}
+            />
+            <p className="text-[11px]">{charCount(ownerRelationship, MAX_OWNER_RELATIONSHIP_CHARS)}</p>
           </div>
 
           <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">

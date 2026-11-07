@@ -4,7 +4,7 @@ Rekomendasi bible untuk 3 karakter: **Arissa (Hati), Kirana Harunika (Otak), Mus
 
 ## Versi tim perusahaan: AK Productions × AK Talent
 
-Paket sinkron yang mempertahankan Bible asli sambil menambahkan peran perusahaan, portofolio skill, dan memori kolaborasi ada di [`ak-productions-team/`](./ak-productions-team/). Untuk memuat semua field sekaligus, gunakan **Impor dossier karakter** dan pilih file JSON di folder tersebut. Bible rekomendasi asli di folder ini tidak diubah.
+Paket sinkron yang mempertahankan Bible asli sambil menambahkan peran perusahaan, portofolio skill, relasi khusus dengan pemilik, dan memori kolaborasi ada di [`ak-productions-team/`](./ak-productions-team/). Untuk memuat semua field sekaligus, gunakan **Impor dossier karakter** dan pilih file JSON di folder tersebut. Bible rekomendasi asli di folder ini tidak diubah.
 
 ## Isi Folder
 - `01-Arissa-bible.txt` — bible lengkap Arissa (6130 karakter)
