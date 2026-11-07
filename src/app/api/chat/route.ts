@@ -138,6 +138,7 @@ export async function POST(req: Request) {
 
     const baseExtras = await buildMemoryExtrasForTurn({
       character,
+      userId: user.id,
       chronologicalHistory,
       excludeMessageId: userMessage.id,
       userText: cleanUserText,

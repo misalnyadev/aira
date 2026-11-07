@@ -210,10 +210,12 @@ const DDL = [
     "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
     "title" text DEFAULT '' NOT NULL,
     "mode" text DEFAULT 'brainstorm' NOT NULL,
+    "scene_canonical" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`ALTER TABLE "brainstorm_rooms" ADD COLUMN IF NOT EXISTS "mode" text NOT NULL DEFAULT 'brainstorm'`,
+  sql`ALTER TABLE "brainstorm_rooms" ADD COLUMN IF NOT EXISTS "scene_canonical" boolean NOT NULL DEFAULT false`,
   sql`CREATE TABLE IF NOT EXISTS "brainstorm_room_members" (
     "id" uuid PRIMARY KEY NOT NULL,
     "room_id" uuid NOT NULL REFERENCES "brainstorm_rooms"("id") ON DELETE cascade,
@@ -234,6 +236,22 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE INDEX IF NOT EXISTS "brainstorm_messages_room_idx" ON "brainstorm_messages" ("room_id", "created_at" ASC)`,
+  sql`CREATE TABLE IF NOT EXISTS "character_continuity_memories" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "source_room_id" uuid NOT NULL REFERENCES "brainstorm_rooms"("id") ON DELETE cascade,
+    "source_message_id" uuid NOT NULL REFERENCES "brainstorm_messages"("id") ON DELETE cascade,
+    "source_mode" text NOT NULL,
+    "continuity_status" text NOT NULL,
+    "title" text DEFAULT '' NOT NULL,
+    "summary" text DEFAULT '' NOT NULL,
+    "occurred_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "continuity_memories_char_message_idx" ON "character_continuity_memories" ("character_id", "source_message_id")`,
+  sql`CREATE INDEX IF NOT EXISTS "continuity_memories_user_char_time_idx" ON "character_continuity_memories" ("user_id", "character_id", "occurred_at" DESC)`,
+
   sql`CREATE INDEX IF NOT EXISTS "brainstorm_rooms_user_idx" ON "brainstorm_rooms" ("user_id", "updated_at" DESC)`,
   // ---- Status / Reels (WA Story + IG Reels) ----
   sql`CREATE TABLE IF NOT EXISTS "character_statuses" (

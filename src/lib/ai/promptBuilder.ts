@@ -5,17 +5,21 @@ export const BUBBLE_DELIMITER = "[[NEXT]]";
 
 type Character = typeof characters.$inferSelect;
 
-export type CharacterInteractionMode = "chat" | "audio_call" | "video_call" | "meetup" | "brainstorm";
+export type CharacterInteractionMode = "chat" | "audio_call" | "video_call" | "meetup" | "brainstorm" | "scene";
 
 export type MemoryPromptContext = {
   /** Deskripsi waktu WIB saat ini & selisih sejak pesan terakhir. */
   timeAwareness?: string;
   /** Buku Ingatan Jangka Panjang yang tersimpan di database karakter. */
   memorySummary?: string;
+  /** Ringkasan Brainstorm/Reka Adegan yang diikuti karakter ini, dengan waktu WIB. */
+  continuityMemoryBlock?: string;
   /** Memori Tim 1 yang dibagikan; tidak mencakup riwayat chat/catatan privat. */
   teamContext?: string;
   /** Kanal interaksi eksplisit agar adegan tidak disimpulkan dari isi pesan. */
   interactionMode?: CharacterInteractionMode;
+  /** Hanya berlaku untuk Reka Adegan: status cerita utama atau latihan. */
+  sceneCanonical?: boolean;
   /** Kutipan asli obrolan lama ber-tanggal yang cocok dengan pertanyaan saat ini. */
   recalledArchive?: string;
   /** Hasil pembacaan link URL atau pencarian internet saat fitur browsing karakter aktif. */
@@ -92,6 +96,10 @@ Cara memakainya:
 === AKHIR BUKU INGATAN ===`);
   }
 
+  if (extras.continuityMemoryBlock?.trim()) {
+    blocks.push(extras.continuityMemoryBlock.trim());
+  }
+
   if (extras.teamContext?.trim()) {
     blocks.push(extras.teamContext.trim());
   }
@@ -150,6 +158,29 @@ Saat ini kamu dan pengguna sedang bertemu secara fisik, hanya kalian berdua, di 
 - Tanggapi gestur dan situasi ruangan secara wajar, tetapi jangan mengarang detail, tindakan, lokasi spesifik, atau respons pengguna yang belum terjadi.
 - Tidak ada karakter lain yang ikut hadir secara fisik. Bicaralah langsung sebagai dirimu kepada pengguna.
 === AKHIR MODE MEETUP TATAP MUKA BERDUA ===`;
+}
+
+export function buildBrainstormModeAnchor(): string {
+  return `=== MODE RUANG: BRAINSTORM ===
+Kamu sedang ikut diskusi ide bersama pengguna dan karakter lain, bukan berada dalam adegan fisik.
+- Bantu mengembangkan topik, memberi sudut pandang sebagai dirimu, dan menanggapi kontribusi yang memang terlihat di percakapan ruangan.
+- Bedakan usulan, rencana, dan keputusan yang benar-benar disepakati. Ide di ruang ini bukan kejadian cerita yang sudah berlangsung.
+- Jangan menganggap karakter yang tidak hadir di ruangan mengetahui isi diskusi ini.
+=== AKHIR MODE BRAINSTORM ===`;
+}
+
+export function buildSceneModeAnchor(sceneCanonical: boolean): string {
+  const status = sceneCanonical ? "BAGIAN CERITA UTAMA (CANON)" : "LATIHAN (BUKAN CANON)";
+  const continuity = sceneCanonical
+    ? "Adegan ini ditandai sebagai bagian cerita utama; jaga konsistensinya dalam kesinambungan cerita."
+    : "Ini hanya latihan adegan. Jangan menganggap peristiwa fiksi di dalamnya sebagai fakta cerita utama; yang mungkin diingat nanti hanya bahwa kalian pernah berlatih adegan ini.";
+
+  return `=== MODE RUANG: REKA ADEGAN — ${status} ===
+Kamu sedang memainkan adegan bersama pengguna dan karakter lain yang tercantum sebagai peserta ruangan; ini berbeda dari Tatap Muka berdua.
+- Tetap menjadi dirimu sendiri dan tanggapi adegan secara hidup, tetapi jangan menulis dialog, keputusan, atau tindakan pengguna maupun karakter lain.
+- Ikuti konteks yang sudah muncul di transkrip ruangan. Jangan mengarang bahwa karakter yang tidak hadir ikut melihat atau mengalami adegan.
+- ${continuity}
+=== AKHIR MODE REKA ADEGAN ===`;
 }
 
 export function buildCallModeAnchor(mode: "video" | "audio"): string {
@@ -218,6 +249,10 @@ function extrasAnchor(extras?: MemoryPromptContext): string {
     } else if (extras?.interactionMode === "meetup") {
       parts.push(buildMeetupModeAnchor());
       if (extras.meetupExpressionMode) parts.push(buildMeetupExpressionAnchor());
+    } else if (extras?.interactionMode === "brainstorm") {
+      parts.push(buildBrainstormModeAnchor());
+    } else if (extras?.interactionMode === "scene") {
+      parts.push(buildSceneModeAnchor(Boolean(extras.sceneCanonical)));
     }
     if (extras?.voiceNoteReply) {
       parts.push(buildVoiceNoteReplyAnchor(Boolean(extras?.meetupExpressionMode)));

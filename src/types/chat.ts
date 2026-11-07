@@ -163,8 +163,8 @@ export type OutgoingContactItem = {
   updatedAt: string;
 };
 
-/** `meetup` is kept for legacy rows; new Tatap Muka uses the character chat history. */
-export type BrainstormRoomMode = "brainstorm" | "meetup";
+/** `meetup` remains for legacy rows; new group scenes use `scene`. */
+export type BrainstormRoomMode = "brainstorm" | "scene" | "meetup";
 
 export type BrainstormMemberSummary = {
   characterId: string;
@@ -177,6 +177,8 @@ export type BrainstormRoomSummary = {
   id: string;
   title: string;
   mode: BrainstormRoomMode;
+  /** Hanya relevan untuk `scene`: apakah adegan dianggap bagian dari cerita utama. */
+  sceneCanonical: boolean;
   members: BrainstormMemberSummary[];
   preview: string;
   updatedAt: string;

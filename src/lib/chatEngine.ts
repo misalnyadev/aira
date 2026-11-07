@@ -33,6 +33,7 @@ import {
   parseCharacterMedia,
 } from "@/lib/characterMedia";
 import { getDailyPresenceForPrompt } from "@/lib/dailyPresence";
+import { buildContinuityMemoryBlock } from "@/lib/continuityMemory";
 import { AUTO_MEMORY_BATCH_MIN } from "@/lib/limits";
 import {
   buildKeyAttempts,
@@ -127,15 +128,21 @@ export { toChatTurns } from "@/lib/messageRules";
  */
 export async function buildMemoryExtrasForTurn({
   character,
+  userId,
   chronologicalHistory,
   excludeMessageId,
+  continuityRoomId,
   userText,
   primaryProviderType,
   now = new Date(),
 }: {
   character: Character;
+  /** Authenticated requester; continuity remains private to the owning account. */
+  userId: string;
   chronologicalHistory: (typeof messages.$inferSelect)[];
   excludeMessageId?: string;
+  /** Exclude the current shared room; its transcript is already in the turn history. */
+  continuityRoomId?: string;
   userText: string;
   primaryProviderType?: string;
   now?: Date;
@@ -144,9 +151,17 @@ export async function buildMemoryExtrasForTurn({
 
   let timeAwareness: string | undefined;
   let memorySummary: string | undefined;
+  let continuityMemoryBlock: string | undefined;
   let recalledArchive = "";
 
   if (character.memoryEnabled) {
+    if (character.userId === userId) {
+      continuityMemoryBlock = await buildContinuityMemoryBlock({
+        userId,
+        characterId: character.id,
+        excludeRoomId: continuityRoomId,
+      });
+    }
     const priorRows = chronologicalHistory.filter((m) => m.id !== excludeMessageId);
     const lastPrior = priorRows[priorRows.length - 1] ?? null;
     timeAwareness = describeTimeAwareness(now, lastPrior?.createdAt ?? null);
@@ -197,13 +212,21 @@ export async function buildMemoryExtrasForTurn({
     }
   }
 
-  if (!timeAwareness && !memorySummary && !recalledArchive && !webContext && !webSearchActive) {
+  if (
+    !timeAwareness &&
+    !memorySummary &&
+    !continuityMemoryBlock &&
+    !recalledArchive &&
+    !webContext &&
+    !webSearchActive
+  ) {
     return undefined;
   }
 
   return {
     timeAwareness,
     memorySummary,
+    continuityMemoryBlock,
     recalledArchive,
     webContext,
     webSearchActive,
@@ -339,7 +362,10 @@ export async function generateBubbles({
       ? "video_call"
       : "audio_call"
     : memoryExtras?.interactionMode ?? "chat";
-  const isSharedRoom = interactionMode === "meetup" || interactionMode === "brainstorm";
+  const isSharedRoom =
+    interactionMode === "meetup" ||
+    interactionMode === "brainstorm" ||
+    interactionMode === "scene";
   const characterMedia = parseCharacterMedia(character.media);
   const meetupExpressionMode =
     interactionMode === "meetup" &&

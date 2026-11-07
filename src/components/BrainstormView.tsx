@@ -6,6 +6,8 @@ import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import { BrainstormIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
 
+type SharedRoomMode = "brainstorm" | "scene";
+
 export function BrainstormView({
   rooms,
   characters,
@@ -19,25 +21,38 @@ export function BrainstormView({
   characters: CharacterSummary[];
   onOpenMeetup: (characterId: string) => void;
   onOpenRoom: (id: string) => void;
-  onCreateBrainstorm: (title: string, characterIds: string[]) => Promise<boolean>;
+  onCreateBrainstorm: (
+    title: string,
+    characterIds: string[],
+    mode: SharedRoomMode,
+    sceneCanonical: boolean
+  ) => Promise<boolean>;
   onDeleteRoom: (id: string) => void;
   onNeedCharacters: () => void;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const [createMode, setCreateMode] = useState<SharedRoomMode>("brainstorm");
   const brainstormRooms = rooms.filter((room) => room.mode === "brainstorm");
+  const sceneRooms = rooms.filter((room) => room.mode === "scene");
   const canBrainstorm = characters.length >= 2;
+  const canCreateRoom = characters.length >= 1;
+
+  function openCreate(mode: SharedRoomMode) {
+    setCreateMode(mode);
+    setShowCreate(true);
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-app">
       <MenuHeader
         title="MeetUp"
-        description="Pilih satu karakter untuk tatap muka, atau buat meja Brainstorm"
+        description="Tatap Muka berdua, diskusi Brainstorm, atau Reka Adegan"
         actions={
           <MenuHeaderIconButton
-            onClick={() => setShowCreate(true)}
-            disabled={!canBrainstorm}
-            aria-label="Buat meja Brainstorm"
-            title={canBrainstorm ? "Buat meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
+            onClick={() => openCreate(canBrainstorm ? "brainstorm" : "scene")}
+            disabled={!canCreateRoom}
+            aria-label="Buat ruang bersama"
+            title={canCreateRoom ? "Buat Brainstorm atau Reka Adegan" : "Buat karakter terlebih dulu"}
           >
             <PlusIcon className="h-5 w-5" />
           </MenuHeaderIconButton>
@@ -101,7 +116,7 @@ export function BrainstormView({
           <div className="mb-3">
             <h2 className="text-sm font-bold text-ink">Brainstorm</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
-              Meja diskusi 2–3 karakter, terpisah dari pertemuan Tatap Muka.
+              Diskusi ide 2–3 karakter. Usulan dan rencana bisa diingat sebagai rencana, bukan kejadian cerita.
             </p>
           </div>
 
@@ -117,12 +132,12 @@ export function BrainstormView({
                 {canBrainstorm
                   ? "Buat meja untuk meminta beberapa karakter menanggapi topik secara bergiliran."
                   : characters.length === 0
-                    ? "Buat karakter untuk memulai Tatap Muka. Brainstorm memerlukan setidaknya dua karakter."
-                    : "Tatap Muka sudah bisa dimulai dengan satu karakter. Untuk Brainstorm, tambahkan karakter lagi."}
+                    ? "Buat karakter dulu. Brainstorm memerlukan setidaknya dua karakter."
+                    : "Tatap Muka dan Reka Adegan sudah bisa dimulai; tambahkan satu karakter lagi untuk Brainstorm."}
               </p>
               {canBrainstorm ? (
                 <button
-                  onClick={() => setShowCreate(true)}
+                  onClick={() => openCreate("brainstorm")}
                   className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
                 >
                   Buat Meja Pertama
@@ -137,56 +152,57 @@ export function BrainstormView({
               ) : null}
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {brainstormRooms.map((room) => (
-                <div
-                  key={room.id}
-                  className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-surface-2"
+            <RoomCards rooms={brainstormRooms} onOpenRoom={onOpenRoom} onDeleteRoom={onDeleteRoom} />
+          )}
+        </section>
+
+        <section className="mx-auto w-full max-w-[900px]">
+          <div className="mb-3">
+            <h2 className="text-sm font-bold text-ink">Reka Adegan</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              Adegan bersama 1–3 karakter. Default-nya latihan; tandai canon bila masuk cerita utama.
+            </p>
+          </div>
+
+          {sceneRooms.length === 0 ? (
+            <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
+              <h3 className="text-sm font-semibold text-ink">
+                {canCreateRoom ? "Belum ada Reka Adegan" : "Buat karakter untuk mulai Reka Adegan"}
+              </h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+                {canCreateRoom
+                  ? "Mainkan adegan dengan satu sampai tiga karakter; pilih Latihan atau bagian cerita utama saat membuatnya."
+                  : "Reka Adegan memerlukan minimal satu karakter."}
+              </p>
+              {canCreateRoom ? (
+                <button
+                  onClick={() => openCreate("scene")}
+                  className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
                 >
-                  <button
-                    type="button"
-                    onClick={() => onOpenRoom(room.id)}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                  >
-                    <div className="flex -space-x-2">
-                      {room.members.slice(0, 3).map((member) => (
-                        <div key={member.characterId} className="rounded-full ring-2 ring-surface">
-                          <Avatar name={member.name} src={member.avatarUrl} size={36} />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{room.title}</p>
-                      <p className="truncate text-xs text-ink-soft">
-                        {room.members.map((member) => member.name).join(" · ")} · {room.messageCount} pesan
-                      </p>
-                      <p className="truncate text-xs text-muted">{room.preview}</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm("Hapus meja ini beserta obrolannya?")) onDeleteRoom(room.id);
-                    }}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
-                    aria-label={`Hapus meja ${room.title}`}
-                    title="Hapus meja"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+                  Buat Adegan Pertama
+                </button>
+              ) : (
+                <button
+                  onClick={onNeedCharacters}
+                  className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink"
+                >
+                  Buat Karakter
+                </button>
+              )}
             </div>
+          ) : (
+            <RoomCards rooms={sceneRooms} onOpenRoom={onOpenRoom} onDeleteRoom={onDeleteRoom} />
           )}
         </section>
       </div>
 
       {showCreate && (
-        <CreateBrainstormModal
+        <CreateSharedRoomModal
           characters={characters}
+          initialMode={createMode}
           onClose={() => setShowCreate(false)}
-          onCreate={async (title, ids) => {
-            const ok = await onCreateBrainstorm(title, ids);
+          onCreate={async (title, ids, mode, sceneCanonical) => {
+            const ok = await onCreateBrainstorm(title, ids, mode, sceneCanonical);
             if (ok) setShowCreate(false);
             return ok;
           }}
@@ -196,19 +212,92 @@ export function BrainstormView({
   );
 }
 
-function CreateBrainstormModal({
+function RoomCards({
+  rooms,
+  onOpenRoom,
+  onDeleteRoom,
+}: {
+  rooms: BrainstormRoomSummary[];
+  onOpenRoom: (id: string) => void;
+  onDeleteRoom: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-2.5">
+      {rooms.map((room) => (
+        <div
+          key={room.id}
+          className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-surface-2"
+        >
+          <button
+            type="button"
+            onClick={() => onOpenRoom(room.id)}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <div className="flex -space-x-2">
+              {room.members.slice(0, 3).map((member) => (
+                <div key={member.characterId} className="rounded-full ring-2 ring-surface">
+                  <Avatar name={member.name} src={member.avatarUrl} size={36} />
+                </div>
+              ))}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-sm font-semibold text-ink">{room.title}</p>
+                {room.mode === "scene" && (
+                  <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+                    {room.sceneCanonical ? "Canon" : "Latihan"}
+                  </span>
+                )}
+              </div>
+              <p className="truncate text-xs text-ink-soft">
+                {room.members.map((member) => member.name).join(" · ")} · {room.messageCount} pesan
+              </p>
+              <p className="truncate text-xs text-muted">{room.preview}</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Hapus ${room.mode === "scene" ? "adegan" : "meja"} ini beserta obrolannya?`)) {
+                onDeleteRoom(room.id);
+              }
+            }}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
+            aria-label={`Hapus ${room.mode === "scene" ? "adegan" : "meja"} ${room.title}`}
+            title={room.mode === "scene" ? "Hapus adegan" : "Hapus meja"}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CreateSharedRoomModal({
   characters,
+  initialMode,
   onClose,
   onCreate,
 }: {
   characters: CharacterSummary[];
+  initialMode: SharedRoomMode;
   onClose: () => void;
-  onCreate: (title: string, characterIds: string[]) => Promise<boolean>;
+  onCreate: (
+    title: string,
+    characterIds: string[],
+    mode: SharedRoomMode,
+    sceneCanonical: boolean
+  ) => Promise<boolean>;
 }) {
+  const [mode, setMode] = useState<SharedRoomMode>(initialMode);
   const [title, setTitle] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
+  const [sceneCanonical, setSceneCanonical] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const minMembers = mode === "scene" ? 1 : 2;
+  const canCreate = picked.length >= minMembers && picked.length <= 3;
 
   function toggle(id: string) {
     setPicked((prev) => {
@@ -219,15 +308,16 @@ function CreateBrainstormModal({
   }
 
   async function handleCreate() {
-    if (picked.length < 2) {
-      setError("Pilih minimal 2 karakter untuk Brainstorm.");
+    if (!canCreate) {
+      setError(mode === "scene" ? "Pilih 1–3 karakter untuk Reka Adegan." : "Pilih 2–3 karakter untuk Brainstorm.");
       return;
     }
     setBusy(true);
     setError(null);
-    const fallbackTitle = `Brainstorm — ${picked.length} karakter`;
-    const ok = await onCreate(title.trim() || fallbackTitle, picked);
-    if (!ok) setError("Gagal membuat meja. Coba lagi.");
+    const fallbackTitle =
+      mode === "scene" ? `Reka Adegan — ${picked.length} karakter` : `Brainstorm — ${picked.length} karakter`;
+    const ok = await onCreate(title.trim() || fallbackTitle, picked, mode, mode === "scene" && sceneCanonical);
+    if (!ok) setError("Gagal membuat ruang. Coba lagi.");
     setBusy(false);
   }
 
@@ -244,8 +334,12 @@ function CreateBrainstormModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-[15px] font-bold text-ink">Buat Meja Brainstorm</h2>
-            <p className="mt-0.5 text-xs text-ink-soft">Pilih 2–3 karakter untuk berdiskusi.</p>
+            <h2 className="font-display text-[15px] font-bold text-ink">
+              {mode === "scene" ? "Buat Reka Adegan" : "Buat Meja Brainstorm"}
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              {mode === "scene" ? "Pilih 1–3 karakter untuk bermain adegan." : "Pilih 2–3 karakter untuk berdiskusi."}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -257,16 +351,54 @@ function CreateBrainstormModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          <label className="text-xs font-semibold text-muted">Judul meja (opsional)</label>
+          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-2 p-1">
+            {(["brainstorm", "scene"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setMode(value);
+                  setError(null);
+                }}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  mode === value ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"
+                }`}
+                aria-pressed={mode === value}
+              >
+                {value === "scene" ? "Reka Adegan" : "Brainstorm"}
+              </button>
+            ))}
+          </div>
+
+          <label className="mt-4 block text-xs font-semibold text-muted">Judul (opsional)</label>
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="mis. Brainstorm Naskah"
+            placeholder={mode === "scene" ? "mis. Adegan di tepi pantai" : "mis. Brainstorm Naskah"}
             className="mt-1.5 w-full rounded-2xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-ink/20"
             maxLength={80}
           />
 
-          <p className="mt-4 text-xs font-semibold text-muted">Pilih 2–3 karakter</p>
+          {mode === "scene" && (
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-surface p-3">
+              <input
+                type="checkbox"
+                checked={sceneCanonical}
+                onChange={(event) => setSceneCanonical(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-current"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink">Bagian dari cerita utama (canon)</span>
+                <span className="mt-0.5 block text-xs text-ink-soft">
+                  Tidak dicentang berarti latihan; ini adalah pilihan default.
+                </span>
+              </span>
+            </label>
+          )}
+
+          <p className="mt-4 text-xs font-semibold text-muted">
+            Pilih {mode === "scene" ? "1–3" : "2–3"} karakter
+          </p>
           <p className="text-[11px] text-muted">Terpilih {picked.length}/{Math.min(characters.length, 3)}</p>
           <div className="mt-2 space-y-2">
             {characters.map((character) => {
@@ -285,6 +417,9 @@ function CreateBrainstormModal({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
                     <p className="truncate text-xs text-ink-soft">{character.shortBio || "Tanpa bio"}</p>
+                    <p className="mt-0.5 text-[10px] text-muted">
+                      Ingatan jangka panjang: {character.memoryEnabled ? "aktif" : "nonaktif"}
+                    </p>
                   </div>
                   <span className={`grid h-6 w-6 place-items-center rounded-full border text-xs font-bold ${active ? "border-ink bg-ink text-white dark:bg-white dark:text-black" : "border-line text-muted"}`}>
                     {active ? "✓" : "+"}
@@ -300,13 +435,17 @@ function CreateBrainstormModal({
         <div className="shrink-0 border-t border-line px-5 py-3">
           <button
             onClick={handleCreate}
-            disabled={busy || picked.length < 2}
+            disabled={busy || !canCreate}
             className="w-full rounded-full bg-brand py-3 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.98] disabled:opacity-40"
           >
-            {busy ? "Membuat..." : `Buat Meja (${picked.length} karakter)`}
+            {busy
+              ? "Membuat..."
+              : mode === "scene"
+                ? `Buat Adegan (${picked.length} karakter)`
+                : `Buat Meja (${picked.length} karakter)`}
           </button>
           <p className="mt-2 text-center text-[11px] text-muted">
-            Tiap karakter menanggapi bergiliran; diskusi grup tidak mengubah riwayat Tatap Muka.
+            Ringkasan berwaktu WIB hanya disimpan untuk karakter peserta yang mengaktifkan Ingatan Jangka Panjang. Transkrip lengkap tetap terpisah dari Chat.
           </p>
         </div>
       </div>

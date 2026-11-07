@@ -137,6 +137,7 @@ export async function POST(
     const baseMemoryExtras = character.memoryEnabled
       ? await buildMemoryExtrasForTurn({
           character,
+          userId: user.id,
           chronologicalHistory,
           userText: lastMsg.content || "",
           primaryProviderType: candidates[0]?.type,
