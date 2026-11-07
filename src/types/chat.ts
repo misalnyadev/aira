@@ -3,6 +3,7 @@ import type { CallEmotion } from "@/lib/callEmotion";
 import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig } from "@/lib/hdVoice";
+import type { OwnerProfileShareField } from "@/lib/characterInvite";
 
 export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
 
@@ -87,6 +88,8 @@ export type CharacterDetail = {
   teamRole: string;
   sharedTeamMemory: string;
   shareTeamMemory: boolean;
+  /** Field profil pemilik yang boleh masuk ke brief undangan karakter ini. */
+  shareOwnerProfileFields: OwnerProfileShareField[];
   memorySummary: string;
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;

@@ -13,6 +13,7 @@ import { parseCharacterMedia } from "@/lib/characterMedia";
 import { parseOptionalChatBackground } from "@/lib/chatBackground";
 import { loadActiveContactThreadsForUser } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeOwnerProfileShareFields } from "@/lib/characterInvite";
 import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
@@ -206,6 +207,7 @@ export async function POST(req: Request) {
     teamRole,
     sharedTeamMemory,
     shareTeamMemory,
+    shareOwnerProfileFields,
   } = body as {
     name?: string;
     avatarUrl?: string;
@@ -218,6 +220,7 @@ export async function POST(req: Request) {
     teamRole?: string;
     sharedTeamMemory?: string;
     shareTeamMemory?: boolean;
+    shareOwnerProfileFields?: unknown;
   };
 
   if (!name?.trim()) {
@@ -271,6 +274,12 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  if (shareOwnerProfileFields !== undefined && !Array.isArray(shareOwnerProfileFields)) {
+    return NextResponse.json(
+      { error: "Daftar info pemilik yang dibagikan tidak valid." },
+      { status: 400 }
+    );
+  }
   if ((bible ?? "").trim().length > MAX_BIBLE_CHARS) {
     return NextResponse.json(
       { error: `Bible maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.` },
@@ -291,6 +300,9 @@ export async function POST(req: Request) {
       teamRole: (teamRole ?? "").trim(),
       sharedTeamMemory: (sharedTeamMemory ?? "").trim(),
       shareTeamMemory: shareTeamMemory === true,
+      shareOwnerProfileFields: JSON.stringify(
+        normalizeOwnerProfileShareFields(shareOwnerProfileFields)
+      ),
       providerId: providerId || null,
       model: model?.trim() || null,
     })

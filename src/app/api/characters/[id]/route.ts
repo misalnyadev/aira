@@ -11,6 +11,7 @@ import {
 } from "@/lib/characterMedia";
 import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeOwnerProfileShareFields, parseOwnerProfileShareFields } from "@/lib/characterInvite";
 import { normalizeCharacterVoice, parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
@@ -49,6 +50,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     teamRole: row.teamRole,
     sharedTeamMemory: row.sharedTeamMemory,
     shareTeamMemory: Boolean(row.shareTeamMemory),
+    shareOwnerProfileFields: parseOwnerProfileShareFields(row.shareOwnerProfileFields),
     memorySummary: row.memorySummary ?? "",
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
     browsingEnabled: Boolean(row.browsingEnabled),
@@ -100,6 +102,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     teamRole,
     sharedTeamMemory,
     shareTeamMemory,
+    shareOwnerProfileFields,
     browsingEnabled,
     proactiveEnabled,
   } = body as {
@@ -120,6 +123,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     teamRole?: string;
     sharedTeamMemory?: string;
     shareTeamMemory?: boolean;
+    shareOwnerProfileFields?: unknown;
     browsingEnabled?: boolean;
     proactiveEnabled?: boolean;
   };
@@ -157,6 +161,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       { status: 400 }
     );
   }
+  if (shareOwnerProfileFields !== undefined && !Array.isArray(shareOwnerProfileFields)) {
+    return NextResponse.json(
+      { error: "Daftar info pemilik yang dibagikan tidak valid." },
+      { status: 400 }
+    );
+  }
   if (bible !== undefined && bible.trim().length > MAX_BIBLE_CHARS) {
     return NextResponse.json(
       { error: `Bible maksimal ${MAX_BIBLE_CHARS.toLocaleString("id-ID")} karakter.` },
@@ -183,6 +193,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (teamRole !== undefined) updates.teamRole = teamRole.trim();
   if (sharedTeamMemory !== undefined) updates.sharedTeamMemory = sharedTeamMemory.trim();
   if (typeof shareTeamMemory === "boolean") updates.shareTeamMemory = shareTeamMemory;
+  if (shareOwnerProfileFields !== undefined) {
+    updates.shareOwnerProfileFields = JSON.stringify(
+      normalizeOwnerProfileShareFields(shareOwnerProfileFields)
+    );
+  }
   if (greeting !== undefined) updates.greeting = greeting.trim();
   if (bible !== undefined) updates.bible = bible.trim();
   if (providerId !== undefined) updates.providerId = providerId || null;

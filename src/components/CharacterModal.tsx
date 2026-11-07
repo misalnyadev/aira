@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CharacterDetail, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
 import { parseBibleFile } from "@/lib/characterBible";
+import { OWNER_PROFILE_SHARE_OPTIONS, type OwnerProfileShareField } from "@/lib/characterInvite";
 import {
   MAX_BIBLE_CHARS,
   MAX_PERSONALITY_CHARS,
@@ -55,6 +56,9 @@ export function CharacterModal({
   const [teamRole, setTeamRole] = useState(initial?.teamRole ?? "");
   const [sharedTeamMemory, setSharedTeamMemory] = useState(initial?.sharedTeamMemory ?? "");
   const [shareTeamMemory, setShareTeamMemory] = useState(initial?.shareTeamMemory ?? false);
+  const [shareOwnerProfileFields, setShareOwnerProfileFields] = useState<OwnerProfileShareField[]>(
+    initial?.shareOwnerProfileFields ?? []
+  );
   const [personality, setPersonality] = useState(initial?.personality ?? "");
   const [bible, setBible] = useState(initial?.bible ?? "");
   const [greeting, setGreeting] = useState(initial?.greeting ?? "");
@@ -214,6 +218,7 @@ export function CharacterModal({
         teamRole,
         sharedTeamMemory,
         shareTeamMemory,
+        shareOwnerProfileFields,
         personality,
         bible,
         greeting,
@@ -393,6 +398,37 @@ export function CharacterModal({
             </label>
             <p className="text-[11px] leading-relaxed text-muted">
               Riwayat chat, Buku Ingatan pribadi, dan Papan Catatan & Janji tetap milik masing-masing pengguna dan tidak ikut dibagikan.
+            </p>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+            <div>
+              <p className="text-xs font-semibold text-ink">Info profil pemilik saat diundang</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                Karakter tetap tahu bahwa ia milikmu dan hadir sebagai tamu. Centang hanya fakta profilmu yang boleh masuk ke brief dan dibagikan saat ia diundang.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {OWNER_PROFILE_SHARE_OPTIONS.map(({ field, label }) => (
+                <label key={field} className="flex items-center gap-2 text-xs text-ink-soft">
+                  <input
+                    type="checkbox"
+                    checked={shareOwnerProfileFields.includes(field)}
+                    onChange={(event) => {
+                      setShareOwnerProfileFields((prev) =>
+                        event.target.checked
+                          ? [...prev, field]
+                          : prev.filter((item) => item !== field)
+                      );
+                    }}
+                    className="accent-ink"
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted">
+              Yang tidak dicentang tidak dimasukkan dari profil akunmu. Riwayat chat, Buku Ingatan pribadi, dan Papan Catatan & Janji tetap privat. Izin Tim 1 diatur terpisah di atas.
             </p>
           </div>
 

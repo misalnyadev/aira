@@ -14,6 +14,8 @@ export type MemoryPromptContext = {
   memorySummary?: string;
   /** Ringkasan Brainstorm/Reka Adegan yang diikuti karakter ini, dengan waktu WIB. */
   continuityMemoryBlock?: string;
+  /** Brief identitas pemilik dan batasan saat karakter berbicara sebagai tamu undangan. */
+  invitedCharacterContext?: string;
   /** Memori Tim 1 yang dibagikan; tidak mencakup riwayat chat/catatan privat. */
   teamContext?: string;
   /** Kanal interaksi eksplisit agar adegan tidak disimpulkan dari isi pesan. */
@@ -75,6 +77,10 @@ Cara memakainya:
 function buildMemorySection(extras?: MemoryPromptContext): string {
   if (!extras) return "";
   const blocks: string[] = [];
+
+  if (extras.invitedCharacterContext?.trim()) {
+    blocks.push(extras.invitedCharacterContext.trim());
+  }
 
   if (extras.timeAwareness?.trim()) {
     blocks.push(`=== KESADARAN WAKTU & JARAK OBROLAN (WIB) ===
