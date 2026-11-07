@@ -16,6 +16,7 @@ import {
   pickProviderCandidates,
   toChatTurns,
 } from "@/lib/chatEngine";
+import { buildInvitedCharacterContext, parseOwnerProfileShareFields } from "@/lib/characterInvite";
 import { effectiveContactState } from "@/lib/contactPin";
 import { serializeContactMessageForViewer } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
@@ -308,6 +309,22 @@ export async function POST(
     if (teamContext) {
       memoryExtras = { ...memoryExtras, teamContext };
     }
+
+    const shareOwnerProfileFields = parseOwnerProfileShareFields(
+      character.shareOwnerProfileFields
+    );
+    const ownerProfile = shareOwnerProfileFields.length
+      ? (await loadUserChatSettings(contact.ownerUserId)).profile
+      : null;
+    memoryExtras = {
+      ...memoryExtras,
+      invitedCharacterContext: buildInvitedCharacterContext({
+        characterName: character.name,
+        ownerProfile,
+        shareOwnerProfileFields,
+      }),
+    };
+
     if (replyAsVoiceNote) {
       memoryExtras = { ...memoryExtras, voiceNoteReply: true };
     }
