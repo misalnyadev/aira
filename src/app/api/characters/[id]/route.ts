@@ -21,6 +21,7 @@ import {
   MAX_BIBLE_CHARS,
   MAX_GREETING_CHARS,
   MAX_MEMORY_SUMMARY_CHARS,
+  MAX_OWNER_RELATIONSHIP_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
   MAX_SHARED_TEAM_MEMORY_CHARS,
@@ -44,6 +45,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
     personality: row.personality,
     bible: row.bible,
+    ownerRelationship: row.ownerRelationship,
     greeting: row.greeting,
     providerId: row.providerId,
     model: row.model,
@@ -97,6 +99,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     personality,
     greeting,
     bible,
+    ownerRelationship,
     providerId,
     model,
     chatBackground,
@@ -119,6 +122,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     personality?: string;
     greeting?: string;
     bible?: string;
+    ownerRelationship?: unknown;
     providerId?: string | null;
     model?: string | null;
     chatBackground?: unknown | null;
@@ -168,6 +172,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       { status: 400 }
     );
   }
+  if (ownerRelationship !== undefined && typeof ownerRelationship !== "string") {
+    return NextResponse.json(
+      { error: "Hubungan dengan pemilik harus berupa teks." },
+      { status: 400 }
+    );
+  }
+  if (
+    typeof ownerRelationship === "string" &&
+    ownerRelationship.trim().length > MAX_OWNER_RELATIONSHIP_CHARS
+  ) {
+    return NextResponse.json(
+      { error: `Hubungan dengan pemilik maksimal ${MAX_OWNER_RELATIONSHIP_CHARS.toLocaleString("id-ID")} karakter.` },
+      { status: 400 }
+    );
+  }
   if (shareOwnerProfileFields !== undefined && !Array.isArray(shareOwnerProfileFields)) {
     return NextResponse.json(
       { error: "Daftar info pemilik yang dibagikan tidak valid." },
@@ -213,6 +232,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (greeting !== undefined) updates.greeting = greeting.trim();
   if (bible !== undefined) updates.bible = bible.trim();
+  if (typeof ownerRelationship === "string") {
+    updates.ownerRelationship = ownerRelationship.trim();
+  }
   if (providerId !== undefined) updates.providerId = providerId || null;
   if (model !== undefined) updates.model = model?.trim() || null;
   if ("chatBackground" in body) {

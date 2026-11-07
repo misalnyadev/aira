@@ -22,6 +22,7 @@ import { parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
   MAX_GREETING_CHARS,
+  MAX_OWNER_RELATIONSHIP_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
   MAX_SHARED_TEAM_MEMORY_CHARS,
@@ -209,6 +210,7 @@ export async function POST(req: Request) {
     personality,
     greeting,
     bible,
+    ownerRelationship,
     providerId,
     model,
     teamRole,
@@ -223,6 +225,7 @@ export async function POST(req: Request) {
     personality?: string;
     greeting?: string;
     bible?: string;
+    ownerRelationship?: unknown;
     providerId?: string | null;
     model?: string | null;
     teamRole?: string;
@@ -286,6 +289,21 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  if (ownerRelationship !== undefined && typeof ownerRelationship !== "string") {
+    return NextResponse.json(
+      { error: "Hubungan dengan pemilik harus berupa teks." },
+      { status: 400 }
+    );
+  }
+  if (
+    typeof ownerRelationship === "string" &&
+    ownerRelationship.trim().length > MAX_OWNER_RELATIONSHIP_CHARS
+  ) {
+    return NextResponse.json(
+      { error: `Hubungan dengan pemilik maksimal ${MAX_OWNER_RELATIONSHIP_CHARS.toLocaleString("id-ID")} karakter.` },
+      { status: 400 }
+    );
+  }
   if (shareOwnerProfileFields !== undefined && !Array.isArray(shareOwnerProfileFields)) {
     return NextResponse.json(
       { error: "Daftar info pemilik yang dibagikan tidak valid." },
@@ -309,6 +327,8 @@ export async function POST(req: Request) {
       skillPortfolio: JSON.stringify(skillValidation.skills),
       personality: personality.trim(),
       bible: (bible ?? "").trim(),
+      ownerRelationship:
+        typeof ownerRelationship === "string" ? ownerRelationship.trim() : "",
       greeting: (greeting ?? "").trim(),
       teamRole: (teamRole ?? "").trim(),
       sharedTeamMemory: (sharedTeamMemory ?? "").trim(),

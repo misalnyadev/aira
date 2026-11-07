@@ -389,6 +389,9 @@ export async function generateBubbles({
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
           ...(callMode ? { callMode } : {}),
+          ...(character.userId === userId && character.ownerRelationship.trim()
+            ? { ownerRelationship: character.ownerRelationship.trim() }
+            : {}),
           interactionMode,
           ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
           dailyPresence,

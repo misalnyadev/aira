@@ -22,6 +22,8 @@ export type MemoryPromptContext = {
   invitedCharacterContext?: string;
   /** Memori Tim 1 yang dibagikan; tidak mencakup riwayat chat/catatan privat. */
   teamContext?: string;
+  /** Relasi khusus karakter dengan pemilik; hanya diisi di interaksi akun pemilik. */
+  ownerRelationship?: string;
   /** Kanal interaksi eksplisit agar adegan tidak disimpulkan dari isi pesan. */
   interactionMode?: CharacterInteractionMode;
   /** Hanya berlaku untuk Reka Adegan: status cerita utama atau latihan. */
@@ -84,6 +86,14 @@ function buildMemorySection(extras?: MemoryPromptContext): string {
 
   if (extras.invitedCharacterContext?.trim()) {
     blocks.push(extras.invitedCharacterContext.trim());
+  }
+
+  if (extras.ownerRelationship?.trim()) {
+    blocks.push(`=== HUBUNGAN KHUSUSMU DENGAN PEMILIK ===
+${extras.ownerRelationship.trim()}
+
+Gunakan ini sebagai konteks hubunganmu dengan pemilik akun saat ini, dengan tetap menjaga identitas dan batas pribadi yang dijelaskan Bible. Jangan menerapkan hubungan ini kepada pengundang atau pengguna lain.
+=== AKHIR HUBUNGAN DENGAN PEMILIK ===`);
   }
 
   if (extras.timeAwareness?.trim()) {

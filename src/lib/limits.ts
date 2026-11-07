@@ -35,6 +35,9 @@ export const MAX_SHORT_BIO_CHARS = 120;
 /** Batas label peran karakter di Tim 1. */
 export const MAX_TEAM_ROLE_CHARS = 120;
 
+/** Batas relasi personal karakter dengan pemilik di pengaturan karakter. */
+export const MAX_OWNER_RELATIONSHIP_CHARS = 2_000;
+
 /** Batas catatan hubungan tim yang bisa dibagikan bersama karakter. */
 export const MAX_SHARED_TEAM_MEMORY_CHARS = 2_000;
 

@@ -2,6 +2,7 @@ import { validateCharacterSkillPortfolio, type CharacterSkill } from "./characte
 import {
   MAX_BIBLE_CHARS,
   MAX_GREETING_CHARS,
+  MAX_OWNER_RELATIONSHIP_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHARED_TEAM_MEMORY_CHARS,
   MAX_SHORT_BIO_CHARS,
@@ -15,6 +16,7 @@ export type CharacterProfileDossier = {
   skillPortfolio?: CharacterSkill[];
   teamRole?: string;
   sharedTeamMemory?: string;
+  ownerRelationship?: string;
   personality?: string;
   bible?: string;
 };
@@ -111,6 +113,15 @@ export function parseCharacterProfileDossier(rawText: string): CharacterProfileD
   if (!sharedTeamMemory.ok) return { ok: false, error: sharedTeamMemory.error };
   if (sharedTeamMemory.present) data.sharedTeamMemory = sharedTeamMemory.value;
 
+  const ownerRelationship = readOptionalText(
+    record,
+    "ownerRelationship",
+    "Hubungan dengan pemilik",
+    MAX_OWNER_RELATIONSHIP_CHARS
+  );
+  if (!ownerRelationship.ok) return { ok: false, error: ownerRelationship.error };
+  if (ownerRelationship.present) data.ownerRelationship = ownerRelationship.value;
+
   const personality = readOptionalText(
     record,
     "personality",
@@ -130,12 +141,13 @@ export function parseCharacterProfileDossier(rawText: string): CharacterProfileD
     hasOwn(record, "skillPortfolio") ||
     hasOwn(record, "teamRole") ||
     hasOwn(record, "sharedTeamMemory") ||
+    hasOwn(record, "ownerRelationship") ||
     hasOwn(record, "personality") ||
     hasOwn(record, "bible");
   if (!hasImportableField) {
     return {
       ok: false,
-      error: "Dossier belum memuat field profil, tim, kepribadian, atau bible yang bisa diimpor.",
+      error: "Dossier belum memuat field profil, tim, hubungan dengan pemilik, kepribadian, atau bible yang bisa diimpor.",
     };
   }
 

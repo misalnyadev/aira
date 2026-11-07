@@ -81,6 +81,8 @@ export type CharacterDetail = {
   personality: string;
   /** Naskah bible peran; kosong kalau belum diimpor. */
   bible: string;
+  /** Relasi pribadi karakter dengan akun pemilik; tidak dibagikan ke pengguna undangan. */
+  ownerRelationship: string;
   greeting: string;
   providerId: string | null;
   model: string | null;
