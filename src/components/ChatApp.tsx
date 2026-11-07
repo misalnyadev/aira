@@ -491,13 +491,15 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   async function handleCreateBrainstorm(
     title: string,
-    characterIds: string[]
+    characterIds: string[],
+    mode: "brainstorm" | "scene",
+    sceneCanonical: boolean
   ): Promise<boolean> {
     try {
       const res = await api("/api/brainstorm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, characterIds, mode: "brainstorm" }),
+        body: JSON.stringify({ title, characterIds, mode, sceneCanonical }),
       });
       if (!res.ok) return false;
       await fetchBrainstormRooms();
@@ -1644,6 +1646,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                 <BrainstormRoomView
                   roomTitle={room.title}
                   mode={room.mode}
+                  sceneCanonical={room.sceneCanonical}
                   members={room.members}
                   messages={brainstormMessages[activeBrainstormId] ?? []}
                   isTyping={brainstormTyping === activeBrainstormId}

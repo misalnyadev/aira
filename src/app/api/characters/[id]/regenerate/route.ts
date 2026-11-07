@@ -122,6 +122,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
     const baseExtras = await buildMemoryExtrasForTurn({
       character,
+      userId: user.id,
       chronologicalHistory: chronologicalPrior,
       excludeMessageId: lastUser.id,
       userText: cleanUserText,

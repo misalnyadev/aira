@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { generateCharacterPin } from "@/lib/contactPin";
 
@@ -347,8 +347,10 @@ export const brainstormRooms = pgTable("brainstorm_rooms", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull().default(""),
-  /** 'brainstorm' | 'meetup' (legacy; tidak dipakai oleh MeetUp baru). */
+  /** 'brainstorm' | 'scene' | 'meetup' (legacy). */
   mode: text("mode").notNull().default("brainstorm"),
+  /** Adegan `scene` menjadi bagian cerita utama; false berarti latihan. */
+  sceneCanonical: boolean("scene_canonical").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -387,6 +389,48 @@ export const brainstormMessages = pgTable("brainstorm_messages", {
   emotion: text("emotion"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Ringkasan lintas mode per karakter peserta. Mengikuti pengaturan ingatan karakter;
+ * sumber pesan/ruang membuatnya terhapus saat pengguna menghapus sesi tersebut.
+ */
+export const characterContinuityMemories = pgTable(
+  "character_continuity_memories",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    characterId: uuid("character_id")
+      .notNull()
+      .references(() => characters.id, { onDelete: "cascade" }),
+    sourceRoomId: uuid("source_room_id")
+      .notNull()
+      .references(() => brainstormRooms.id, { onDelete: "cascade" }),
+    sourceMessageId: uuid("source_message_id")
+      .notNull()
+      .references(() => brainstormMessages.id, { onDelete: "cascade" }),
+    sourceMode: text("source_mode").notNull(),
+    continuityStatus: text("continuity_status").notNull(),
+    title: text("title").notNull().default(""),
+    summary: text("summary").notNull().default(""),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("continuity_memories_char_message_idx").on(
+      table.characterId,
+      table.sourceMessageId
+    ),
+    index("continuity_memories_user_char_time_idx").on(
+      table.userId,
+      table.characterId,
+      table.occurredAt
+    ),
+  ]
+);
 
 /**
  * Status/Reels ala WA & IG — story 24 jam & feed permanen.

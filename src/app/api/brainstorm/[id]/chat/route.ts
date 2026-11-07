@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { brainstormMessages, brainstormRoomMembers, brainstormRooms, characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { extractCallReplyEmotion } from "@/lib/callEmotion";
 import { buildBrainstormAnchor } from "@/lib/brainstormEngine";
 import { buildMemoryExtrasForTurn, generateBubbles, loadUserChatSettings, pickProviderCandidates } from "@/lib/chatEngine";
-import { MAX_MEETUP_MEMBERS } from "@/lib/limits";
-import { captureAndBuildSharedNotesContext } from "@/lib/sharedNotesServer";
+import { recordRoomTurnContinuityMemories } from "@/lib/continuityMemory";
 import { buildTeamMemoryContext } from "@/lib/teamMemory";
-import { toUserFacingError } from "@/lib/ai";
 import { ensureDb } from "@/lib/dbReady";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +23,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!room || room.userId !== user.id) return NextResponse.json({ error: "Meja tidak ditemukan." }, { status: 404 });
   if (room.mode === "meetup") {
     return NextResponse.json(
-      { error: "MeetUp sekarang memakai riwayat chat karakter dan tidak lagi memakai ruang terpisah." },
+      { error: "Tatap Muka memakai riwayat chat karakter; data meja MeetUp lama tetap tersimpan." },
       { status: 410 }
     );
+  }
+  if (room.mode !== "brainstorm" && room.mode !== "scene") {
+    return NextResponse.json({ error: "Mode ruangan tidak valid." }, { status: 400 });
   }
 
   const body = await req.json().catch(() => null);
@@ -42,12 +43,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .where(eq(brainstormRoomMembers.roomId, roomId))
     .orderBy(asc(brainstormRoomMembers.createdAt));
 
-  const roomMode: "meetup" | "brainstorm" = room.mode === "meetup" ? "meetup" : "brainstorm";
-  const minMembers = roomMode === "meetup" ? 1 : 2;
-  const maxMembers = roomMode === "meetup" ? MAX_MEETUP_MEMBERS : 3;
+  const roomMode: "brainstorm" | "scene" = room.mode;
+  const minMembers = roomMode === "scene" ? 1 : 2;
+  const maxMembers = 3;
   if (members.length < minMembers || members.length > maxMembers) {
     return NextResponse.json(
-      { error: roomMode === "meetup" ? `MeetUp ini perlu 1–${MAX_MEETUP_MEMBERS} karakter.` : "Brainstorm perlu 2–3 karakter." },
+      {
+        error:
+          roomMode === "scene"
+            ? "Reka Adegan perlu 1–3 karakter."
+            : "Brainstorm perlu 2–3 karakter.",
+      },
       { status: 400 }
     );
   }
@@ -106,7 +112,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         try {
           memoryExtras = await buildMemoryExtrasForTurn({
             character,
-            chronologicalHistory: [] as any,
+            userId: user.id,
+            chronologicalHistory: [],
+            continuityRoomId: roomId,
             userText: cleanText,
             now: new Date(),
           });
@@ -116,17 +124,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         ownerUserId: user.id,
         currentCharacterId: character.id,
       }).catch(() => "");
-      const notesContext = roomMode === "meetup"
-        ? await captureAndBuildSharedNotesContext({
-            scope: { characterId: character.id, scopeUserId: user.id },
-            enableAutoCapture: false,
-          }).catch(() => null)
-        : null;
       const brainstormExtras = {
         ...memoryExtras,
         interactionMode: roomMode,
+        sceneCanonical: roomMode === "scene" && room.sceneCanonical,
         ...(teamContext ? { teamContext } : {}),
-        ...(notesContext?.sharedNotesBlock ? { sharedNotesBlock: notesContext.sharedNotesBlock } : {}),
         sceneAnchor: [memoryExtras?.sceneAnchor, anchor, turnHint].filter(Boolean).join("\n\n"),
       };
 
@@ -175,14 +177,35 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       for (const item of toSave) {
         evolvingHistory.push({ role: "assistant", content: `[${character.name}]: ${item.content}` });
       }
-    } catch (err) {
-      // Jika gagal untuk satu karakter, lanjut ke berikutnya; jangan gagalkan seluruh meja
-      // Simpan pesan error ringan
-      const msg = toUserFacingError(err);
-      // Optionally log, but continue
+    } catch {
+      // Jika gagal untuk satu karakter, lanjut ke berikutnya; jangan gagalkan seluruh meja.
       continue;
     }
   }
+
+  await recordRoomTurnContinuityMemories({
+    userId: user.id,
+    roomId,
+    sourceMessageId: userMsg.id,
+    sourceMode: roomMode,
+    sceneCanonical: roomMode === "scene" && room.sceneCanonical,
+    roomTitle: room.title,
+    userText: cleanText,
+    hasImage: Boolean(imageUrl),
+    occurredAt: userMsg.createdAt,
+    participants: charRows.map((character) => ({
+      characterId: character.id,
+      memoryEnabled: character.memoryEnabled,
+    })),
+    replies: assistantReplies.map((message) => {
+      const speaker = charRows.find((character) => character.id === message.characterId);
+      return {
+        characterId: message.characterId,
+        characterName: speaker?.name ?? null,
+        content: message.content,
+      };
+    }),
+  }).catch(() => 0);
 
   await db.update(brainstormRooms).set({ updatedAt: new Date() }).where(eq(brainstormRooms.id, roomId));
 

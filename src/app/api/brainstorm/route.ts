@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { brainstormMessages, brainstormRoomMembers, brainstormRooms, characters } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -17,11 +17,17 @@ export async function GET() {
       id: brainstormRooms.id,
       title: brainstormRooms.title,
       mode: brainstormRooms.mode,
+      sceneCanonical: brainstormRooms.sceneCanonical,
       updatedAt: brainstormRooms.updatedAt,
       createdAt: brainstormRooms.createdAt,
     })
     .from(brainstormRooms)
-    .where(and(eq(brainstormRooms.userId, user.id), eq(brainstormRooms.mode, "brainstorm")))
+    .where(
+      and(
+        eq(brainstormRooms.userId, user.id),
+        inArray(brainstormRooms.mode, ["brainstorm", "scene"])
+      )
+    )
     .orderBy(desc(brainstormRooms.updatedAt));
 
   const result = await Promise.all(
@@ -53,7 +59,8 @@ export async function GET() {
       return {
         id: r.id,
         title: r.title,
-        mode: "brainstorm",
+        mode: r.mode,
+        sceneCanonical: r.sceneCanonical,
         members: members.map((m) => ({
           characterId: m.characterId,
           name: m.name,
@@ -78,21 +85,30 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
 
-  const { title, characterIds, mode } = body as {
+  const { title, characterIds, mode, sceneCanonical } = body as {
     title?: string;
     characterIds?: string[];
     mode?: string;
+    sceneCanonical?: boolean;
   };
   if (mode === "meetup") {
     return NextResponse.json(
-      { error: "Tatap Muka sekarang dibuka dengan memilih satu karakter, bukan membuat meja." },
+      { error: "Tatap Muka hanya untuk pengguna dan satu karakter. Gunakan Reka Adegan untuk adegan grup." },
       { status: 400 }
     );
   }
-  const minMembers = 2;
+  const roomMode = mode ?? "brainstorm";
+  if (roomMode !== "brainstorm" && roomMode !== "scene") {
+    return NextResponse.json({ error: "Mode ruangan tidak valid." }, { status: 400 });
+  }
+  const minMembers = roomMode === "scene" ? 1 : 2;
   const maxMembers = 3;
-  const selectionHint = "Pilih 2–3 karakter untuk Brainstorm.";
-  const cleanTitle = title?.trim() || "Meja Diskusi Baru";
+  const selectionHint =
+    roomMode === "scene"
+      ? "Pilih 1–3 karakter untuk Reka Adegan."
+      : "Pilih 2–3 karakter untuk Brainstorm.";
+  const defaultTitle = roomMode === "scene" ? "Reka Adegan Baru" : "Meja Diskusi Baru";
+  const cleanTitle = title?.trim() || defaultTitle;
 
   if (!Array.isArray(characterIds) || characterIds.length < minMembers || characterIds.length > maxMembers) {
     return NextResponse.json({ error: selectionHint }, { status: 400 });
@@ -114,7 +130,12 @@ export async function POST(req: Request) {
 
   const [room] = await db
     .insert(brainstormRooms)
-    .values({ userId: user.id, title: cleanTitle.slice(0, 80), mode: "brainstorm" })
+    .values({
+      userId: user.id,
+      title: cleanTitle.slice(0, 80),
+      mode: roomMode,
+      sceneCanonical: roomMode === "scene" && sceneCanonical === true,
+    })
     .returning();
 
   for (const cid of unique) {

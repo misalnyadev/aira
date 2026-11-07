@@ -25,12 +25,17 @@ function splitBubbles(content: string): string[] {
 function formatTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return `${d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  })} WIB`;
 }
 
 export function BrainstormRoomView({
   roomTitle,
   mode,
+  sceneCanonical,
   members,
   messages,
   isTyping,
@@ -48,6 +53,7 @@ export function BrainstormRoomView({
 }: {
   roomTitle: string;
   mode: BrainstormRoomMode;
+  sceneCanonical: boolean;
   members: { characterId: string; name: string; avatarUrl: string | null; shortBio: string }[];
   messages: BrainstormMessage[];
   isTyping: boolean;
@@ -98,10 +104,12 @@ export function BrainstormRoomView({
           <p className="truncate text-sm font-semibold text-ink">{roomTitle}</p>
           <p className="truncate text-xs text-ink-soft">
             {isTyping
-              ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : "sedang diskusi...")
+              ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : mode === "scene" ? "sedang bermain adegan..." : "sedang diskusi...")
               : mode === "meetup"
                 ? "Tatap Muka · ruang yang sama"
-                : members.map((m) => m.name).join(" · ")}
+                : mode === "scene"
+                  ? `Reka Adegan · ${sceneCanonical ? "Canon" : "Latihan"}`
+                  : members.map((m) => m.name).join(" · ")}
           </p>
         </div>
         <div className="flex -space-x-2">
@@ -132,6 +140,11 @@ export function BrainstormRoomView({
       {/* Member chips */}
       <div className="shrink-0 border-b border-line/60 bg-surface px-3 py-2 sm:px-4">
         <div className="flex flex-wrap gap-1.5">
+          {mode === "scene" && (
+            <span className="inline-flex items-center rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink">
+              {sceneCanonical ? "Canon · cerita utama" : "Latihan · bukan canon"}
+            </span>
+          )}
           {members.map((m) => (
             <span key={m.characterId} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink">
               <Avatar name={m.name} src={m.avatarUrl} size={18} />
@@ -147,14 +160,20 @@ export function BrainstormRoomView({
           {messages.length === 0 && !isTyping && (
             <div className="py-10 text-center">
               <p className="text-sm font-semibold text-ink">
-                {mode === "meetup" ? "Mulai pertemuan tatap muka" : "Mulai diskusi di meja ini"}
+                {mode === "meetup"
+                  ? "Mulai pertemuan tatap muka"
+                  : mode === "scene"
+                    ? "Mulai Reka Adegan"
+                    : "Mulai diskusi di meja ini"}
               </p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
                 {mode === "meetup"
                   ? members.length === 1
                     ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
                     : `Kamu dan ${members.map((m) => m.name).join(", ")} berada di ruangan yang sama. Mereka akan menanggapi bergiliran.`
-                  : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
+                  : mode === "scene"
+                    ? `${sceneCanonical ? "Adegan ini bagian cerita utama." : "Ini latihan; peristiwa fiksinya bukan canon."} Mulai dengan arahan atau dialog untuk ${members.map((m) => m.name).join(", ")}.`
+                    : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
               </p>
             </div>
           )}
@@ -241,7 +260,13 @@ export function BrainstormRoomView({
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={mode === "meetup" ? "Bicara langsung..." : `Tanya ${members.map((m) => m.name).join(", ")}...`}
+            placeholder={
+              mode === "meetup"
+                ? "Bicara langsung..."
+                : mode === "scene"
+                  ? "Lanjutkan adegan..."
+                  : `Tanya ${members.map((m) => m.name).join(", ")}...`
+            }
             rows={1}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -265,7 +290,9 @@ export function BrainstormRoomView({
         <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[11px] text-muted">
           {mode === "meetup"
             ? `Tatap Muka · ${members.length} karakter hadir di ruangan ini. Catatan dan Memori Tim 1 yang diizinkan menjadi konteks.`
-            : `Setiap pesanmu akan ditanggapi bergantian oleh ${members.length} karakter.`}
+            : mode === "scene"
+              ? `Reka Adegan ${sceneCanonical ? "canon" : "latihan"}. Ringkasan bertanggal WIB hanya masuk ke ingatan peserta yang mengaktifkan Ingatan Jangka Panjang; transkrip lengkap tetap terpisah dari Chat.`
+              : `Setiap pesanmu ditanggapi bergiliran. Ide/rencana dapat menjadi ingatan bertanggal WIB bagi peserta yang mengaktifkan Ingatan Jangka Panjang; transkrip lengkap tetap terpisah dari Chat.`}
         </p>
       </div>
     </div>
