@@ -2,6 +2,10 @@
 
 Rekomendasi bible untuk 3 karakter: **Arissa (Hati), Kirana Harunika (Otak), Musthzen (Drive)** — saling komplementer di meja diskusi.
 
+## Versi tim perusahaan: AK Productions × AK Talent
+
+Paket sinkron yang mempertahankan Bible asli sambil menambahkan peran perusahaan, portofolio skill, dan memori kolaborasi ada di [`ak-productions-team/`](./ak-productions-team/). Untuk memuat semua field sekaligus, gunakan **Impor dossier karakter** dan pilih file JSON di folder tersebut. Bible rekomendasi asli di folder ini tidak diubah.
+
 ## Isi Folder
 - `01-Arissa-bible.txt` — bible lengkap Arissa (6130 karakter)
 - `01-Arissa-bible.json` — siap impor (nama + personality + shortBio + greeting + bible)
@@ -12,10 +16,9 @@ Semua di bawah limit: bible max 24.000, personality max 8.000, shortBio 120, gre
 
 ## Cara Impor ke Aira / AK Talent
 
-### Opsi A: Impor file (paling cepat)
-1. Di Aira buka **Profil → Akun Saya → Karakter Saya (dropdown v) → Buat Karakter Baru**
-2. Klik **📖 Bible peran → Impor berkas** → pilih file `.json` (atau `.txt`)
-3. Kalau pakai `.json`, field nama/kepribadian/status/greeting auto-terisi. Cek lagi, lalu **Buat Karakter**.
+### Opsi A: Impor file
+- Untuk Bible asli di folder ini, gunakan **📖 Bible peran → Impor berkas**; JSON lama juga mengisi nama/kepribadian/status/greeting.
+- Untuk dossier tim yang menyatukan Bible, skill, peran, dan memori Tim 1, gunakan folder [`ak-productions-team/`](./ak-productions-team/) lalu klik **Impor dossier karakter → Pilih JSON**. Tinjau hasil dan simpan perubahan.
 
 ### Opsi B: Copy-paste manual
 1. Buat karakter baru, isi **Nama**, **Status singkat**, **Kepribadian & latar belakang** (copy dari bagian `personality` di json).
