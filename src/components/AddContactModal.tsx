@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { IncomingContactItem, OutgoingContactItem } from "@/types/chat";
+import type {
+  ContactInvitePreview,
+  IncomingContactItem,
+  OutgoingContactItem,
+} from "@/types/chat";
 import {
   describeContactState,
   effectiveContactState,
@@ -24,6 +28,11 @@ export function AddContactModal({
 }) {
   const [pin, setPin] = useState("");
   const [note, setNote] = useState("");
+  const [previewing, setPreviewing] = useState(false);
+  const [preview, setPreview] = useState<{
+    pin: string;
+    character: ContactInvitePreview;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     kind: "ok" | "err";
@@ -64,11 +73,51 @@ export function AddContactModal({
     };
   }, [loadContacts]);
 
+  async function handlePreviewPin() {
+    const cleaned = normalizePinInput(pin);
+    if (!cleaned) {
+      setFeedback({ kind: "err", text: "Masukkan kode PIN karakter dulu." });
+      return;
+    }
+
+    setPreviewing(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/contacts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: cleaned }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.preview) {
+        setPreview(null);
+        setFeedback({
+          kind: "err",
+          text: data.error || "Gagal memuat pratinjau karakter.",
+        });
+        return;
+      }
+      setPreview({ pin: cleaned, character: data.preview as ContactInvitePreview });
+    } catch {
+      setPreview(null);
+      setFeedback({ kind: "err", text: "Koneksi gagal saat memuat pratinjau karakter." });
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
   async function handleSubmitPin(e: React.FormEvent) {
     e.preventDefault();
     const cleaned = normalizePinInput(pin);
     if (!cleaned) {
       setFeedback({ kind: "err", text: "Masukkan kode PIN karakter dulu." });
+      return;
+    }
+    if (!preview || preview.pin !== cleaned) {
+      setFeedback({
+        kind: "err",
+        text: "Lihat pratinjau karakter dulu sebelum mengirim undangan.",
+      });
       return;
     }
 
@@ -90,6 +139,7 @@ export function AddContactModal({
       }
       setPin("");
       setNote("");
+      setPreview(null);
       setTab("outgoing");
       setFeedback({
         kind: "ok",
@@ -170,6 +220,8 @@ export function AddContactModal({
   const pendingIncomingCount = incoming.filter(
     (i) => i.ownerStatus === "pending" && i.adminStatus !== "rejected"
   ).length;
+  const visiblePreview =
+    preview?.pin === normalizePinInput(pin) ? preview.character : null;
 
   return (
     <div
@@ -224,7 +276,11 @@ export function AddContactModal({
               <input
                 type="text"
                 value={pin}
-                onChange={(e) => setPin(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setPin(e.target.value.toUpperCase());
+                  setPreview(null);
+                  setFeedback(null);
+                }}
                 placeholder="Contoh: K7R4M9"
                 maxLength={12}
                 autoComplete="off"
@@ -234,11 +290,12 @@ export function AddContactModal({
                 className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 font-mono text-sm font-bold tracking-widest text-ink uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-muted focus:border-ink focus:outline-none"
               />
               <button
-                type="submit"
-                disabled={submitting}
-                className="shrink-0 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+                type="button"
+                disabled={previewing || submitting}
+                onClick={() => void handlePreviewPin()}
+                className="shrink-0 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
               >
-                {submitting ? "Mengirim..." : "Undang"}
+                {previewing ? "Memuat..." : "Pratinjau"}
               </button>
             </div>
             <input
@@ -249,9 +306,67 @@ export function AddContactModal({
               maxLength={200}
               className="w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
             />
+            {visiblePreview && (
+              <div
+                className="space-y-3 rounded-xl border border-line bg-surface p-3.5"
+                aria-live="polite"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar
+                    name={visiblePreview.characterName}
+                    src={visiblePreview.characterAvatarUrl}
+                    size={44}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {visiblePreview.characterName}
+                    </p>
+                    <p className="text-xs leading-relaxed text-ink-soft">
+                      {visiblePreview.characterShortBio || "Belum ada status singkat."}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-ink">Keahlian & layanan</p>
+                  {visiblePreview.skillPortfolio.length ? (
+                    <ul className="space-y-1.5">
+                      {visiblePreview.skillPortfolio.map((skill, index) => (
+                        <li
+                          key={`${skill.title}-${index}`}
+                          className="rounded-lg bg-surface-2/70 px-2.5 py-2"
+                        >
+                          <p className="text-xs font-semibold text-ink">{skill.title}</p>
+                          {skill.description && (
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">
+                              {skill.description}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="rounded-lg bg-surface-2/70 px-2.5 py-2 text-xs text-ink-soft">
+                      Belum ada keahlian yang dicantumkan.
+                    </p>
+                  )}
+                </div>
+                <p className="text-[10px] leading-relaxed text-muted">
+                  Ini portofolio yang diatur pemilik karakter, bukan verifikasi sertifikasi.
+                  Sambungan aktif setelah disetujui pemilik.
+                </p>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-xl bg-brand px-4 py-2.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-50"
+                >
+                  {submitting ? "Mengirim..." : `Undang ${visiblePreview.characterName}`}
+                </button>
+              </div>
+            )}
             <p className="text-[11px] leading-relaxed text-muted">
-              Sambungan kontak langsung aktif setelah disetujui{" "}
-              <b>pemilik karakter</b>. Ngobrol memakai API key masing-masing akun.
+              Pratinjau menampilkan profil publik dan keahlian karakter. Sambungan kontak langsung
+              aktif setelah disetujui <b>pemilik karakter</b>. Ngobrol memakai API key masing-masing
+              akun.
             </p>
           </form>
 

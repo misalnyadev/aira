@@ -4,6 +4,7 @@ import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig } from "@/lib/hdVoice";
 import type { OwnerProfileShareField } from "@/lib/characterInvite";
+import type { CharacterSkill } from "@/lib/characterSkills";
 
 export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
 
@@ -30,6 +31,8 @@ export type CharacterSummary = {
   name: string;
   avatarUrl: string | null;
   shortBio: string;
+  /** Portofolio keahlian dan layanan yang diatur pemilik karakter. */
+  skillPortfolio?: CharacterSkill[];
   greeting: string;
   /** Ada bible peran atau tidak — dipakai untuk menandai 📖 di daftar. */
   hasBible: boolean;
@@ -74,6 +77,7 @@ export type CharacterDetail = {
   name: string;
   avatarUrl: string | null;
   shortBio: string;
+  skillPortfolio: CharacterSkill[];
   personality: string;
   /** Naskah bible peran; kosong kalau belum diimpor. */
   bible: string;
@@ -164,6 +168,13 @@ export type OutgoingContactItem = {
   note: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ContactInvitePreview = {
+  characterName: string;
+  characterAvatarUrl: string | null;
+  characterShortBio: string;
+  skillPortfolio: CharacterSkill[];
 };
 
 /** `meetup` remains for legacy rows; new group scenes use `scene`. */

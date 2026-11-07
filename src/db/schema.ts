@@ -138,6 +138,8 @@ export const characters = pgTable("characters", {
   shareTeamMemory: boolean("share_team_memory").notNull().default(false),
   /** Field profil pemilik yang boleh dibagikan dalam brief undangan (JSON array). */
   shareOwnerProfileFields: text("share_owner_profile_fields").notNull().default("[]"),
+  /** Daftar keahlian dan layanan talent karakter (JSON array). */
+  skillPortfolio: text("skill_portfolio").notNull().default("[]"),
   /** Aktifkan akses browsing internet & pembaca link URL pada karakter ini. */
   browsingEnabled: boolean("browsing_enabled").notNull().default(false),
   /** Aktifkan inisiatif karakter menyapa duluan secara alami saat chat dibuka setelah jeda lama. */
