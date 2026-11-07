@@ -93,9 +93,36 @@ const DDL = [
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "auto_fallback" boolean NOT NULL DEFAULT true`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "chat_background" text NOT NULL DEFAULT '{"kind":"default"}'`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "bubble_style" text NOT NULL DEFAULT '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null}'`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "meetup_background" text`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "meetup_bubble_style" text`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "tts_config" text NOT NULL DEFAULT '{}'`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "chat_background" text`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "meetup_background" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bubble_style" text`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "meetup_bubble_style" text`,
+  // Salin tampilan lama ke Tatap Muka sekali agar tampilannya tidak mendadak berubah.
+  sql`CREATE TABLE IF NOT EXISTS "_aira_migrations" (
+    "id" text PRIMARY KEY,
+    "applied_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`DO $$
+    DECLARE
+      migration_claimed integer;
+    BEGIN
+      INSERT INTO "_aira_migrations" ("id")
+      VALUES ('split_chat_and_meetup_appearance_v1')
+      ON CONFLICT ("id") DO NOTHING;
+      GET DIAGNOSTICS migration_claimed = ROW_COUNT;
+      IF migration_claimed = 1 THEN
+        UPDATE "users"
+        SET "meetup_background" = "chat_background",
+            "meetup_bubble_style" = "bubble_style";
+        UPDATE "characters"
+        SET "meetup_background" = "chat_background",
+            "meetup_bubble_style" = "bubble_style"
+        WHERE "chat_background" IS NOT NULL OR "bubble_style" IS NOT NULL;
+      END IF;
+    END $$`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "media" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "voice_config" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "memory_enabled" boolean NOT NULL DEFAULT false`,

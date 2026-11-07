@@ -4,8 +4,8 @@ import type { CSSProperties } from "react";
  * Latar area chat.
  *
  * Bentuknya sengaja kecil dan datar supaya aman disimpan sebagai JSON di
- * kolom `users.chat_background` dan mudah dibaca ulang walau versi aplikasi
- * berubah. Pilihan yang tidak dikenal dianggap "default", jadi data lama
+ * kolom `users.chat_background` atau `users.meetup_background` dan mudah
+ * dibaca ulang walau versi aplikasi berubah. Pilihan yang tidak dikenal dianggap "default", jadi data lama
  * tidak pernah membuat halaman gagal tampil.
  */
 export type ChatBackground =

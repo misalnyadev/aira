@@ -114,6 +114,7 @@ function SideColors({
 
 type AccountBubbleProps = {
   allowInherit?: false;
+  mode?: "chat" | "meetup";
   value: BubbleStyle;
   onChange: (next: BubbleStyle) => void;
   disabled?: boolean;
@@ -121,6 +122,7 @@ type AccountBubbleProps = {
 
 type CharacterBubbleProps = {
   allowInherit: true;
+  mode?: "chat" | "meetup";
   value: BubbleStyle | null;
   fallback: BubbleStyle;
   onChange: (next: BubbleStyle | null) => void;
@@ -130,11 +132,11 @@ type CharacterBubbleProps = {
 /**
  * Pengaturan tampilan gelembung pesan.
  *
- * Dipakai di Setelan (bawaan akun) maupun di Profil Karakter (`allowInherit`,
- * di mana `value === null` berarti mengikuti setelan bawaan akun).
+ * Dipakai untuk pengaturan Chat maupun Tatap Muka, di Setelan (bawaan akun)
+ * dan Profil Karakter (`allowInherit`, `value === null` berarti ikut bawaan akun).
  */
 export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleProps) {
-  const { disabled = false } = props;
+  const { disabled = false, mode = "chat" } = props;
   const style = props.allowInherit ? (props.value ?? props.fallback) : props.value;
 
   /** Kepekatan sementara saat jari masih di slider; disimpan ketika dilepas. */
@@ -181,24 +183,27 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
           />
         </div>
 
-        <div className="border-t border-line" />
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="block text-xs font-medium text-ink">
-              Sembunyikan tulisan di Tatap Muka
-            </span>
-            <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-              Sembunyikan gelembung agar video/ekspresi terlihat; Chat biasa tetap tampil.
-            </span>
-          </div>
-          <Switch
-            checked={Boolean(style.hideMessages)}
-            onChange={(next) => update({ hideMessages: next })}
-            label="Sembunyikan tulisan di Tatap Muka"
-            disabled={disabled}
-          />
-        </div>
+        {mode === "meetup" && (
+          <>
+            <div className="border-t border-line" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="block text-xs font-medium text-ink">
+                  Sembunyikan tulisan di Tatap Muka
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+                  Sembunyikan gelembung agar video/ekspresi terlihat.
+                </span>
+              </div>
+              <Switch
+                checked={Boolean(style.hideMessages)}
+                onChange={(next) => update({ hideMessages: next })}
+                label="Sembunyikan tulisan di Tatap Muka"
+                disabled={disabled}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="rounded-xl border border-line px-3 py-2.5">
@@ -239,9 +244,9 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
       </div>
 
       <div className="flex flex-col gap-1.5 rounded-xl border border-line px-3 py-2.5">
-        {style.hideMessages ? (
+        {mode === "meetup" && style.hideMessages ? (
           <p className="py-2 text-center text-xs text-muted">
-            Di Tatap Muka, tulisan disembunyikan agar video/ekspresi terlihat. Chat biasa tetap tampil.
+            Di Tatap Muka, tulisan disembunyikan agar video/ekspresi terlihat.
           </p>
         ) : (
           <>

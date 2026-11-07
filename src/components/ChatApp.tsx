@@ -106,7 +106,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
   const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
+  const [meetupBackground, setMeetupBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
   const [bubbleStyle, setBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
+  const [meetupBubbleStyle, setMeetupBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const [ttsSummary, setTtsSummary] = useState<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
   const [limit, setLimit] = useState<number>(
     user.isAdmin ? 50 : user.characterQuota ?? MAX_CHARACTERS
@@ -172,7 +174,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
-  const bubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
+  const meetupBubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const ttsSummaryRef = useRef<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
 
   useEffect(() => {
@@ -184,8 +186,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }, [allThreads]);
 
   useEffect(() => {
-    bubbleStyleRef.current = bubbleStyle;
-  }, [bubbleStyle]);
+    meetupBubbleStyleRef.current = meetupBubbleStyle;
+  }, [meetupBubbleStyle]);
 
   useEffect(() => {
     ttsSummaryRef.current = ttsSummary;
@@ -211,7 +213,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     if (isDictating() || activeIdRef.current !== targetId) return false;
     if (voiceEnabled) return true;
     const charObj = charactersRef.current.find((c) => c.id === targetId);
-    const effective = charObj?.bubbleStyle ?? bubbleStyleRef.current;
+    const effective = charObj?.meetupBubbleStyle ?? meetupBubbleStyleRef.current;
     return Boolean(
       view === "brainstorm" &&
         activeMeetupCharacterId === targetId &&
@@ -275,7 +277,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     if (!res.ok) return;
     const data = await res.json();
     if (data.chatBackground) setChatBackground(data.chatBackground);
+    if (data.meetupBackground) setMeetupBackground(data.meetupBackground);
     if (data.bubbleStyle) setBubbleStyle(data.bubbleStyle);
+    if (data.meetupBubbleStyle) setMeetupBubbleStyle(data.meetupBubbleStyle);
   }, [api]);
 
   const fetchProfile = useCallback(async () => {
@@ -1161,6 +1165,48 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
+  async function handleCharacterMeetupBackground(id: string, next: ChatBackground | null) {
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, meetupBackground: next } : c))
+    );
+    setProfileDetail((cur) =>
+      cur && cur.id === id ? { ...cur, meetupBackground: next } : cur
+    );
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meetupBackground: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan latar Tatap Muka.");
+      fetchCharacters();
+    }
+  }
+
+  async function handleCharacterMeetupBubble(id: string, next: BubbleStyle | null) {
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, meetupBubbleStyle: next } : c))
+    );
+    setProfileDetail((cur) =>
+      cur && cur.id === id ? { ...cur, meetupBubbleStyle: next } : cur
+    );
+
+    try {
+      const res = await api(`/api/characters/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meetupBubbleStyle: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      showToast("Gagal menyimpan tampilan Tatap Muka.");
+      fetchCharacters();
+    }
+  }
+
   async function handleCharacterMedia(id: string, next: CharacterMedia | null) {
     setCharacters((prev) => prev.map((c) => (c.id === id ? { ...c, media: next } : c)));
     setProfileDetail((cur) => (cur && cur.id === id ? { ...cur, media: next } : cur));
@@ -1237,7 +1283,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     characters.find((character) => character.id === activeMeetupCharacterId) ?? null;
   const isMeetupConversation = view === "brainstorm" && Boolean(activeMeetupCharacterId);
   const activeBubble = isMeetupConversation
-    ? activeMeetupCharacter?.bubbleStyle ?? bubbleStyle
+    ? activeMeetupCharacter?.meetupBubbleStyle ?? meetupBubbleStyle
     : activeCharacter?.bubbleStyle ?? bubbleStyle;
   const isHiddenMode = Boolean(
     isMeetupConversation &&
@@ -1381,9 +1427,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   function handleToggleHideChat(character: CharacterSummary) {
-    const characterBubble = character.bubbleStyle ?? bubbleStyle;
+    const characterBubble = character.meetupBubbleStyle ?? meetupBubbleStyle;
     setPeekCharId(null);
-    void handleCharacterBubble(character.id, {
+    void handleCharacterMeetupBubble(character.id, {
       ...characterBubble,
       hideMessages: !characterBubble.hideMessages,
     });
@@ -1398,7 +1444,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   ) {
     const isMeetup = options.mode === "meetup";
-    const characterBubble = character.bubbleStyle ?? bubbleStyle;
+    const characterBubble = isMeetup
+      ? character.meetupBubbleStyle ?? meetupBubbleStyle
+      : character.bubbleStyle ?? bubbleStyle;
+    const characterBackground = isMeetup
+      ? character.meetupBackground ?? meetupBackground
+      : character.chatBackground ?? chatBackground;
     const characterHidden = isMeetup && Boolean(characterBubble.hideMessages);
     return (
       <ChatWindow
@@ -1409,7 +1460,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         isSpeaking={isSpeaking}
         canSpeak={speechSupported || ttsSummary.hasActiveKey}
         voiceEnabled={voice.enabled}
-        background={character.chatBackground ?? chatBackground}
+        background={characterBackground}
         bubble={characterBubble}
         visualMode={options.mode}
         sceneLabel={isMeetup ? "Tatap Muka · kalian berdua hadir langsung" : undefined}
@@ -1616,8 +1667,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               onAutoFallbackChange={setAutoFallback}
               chatBackground={chatBackground}
               onChatBackgroundChange={setChatBackground}
+              meetupBackground={meetupBackground}
+              onMeetupBackgroundChange={setMeetupBackground}
               bubbleStyle={bubbleStyle}
               onBubbleStyleChange={setBubbleStyle}
+              meetupBubbleStyle={meetupBubbleStyle}
+              onMeetupBubbleStyleChange={setMeetupBubbleStyle}
               isAdmin={isAdmin}
               onOpenAccountManagement={() => {
                 setProfileTab(isAdmin ? "admin" : "account");
@@ -1761,6 +1816,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           character={profileDetail}
           providerLabel={profileProviderLabel}
           bubbleFallback={bubbleStyle}
+          meetupBubbleFallback={meetupBubbleStyle}
           ttsSummary={ttsSummary}
           voiceSettings={voice}
           onClose={() => setShowProfile(false)}
@@ -1772,6 +1828,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           onDelete={() => handleDeleteCharacter(profileDetail.id)}
           onBackgroundChange={(next) => handleCharacterBackground(profileDetail.id, next)}
           onBubbleChange={(next) => handleCharacterBubble(profileDetail.id, next)}
+          onMeetupBackgroundChange={(next) =>
+            handleCharacterMeetupBackground(profileDetail.id, next)
+          }
+          onMeetupBubbleChange={(next) =>
+            handleCharacterMeetupBubble(profileDetail.id, next)
+          }
           onVoiceChange={(next) => handleCharacterVoice(profileDetail.id, next)}
           onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
           onMemoryChange={(next) => handleCharacterMemorySync(profileDetail.id, next)}

@@ -32,10 +32,10 @@ type CharacterPickerProps = {
 };
 
 /**
- * Pemilih latar area chat: bawaan, warna, gambar sendiri, atau animasi.
+ * Pemilih latar Chat atau Tatap Muka: bawaan, warna, gambar sendiri, atau animasi.
  *
  * Di Profil Karakter (`allowInherit`), `value === null` berarti mengikuti
- * latar bawaan akun dari Setelan.
+ * latar bawaan akun untuk mode yang sedang diatur.
  */
 export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPickerProps) {
   const { disabled = false } = props;

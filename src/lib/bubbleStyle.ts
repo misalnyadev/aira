@@ -12,7 +12,7 @@ export type BubbleStyle = {
   bgColorIn: string | null;
   textColorOut: string | null;
   bgColorOut: string | null;
-  /** Sembunyikan gelembung pesan di ruang chat (mode ngobrol langsung berlatar bersih). */
+  /** Sembunyikan gelembung pesan hanya di Tatap Muka. */
   hideMessages?: boolean;
   /** Header & kolom ketik transparan kaca; di atas cukup tampil foto karakter & ikon. */
   minimalBars?: boolean;

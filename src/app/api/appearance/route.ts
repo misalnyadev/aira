@@ -21,10 +21,10 @@ export const runtime = "nodejs";
 const UNAUTHORIZED = { error: "Kamu belum masuk." };
 
 /**
- * Tampilan chat milik akun (latar chat & gaya gelembung pesan bawaan).
+ * Tampilan bawaan akun untuk Chat dan Tatap Muka.
  *
- * Disimpan di server, bukan di HP, supaya tampilan yang dipilih di satu
- * perangkat ikut terbawa ke perangkat lain.
+ * Tiap mode disimpan terpisah di server supaya pilihan tampilannya tidak
+ * saling memengaruhi dan ikut terbawa ke perangkat lain.
  */
 export async function GET() {
   await ensureDb();
@@ -35,7 +35,9 @@ export async function GET() {
   const [row] = await db
     .select({
       chatBackground: users.chatBackground,
+      meetupBackground: users.meetupBackground,
       bubbleStyle: users.bubbleStyle,
+      meetupBubbleStyle: users.meetupBubbleStyle,
     })
     .from(users)
     .where(eq(users.id, user.id))
@@ -43,7 +45,9 @@ export async function GET() {
 
   return NextResponse.json({
     chatBackground: parseChatBackground(row?.chatBackground),
+    meetupBackground: parseChatBackground(row?.meetupBackground),
     bubbleStyle: parseBubbleStyle(row?.bubbleStyle),
+    meetupBubbleStyle: parseBubbleStyle(row?.meetupBubbleStyle),
   });
 }
 
@@ -57,7 +61,10 @@ export async function PATCH(req: Request) {
   if (
     !body ||
     typeof body !== "object" ||
-    (!("chatBackground" in body) && !("bubbleStyle" in body))
+    (!("chatBackground" in body) &&
+      !("meetupBackground" in body) &&
+      !("bubbleStyle" in body) &&
+      !("meetupBubbleStyle" in body))
   ) {
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
@@ -68,9 +75,19 @@ export async function PATCH(req: Request) {
       normalizeChatBackground((body as { chatBackground?: unknown }).chatBackground)
     );
   }
+  if ("meetupBackground" in body) {
+    updates.meetupBackground = JSON.stringify(
+      normalizeChatBackground((body as { meetupBackground?: unknown }).meetupBackground)
+    );
+  }
   if ("bubbleStyle" in body) {
     updates.bubbleStyle = JSON.stringify(
       normalizeBubbleStyle((body as { bubbleStyle?: unknown }).bubbleStyle)
+    );
+  }
+  if ("meetupBubbleStyle" in body) {
+    updates.meetupBubbleStyle = JSON.stringify(
+      normalizeBubbleStyle((body as { meetupBubbleStyle?: unknown }).meetupBubbleStyle)
     );
   }
 
@@ -80,12 +97,16 @@ export async function PATCH(req: Request) {
     .where(eq(users.id, user.id))
     .returning({
       chatBackground: users.chatBackground,
+      meetupBackground: users.meetupBackground,
       bubbleStyle: users.bubbleStyle,
+      meetupBubbleStyle: users.meetupBubbleStyle,
     });
 
   return NextResponse.json({
     chatBackground: parseChatBackground(row?.chatBackground),
+    meetupBackground: parseChatBackground(row?.meetupBackground),
     bubbleStyle: parseBubbleStyle(row?.bubbleStyle),
+    meetupBubbleStyle: parseBubbleStyle(row?.meetupBubbleStyle),
   });
 }
 
@@ -100,12 +121,16 @@ export async function DELETE() {
     .update(users)
     .set({
       chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+      meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
       bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+      meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
     })
     .where(eq(users.id, user.id));
 
   return NextResponse.json({
     chatBackground: DEFAULT_CHAT_BACKGROUND,
+    meetupBackground: DEFAULT_CHAT_BACKGROUND,
     bubbleStyle: DEFAULT_BUBBLE_STYLE,
+    meetupBubbleStyle: DEFAULT_BUBBLE_STYLE,
   });
 }
