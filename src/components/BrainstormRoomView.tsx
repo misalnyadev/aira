@@ -9,7 +9,7 @@ import type {
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import { bubblePaint, bubbleInk, DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
 import { Avatar } from "./Avatar";
-import { BackIcon, ChevronDownIcon, TrashIcon, SpeakerIcon } from "./icons";
+import { BackIcon, TrashIcon, SpeakerIcon } from "./icons";
 import { useSpeakingMessageId, useIsAudibleSpeaking } from "@/lib/voice";
 import { inferEmotionFromIndonesianText } from "@/lib/callEmotion";
 
@@ -276,9 +276,11 @@ export function BrainstormRoomView({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
               >
-                <ChevronDownIcon className="h-5 w-5" />
+                <span aria-hidden="true" className="-translate-y-0.5 text-[18px] font-semibold leading-none">
+                  v
+                </span>
               </button>
             </div>
           </div>

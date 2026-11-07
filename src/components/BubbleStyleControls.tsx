@@ -185,15 +185,17 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
 
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <span className="block text-xs font-medium text-ink">Sembunyikan tulisan chat</span>
+            <span className="block text-xs font-medium text-ink">
+              Sembunyikan tulisan di Tatap Muka
+            </span>
             <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-              Layar bersih seperti video call — chat & suara tetap berjalan
+              Sembunyikan gelembung agar video/ekspresi terlihat; Chat biasa tetap tampil.
             </span>
           </div>
           <Switch
             checked={Boolean(style.hideMessages)}
             onChange={(next) => update({ hideMessages: next })}
-            label="Sembunyikan tulisan chat"
+            label="Sembunyikan tulisan di Tatap Muka"
             disabled={disabled}
           />
         </div>
@@ -239,7 +241,7 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
       <div className="flex flex-col gap-1.5 rounded-xl border border-line px-3 py-2.5">
         {style.hideMessages ? (
           <p className="py-2 text-center text-xs text-muted">
-            Semua elemen ruang chat disembunyikan — sentuh layar untuk memunculkan kolom ketik & ikon mata.
+            Di Tatap Muka, tulisan disembunyikan agar video/ekspresi terlihat. Chat biasa tetap tampil.
           </p>
         ) : (
           <>
