@@ -43,6 +43,7 @@ import {
 import {
   BackIcon,
   CheckIcon,
+  ChevronDownIcon,
   DoubleCheckIcon,
   EyeIcon,
   EyeOffIcon,
@@ -919,9 +920,7 @@ export function ChatWindow({
                 title="Pesan terbaru"
                 className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
               >
-                <span aria-hidden="true" className="-translate-y-0.5 text-[18px] font-semibold leading-none">
-                  v
-                </span>
+                <ChevronDownIcon className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
           </div>
