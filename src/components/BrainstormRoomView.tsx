@@ -9,7 +9,7 @@ import type {
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import { bubblePaint, bubbleInk, DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
 import { Avatar } from "./Avatar";
-import { BackIcon, TrashIcon, SpeakerIcon } from "./icons";
+import { BackIcon, ChevronDownIcon, TrashIcon, SpeakerIcon } from "./icons";
 import { useSpeakingMessageId, useIsAudibleSpeaking } from "@/lib/voice";
 import { inferEmotionFromIndonesianText } from "@/lib/callEmotion";
 
@@ -71,6 +71,7 @@ export function BrainstormRoomView({
 }) {
   const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
   const [input, setInput] = useState("");
   const speakingId = useSpeakingMessageId();
   const audible = useIsAudibleSpeaking();
@@ -81,10 +82,11 @@ export function BrainstormRoomView({
     return m;
   }, [members]);
 
-  // Auto scroll
+  // Ikuti pesan terbaru selama pengguna memang berada di bagian bawah.
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping]);
+    const el = scrollRef.current;
+    if (el && atBottom) el.scrollTop = el.scrollHeight;
+  }, [messages, isTyping, atBottom]);
 
   function handleSend() {
     const t = input.trim();
@@ -155,103 +157,132 @@ export function BrainstormRoomView({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-        <div className="mx-auto w-full max-w-3xl space-y-3">
-          {messages.length === 0 && !isTyping && (
-            <div className="py-10 text-center">
-              <p className="text-sm font-semibold text-ink">
-                {mode === "meetup"
-                  ? "Mulai pertemuan tatap muka"
-                  : mode === "scene"
-                    ? "Mulai Reka Adegan"
-                    : "Mulai diskusi di meja ini"}
-              </p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                {mode === "meetup"
-                  ? members.length === 1
-                    ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
-                    : `Kamu dan ${members.map((m) => m.name).join(", ")} berada di ruangan yang sama. Mereka akan menanggapi bergiliran.`
-                  : mode === "scene"
-                    ? `${sceneCanonical ? "Adegan ini bagian cerita utama." : "Ini latihan; peristiwa fiksinya bukan canon."} Mulai dengan arahan atau dialog untuk ${members.map((m) => m.name).join(", ")}.`
-                    : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
-              </p>
-            </div>
-          )}
-          {messages.map((m) => {
-            const isUser = m.role === "user";
-            const char = m.characterId ? memberMap.get(m.characterId) : null;
-            const parts = splitBubbles(m.content);
-            return (
-              <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                <div className={`flex max-w-[85%] gap-2 sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-                  {!isUser && char && (
-                    <div className="shrink-0 self-end">
-                      <Avatar name={char.name} src={char.avatarUrl} size={28} />
-                    </div>
-                  )}
-                  <div className="space-y-1.5">
+      <div className="relative flex min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+          }}
+          className={`min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
+            !atBottom ? "pb-14 sm:pb-14" : ""
+          }`}
+        >
+          <div className="mx-auto w-full max-w-3xl space-y-3">
+            {messages.length === 0 && !isTyping && (
+              <div className="py-10 text-center">
+                <p className="text-sm font-semibold text-ink">
+                  {mode === "meetup"
+                    ? "Mulai pertemuan tatap muka"
+                    : mode === "scene"
+                      ? "Mulai Reka Adegan"
+                      : "Mulai diskusi di meja ini"}
+                </p>
+                <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+                  {mode === "meetup"
+                    ? members.length === 1
+                      ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
+                      : `Kamu dan ${members.map((m) => m.name).join(", ")} berada di ruangan yang sama. Mereka akan menanggapi bergiliran.`
+                    : mode === "scene"
+                      ? `${sceneCanonical ? "Adegan ini bagian cerita utama." : "Ini latihan; peristiwa fiksinya bukan canon."} Mulai dengan arahan atau dialog untuk ${members.map((m) => m.name).join(", ")}.`
+                      : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
+                </p>
+              </div>
+            )}
+            {messages.map((m) => {
+              const isUser = m.role === "user";
+              const char = m.characterId ? memberMap.get(m.characterId) : null;
+              const parts = splitBubbles(m.content);
+              return (
+                <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                  <div className={`flex max-w-[85%] gap-2 sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                     {!isUser && char && (
-                      <p className="mb-1 ml-1 text-[11px] font-semibold text-ink-soft">{char.name}</p>
-                    )}
-                    {parts.map((part, pIdx) => (
-                      <div
-                        key={`${m.id}-${pIdx}`}
-                        className={`rounded-2xl px-3 py-2 text-sm shadow-xs ${isUser ? "rounded-br-sm bg-bubble-out text-bubble-out-ink" : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"}`}
-                        style={bubblePaint(bubbleStyle, isUser ? "out" : "in")}
-                      >
-                        <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
-                          {part}
-                        </p>
-                        {pIdx === parts.length - 1 && (
-                          <div className="mt-1 flex items-center justify-end gap-2">
-                            <span
-                              className={`text-[11px] ${(isUser ? bubbleStyle.textColorOut : bubbleStyle.textColorIn) ? "opacity-75" : "text-ink-soft/70"}`}
-                              style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}
-                            >
-                              {formatTime(m.createdAt)}
-                            </span>
-                            {!isUser && canSpeak && part && (
-                              <button
-                                onClick={() => {
-                                  if (speakingId === `${m.id}-${pIdx}`) onStopSpeaking();
-                                  else {
-                                    onSpeak(part, `${m.id}-${pIdx}`, m.characterId);
-                                  }
-                                }}
-                                className={`rounded-full p-1 transition ${speakingId === `${m.id}-${pIdx}` && audible ? "bg-ink text-white" : "text-ink-soft hover:bg-surface-2 hover:text-ink"}`}
-                                title="Putar suara karakter"
-                              >
-                                <SpeakerIcon className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {isUser && pIdx === 0 && (
-                              <button
-                                onClick={() => onCopy(m.content)}
-                                className="text-[11px] text-ink-soft hover:text-ink"
-                              >
-                                Salin
-                              </button>
-                            )}
-                          </div>
-                        )}
+                      <div className="shrink-0 self-end">
+                        <Avatar name={char.name} src={char.avatarUrl} size={28} />
                       </div>
-                    ))}
+                    )}
+                    <div className="space-y-1.5">
+                      {!isUser && char && (
+                        <p className="mb-1 ml-1 text-[11px] font-semibold text-ink-soft">{char.name}</p>
+                      )}
+                      {parts.map((part, pIdx) => (
+                        <div
+                          key={`${m.id}-${pIdx}`}
+                          className={`rounded-2xl px-3 py-2 text-sm shadow-xs ${isUser ? "rounded-br-sm bg-bubble-out text-bubble-out-ink" : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"}`}
+                          style={bubblePaint(bubbleStyle, isUser ? "out" : "in")}
+                        >
+                          <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
+                            {part}
+                          </p>
+                          {pIdx === parts.length - 1 && (
+                            <div className="mt-1 flex items-center justify-end gap-2">
+                              <span
+                                className={`text-[11px] ${(isUser ? bubbleStyle.textColorOut : bubbleStyle.textColorIn) ? "opacity-75" : "text-ink-soft/70"}`}
+                                style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}
+                              >
+                                {formatTime(m.createdAt)}
+                              </span>
+                              {!isUser && canSpeak && part && (
+                                <button
+                                  onClick={() => {
+                                    if (speakingId === `${m.id}-${pIdx}`) onStopSpeaking();
+                                    else {
+                                      onSpeak(part, `${m.id}-${pIdx}`, m.characterId);
+                                    }
+                                  }}
+                                  className={`rounded-full p-1 transition ${speakingId === `${m.id}-${pIdx}` && audible ? "bg-ink text-white" : "text-ink-soft hover:bg-surface-2 hover:text-ink"}`}
+                                  title="Putar suara karakter"
+                                >
+                                  <SpeakerIcon className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {isUser && pIdx === 0 && (
+                                <button
+                                  onClick={() => onCopy(m.content)}
+                                  className="text-[11px] text-ink-soft hover:text-ink"
+                                >
+                                  Salin
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-bubble-in px-4 py-3 shadow-sm" style={bubblePaint(bubbleStyle, "in")}>
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
+                  {typingLabel && <span className="ml-2 text-xs text-ink-soft">{typingLabel}</span>}
+                </div>
               </div>
-            );
-          })}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-bubble-in px-4 py-3 shadow-sm" style={bubblePaint(bubbleStyle, "in")}>
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.3s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
-                {typingLabel && <span className="ml-2 text-xs text-ink-soft">{typingLabel}</span>}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+        {!atBottom && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 sm:px-4">
+            <div className="mx-auto flex w-full max-w-3xl justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+                }}
+                aria-label="Kembali ke pesan terbaru"
+                title="Pesan terbaru"
+                className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+              >
+                <ChevronDownIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Composer */}

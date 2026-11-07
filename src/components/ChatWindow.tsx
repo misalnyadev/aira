@@ -43,9 +43,8 @@ import {
 import {
   BackIcon,
   CheckIcon,
+  ChevronDownIcon,
   DoubleCheckIcon,
-  EyeIcon,
-  EyeOffIcon,
   NotesBoardIcon,
   PhoneCallIcon,
   SpeakerIcon,
@@ -124,7 +123,6 @@ export function ChatWindow({
   onOpenNotes,
   activeNotesCount = 0,
   hasDueTodayNote = false,
-  onToggleHideChat,
   onVideoCall,
   onAudioCall,
   onImageClick,
@@ -163,7 +161,6 @@ export function ChatWindow({
   onOpenNotes?: () => void;
   activeNotesCount?: number;
   hasDueTodayNote?: boolean;
-  onToggleHideChat?: () => void;
   onVideoCall?: () => void;
   onAudioCall?: () => void;
   onImageClick: (url: string) => void;
@@ -705,7 +702,7 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* Area chat + tombol mengambang sembunyikan chat di atas tombol kirim */}
+      {/* Area chat */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {hideMessages ? (
           <div className="min-h-0 flex-1" aria-hidden="true" />
@@ -717,7 +714,7 @@ export function ChatWindow({
               setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
             }}
             className={`flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
-              onToggleHideChat ? "pb-12 sm:pb-12" : ""
+              !atBottom ? "pb-12 sm:pb-12" : ""
             } ${
               minimalBars
                 ? "[-webkit-mask-image:linear-gradient(to_bottom,transparent,black_16px)] [mask-image:linear-gradient(to_bottom,transparent,black_16px)]"
@@ -894,36 +891,21 @@ export function ChatWindow({
           </div>
         )}
 
-        {onToggleHideChat && (
-          <div
-            className={`pointer-events-none absolute inset-x-0 bottom-2 z-10 px-2.5 transition-all duration-200 sm:px-3 ${
-              !hideMessages || composerVisible
-                ? "translate-y-0 opacity-100"
-                : "translate-y-2 opacity-0"
-            }`}
-          >
+        {!hideMessages && !atBottom && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 sm:px-4">
             <div className="mx-auto flex w-full max-w-3xl justify-end">
-              <div className="flex w-10 justify-center">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleHideChat();
-                  }}
-                  aria-pressed={hideMessages}
-                  aria-label={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
-                  title={hideMessages ? "Tampilkan tulisan chat" : "Sembunyikan tulisan chat"}
-                  className={`${
-                    !hideMessages || composerVisible ? "pointer-events-auto" : "pointer-events-none"
-                  } grid h-9 w-9 place-items-center rounded-full bg-surface/45 text-ink/70 ring-1 ring-line/50 backdrop-blur-md transition hover:bg-surface/70 hover:text-ink active:scale-95 active:opacity-70`}
-                >
-                  {hideMessages ? (
-                    <EyeOffIcon className="h-[18px] w-[18px]" />
-                  ) : (
-                    <EyeIcon className="h-[18px] w-[18px]" />
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+                }}
+                aria-label="Kembali ke pesan terbaru"
+                title="Pesan terbaru"
+                className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+              >
+                <ChevronDownIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
         )}
