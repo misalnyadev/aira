@@ -400,6 +400,9 @@ export const brainstormMessages = pgTable("brainstorm_messages", {
   characterId: uuid("character_id"),
   content: text("content").notNull().default(""),
   imageUrl: text("image_url"),
+  /** Nama & teks hasil ekstraksi dokumen; berkas aslinya tidak disimpan. */
+  attachmentName: text("attachment_name"),
+  attachmentText: text("attachment_text"),
   isVoiceNote: boolean("is_voice_note").notNull().default(false),
   /** Emosi yang terdeteksi (untuk sinkron klip video/voice). */
   emotion: text("emotion"),

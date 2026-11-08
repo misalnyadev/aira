@@ -555,9 +555,45 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     if (!messagesMap[characterId]) void fetchMessages(characterId);
   }
 
-  async function handleSendBrainstorm(text: string) {
-    if (!activeBrainstormId) return;
+  async function handleSendBrainstorm(text: string, attachmentFile: File | null): Promise<string | null> {
+    if (!activeBrainstormId) return "Ruangan chat tidak ditemukan.";
     const roomId = activeBrainstormId;
+    const cleanText = text.trim();
+    let imageUrl: string | null = null;
+    let attachmentName: string | null = null;
+    let attachmentText: string | null = null;
+
+    if (attachmentFile) {
+      try {
+        const fileToUpload = attachmentFile.type.startsWith("image/")
+          ? await compressImageFile(attachmentFile)
+          : attachmentFile;
+        const formData = new FormData();
+        formData.append("file", fileToUpload);
+        const uploadRes = await api("/api/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok) {
+          return typeof uploadData.error === "string" ? uploadData.error : "Gagal mengunggah file.";
+        }
+        if (attachmentFile.type.startsWith("image/")) {
+          if (typeof uploadData.url !== "string") return "Gagal mengunggah gambar.";
+          imageUrl = uploadData.url;
+        } else {
+          if (typeof uploadData.documentText !== "string" || !uploadData.documentText.trim()) {
+            return "Isi dokumen tidak berhasil dibaca.";
+          }
+          attachmentName = typeof uploadData.fileName === "string"
+            ? uploadData.fileName
+            : attachmentFile.name;
+          attachmentText = uploadData.documentText;
+        }
+      } catch {
+        return "Gagal membaca atau mengunggah file.";
+      }
+    }
+
+    if (!cleanText && !imageUrl && !attachmentText) return "Pesan tidak boleh kosong.";
+
     const activeRoom = brainstormRooms.find((r) => r.id === roomId);
     const tempId = `temp-${Date.now()}`;
     const optimistic: BrainstormMessage = {
@@ -565,13 +601,14 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       roomId,
       role: "user",
       characterId: null,
-      content: text,
-      imageUrl: null,
+      content: cleanText,
+      imageUrl,
+      attachmentName,
+      attachmentText,
       createdAt: new Date().toISOString(),
     };
     setBrainstormMessages((prev) => ({ ...prev, [roomId]: [...(prev[roomId] ?? []), optimistic] }));
     setBrainstormTyping(roomId);
-    // Tampilkan label bergiliran
     const memberNames = activeRoom?.members.map((m) => m.name) ?? [];
     let labelIdx = 0;
     setBrainstormTypingLabel(memberNames[0] ? `${memberNames[0]} mengetik...` : "Mengetik...");
@@ -585,31 +622,31 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       const res = await api(`/api/brainstorm/${encodeURIComponent(roomId)}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({ content: cleanText, imageUrl, attachmentName, attachmentText }),
       });
       const data = await res.json().catch(() => null);
       if (labelInterval) window.clearInterval(labelInterval);
       setBrainstormTyping(null);
       setBrainstormTypingLabel(null);
 
-      if (!res.ok) {
+      if (!res.ok || !data?.userMessage) {
         setBrainstormMessages((prev) => ({
           ...prev,
           [roomId]: (prev[roomId] ?? []).filter((m) => m.id !== tempId),
         }));
-        return;
+        return typeof data?.error === "string" ? data.error : "Gagal mengirim. Coba lagi.";
       }
-      // Ganti optimistic dengan real userMessage dari server
+
       setBrainstormMessages((prev) => {
         const cur = prev[roomId] ?? [];
-        const replaced = cur.map((m) => (m.id === tempId ? (data.userMessage ?? { ...m, id: data.userMessage?.id ?? m.id, pending: false }) : m));
-        return { ...prev, [roomId]: replaced };
+        const userMessage = data.userMessage as BrainstormMessage;
+        return { ...prev, [roomId]: cur.map((m) => (m.id === tempId ? userMessage : m)) };
       });
-      const assistants: BrainstormMessage[] = data.assistantMessages ?? [];
-      // Deliver sequential with delay + TTS prefetch
+      const assistants: BrainstormMessage[] = Array.isArray(data.assistantMessages)
+        ? data.assistantMessages
+        : [];
       for (let i = 0; i < assistants.length; i++) {
         const msg = assistants[i];
-        // prefetch voice
         const charObj = characters.find((c) => c.id === msg.characterId);
         if (charObj) {
           const target = resolveVoiceTarget(charObj.voiceConfig, voice.engine, ttsSummaryRef.current.hasActiveKey);
@@ -617,7 +654,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         }
         await new Promise((r) => setTimeout(r, typingDelayFor(msg.content)));
         setBrainstormMessages((prev) => ({ ...prev, [roomId]: [...(prev[roomId] ?? []), msg] }));
-        // auto speak jika voice enabled
         if (voice.enabled && charObj) {
           const currVoice = loadVoiceSettings(user.id);
           const target = resolveVoiceTarget(charObj.voiceConfig, currVoice.engine, ttsSummaryRef.current.hasActiveKey);
@@ -628,10 +664,16 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         }
       }
       fetchBrainstormRooms();
+      return null;
     } catch {
       if (labelInterval) window.clearInterval(labelInterval);
       setBrainstormTyping(null);
       setBrainstormTypingLabel(null);
+      setBrainstormMessages((prev) => ({
+        ...prev,
+        [roomId]: (prev[roomId] ?? []).filter((m) => m.id !== tempId),
+      }));
+      return "Gagal mengirim. Periksa koneksi lalu coba lagi.";
     }
   }
 
@@ -1748,6 +1790,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                   onClear={() => handleClearBrainstorm(activeBrainstormId)}
                   onDeleteRoom={() => handleDeleteBrainstorm(activeBrainstormId)}
                   onSend={handleSendBrainstorm}
+                  onImageClick={(url) => setLightbox(url)}
                   onCopy={handleCopyMessage}
                   onSpeak={handleSpeakBrainstorm}
                   onStopSpeaking={stopSpeaking}

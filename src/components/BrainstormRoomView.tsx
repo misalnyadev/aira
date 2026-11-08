@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
+import Image from "next/image";
+import { isSupportedDocumentFile } from "@/lib/chatAttachmentTypes";
 import type {
   BrainstormMessage,
   BrainstormRoomMode,
@@ -9,7 +11,7 @@ import type {
 import type { BubbleStyle } from "@/lib/bubbleStyle";
 import { bubblePaint, bubbleInk, DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
 import { Avatar } from "./Avatar";
-import { BackIcon, ChevronDownIcon, TrashIcon, SpeakerIcon } from "./icons";
+import { BackIcon, ChevronDownIcon, PaperclipIcon, PlusIcon, SendIcon, TrashIcon, SpeakerIcon, XIcon } from "./icons";
 import { useSpeakingMessageId, useIsAudibleSpeaking } from "@/lib/voice";
 import { inferEmotionFromIndonesianText } from "@/lib/callEmotion";
 
@@ -46,6 +48,7 @@ export function BrainstormRoomView({
   onClear,
   onDeleteRoom,
   onSend,
+  onImageClick,
   onCopy,
   onSpeak,
   onStopSpeaking,
@@ -63,7 +66,8 @@ export function BrainstormRoomView({
   onBack: () => void;
   onClear: () => void;
   onDeleteRoom: () => void;
-  onSend: (text: string) => void;
+  onSend: (text: string, attachmentFile: File | null) => Promise<string | null>;
+  onImageClick: (url: string) => void;
   onCopy: (text: string) => void;
   onSpeak: (text: string, messageId?: string, characterId?: string | null) => void;
   onStopSpeaking: () => void;
@@ -73,6 +77,11 @@ export function BrainstormRoomView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [input, setInput] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const speakingId = useSpeakingMessageId();
   const audible = useIsAudibleSpeaking();
 
@@ -88,11 +97,35 @@ export function BrainstormRoomView({
     if (el && atBottom) el.scrollTop = el.scrollHeight;
   }, [messages, isTyping, atBottom]);
 
-  function handleSend() {
+  useEffect(() => {
+    if (!imagePreview) return;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
+
+  function clearAttachment() {
+    setAttachmentFile(null);
+    setImagePreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function handleSend() {
     const t = input.trim();
-    if (!t || isTyping) return;
-    onSend(t);
-    setInput("");
+    if ((!t && !attachmentFile) || isTyping || sending) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const error = await onSend(t, attachmentFile);
+      if (error) {
+        setSendError(error);
+        return;
+      }
+      setInput("");
+      clearAttachment();
+    } catch {
+      setSendError("Gagal mengirim. Coba lagi.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -193,6 +226,8 @@ export function BrainstormRoomView({
               const isUser = m.role === "user";
               const char = m.characterId ? memberMap.get(m.characterId) : null;
               const parts = splitBubbles(m.content);
+              const displayParts =
+                parts.length > 0 ? parts : m.imageUrl || m.attachmentName ? [""] : [];
               return (
                 <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                   <div className={`flex max-w-[85%] gap-2 sm:max-w-[78%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -205,16 +240,56 @@ export function BrainstormRoomView({
                       {!isUser && char && (
                         <p className="mb-1 ml-1 text-[11px] font-semibold text-ink-soft">{char.name}</p>
                       )}
-                      {parts.map((part, pIdx) => (
+                      {displayParts.map((part, pIdx) => (
                         <div
                           key={`${m.id}-${pIdx}`}
                           className={`rounded-2xl px-3 py-2 text-sm shadow-xs ${isUser ? "rounded-br-sm bg-bubble-out text-bubble-out-ink" : "rounded-bl-sm bg-bubble-in text-bubble-in-ink"}`}
                           style={bubblePaint(bubbleStyle, isUser ? "out" : "in")}
                         >
-                          <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
-                            {part}
-                          </p>
-                          {pIdx === parts.length - 1 && (
+                          {pIdx === 0 && m.imageUrl && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onImageClick(m.imageUrl!);
+                              }}
+                              aria-label="Buka gambar"
+                              className="mb-1 block overflow-hidden rounded-lg"
+                            >
+                              <Image
+                                src={m.imageUrl}
+                                alt="Lampiran gambar"
+                                width={640}
+                                height={480}
+                                unoptimized
+                                className="max-h-64 max-w-full cursor-zoom-in rounded-lg object-contain"
+                              />
+                            </button>
+                          )}
+                          {pIdx === 0 && m.attachmentName && (
+                            <div className="mb-1 rounded-lg bg-surface/60 p-2">
+                              <div className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                                <PaperclipIcon className="h-4 w-4 shrink-0" />
+                                <span className="truncate">{m.attachmentName}</span>
+                              </div>
+                              {m.attachmentText && (
+                                <details className="mt-1.5 text-xs">
+                                  <summary className="cursor-pointer text-ink-soft hover:text-ink">
+                                    Lihat teks yang dibaca
+                                  </summary>
+                                  <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface/70 p-2 font-sans text-[11px]">
+                                    {m.attachmentText}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          )}
+                          {part && (
+                            <p className="whitespace-pre-wrap break-words" style={bubbleInk(bubbleStyle, isUser ? "out" : "in")}>
+                              {part}
+                            </p>
+                          )}
+                          {pIdx === displayParts.length - 1 && (
                             <div className="mt-1 flex items-center justify-end gap-2">
                               <span
                                 className={`text-[11px] ${(isUser ? bubbleStyle.textColorOut : bubbleStyle.textColorIn) ? "opacity-75" : "text-ink-soft/70"}`}
@@ -236,7 +311,7 @@ export function BrainstormRoomView({
                                   <SpeakerIcon className="h-3.5 w-3.5" />
                                 </button>
                               )}
-                              {isUser && pIdx === 0 && (
+                              {isUser && pIdx === 0 && m.content && (
                                 <button
                                   onClick={() => onCopy(m.content)}
                                   className="text-[11px] text-ink-soft hover:text-ink"
@@ -287,44 +362,106 @@ export function BrainstormRoomView({
 
       {/* Composer */}
       <div className="bottom-bar shrink-0 p-2 sm:p-3">
-        <div className="mx-auto flex w-full max-w-3xl items-end gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              mode === "meetup"
-                ? "Bicara langsung..."
-                : mode === "scene"
-                  ? "Lanjutkan adegan..."
-                  : `Tanya ${members.map((m) => m.name).join(", ")}...`
-            }
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
+        <div className="mx-auto w-full max-w-3xl">
+          {attachmentFile && (
+            <div className="mb-2 flex items-center gap-2 px-1">
+              {imagePreview ? (
+                <Image
+                  src={imagePreview}
+                  alt="Pratinjau gambar"
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-12 w-12 rounded-lg object-cover ring-1 ring-line"
+                />
+              ) : (
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink-soft">
+                  <PaperclipIcon className="h-5 w-5" />
+                </div>
+              )}
+              <span className="min-w-0 flex-1 truncate text-xs text-ink-soft">
+                {attachmentFile.name}
+              </span>
+              <button
+                type="button"
+                onClick={clearAttachment}
+                aria-label="Batalkan lampiran"
+                className="rounded-full p-1 text-ink-soft hover:bg-surface-2 hover:text-ink"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {sendError && (
+            <p role="alert" className="mb-2 px-1 text-xs text-rose-600 dark:text-rose-400">
+              {sendError}
+            </p>
+          )}
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,.pdf,.txt,.md,.csv,.json"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (!file) return;
+                if (file.type.startsWith("image/") || isSupportedDocumentFile(file.name)) {
+                  setAttachmentFile(file);
+                  setImagePreview(file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
+                  setSendError(null);
+                } else {
+                  clearAttachment();
+                  setSendError("Format didukung: gambar, PDF, TXT, MD, CSV, dan JSON.");
+                }
+                event.currentTarget.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={isTyping || sending}
+              aria-label="Lampirkan gambar atau file"
+              title="Kirim gambar atau file"
+              className="mb-0.5 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-surface-2 hover:text-ink active:scale-95 disabled:opacity-40"
+            >
+              <PlusIcon className="h-6 w-6" />
+            </button>
+            <textarea
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                setSendError(null);
+              }}
+              placeholder={
+                mode === "meetup"
+                  ? "Bicara langsung..."
+                  : mode === "scene"
+                    ? "Lanjutkan adegan..."
+                    : `Tanya ${members.map((m) => m.name).join(", ")}...`
               }
-            }}
-            className="max-h-28 min-h-[42px] flex-1 resize-none rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none placeholder:text-muted sm:text-sm"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isTyping}
-            className="grid h-[42px] w-[42px] place-items-center rounded-full bg-brand text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:opacity-40"
-            aria-label="Kirim"
-          >
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-              <path d="M3.4 20.6 21 12 3.4 3.4 3 10l12 2-12 2z" fill="currentColor" />
-            </svg>
-          </button>
+              rows={1}
+              disabled={isTyping || sending}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void handleSend();
+                }
+              }}
+              className="max-h-28 min-h-[42px] flex-1 resize-none rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none placeholder:text-muted disabled:opacity-60 sm:text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => void handleSend()}
+              disabled={isTyping || sending || (!input.trim() && !attachmentFile)}
+              className="mb-0.5 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-brand text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:opacity-40"
+              aria-label="Kirim"
+              title="Kirim"
+            >
+              <SendIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <p className="mx-auto mt-1 max-w-3xl px-1 text-center text-[11px] text-muted">
-          {mode === "meetup"
-            ? `Tatap Muka · ${members.length} karakter hadir di ruangan ini. Catatan dan Memori Tim 1 yang diizinkan menjadi konteks.`
-            : mode === "scene"
-              ? `Reka Adegan ${sceneCanonical ? "canon" : "latihan"}. Ringkasan bertanggal WIB hanya masuk ke ingatan peserta yang mengaktifkan Ingatan Jangka Panjang; transkrip lengkap tetap terpisah dari Chat.`
-              : `Setiap pesanmu ditanggapi bergiliran. Ide/rencana dapat menjadi ingatan bertanggal WIB bagi peserta yang mengaktifkan Ingatan Jangka Panjang; transkrip lengkap tetap terpisah dari Chat.`}
-        </p>
       </div>
     </div>
   );
