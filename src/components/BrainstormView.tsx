@@ -89,22 +89,23 @@ export function BrainstormView({
                   type="button"
                   onClick={() => onOpenMeetup(character.id)}
                   className="rounded-2xl border border-line bg-surface p-3.5 text-left transition hover:bg-surface-2 active:scale-[0.99]"
-                  aria-label={`Ajak ${character.name} bertemu tatap muka`}
+                  aria-label={`Temui ${character.name} tatap muka`}
                 >
                   <div className="flex items-center gap-3">
                     <Avatar name={character.name} src={character.avatarUrl} size={48} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate text-sm font-semibold text-ink">
+                          {character.name}
+                        </p>
+                        <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
+                          Temui
+                        </span>
+                      </div>
                       <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">
                         {character.shortBio || "Karakter pribadimu"}
                       </p>
                     </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted">Hanya kamu dan {character.name}</span>
-                    <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
-                      Ajak bertemu
-                    </span>
                   </div>
                 </button>
               ))}
