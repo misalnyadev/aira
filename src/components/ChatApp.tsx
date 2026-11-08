@@ -10,6 +10,7 @@ import type {
 } from "@/types/chat";
 import {
   DEFAULT_BUBBLE_STYLE,
+  parseBubbleStyle,
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
 import type { CallEmotion } from "@/lib/callEmotion";
@@ -86,6 +87,10 @@ function parseContactThreadId(id: string | null | undefined): string | null {
   return raw || null;
 }
 
+function contactMeetupBubbleStorageKey(userId: string, threadId: string) {
+  return `aira:contact-meetup-bubble:${userId}:${threadId}`;
+}
+
 export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusId?: string | null }) {
   const { user, expire } = useAuth();
   const [voice, setVoice] = useVoiceSettings(user.id);
@@ -153,6 +158,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const [brainstormRooms, setBrainstormRooms] = useState<BrainstormRoomSummary[]>([]);
   const [activeBrainstormId, setActiveBrainstormId] = useState<string | null>(null);
   const [activeMeetupCharacterId, setActiveMeetupCharacterId] = useState<string | null>(null);
+  const [contactMeetupBubbleStyles, setContactMeetupBubbleStyles] = useState<
+    Record<string, BubbleStyle>
+  >({});
   const [brainstormMessages, setBrainstormMessages] = useState<Record<string, BrainstormMessage[]>>({});
   const [brainstormTyping, setBrainstormTyping] = useState<string | null>(null);
   const [brainstormTypingLabel, setBrainstormTypingLabel] = useState<string | null>(null);
@@ -523,6 +531,21 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   function handleOpenMeetup(characterId: string) {
     if (activeId !== characterId) stopSpeaking();
+    if (parseContactThreadId(characterId)) {
+      try {
+        const savedStyle = window.localStorage.getItem(
+          contactMeetupBubbleStorageKey(user.id, characterId)
+        );
+        if (savedStyle) {
+          setContactMeetupBubbleStyles((prev) => ({
+            ...prev,
+            [characterId]: parseBubbleStyle(savedStyle),
+          }));
+        }
+      } catch {
+        // Prefer the default local appearance when storage is unavailable.
+      }
+    }
     setPeekCharId(null);
     setChatOriginView("chats");
     setActiveBrainstormId(null);
@@ -620,16 +643,19 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  // Sinkronisasi berkala 2 arah saat ruang chat kontak sedang dibuka & diam.
+  // Sinkronisasi berkala 2 arah saat chat kontak atau Tatap Mukanya sedang dibuka.
   useEffect(() => {
     const contactId = parseContactThreadId(activeId);
-    if (!activeId || !contactId || view !== "chats") return;
+    const isOpenContactConversation =
+      view === "chats" ||
+      (view === "brainstorm" && activeMeetupCharacterId === activeId);
+    if (!activeId || !contactId || !isOpenContactConversation) return;
     const timer = window.setInterval(() => {
       if (document.hidden || typingFor === activeId) return;
       void fetchMessages(activeId);
     }, 4500);
     return () => window.clearInterval(timer);
-  }, [activeId, view, typingFor, fetchMessages]);
+  }, [activeId, activeMeetupCharacterId, view, typingFor, fetchMessages]);
 
   function handleViewChange(next: AppView) {
     if (next !== "chats") stopSpeaking();
@@ -761,7 +787,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         ? `/api/contacts/${contactId}/chat`
         : "/api/chat";
       const payload = contactId
-        ? { content: text, imageUrl, isVoiceNote: sendAsVoiceNote }
+        ? {
+            content: text,
+            imageUrl,
+            isVoiceNote: sendAsVoiceNote,
+            ...(interactionMode ? { interactionMode } : {}),
+          }
         : {
             characterId: target,
             content: text,
@@ -1260,12 +1291,20 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     return `${chosen.label} · ${modelName}`;
   })();
 
+  function meetupBubbleFor(character: CharacterSummary | null) {
+    if (!character) return DEFAULT_BUBBLE_STYLE;
+    if (character.threadKind === "guest_contact") {
+      return contactMeetupBubbleStyles[character.id] ?? DEFAULT_BUBBLE_STYLE;
+    }
+    return character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE;
+  }
+
   const activeCharacter = allThreads.find((c) => c.id === activeId) ?? null;
   const activeMeetupCharacter =
-    characters.find((character) => character.id === activeMeetupCharacterId) ?? null;
+    chatThreads.find((character) => character.id === activeMeetupCharacterId) ?? null;
   const isMeetupConversation = view === "brainstorm" && Boolean(activeMeetupCharacterId);
   const activeBubble = isMeetupConversation
-    ? activeMeetupCharacter?.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE
+    ? meetupBubbleFor(activeMeetupCharacter)
     : activeCharacter?.bubbleStyle ?? DEFAULT_BUBBLE_STYLE;
   const isHiddenMode = Boolean(
     isMeetupConversation &&
@@ -1409,12 +1448,25 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   function handleToggleHideChat(character: CharacterSummary) {
-    const characterBubble = character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE;
-    setPeekCharId(null);
-    void handleCharacterMeetupBubble(character.id, {
+    const characterBubble = meetupBubbleFor(character);
+    const next = {
       ...characterBubble,
       hideMessages: !characterBubble.hideMessages,
-    });
+    };
+    setPeekCharId(null);
+    if (character.threadKind === "guest_contact") {
+      setContactMeetupBubbleStyles((prev) => ({ ...prev, [character.id]: next }));
+      try {
+        window.localStorage.setItem(
+          contactMeetupBubbleStorageKey(user.id, character.id),
+          JSON.stringify(next)
+        );
+      } catch {
+        // Keep the in-session setting even when local persistence is unavailable.
+      }
+      return;
+    }
+    void handleCharacterMeetupBubble(character.id, next);
   }
 
   function renderCharacterConversation(
@@ -1427,7 +1479,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   ) {
     const isMeetup = options.mode === "meetup";
     const characterBubble = isMeetup
-      ? character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE
+      ? meetupBubbleFor(character)
       : character.bubbleStyle ?? DEFAULT_BUBBLE_STYLE;
     const characterBackground = isMeetup
       ? character.meetupBackground ?? DEFAULT_CHAT_BACKGROUND
@@ -1662,6 +1714,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             <BrainstormView
               rooms={brainstormRooms}
               characters={characters}
+              meetupCharacters={chatThreads}
               onOpenMeetup={handleOpenMeetup}
               onOpenRoom={handleOpenBrainstorm}
               onCreateBrainstorm={handleCreateBrainstorm}

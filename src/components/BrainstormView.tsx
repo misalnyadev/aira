@@ -11,6 +11,7 @@ type SharedRoomMode = "brainstorm" | "scene";
 export function BrainstormView({
   rooms,
   characters,
+  meetupCharacters,
   onOpenMeetup,
   onOpenRoom,
   onCreateBrainstorm,
@@ -19,6 +20,7 @@ export function BrainstormView({
 }: {
   rooms: BrainstormRoomSummary[];
   characters: CharacterSummary[];
+  meetupCharacters: CharacterSummary[];
   onOpenMeetup: (characterId: string) => void;
   onOpenRoom: (id: string) => void;
   onCreateBrainstorm: (
@@ -68,7 +70,7 @@ export function BrainstormView({
             </p>
           </div>
 
-          {characters.length === 0 ? (
+          {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
               <p className="text-sm font-semibold text-ink">Belum ada karakter untuk diajak bertemu</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
@@ -83,7 +85,7 @@ export function BrainstormView({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-              {characters.map((character) => (
+              {meetupCharacters.map((character) => (
                 <button
                   key={character.id}
                   type="button"
@@ -102,9 +104,16 @@ export function BrainstormView({
                           Temui
                         </span>
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">
-                        {character.shortBio || "Karakter pribadimu"}
-                      </p>
+                      <div className="mt-0.5 flex items-start gap-1.5">
+                        {character.threadKind === "guest_contact" && (
+                          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                            Kontak
+                          </span>
+                        )}
+                        <p className="line-clamp-2 text-xs text-ink-soft">
+                          {character.shortBio || "Karakter pribadimu"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </button>
