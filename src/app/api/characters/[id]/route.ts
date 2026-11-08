@@ -3,13 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { normalizeBubbleStyle, parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import { normalizeBubbleStyle, parseBubbleStyle } from "@/lib/bubbleStyle";
 import {
   collectMediaKeys,
   normalizeCharacterMedia,
   parseCharacterMedia,
 } from "@/lib/characterMedia";
-import { normalizeChatBackground, parseOptionalChatBackground } from "@/lib/chatBackground";
+import { normalizeChatBackground, parseChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import { normalizeOwnerProfileShareFields, parseOwnerProfileShareFields } from "@/lib/characterInvite";
 import {
@@ -49,10 +49,10 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     greeting: row.greeting,
     providerId: row.providerId,
     model: row.model,
-    chatBackground: parseOptionalChatBackground(row.chatBackground),
-    meetupBackground: parseOptionalChatBackground(row.meetupBackground),
-    bubbleStyle: parseOptionalBubbleStyle(row.bubbleStyle),
-    meetupBubbleStyle: parseOptionalBubbleStyle(row.meetupBubbleStyle),
+    chatBackground: parseChatBackground(row.chatBackground),
+    meetupBackground: parseChatBackground(row.meetupBackground),
+    bubbleStyle: parseBubbleStyle(row.bubbleStyle),
+    meetupBubbleStyle: parseBubbleStyle(row.meetupBubbleStyle),
     media: parseCharacterMedia(row.media),
     voiceConfig: parseCharacterVoice(row.voiceConfig),
     memoryEnabled: Boolean(row.memoryEnabled),
@@ -244,22 +244,16 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (providerId !== undefined) updates.providerId = providerId || null;
   if (model !== undefined) updates.model = model?.trim() || null;
   if ("chatBackground" in body) {
-    updates.chatBackground =
-      chatBackground === null ? null : JSON.stringify(normalizeChatBackground(chatBackground));
+    updates.chatBackground = JSON.stringify(normalizeChatBackground(chatBackground));
   }
   if ("meetupBackground" in body) {
-    updates.meetupBackground =
-      meetupBackground === null ? null : JSON.stringify(normalizeChatBackground(meetupBackground));
+    updates.meetupBackground = JSON.stringify(normalizeChatBackground(meetupBackground));
   }
   if ("bubbleStyle" in body) {
-    updates.bubbleStyle =
-      bubbleStyle === null ? null : JSON.stringify(normalizeBubbleStyle(bubbleStyle));
+    updates.bubbleStyle = JSON.stringify(normalizeBubbleStyle(bubbleStyle));
   }
   if ("meetupBubbleStyle" in body) {
-    updates.meetupBubbleStyle =
-      meetupBubbleStyle === null
-        ? null
-        : JSON.stringify(normalizeBubbleStyle(meetupBubbleStyle));
+    updates.meetupBubbleStyle = JSON.stringify(normalizeBubbleStyle(meetupBubbleStyle));
   }
   if ("media" in body) {
     const cleaned = media === null ? null : normalizeCharacterMedia(media, user.id);

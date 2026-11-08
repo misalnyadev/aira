@@ -123,6 +123,43 @@ const DDL = [
         WHERE "chat_background" IS NOT NULL OR "bubble_style" IS NOT NULL;
       END IF;
     END $$`,
+  // Materialisasikan tampilan akun ke karakter lama sekali sebelum fallback akun dihapus.
+  sql`DO $$
+    DECLARE
+      migration_claimed integer;
+    BEGIN
+      INSERT INTO "_aira_migrations" ("id")
+      VALUES ('character_appearance_defaults_v1')
+      ON CONFLICT ("id") DO NOTHING;
+      GET DIAGNOSTICS migration_claimed = ROW_COUNT;
+      IF migration_claimed = 1 THEN
+        UPDATE "characters" AS c
+        SET "chat_background" = COALESCE(c."chat_background", u."chat_background", '{"kind":"default"}'),
+            "meetup_background" = COALESCE(c."meetup_background", u."meetup_background", '{"kind":"default"}'),
+            "bubble_style" = COALESCE(c."bubble_style", u."bubble_style", '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'),
+            "meetup_bubble_style" = COALESCE(c."meetup_bubble_style", u."meetup_bubble_style", '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}')
+        FROM "users" AS u
+        WHERE c."user_id" = u."id";
+
+        UPDATE "characters"
+        SET "chat_background" = COALESCE("chat_background", '{"kind":"default"}'),
+            "meetup_background" = COALESCE("meetup_background", '{"kind":"default"}'),
+            "bubble_style" = COALESCE("bubble_style", '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'),
+            "meetup_bubble_style" = COALESCE("meetup_bubble_style", '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}')
+        WHERE "chat_background" IS NULL
+           OR "meetup_background" IS NULL
+           OR "bubble_style" IS NULL
+           OR "meetup_bubble_style" IS NULL;
+      END IF;
+    END $$`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "chat_background" SET DEFAULT '{"kind":"default"}'`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "chat_background" SET NOT NULL`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "meetup_background" SET DEFAULT '{"kind":"default"}'`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "meetup_background" SET NOT NULL`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "bubble_style" SET DEFAULT '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "bubble_style" SET NOT NULL`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "meetup_bubble_style" SET DEFAULT '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'`,
+  sql`ALTER TABLE "characters" ALTER COLUMN "meetup_bubble_style" SET NOT NULL`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "media" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "voice_config" text`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "memory_enabled" boolean NOT NULL DEFAULT false`,

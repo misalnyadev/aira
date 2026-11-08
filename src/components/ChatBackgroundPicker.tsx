@@ -17,28 +17,18 @@ import { CameraIcon } from "./icons";
 const ring = "border-ink ring-2 ring-ink/25";
 const idle = "border-line hover:border-ink/40";
 
-type AccountPickerProps = {
-  allowInherit?: false;
+type ChatBackgroundPickerProps = {
   value: ChatBackground;
   onChange: (next: ChatBackground) => void;
   disabled?: boolean;
 };
 
-type CharacterPickerProps = {
-  allowInherit: true;
-  value: ChatBackground | null;
-  onChange: (next: ChatBackground | null) => void;
-  disabled?: boolean;
-};
-
-/**
- * Pemilih latar Chat atau Tatap Muka: bawaan, warna, gambar sendiri, atau animasi.
- *
- * Di Profil Karakter (`allowInherit`), `value === null` berarti mengikuti
- * latar bawaan akun untuk mode yang sedang diatur.
- */
-export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPickerProps) {
-  const { disabled = false } = props;
+/** Pemilih latar Chat atau Tatap Muka: bawaan, warna, gambar sendiri, atau animasi. */
+export function ChatBackgroundPicker({
+  value,
+  onChange,
+  disabled = false,
+}: ChatBackgroundPickerProps) {
   const imageRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,18 +36,13 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
   const [dimDraft, setDimDraft] = useState<number | null>(null);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
 
-  const inherited = props.allowInherit && props.value === null;
-  const current: ChatBackground = props.value ?? { kind: "default" };
-  const isImage = !inherited && current.kind === "image";
+  const current = value;
+  const isImage = current.kind === "image";
   const dimPercent =
     dimDraft ?? Math.round((current.kind === "image" ? current.dim : 0.25) * 100);
 
   function selectBackground(next: ChatBackground) {
-    if (props.allowInherit) {
-      props.onChange(next);
-    } else {
-      props.onChange(next);
-    }
+    onChange(next);
   }
 
   async function handleImage(file: File) {
@@ -95,27 +80,13 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
       <div>
         <p className="mb-1.5 text-[12px] font-medium text-muted">Warna &amp; gambar</p>
         <div className="flex flex-wrap items-center gap-2">
-          {props.allowInherit && (
-            <button
-              type="button"
-              onClick={() => props.onChange(null)}
-              title="Ikut setelan"
-              aria-pressed={inherited}
-              className={`flex h-10 items-center rounded-full border px-3 text-xs font-medium transition ${
-                inherited ? `${ring} text-ink` : `${idle} bg-surface-2 text-ink-soft`
-              }`}
-            >
-              Ikut setelan
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => selectBackground({ kind: "default" })}
-            aria-pressed={!inherited && current.kind === "default"}
+            aria-pressed={current.kind === "default"}
             title="Bawaan"
             className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-full border transition ${
-              !inherited && current.kind === "default" ? ring : idle
+              current.kind === "default" ? ring : idle
             }`}
             style={{
               backgroundColor: isDark ? "#0b0b0d" : "#f7f8fa",
@@ -128,7 +99,7 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
           </button>
 
           {CHAT_COLOR_PRESETS.map((preset) => {
-            const active = !inherited && current.kind === "preset" && current.id === preset.id;
+            const active = current.kind === "preset" && current.id === preset.id;
             return (
               <button
                 key={preset.id}
@@ -174,7 +145,7 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
         <p className="mb-1.5 text-[12px] font-medium text-muted">Animasi</p>
         <div className="flex flex-wrap items-center gap-2">
           {CHAT_ANIMATED_PRESETS.map((preset) => {
-            const active = !inherited && current.kind === "animated" && current.id === preset.id;
+            const active = current.kind === "animated" && current.id === preset.id;
             return (
               <button
                 key={preset.id}
@@ -221,7 +192,7 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
             <button
               type="button"
               onClick={() =>
-                props.allowInherit ? props.onChange(null) : props.onChange({ kind: "default" })
+                onChange({ kind: "default" })
               }
               className="text-xs font-medium text-ink-soft transition hover:text-ink"
             >
@@ -245,11 +216,11 @@ export function ChatBackgroundPicker(props: AccountPickerProps | CharacterPicker
         </div>
       )}
 
-      {!inherited && current.kind === "preset" && (
+      {current.kind === "preset" && (
         <p className="text-xs text-muted">{getPreset(current.id).label}</p>
       )}
 
-      {!inherited && current.kind === "animated" && (
+      {current.kind === "animated" && (
         <p className="text-xs text-muted">
           {getAnimatedPreset(current.id).label} · {getAnimatedPreset(current.id).hint}
         </p>

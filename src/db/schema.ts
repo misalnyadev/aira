@@ -35,23 +35,17 @@ export const users = pgTable("users", {
   /** Pindah otomatis ke provider lain saat semua key provider utama kena limit/gagal. */
   autoFallback: boolean("auto_fallback").notNull().default(true),
 
-  /**
-   * Latar area chat, disimpan sebagai JSON pendek:
-   * `{"kind":"default"}`, `{"kind":"preset","id":"sand"}`,
-   * `{"kind":"animated","id":"aurora"}`, atau
-   * `{"kind":"image","imageUrl":"/uploads/..","dim":0.25}`.
-   * Disimpan di akun supaya ikut ke semua perangkat.
-   */
+  /** Data tampilan lama milik akun; dipertahankan untuk backfill per-karakter. */
   chatBackground: text("chat_background").notNull().default('{"kind":"default"}'),
-  /** Latar khusus bawaan akun untuk Tatap Muka; null berarti latar default Tatap Muka. */
+  /** Data tampilan lama Tatap Muka; bukan lagi sumber tampilan runtime. */
   meetupBackground: text("meetup_background"),
-  /** Gaya gelembung bawaan akun untuk Chat biasa. */
+  /** Data gaya gelembung lama untuk Chat; dipertahankan untuk backfill per-karakter. */
   bubbleStyle: text("bubble_style")
     .notNull()
     .default(
       '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null}'
     ),
-  /** Gaya gelembung bawaan akun untuk Tatap Muka. */
+  /** Data gaya gelembung lama Tatap Muka; bukan lagi sumber tampilan runtime. */
   meetupBubbleStyle: text("meetup_bubble_style"),
   /** Pengaturan Suara HD (ElevenLabs) milik akun: API key, key cadangan, dan 2 slot suara (JSON). */
   ttsConfig: text("tts_config").notNull().default("{}"),
@@ -120,14 +114,22 @@ export const characters = pgTable("characters", {
     onDelete: "set null",
   }),
   model: text("model"),
-  /** Latar Chat khusus karakter (JSON); `null` = ikut latar Chat bawaan akun. */
-  chatBackground: text("chat_background"),
-  /** Latar Tatap Muka khusus karakter (JSON); `null` = ikut latar Tatap Muka bawaan akun. */
-  meetupBackground: text("meetup_background"),
-  /** Gaya gelembung Chat khusus karakter (JSON); `null` = ikut gelembung Chat bawaan akun. */
-  bubbleStyle: text("bubble_style"),
-  /** Gaya gelembung Tatap Muka khusus karakter (JSON); `null` = ikut bawaan akun. */
-  meetupBubbleStyle: text("meetup_bubble_style"),
+  /** Tampilan Chat milik karakter (JSON); karakter baru memakai tampilan default. */
+  chatBackground: text("chat_background").notNull().default('{"kind":"default"}'),
+  /** Tampilan Tatap Muka milik karakter (JSON); karakter baru memakai tampilan default. */
+  meetupBackground: text("meetup_background").notNull().default('{"kind":"default"}'),
+  /** Gaya gelembung Chat milik karakter (JSON). */
+  bubbleStyle: text("bubble_style")
+    .notNull()
+    .default(
+      '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'
+    ),
+  /** Gaya gelembung Tatap Muka milik karakter (JSON). */
+  meetupBubbleStyle: text("meetup_bubble_style")
+    .notNull()
+    .default(
+      '{"glass":false,"opacity":70,"textColorIn":null,"bgColorIn":null,"textColorOut":null,"bgColorOut":null,"hideMessages":false,"minimalBars":false}'
+    ),
   /** Media pribadi karakter di R2: video chat, video call, dan suara telepon (JSON). */
   media: text("media"),
   /** Pilihan suara khusus karakter: ikut bawaan, perangkat, HD perempuan, HD laki-laki, atau custom (JSON). */

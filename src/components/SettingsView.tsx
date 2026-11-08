@@ -14,13 +14,9 @@ import {
 import { MAX_BACKUP_KEYS } from "@/lib/limits";
 import { readClipboardText } from "@/lib/clipboard";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
-import type { BubbleStyle } from "@/lib/bubbleStyle";
-import type { ChatBackground } from "@/lib/chatBackground";
 import type { TtsAccountSummary } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
 import { useAuth } from "./AuthGate";
-import { BubbleStyleControls } from "./BubbleStyleControls";
-import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { MenuHeader } from "./MenuHeader";
 import { Switch } from "./Switch";
 import { ThemeSegmented } from "./ThemeToggle";
@@ -110,14 +106,6 @@ export function SettingsView({
   openVoiceInitially = false,
   autoFallback,
   onAutoFallbackChange,
-  chatBackground,
-  onChatBackgroundChange,
-  meetupBackground,
-  onMeetupBackgroundChange,
-  bubbleStyle,
-  onBubbleStyleChange,
-  meetupBubbleStyle,
-  onMeetupBubbleStyleChange,
   onChanged,
   isAdmin,
   onOpenAccountManagement,
@@ -131,14 +119,6 @@ export function SettingsView({
   openVoiceInitially?: boolean;
   autoFallback: boolean;
   onAutoFallbackChange: (next: boolean) => void;
-  chatBackground: ChatBackground;
-  onChatBackgroundChange: (next: ChatBackground) => void;
-  meetupBackground: ChatBackground;
-  onMeetupBackgroundChange: (next: ChatBackground) => void;
-  bubbleStyle: BubbleStyle;
-  onBubbleStyleChange: (next: BubbleStyle) => void;
-  meetupBubbleStyle: BubbleStyle;
-  onMeetupBubbleStyleChange: (next: BubbleStyle) => void;
   onChanged: () => Promise<void>;
   isAdmin?: boolean;
   onOpenAccountManagement?: () => void;
@@ -148,15 +128,11 @@ export function SettingsView({
   const [openSections, setOpenSections] = useState<{
     providers: boolean;
     appearance: boolean;
-    bubbles: boolean;
-    meetupAppearance: boolean;
     voice: boolean;
     account: boolean;
   }>(() => ({
     providers: providers.length === 0,
     appearance: false,
-    bubbles: false,
-    meetupAppearance: false,
     voice: openVoiceInitially,
     account: false,
   }));
@@ -176,15 +152,6 @@ export function SettingsView({
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestState>>({});
-  const [bgBusy, setBgBusy] = useState(false);
-  const [bgError, setBgError] = useState<string | null>(null);
-  const [bubbleBusy, setBubbleBusy] = useState(false);
-  const [bubbleError, setBubbleError] = useState<string | null>(null);
-  const [meetupBgBusy, setMeetupBgBusy] = useState(false);
-  const [meetupBgError, setMeetupBgError] = useState<string | null>(null);
-  const [meetupBubbleBusy, setMeetupBubbleBusy] = useState(false);
-  const [meetupBubbleError, setMeetupBubbleError] = useState<string | null>(null);
-
   // Pemilih & detektor otomatis model hidup dari API key provider
   const [models, setModels] = useState<ModelOption[] | null>(null);
   const [liveRecommended, setLiveRecommended] = useState<string[]>([]);
@@ -604,103 +571,6 @@ export function SettingsView({
     }
   }
 
-  /**
-   * Simpan latar chat ke akun. Tampilan langsung berubah (optimistis); kalau
-   * server menolak, pilihan dikembalikan ke nilai sebelumnya supaya layar
-   * tidak berbohong.
-   */
-  async function handleBackgroundChange(next: ChatBackground) {
-    const previous = chatBackground;
-    setBgError(null);
-    onChatBackgroundChange(next);
-    setBgBusy(true);
-    try {
-      const res = await fetch("/api/appearance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatBackground: next }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan latar.");
-      if (data.chatBackground) onChatBackgroundChange(data.chatBackground);
-    } catch (err) {
-      onChatBackgroundChange(previous);
-      setBgError(err instanceof Error ? err.message : "Gagal menyimpan latar.");
-    } finally {
-      setBgBusy(false);
-    }
-  }
-
-  async function handleBubbleStyleChange(next: BubbleStyle) {
-    const previous = bubbleStyle;
-    setBubbleError(null);
-    onBubbleStyleChange(next);
-    setBubbleBusy(true);
-    try {
-      const res = await fetch("/api/appearance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bubbleStyle: next }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan gaya gelembung.");
-      if (data.bubbleStyle) onBubbleStyleChange(data.bubbleStyle);
-    } catch (err) {
-      onBubbleStyleChange(previous);
-      setBubbleError(
-        err instanceof Error ? err.message : "Gagal menyimpan gaya gelembung."
-      );
-    } finally {
-      setBubbleBusy(false);
-    }
-  }
-
-  async function handleMeetupBackgroundChange(next: ChatBackground) {
-    const previous = meetupBackground;
-    setMeetupBgError(null);
-    onMeetupBackgroundChange(next);
-    setMeetupBgBusy(true);
-    try {
-      const res = await fetch("/api/appearance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meetupBackground: next }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan latar Tatap Muka.");
-      if (data.meetupBackground) onMeetupBackgroundChange(data.meetupBackground);
-    } catch (err) {
-      onMeetupBackgroundChange(previous);
-      setMeetupBgError(err instanceof Error ? err.message : "Gagal menyimpan latar Tatap Muka.");
-    } finally {
-      setMeetupBgBusy(false);
-    }
-  }
-
-  async function handleMeetupBubbleStyleChange(next: BubbleStyle) {
-    const previous = meetupBubbleStyle;
-    setMeetupBubbleError(null);
-    onMeetupBubbleStyleChange(next);
-    setMeetupBubbleBusy(true);
-    try {
-      const res = await fetch("/api/appearance", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meetupBubbleStyle: next }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan tampilan Tatap Muka.");
-      if (data.meetupBubbleStyle) onMeetupBubbleStyleChange(data.meetupBubbleStyle);
-    } catch (err) {
-      onMeetupBubbleStyleChange(previous);
-      setMeetupBubbleError(
-        err instanceof Error ? err.message : "Gagal menyimpan tampilan Tatap Muka."
-      );
-    } finally {
-      setMeetupBubbleBusy(false);
-    }
-  }
-
   async function handleToggleAutoFallback(next: boolean) {
     const previous = autoFallback;
     onAutoFallbackChange(next);
@@ -724,10 +594,6 @@ export function SettingsView({
     providers.length === 0
       ? "Tambahkan minimal satu API key untuk mulai ngobrol"
       : `${providers.length} provider tersimpan · ${defaultProvider.label} (${defaultProvider.model})`;
-  const bubbleSubtitle = bubbleStyle.glass
-    ? `Chat · efek kaca aktif (${bubbleStyle.opacity}%)`
-    : "Chat · warna pesan, efek kaca, & bar tampilan";
-
   function toggleSection(key: keyof typeof openSections) {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
@@ -736,7 +602,7 @@ export function SettingsView({
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
       <MenuHeader
         title="Setelan"
-        description="Atur tampilan, chat, suara, dan akunmu"
+        description="Atur tema aplikasi, suara, provider, dan akunmu"
       />
 
       <div
@@ -744,131 +610,26 @@ export function SettingsView({
         className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(var(--tabbar-space)+2rem)] sm:px-6"
       >
         <div className="mx-auto w-full max-w-2xl space-y-3">
-          {/* 1. Tema & Latar Chat */}
+          {/* Tema aplikasi — tampilan Chat dan Tatap Muka diatur dari profil karakter. */}
           <SettingsAccordionCard
-            title="Tema Aplikasi & Latar Chat"
-            subtitle="Mode terang/gelap global & wallpaper khusus Chat"
+            title="Tema Aplikasi"
+            subtitle="Tema global · tampilan per karakter"
             open={openSections.appearance}
             onToggle={() => toggleSection("appearance")}
           >
-            <div className="space-y-4">
-              <div>
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted">
-                  Mode Tema
-                </span>
-                <ThemeSegmented />
-              </div>
-
-              <div className="rounded-xl border border-line px-3.5 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block text-sm font-medium text-ink">Latar chat</span>
-                    <span className="block text-[11px] text-muted">
-                      Tersimpan di akun, ikut ke semua perangkat
-                    </span>
-                  </div>
-                  {bgBusy && <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>}
-                </div>
-
-                <ChatBackgroundPicker
-                  value={chatBackground}
-                  onChange={handleBackgroundChange}
-                  disabled={bgBusy}
-                />
-
-                {bgError && (
-                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bgError}</p>
-                )}
-              </div>
-            </div>
-          </SettingsAccordionCard>
-
-          {/* 2. Tampilan gelembung Chat */}
-          <SettingsAccordionCard
-            title="Gaya Gelembung Chat"
-            subtitle={bubbleSubtitle}
-            open={openSections.bubbles}
-            onToggle={() => toggleSection("bubbles")}
-          >
             <div>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-muted">
-                  Bawaan untuk semua karakter · tiap karakter bisa diatur sendiri di profilnya
-                </span>
-                {bubbleBusy && (
-                  <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
-                )}
-              </div>
-
-              <BubbleStyleControls
-                mode="chat"
-                value={bubbleStyle}
-                onChange={handleBubbleStyleChange}
-                disabled={bubbleBusy}
-              />
-
-              {bubbleError && (
-                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{bubbleError}</p>
-              )}
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted">
+                Mode Tema
+              </span>
+              <ThemeSegmented />
+              <p className="mt-3 text-xs leading-relaxed text-muted">
+                Latar dan gelembung Chat/Tatap Muka diatur lewat foto profil karakter saat
+                membuka percakapannya.
+              </p>
             </div>
           </SettingsAccordionCard>
 
-          {/* 3. Tampilan Tatap Muka */}
-          <SettingsAccordionCard
-            title="Tampilan Tatap Muka"
-            subtitle="Latar dan gelembung khusus sesi Tatap Muka"
-            open={openSections.meetupAppearance}
-            onToggle={() => toggleSection("meetupAppearance")}
-          >
-            <div className="space-y-4">
-              <div className="rounded-xl border border-line px-3.5 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block text-sm font-medium text-ink">Latar Tatap Muka</span>
-                    <span className="block text-[11px] text-muted">
-                      Bawaan akun untuk semua karakter
-                    </span>
-                  </div>
-                  {meetupBgBusy && (
-                    <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
-                  )}
-                </div>
-                <ChatBackgroundPicker
-                  value={meetupBackground}
-                  onChange={handleMeetupBackgroundChange}
-                  disabled={meetupBgBusy}
-                />
-                {meetupBgError && (
-                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{meetupBgError}</p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-line px-3.5 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block text-sm font-medium text-ink">Gelembung Tatap Muka</span>
-                    <span className="block text-[11px] text-muted">
-                      Bawaan akun untuk semua karakter
-                    </span>
-                  </div>
-                  {meetupBubbleBusy && (
-                    <span className="shrink-0 text-[11px] text-muted">Menyimpan...</span>
-                  )}
-                </div>
-                <BubbleStyleControls
-                  mode="meetup"
-                  value={meetupBubbleStyle}
-                  onChange={handleMeetupBubbleStyleChange}
-                  disabled={meetupBubbleBusy}
-                />
-                {meetupBubbleError && (
-                  <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{meetupBubbleError}</p>
-                )}
-              </div>
-            </div>
-          </SettingsAccordionCard>
-
-          {/* 4. Suara */}
+          {/* Suara */}
           <SettingsAccordionCard
             title="Suara"
             subtitle="Bacakan balasan, Suara HD, bank rekaman, dan suara lokal"
@@ -886,7 +647,7 @@ export function SettingsView({
             />
           </SettingsAccordionCard>
 
-          {/* 5. Provider AI & API Key */}
+          {/* Provider AI & API Key */}
           <SettingsAccordionCard
             title="Provider AI & API Key"
             subtitle={providerSubtitle}
@@ -1391,7 +1152,7 @@ export function SettingsView({
             </div>
           </SettingsAccordionCard>
 
-          {/* 4. Akun & Sesi */}
+          {/* Akun & Sesi */}
           <SettingsAccordionCard
             title="Akun & Sesi"
             subtitle={user.email}

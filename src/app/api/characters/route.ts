@@ -8,9 +8,9 @@ import {
   messages,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
+import { DEFAULT_BUBBLE_STYLE, parseOptionalBubbleStyle } from "@/lib/bubbleStyle";
 import { parseCharacterMedia } from "@/lib/characterMedia";
-import { parseOptionalChatBackground } from "@/lib/chatBackground";
+import { DEFAULT_CHAT_BACKGROUND, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { loadActiveContactThreadsForUser } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
 import { normalizeOwnerProfileShareFields } from "@/lib/characterInvite";
@@ -342,6 +342,10 @@ export async function POST(req: Request) {
       ),
       providerId: providerId || null,
       model: model?.trim() || null,
+      chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+      meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+      bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+      meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
     })
     .returning();
 

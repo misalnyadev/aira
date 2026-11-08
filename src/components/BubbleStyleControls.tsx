@@ -112,32 +112,17 @@ function SideColors({
   );
 }
 
-type AccountBubbleProps = {
-  allowInherit?: false;
+type BubbleStyleControlsProps = {
   mode?: "chat" | "meetup";
   value: BubbleStyle;
   onChange: (next: BubbleStyle) => void;
   disabled?: boolean;
 };
 
-type CharacterBubbleProps = {
-  allowInherit: true;
-  mode?: "chat" | "meetup";
-  value: BubbleStyle | null;
-  fallback: BubbleStyle;
-  onChange: (next: BubbleStyle | null) => void;
-  disabled?: boolean;
-};
-
-/**
- * Pengaturan tampilan gelembung pesan.
- *
- * Dipakai untuk pengaturan Chat maupun Tatap Muka, di Setelan (bawaan akun)
- * dan Profil Karakter (`allowInherit`, `value === null` berarti ikut bawaan akun).
- */
-export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleProps) {
+/** Pengaturan gaya gelembung untuk Chat atau Tatap Muka milik satu karakter. */
+export function BubbleStyleControls(props: BubbleStyleControlsProps) {
   const { disabled = false, mode = "chat" } = props;
-  const style = props.allowInherit ? (props.value ?? props.fallback) : props.value;
+  const style = props.value;
 
   /** Kepekatan sementara saat jari masih di slider; disimpan ketika dilepas. */
   const [opacityDraft, setOpacityDraft] = useState<number | null>(null);
@@ -145,11 +130,7 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
   const previewStyle: BubbleStyle = { ...style, opacity };
 
   function emit(next: BubbleStyle) {
-    if (props.allowInherit) {
-      props.onChange(next);
-    } else {
-      props.onChange(next);
-    }
+    props.onChange(next);
   }
 
   function update(patch: Partial<BubbleStyle>) {
@@ -161,7 +142,7 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
     update({ opacity: raw });
   }
 
-  const canReset = props.allowInherit ? props.value !== null : !isDefaultBubbleStyle(style);
+  const canReset = !isDefaultBubbleStyle(style);
 
   return (
     <div className={`space-y-3 ${disabled ? "pointer-events-none opacity-50" : ""}`}>
@@ -269,16 +250,10 @@ export function BubbleStyleControls(props: AccountBubbleProps | CharacterBubbleP
       {canReset && (
         <button
           type="button"
-          onClick={() => {
-            if (props.allowInherit) {
-              props.onChange(null);
-            } else {
-              props.onChange(DEFAULT_BUBBLE_STYLE);
-            }
-          }}
+          onClick={() => props.onChange(DEFAULT_BUBBLE_STYLE)}
           className="w-full rounded-lg border border-line py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink"
         >
-          {props.allowInherit ? "Ikut setelan bawaan" : "Kembalikan ke bawaan"}
+          Kembalikan ke bawaan
         </button>
       )}
     </div>
