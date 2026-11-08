@@ -538,24 +538,6 @@ export function ChatWindow({
             )}
           </button>
 
-          {onOpenNotes && (
-            <button
-              onClick={onOpenNotes}
-              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
-              aria-label={`Catatan Kita bersama ${character.name}`}
-              title="Catatan & Janji Kita"
-            >
-              <NotesBoardIcon className="h-5 w-5" />
-              {activeNotesCount > 0 && (
-                <span
-                  className={`absolute right-2 top-2 h-2 w-2 rounded-full ${
-                    hasDueTodayNote ? "bg-amber-500" : "bg-ink/80"
-                  }`}
-                />
-              )}
-            </button>
-          )}
-
           {onVideoCall && (
             <button
               onClick={onVideoCall}
@@ -640,24 +622,6 @@ export function ChatWindow({
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
             )}
           </button>
-
-          {onOpenNotes && (
-            <button
-              onClick={onOpenNotes}
-              className="relative shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink active:opacity-60"
-              aria-label={`Catatan Kita bersama ${character.name}`}
-              title="Catatan & Janji Kita"
-            >
-              <NotesBoardIcon className="h-[22px] w-[22px]" />
-              {activeNotesCount > 0 && (
-                <span
-                  className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${
-                    hasDueTodayNote ? "bg-amber-500" : "bg-ink/75"
-                  }`}
-                />
-              )}
-            </button>
-          )}
 
           {onVideoCall && (
             <button
@@ -903,6 +867,28 @@ export function ChatWindow({
           </div>
         )}
 
+        {!hideMessages && !atBottom && onOpenNotes && (
+          <div className="pointer-events-none absolute inset-x-0 top-2 z-20 px-3 sm:px-4">
+            <div className="mx-auto flex w-full max-w-3xl justify-end">
+              <button
+                type="button"
+                onClick={onOpenNotes}
+                aria-label={`Catatan Kita bersama ${character.name}`}
+                title="Catatan & Janji Kita"
+                className="pointer-events-auto relative grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+              >
+                <NotesBoardIcon className="h-4 w-4" />
+                {activeNotesCount > 0 && (
+                  <span
+                    className={`absolute right-2 top-2 h-2 w-2 rounded-full ${
+                      hasDueTodayNote ? "bg-amber-500" : "bg-ink/80"
+                    }`}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
         {!hideMessages && !atBottom && (
           <div
             className={`pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4 ${
