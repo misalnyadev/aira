@@ -45,7 +45,7 @@ import { Avatar } from "./Avatar";
 import { CallVideoStage } from "./ChatVideo";
 import {
   CallEndIcon,
-  ChatsIcon,
+  ChatSquareIcon,
   MicIcon,
   MicOffIcon,
   SendIcon,
@@ -1113,7 +1113,7 @@ export function CallOverlay({
                     : "bg-white/18 text-white hover:bg-white/25"
                 }`}
               >
-                <ChatsIcon className="h-5 w-5" />
+                <ChatSquareIcon className="h-5 w-5" />
               </button>
             )}
 
