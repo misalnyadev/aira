@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { BrainstormRoomSummary, CharacterSummary } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
-import { BrainstormIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
+import { MeetupIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
 
 type SharedRoomMode = "brainstorm" | "scene";
 
@@ -124,7 +124,7 @@ export function BrainstormView({
           {brainstormRooms.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-2">
-                <BrainstormIcon className="h-6 w-6 text-ink-soft" />
+                <MeetupIcon className="h-6 w-6 text-ink-soft" />
               </div>
               <h3 className="mt-3 text-sm font-semibold text-ink">
                 {canBrainstorm ? "Belum ada meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
