@@ -105,10 +105,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [autoFallback, setAutoFallback] = useState(true);
-  const [chatBackground, setChatBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
-  const [meetupBackground, setMeetupBackground] = useState<ChatBackground>(DEFAULT_CHAT_BACKGROUND);
-  const [bubbleStyle, setBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
-  const [meetupBubbleStyle, setMeetupBubbleStyle] = useState<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const [ttsSummary, setTtsSummary] = useState<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
   const [limit, setLimit] = useState<number>(
     user.isAdmin ? 50 : user.characterQuota ?? MAX_CHARACTERS
@@ -141,6 +137,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const notesLoadedRef = useRef<Set<string>>(new Set());
   const [editDetail, setEditDetail] = useState<CharacterDetail | null>(null);
   const [profileDetail, setProfileDetail] = useState<CharacterDetail | null>(null);
+  const [profileMode, setProfileMode] = useState<"chat" | "meetup">("chat");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [call, setCall] = useState<{ characterId: string; mode: "video" | "audio" } | null>(null);
@@ -174,7 +171,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   const activeIdRef = useRef<string | null>(null);
   const charactersRef = useRef<CharacterSummary[]>([]);
-  const meetupBubbleStyleRef = useRef<BubbleStyle>(DEFAULT_BUBBLE_STYLE);
   const ttsSummaryRef = useRef<TtsAccountSummary>(DEFAULT_TTS_ACCOUNT_SUMMARY);
 
   useEffect(() => {
@@ -184,10 +180,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   useEffect(() => {
     charactersRef.current = allThreads;
   }, [allThreads]);
-
-  useEffect(() => {
-    meetupBubbleStyleRef.current = meetupBubbleStyle;
-  }, [meetupBubbleStyle]);
 
   useEffect(() => {
     ttsSummaryRef.current = ttsSummary;
@@ -213,7 +205,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     if (isDictating() || activeIdRef.current !== targetId) return false;
     if (voiceEnabled) return true;
     const charObj = charactersRef.current.find((c) => c.id === targetId);
-    const effective = charObj?.meetupBubbleStyle ?? meetupBubbleStyleRef.current;
+    const effective = charObj?.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE;
     return Boolean(
       view === "brainstorm" &&
         activeMeetupCharacterId === targetId &&
@@ -270,16 +262,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     const data = await res.json();
     setProviders(data.providers ?? []);
     if (typeof data.autoFallback === "boolean") setAutoFallback(data.autoFallback);
-  }, [api]);
-
-  const fetchAppearance = useCallback(async () => {
-    const res = await api("/api/appearance");
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.chatBackground) setChatBackground(data.chatBackground);
-    if (data.meetupBackground) setMeetupBackground(data.meetupBackground);
-    if (data.bubbleStyle) setBubbleStyle(data.bubbleStyle);
-    if (data.meetupBubbleStyle) setMeetupBubbleStyle(data.meetupBubbleStyle);
   }, [api]);
 
   const fetchProfile = useCallback(async () => {
@@ -393,11 +375,10 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       fetchCharacters(),
       fetchProviders(),
       fetchProfile(),
-      fetchAppearance(),
       fetchTtsSettings(),
       fetchBrainstormRooms(),
     ]).finally(() => setLoaded(true));
-  }, [fetchCharacters, fetchProviders, fetchProfile, fetchAppearance, fetchTtsSettings, fetchBrainstormRooms]);
+  }, [fetchCharacters, fetchProviders, fetchProfile, fetchTtsSettings, fetchBrainstormRooms]);
 
   useEffect(() => {
     if (!activeId || notesLoadedRef.current.has(activeId)) return;
@@ -1076,11 +1057,12 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  async function openProfile(id: string) {
+  async function openProfile(id: string, mode: "chat" | "meetup" = "chat") {
     if (parseContactThreadId(id)) {
       setShowAddContact(true);
       return;
     }
+    setProfileMode(mode);
     const res = await api(`/api/characters/${id}`);
     const data = await res.json();
     if (res.ok) {
@@ -1127,7 +1109,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     fetchCharacters();
   }
 
-  async function handleCharacterBackground(id: string, next: ChatBackground | null) {
+  async function handleCharacterBackground(id: string, next: ChatBackground) {
     setCharacters((prev) =>
       prev.map((c) => (c.id === id ? { ...c, chatBackground: next } : c))
     );
@@ -1146,7 +1128,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  async function handleCharacterBubble(id: string, next: BubbleStyle | null) {
+  async function handleCharacterBubble(id: string, next: BubbleStyle) {
     setCharacters((prev) =>
       prev.map((c) => (c.id === id ? { ...c, bubbleStyle: next } : c))
     );
@@ -1165,7 +1147,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  async function handleCharacterMeetupBackground(id: string, next: ChatBackground | null) {
+  async function handleCharacterMeetupBackground(id: string, next: ChatBackground) {
     setCharacters((prev) =>
       prev.map((c) => (c.id === id ? { ...c, meetupBackground: next } : c))
     );
@@ -1186,7 +1168,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
-  async function handleCharacterMeetupBubble(id: string, next: BubbleStyle | null) {
+  async function handleCharacterMeetupBubble(id: string, next: BubbleStyle) {
     setCharacters((prev) =>
       prev.map((c) => (c.id === id ? { ...c, meetupBubbleStyle: next } : c))
     );
@@ -1283,8 +1265,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     characters.find((character) => character.id === activeMeetupCharacterId) ?? null;
   const isMeetupConversation = view === "brainstorm" && Boolean(activeMeetupCharacterId);
   const activeBubble = isMeetupConversation
-    ? activeMeetupCharacter?.meetupBubbleStyle ?? meetupBubbleStyle
-    : activeCharacter?.bubbleStyle ?? bubbleStyle;
+    ? activeMeetupCharacter?.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE
+    : activeCharacter?.bubbleStyle ?? DEFAULT_BUBBLE_STYLE;
   const isHiddenMode = Boolean(
     isMeetupConversation &&
       activeMeetupCharacter?.id === activeMeetupCharacterId &&
@@ -1427,7 +1409,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   }
 
   function handleToggleHideChat(character: CharacterSummary) {
-    const characterBubble = character.meetupBubbleStyle ?? meetupBubbleStyle;
+    const characterBubble = character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE;
     setPeekCharId(null);
     void handleCharacterMeetupBubble(character.id, {
       ...characterBubble,
@@ -1445,11 +1427,11 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   ) {
     const isMeetup = options.mode === "meetup";
     const characterBubble = isMeetup
-      ? character.meetupBubbleStyle ?? meetupBubbleStyle
-      : character.bubbleStyle ?? bubbleStyle;
+      ? character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE
+      : character.bubbleStyle ?? DEFAULT_BUBBLE_STYLE;
     const characterBackground = isMeetup
-      ? character.meetupBackground ?? meetupBackground
-      : character.chatBackground ?? chatBackground;
+      ? character.meetupBackground ?? DEFAULT_CHAT_BACKGROUND
+      : character.chatBackground ?? DEFAULT_CHAT_BACKGROUND;
     const characterHidden = isMeetup && Boolean(characterBubble.hideMessages);
     return (
       <ChatWindow
@@ -1470,7 +1452,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         onToggleHideChat={isMeetup ? () => handleToggleHideChat(character) : undefined}
         onBack={options.onBack}
         backLabel={options.backLabel}
-        onOpenProfile={() => openProfile(character.id)}
+        onOpenProfile={() => openProfile(character.id, options.mode)}
         onOpenVoice={() => {
           setFocusVoiceSettings(true);
           handleViewChange("settings");
@@ -1665,14 +1647,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               openVoiceInitially={focusVoiceSettings}
               autoFallback={autoFallback}
               onAutoFallbackChange={setAutoFallback}
-              chatBackground={chatBackground}
-              onChatBackgroundChange={setChatBackground}
-              meetupBackground={meetupBackground}
-              onMeetupBackgroundChange={setMeetupBackground}
-              bubbleStyle={bubbleStyle}
-              onBubbleStyleChange={setBubbleStyle}
-              meetupBubbleStyle={meetupBubbleStyle}
-              onMeetupBubbleStyleChange={setMeetupBubbleStyle}
               isAdmin={isAdmin}
               onOpenAccountManagement={() => {
                 setProfileTab(isAdmin ? "admin" : "account");
@@ -1713,7 +1687,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                   messages={brainstormMessages[activeBrainstormId] ?? []}
                   isTyping={brainstormTyping === activeBrainstormId}
                   typingLabel={brainstormTypingLabel}
-                  bubble={bubbleStyle}
                   characters={characters}
                   onBack={() => {
                     setActiveBrainstormId(null);
@@ -1814,9 +1787,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       {showProfile && profileDetail && (
         <CharacterProfileModal
           character={profileDetail}
+          mode={profileMode}
           providerLabel={profileProviderLabel}
-          bubbleFallback={bubbleStyle}
-          meetupBubbleFallback={meetupBubbleStyle}
           ttsSummary={ttsSummary}
           voiceSettings={voice}
           onClose={() => setShowProfile(false)}

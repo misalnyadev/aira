@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * Pengaturan tampilan gelembung pesan (milik akun di Setelan atau khusus satu karakter).
+ * Pengaturan tampilan gelembung pesan milik satu karakter.
  *
  * Nilai warna `null` berarti mengikuti warna bawaan tema terang/gelap yang aktif.
  */

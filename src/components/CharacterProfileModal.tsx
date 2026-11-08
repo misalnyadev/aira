@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BubbleStyle } from "@/lib/bubbleStyle";
+import { DEFAULT_BUBBLE_STYLE, type BubbleStyle } from "@/lib/bubbleStyle";
 import type { CharacterMedia } from "@/lib/characterMedia";
-import type { ChatBackground } from "@/lib/chatBackground";
+import { DEFAULT_CHAT_BACKGROUND, type ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig, TtsAccountSummary } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
 import type { CharacterDetail } from "@/types/chat";
@@ -17,9 +17,8 @@ import { PencilIcon, TrashIcon, XIcon } from "./icons";
 
 export function CharacterProfileModal({
   character,
+  mode,
   providerLabel,
-  bubbleFallback,
-  meetupBubbleFallback,
   ttsSummary,
   voiceSettings,
   onClose,
@@ -36,19 +35,18 @@ export function CharacterProfileModal({
   onNotice,
 }: {
   character: CharacterDetail;
+  mode: "chat" | "meetup";
   providerLabel: string;
-  bubbleFallback: BubbleStyle;
-  meetupBubbleFallback: BubbleStyle;
   ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
   onClose: () => void;
   onEdit: () => void;
   onClearChat: () => void;
   onDelete: () => void;
-  onBackgroundChange: (next: ChatBackground | null) => void;
-  onBubbleChange: (next: BubbleStyle | null) => void;
-  onMeetupBackgroundChange: (next: ChatBackground | null) => void;
-  onMeetupBubbleChange: (next: BubbleStyle | null) => void;
+  onBackgroundChange: (next: ChatBackground) => void;
+  onBubbleChange: (next: BubbleStyle) => void;
+  onMeetupBackgroundChange: (next: ChatBackground) => void;
+  onMeetupBubbleChange: (next: BubbleStyle) => void;
   onVoiceChange: (next: CharacterVoiceConfig | null) => void;
   onMediaChange: (next: CharacterMedia | null) => void;
   onMemoryChange: (next: MemoryPatch) => void;
@@ -75,10 +73,15 @@ export function CharacterProfileModal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={`Profil ${character.name}`}
+        aria-label={`Profil ${character.name} · ${mode === "meetup" ? "Tatap Muka" : "Chat"}`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="font-display text-lg font-bold text-ink">Profil Karakter</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="truncate font-display text-lg font-bold text-ink">Profil Karakter</h2>
+            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+              {mode === "meetup" ? "Tatap Muka" : "Chat"}
+            </span>
+          </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
@@ -152,53 +155,65 @@ export function CharacterProfileModal({
             />
           </div>
 
-          <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Latar Chat
-            </h4>
-            <ChatBackgroundPicker
-              allowInherit
-              value={character.chatBackground}
-              onChange={onBackgroundChange}
-            />
-          </div>
+          {mode === "chat" ? (
+            <>
+              <div className="mt-5">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Latar Chat
+                </h4>
+                <ChatBackgroundPicker
+                  value={character.chatBackground ?? DEFAULT_CHAT_BACKGROUND}
+                  onChange={onBackgroundChange}
+                />
+              </div>
 
-          <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Tampilan Chat
-            </h4>
-            <BubbleStyleControls
-              allowInherit
-              mode="chat"
-              value={character.bubbleStyle}
-              fallback={bubbleFallback}
-              onChange={onBubbleChange}
-            />
-          </div>
+              <div className="mt-5">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Tampilan Chat
+                </h4>
+                <BubbleStyleControls
+                  mode="chat"
+                  value={character.bubbleStyle ?? DEFAULT_BUBBLE_STYLE}
+                  onChange={onBubbleChange}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-5">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Latar Tatap Muka
+                </h4>
+                <ChatBackgroundPicker
+                  value={character.meetupBackground ?? DEFAULT_CHAT_BACKGROUND}
+                  onChange={onMeetupBackgroundChange}
+                />
+              </div>
 
-          <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Latar Tatap Muka
-            </h4>
-            <ChatBackgroundPicker
-              allowInherit
-              value={character.meetupBackground}
-              onChange={onMeetupBackgroundChange}
-            />
-          </div>
+              <div className="mt-5">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Tampilan Tatap Muka
+                </h4>
+                <BubbleStyleControls
+                  mode="meetup"
+                  value={character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE}
+                  onChange={onMeetupBubbleChange}
+                />
+              </div>
 
-          <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Tampilan Tatap Muka
-            </h4>
-            <BubbleStyleControls
-              allowInherit
-              mode="meetup"
-              value={character.meetupBubbleStyle}
-              fallback={meetupBubbleFallback}
-              onChange={onMeetupBubbleChange}
-            />
-          </div>
+              <div className="mt-5">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Media karakter
+                </h4>
+                <CharacterMediaSection
+                  characterId={character.id}
+                  media={character.media}
+                  fallbackVoiceSlot={voiceSettings.engine === "hd_male" ? "male" : "female"}
+                  onChange={onMediaChange}
+                />
+              </div>
+            </>
+          )}
 
           <div className="mt-5">
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">

@@ -1,5 +1,7 @@
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
+import { DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
+import { DEFAULT_CHAT_BACKGROUND } from "@/lib/chatBackground";
 
 /**
  * Karakter awal untuk setiap akun baru.
@@ -67,7 +69,14 @@ Konteks: Ngobrol santai lewat chat soal kerjaan, syuting, dan hal-hal kecil seha
 export async function seedStarterCharacter(userId: string): Promise<string | null> {
   const [row] = await db
     .insert(characters)
-    .values({ ...STARTER_CHARACTER, userId })
+    .values({
+      ...STARTER_CHARACTER,
+      userId,
+      chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+      meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+      bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+      meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+    })
     .returning({ id: characters.id });
 
   if (!row) return null;
