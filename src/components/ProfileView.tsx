@@ -95,8 +95,12 @@ export function ProfileView({
     initialTab === "admin" && !effectiveIsAdmin ? "account" : initialTab
   );
 
-  const [displayName, setDisplayName] = useState(profile.displayName);
-  const [nickname, setNickname] = useState(profile.nickname);
+  const [displayName, setDisplayName] = useState(
+    profile.displayName.slice(0, MAX_DISPLAY_NAME_CHARS)
+  );
+  const [nickname, setNickname] = useState(
+    profile.nickname.slice(0, MAX_NICKNAME_CHARS)
+  );
   const [age, setAge] = useState(profile.age ? String(profile.age) : "");
   const [occupation, setOccupation] = useState(profile.occupation);
   const [about, setAbout] = useState(profile.about);
@@ -410,6 +414,7 @@ export function ProfileView({
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
+                  maxLength={MAX_DISPLAY_NAME_CHARS}
                   placeholder="Mis. Adi"
                   className={FIELD}
                 />
@@ -424,6 +429,7 @@ export function ProfileView({
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
+                  maxLength={MAX_NICKNAME_CHARS}
                   placeholder="Mis. Mas Adi / Kak"
                   className={FIELD}
                 />
