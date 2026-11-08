@@ -68,6 +68,7 @@ export function Sidebar({
           <>
             <MenuHeaderIconButton
               onClick={onAddContact}
+              className="translate-x-px"
               title="Tambah & kelola kontak karakter (PIN)"
               aria-label="Tambah & kelola kontak karakter"
             >
