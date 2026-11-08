@@ -51,8 +51,8 @@ export const MAX_SHARED_TEAM_PROMPT_CHARS = 6_000;
 export const MAX_MEETUP_MEMBERS = 1;
 
 /** Batas isian profil pengguna. */
-export const MAX_DISPLAY_NAME_CHARS = 60;
-export const MAX_NICKNAME_CHARS = 30;
+export const MAX_DISPLAY_NAME_CHARS = 15;
+export const MAX_NICKNAME_CHARS = 15;
 export const MAX_OCCUPATION_CHARS = 80;
 export const MAX_ABOUT_CHARS = 500;
 export const MIN_AGE = 10;
