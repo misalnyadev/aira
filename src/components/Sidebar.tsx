@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
-import { ThemeQuickToggle } from "./ThemeToggle";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import { PlusIcon, SearchIcon, XIcon } from "./icons";
 
@@ -67,7 +66,6 @@ export function Sidebar({
         }`}
         actions={
           <>
-            <ThemeQuickToggle className="md:hidden" />
             <MenuHeaderIconButton
               onClick={onAddContact}
               title="Tambah & kelola kontak karakter (PIN)"
