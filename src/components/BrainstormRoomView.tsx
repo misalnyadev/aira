@@ -81,7 +81,9 @@ export function BrainstormRoomView({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [multiline, setMultiline] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const speakingId = useSpeakingMessageId();
   const audible = useIsAudibleSpeaking();
 
@@ -102,6 +104,16 @@ export function BrainstormRoomView({
     return () => URL.revokeObjectURL(imagePreview);
   }, [imagePreview]);
 
+  function syncInputSize(element: HTMLTextAreaElement) {
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, 120)}px`;
+    const styles = window.getComputedStyle(element);
+    const lineHeight = parseFloat(styles.lineHeight) || 24;
+    const padding =
+      (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+    setMultiline(element.scrollHeight - padding > lineHeight * 1.3);
+  }
+
   function clearAttachment() {
     setAttachmentFile(null);
     setImagePreview(null);
@@ -120,6 +132,10 @@ export function BrainstormRoomView({
         return;
       }
       setInput("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        setMultiline(false);
+      }
       clearAttachment();
     } catch {
       setSendError("Gagal mengirim. Coba lagi.");
@@ -144,7 +160,7 @@ export function BrainstormRoomView({
                 ? "Tatap Muka · ruang yang sama"
                 : mode === "scene"
                   ? `Reka Adegan · ${sceneCanonical ? "Canon" : "Latihan"}`
-                  : members.map((m) => m.name).join(" · ")}
+                  : "Brainstorm · diskusi bersama"}
           </p>
         </div>
         <div className="flex -space-x-2">
@@ -170,23 +186,6 @@ export function BrainstormRoomView({
         >
           <TrashIcon className="h-4 w-4" />
         </button>
-      </div>
-
-      {/* Member chips */}
-      <div className="shrink-0 border-b border-line/60 bg-surface px-3 py-2 sm:px-4">
-        <div className="flex flex-wrap gap-1.5">
-          {mode === "scene" && (
-            <span className="inline-flex items-center rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink">
-              {sceneCanonical ? "Canon · cerita utama" : "Latihan · bukan canon"}
-            </span>
-          )}
-          {members.map((m) => (
-            <span key={m.characterId} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink">
-              <Avatar name={m.name} src={m.avatarUrl} size={18} />
-              {m.name}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* Messages */}
@@ -217,8 +216,8 @@ export function BrainstormRoomView({
                       ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
                       : `Kamu dan ${members.map((m) => m.name).join(", ")} berada di ruangan yang sama. Mereka akan menanggapi bergiliran.`
                     : mode === "scene"
-                      ? `${sceneCanonical ? "Adegan ini bagian cerita utama." : "Ini latihan; peristiwa fiksinya bukan canon."} Mulai dengan arahan atau dialog untuk ${members.map((m) => m.name).join(", ")}.`
-                      : `Tulis topik atau pertanyaan — ${members.map((m) => m.name).join(", ")} akan menanggapi satu per satu dengan gaya masing-masing.`}
+                      ? `${sceneCanonical ? "Adegan ini bagian cerita utama." : "Ini latihan; peristiwa fiksinya bukan canon."} Mulai dengan arahan atau dialog untuk melanjutkan adegan.`
+                      : "Tulis topik atau pertanyaan untuk memulai diskusi. Karakter di meja ini akan menanggapi satu per satu dengan gaya masing-masing."}
                 </p>
               </div>
             )}
@@ -361,35 +360,37 @@ export function BrainstormRoomView({
       </div>
 
       {/* Composer */}
-      <div className="bottom-bar shrink-0 p-2 sm:p-3">
+      <div className="composer-bar bottom-bar shrink-0 px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
         <div className="mx-auto w-full max-w-3xl">
           {attachmentFile && (
-            <div className="mb-2 flex items-center gap-2 px-1">
-              {imagePreview ? (
-                <Image
-                  src={imagePreview}
-                  alt="Pratinjau gambar"
-                  width={48}
-                  height={48}
-                  unoptimized
-                  className="h-12 w-12 rounded-lg object-cover ring-1 ring-line"
-                />
-              ) : (
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink-soft">
-                  <PaperclipIcon className="h-5 w-5" />
-                </div>
-              )}
-              <span className="min-w-0 flex-1 truncate text-xs text-ink-soft">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="relative">
+                {imagePreview ? (
+                  <Image
+                    src={imagePreview}
+                    alt="Pratinjau gambar"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-line"
+                  />
+                ) : (
+                  <div className="grid h-16 w-16 place-items-center rounded-lg bg-surface-2 text-ink-soft ring-1 ring-line">
+                    <PaperclipIcon className="h-6 w-6" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={clearAttachment}
+                  aria-label="Batalkan lampiran"
+                  className="absolute -right-1.5 -top-1.5 rounded-full bg-surface p-0.5 text-ink shadow ring-1 ring-line"
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              </div>
+              <span className="min-w-0 truncate text-xs text-ink-soft">
                 {attachmentFile.name}
               </span>
-              <button
-                type="button"
-                onClick={clearAttachment}
-                aria-label="Batalkan lampiran"
-                className="rounded-full p-1 text-ink-soft hover:bg-surface-2 hover:text-ink"
-              >
-                <XIcon className="h-4 w-4" />
-              </button>
             </div>
           )}
           {sendError && (
@@ -423,38 +424,47 @@ export function BrainstormRoomView({
               disabled={isTyping || sending}
               aria-label="Lampirkan gambar atau file"
               title="Kirim gambar atau file"
-              className="mb-0.5 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-surface-2 hover:text-ink active:scale-95 disabled:opacity-40"
+              className="mb-0.5 shrink-0 p-[5px] text-ink-soft transition active:opacity-50 disabled:opacity-50"
             >
-              <PlusIcon className="h-6 w-6" />
+              <PlusIcon className="h-[30px] w-[30px]" />
             </button>
-            <textarea
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-                setSendError(null);
-              }}
-              placeholder={
-                mode === "meetup"
-                  ? "Bicara langsung..."
-                  : mode === "scene"
-                    ? "Lanjutkan adegan..."
-                    : `Tanya ${members.map((m) => m.name).join(", ")}...`
-              }
-              rows={1}
-              disabled={isTyping || sending}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  void handleSend();
+            <div className="relative min-w-0 w-full flex-1">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(event) => {
+                  setInput(event.target.value);
+                  setSendError(null);
+                  syncInputSize(event.currentTarget);
+                }}
+                placeholder={
+                  mode === "meetup"
+                    ? "Bicara langsung..."
+                    : mode === "scene"
+                      ? "Lanjutkan adegan..."
+                      : "Tanya di meja ini..."
                 }
-              }}
-              className="max-h-28 min-h-[42px] flex-1 resize-none rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none placeholder:text-muted disabled:opacity-60 sm:text-sm"
-            />
+                rows={1}
+                disabled={isTyping || sending}
+                autoComplete="off"
+                enterKeyHint="send"
+                aria-label="Tulis pesan"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/75 px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:bg-surface/40 dark:ring-line/40 ${
+                  multiline ? "rounded-2xl" : "rounded-full"
+                }`}
+              />
+            </div>
             <button
               type="button"
               onClick={() => void handleSend()}
               disabled={isTyping || sending || (!input.trim() && !attachmentFile)}
-              className="mb-0.5 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-brand text-brand-ink transition hover:bg-brand-strong active:scale-95 disabled:opacity-40"
+              className="mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink ring-1 ring-line/70 transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 dark:bg-surface/40 dark:ring-line/40 dark:hover:bg-surface/60"
               aria-label="Kirim"
               title="Kirim"
             >
