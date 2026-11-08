@@ -97,23 +97,23 @@ export function BrainstormView({
                     <Avatar name={character.name} src={character.avatarUrl} size={48} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="min-w-0 truncate text-sm font-semibold text-ink">
-                          {character.name}
-                        </p>
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                            {character.name}
+                          </p>
+                          {character.threadKind === "guest_contact" && (
+                            <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                              Kontak
+                            </span>
+                          )}
+                        </div>
                         <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
                           Temui
                         </span>
                       </div>
-                      <div className="mt-0.5 flex items-start gap-1.5">
-                        {character.threadKind === "guest_contact" && (
-                          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
-                            Kontak
-                          </span>
-                        )}
-                        <p className="line-clamp-2 text-xs text-ink-soft">
-                          {character.shortBio || "Karakter pribadimu"}
-                        </p>
-                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">
+                        {character.shortBio || "Karakter pribadimu"}
+                      </p>
                     </div>
                   </div>
                 </button>
