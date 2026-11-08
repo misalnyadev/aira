@@ -2,7 +2,6 @@
 
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
-import { ThemeQuickToggle } from "./ThemeToggle";
 import { ChatSquareIcon, ChatsIcon, MeetupIcon, PhoneCallIcon, StatusIcon, UserIcon } from "./icons";
 
 export type AppView = "chats" | "calls" | "profile" | "settings" | "brainstorm" | "status";
@@ -40,7 +39,7 @@ export function NavRail({
   return (
     <nav
       aria-label="Navigasi utama"
-      className="hidden h-full w-[74px] shrink-0 flex-col items-center justify-between border-r border-line bg-header py-3 md:flex"
+      className="hidden h-full w-[74px] shrink-0 flex-col items-center justify-start border-r border-line bg-header py-3 md:flex"
     >
       <div className="flex flex-col items-center gap-1">
         {ITEMS.map(({ id, label, Icon }) => {
@@ -74,10 +73,6 @@ export function NavRail({
             </button>
           );
         })}
-      </div>
-
-      <div className="flex flex-col items-center gap-1">
-        <ThemeQuickToggle />
       </div>
     </nav>
   );
