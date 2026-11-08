@@ -230,18 +230,6 @@ export function CharacterProfileModal({
             />
           </div>
 
-          <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              Media karakter
-            </h4>
-            <CharacterMediaSection
-              characterId={character.id}
-              media={character.media}
-              fallbackVoiceSlot={voiceSettings.engine === "hd_male" ? "male" : "female"}
-              onChange={onMediaChange}
-            />
-          </div>
-
           <div className="mt-6 grid grid-cols-2 gap-2">
             <button
               onClick={onEdit}
