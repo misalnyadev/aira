@@ -17,6 +17,11 @@ import {
   toChatTurns,
 } from "@/lib/chatEngine";
 import { buildInvitedCharacterContext, parseOwnerProfileShareFields } from "@/lib/characterInvite";
+import {
+  hasCallExpressionAssets,
+  isUsingCallClipsInMeetup,
+  parseCharacterMedia,
+} from "@/lib/characterMedia";
 import { effectiveContactState } from "@/lib/contactPin";
 import { serializeContactMessageForViewer } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
@@ -49,14 +54,17 @@ export async function POST(
     return NextResponse.json({ error: "Body tidak valid." }, { status: 400 });
   }
 
-  const { content, imageUrl, callMode, isVoiceNote } = body as {
+  const { content, imageUrl, callMode, interactionMode, isVoiceNote } = body as {
     content?: string;
     imageUrl?: string | null;
     callMode?: "video" | "audio" | null;
+    interactionMode?: "chat" | "meetup";
     isVoiceNote?: boolean;
   };
   const activeCallMode =
     callMode === "video" || callMode === "audio" ? callMode : undefined;
+  const activeInteractionMode: "chat" | "meetup" =
+    !activeCallMode && interactionMode === "meetup" ? "meetup" : "chat";
   const userSentVoiceNote = Boolean(isVoiceNote && !activeCallMode && content?.trim());
 
   if (!content?.trim() && !imageUrl) {
@@ -136,7 +144,9 @@ export async function POST(
   // =========================================================================
   // KASUS B: Pengirim adalah Pengundang (Guest)
   // =========================================================================
-  const shouldRunAi = Boolean(contact.aiAutoReply || activeCallMode);
+  const shouldRunAi = Boolean(
+    contact.aiAutoReply || activeCallMode || activeInteractionMode === "meetup"
+  );
 
   // Jika mode manual aktif (AI dijeda oleh pemilik karakter) & bukan telepon:
   if (!shouldRunAi) {
@@ -235,13 +245,21 @@ export async function POST(
     content?.trim() || (imageUrl ? "(mengirim foto tanpa teks)" : "");
 
   const charVoiceCfg = parseCharacterVoice(character.voiceConfig);
-  const replyAsVoiceNote = shouldReplyWithVoiceNote({
-    mode: charVoiceCfg?.voiceNoteMode,
-    userSentVoiceNote,
-    userText: cleanUserText,
-    hasImage: Boolean(imageUrl),
-    callMode: activeCallMode,
-  });
+  const characterMedia = parseCharacterMedia(character.media);
+  const meetupExpressionMode =
+    activeInteractionMode === "meetup" &&
+    isUsingCallClipsInMeetup(characterMedia) &&
+    hasCallExpressionAssets(characterMedia);
+  const replyAsVoiceNote =
+    activeInteractionMode === "meetup"
+      ? false
+      : shouldReplyWithVoiceNote({
+          mode: charVoiceCfg?.voiceNoteMode,
+          userSentVoiceNote,
+          userText: cleanUserText,
+          hasImage: Boolean(imageUrl),
+          callMode: activeCallMode,
+        });
 
   try {
     const now = new Date();
@@ -318,6 +336,8 @@ export async function POST(
       : null;
     memoryExtras = {
       ...memoryExtras,
+      interactionMode: activeInteractionMode,
+      ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
       invitedCharacterContext: buildInvitedCharacterContext({
         characterName: character.name,
         ownerProfile,
@@ -349,7 +369,7 @@ export async function POST(
       callMode: activeCallMode,
     });
 
-    const shouldExtractEmotion = Boolean(activeCallMode);
+    const shouldExtractEmotion = Boolean(activeCallMode || meetupExpressionMode);
 
     let callEmotion: CallEmotion | undefined;
     let preparedBubbles: { content: string; emotion?: CallEmotion }[] =
