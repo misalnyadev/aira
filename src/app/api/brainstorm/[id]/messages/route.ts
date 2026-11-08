@@ -42,6 +42,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       characterAvatarUrl: meta?.avatarUrl ?? null,
       content: m.content,
       imageUrl: m.imageUrl,
+      attachmentName: m.attachmentName,
+      attachmentText: m.attachmentText,
       isVoiceNote: m.isVoiceNote,
       emotion: m.emotion,
       createdAt: m.createdAt.toISOString(),

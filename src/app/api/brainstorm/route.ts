@@ -45,7 +45,12 @@ export async function GET() {
         .orderBy(asc(brainstormRoomMembers.createdAt));
 
       const [lastMsg] = await db
-        .select({ content: brainstormMessages.content, createdAt: brainstormMessages.createdAt })
+        .select({
+          content: brainstormMessages.content,
+          imageUrl: brainstormMessages.imageUrl,
+          attachmentName: brainstormMessages.attachmentName,
+          createdAt: brainstormMessages.createdAt,
+        })
         .from(brainstormMessages)
         .where(eq(brainstormMessages.roomId, r.id))
         .orderBy(desc(brainstormMessages.createdAt))
@@ -67,7 +72,13 @@ export async function GET() {
           avatarUrl: m.avatarUrl,
           shortBio: m.shortBio,
         })),
-        preview: lastMsg?.content || "Belum ada obrolan di meja ini",
+        preview:
+          lastMsg?.content ||
+          (lastMsg?.attachmentName
+            ? `📎 ${lastMsg.attachmentName}`
+            : lastMsg?.imageUrl
+              ? "📷 Gambar"
+              : "Belum ada obrolan di meja ini"),
         updatedAt: (lastMsg?.createdAt ?? r.updatedAt).toISOString(),
         messageCount: Number(count),
       };

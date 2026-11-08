@@ -298,10 +298,14 @@ const DDL = [
     "character_id" uuid,
     "content" text DEFAULT '' NOT NULL,
     "image_url" text,
+    "attachment_name" text,
+    "attachment_text" text,
     "is_voice_note" boolean DEFAULT false NOT NULL,
     "emotion" text,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "brainstorm_messages" ADD COLUMN IF NOT EXISTS "attachment_name" text`,
+  sql`ALTER TABLE "brainstorm_messages" ADD COLUMN IF NOT EXISTS "attachment_text" text`,
   sql`CREATE INDEX IF NOT EXISTS "brainstorm_messages_room_idx" ON "brainstorm_messages" ("room_id", "created_at" ASC)`,
   sql`CREATE TABLE IF NOT EXISTS "character_continuity_memories" (
     "id" uuid PRIMARY KEY NOT NULL,

@@ -213,6 +213,8 @@ export type BrainstormMessage = {
   characterAvatarUrl?: string | null;
   content: string;
   imageUrl: string | null;
+  attachmentName?: string | null;
+  attachmentText?: string | null;
   isVoiceNote?: boolean;
   emotion?: string | null;
   createdAt: string;
