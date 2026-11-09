@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CharacterDetail, ProviderSummary } from "@/types/chat";
 import { compressImageFile } from "@/lib/compressImage";
+import { uploadAvatarImage } from "@/lib/avatarUploadClient";
 import { parseBibleFile } from "@/lib/characterBible";
 import { parseCharacterProfileDossier } from "@/lib/characterProfileDossier";
 import { OWNER_PROFILE_SHARE_OPTIONS, type OwnerProfileShareField } from "@/lib/characterInvite";
@@ -172,26 +173,8 @@ export function CharacterModal({
         maxSize: 512,
         quality: 0.86,
       });
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": compressed.type || "image/jpeg" },
-        body: compressed,
-      });
-      const data = (await res.json().catch(() => null)) as {
-        error?: unknown;
-        url?: unknown;
-      } | null;
-      if (!res.ok) {
-        throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : `Gagal mengunggah foto (HTTP ${res.status}).`
-        );
-      }
-      if (typeof data?.url !== "string" || !data.url) {
-        throw new Error("Server tidak mengembalikan alamat foto.");
-      }
-      setAvatarUrl(data.url);
+      const url = await uploadAvatarImage(compressed);
+      setAvatarUrl(url);
       setCropSource(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengunggah foto.");
