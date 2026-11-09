@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { BrainstormRoomSummary, CharacterSummary } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
-import { MeetupIcon, PlusIcon, TrashIcon, XIcon } from "./icons";
+import { MeetupIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from "./icons";
 
 type SharedRoomMode = "brainstorm" | "scene";
 
@@ -38,6 +38,18 @@ export function BrainstormView({
   const sceneRooms = rooms.filter((room) => room.mode === "scene");
   const canBrainstorm = characters.length >= 2;
   const canCreateRoom = characters.length >= 1;
+  const [meetupQuery, setMeetupQuery] = useState("");
+  const filteredMeetupCharacters = useMemo(() => {
+    const query = meetupQuery.trim().toLowerCase();
+    if (!query) return meetupCharacters;
+
+    return meetupCharacters.filter((character) =>
+      [character.name, character.shortBio, character.preview]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [meetupCharacters, meetupQuery]);
 
   function openCreate(mode: SharedRoomMode) {
     setCreateMode(mode);
@@ -63,11 +75,25 @@ export function BrainstormView({
 
       <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-3 py-4 pb-[calc(var(--tabbar-space)+1rem)] md:px-4">
         <section className="mx-auto w-full max-w-[900px]">
-          <div className="mb-3">
-            <h2 className="text-sm font-bold text-ink">Tatap Muka</h2>
-            <p className="mt-0.5 text-xs text-ink-soft">
-              Pilih satu karakter. Kalian berdua melanjutkan riwayat Chat dan Panggilan yang sama.
-            </p>
+          <div className="mb-3 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
+            <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
+            <input
+              value={meetupQuery}
+              onChange={(event) => setMeetupQuery(event.target.value)}
+              placeholder="Cari karakter untuk Tatap Muka..."
+              aria-label="Cari karakter untuk Tatap Muka"
+              className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+            />
+            {meetupQuery && (
+              <button
+                type="button"
+                onClick={() => setMeetupQuery("")}
+                aria-label="Bersihkan pencarian"
+                className="rounded-full p-0.5 text-muted transition hover:text-ink"
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {meetupCharacters.length === 0 ? (
@@ -83,9 +109,13 @@ export function BrainstormView({
                 Buat Karakter
               </button>
             </div>
+          ) : filteredMeetupCharacters.length === 0 ? (
+            <div className="px-4 py-12 text-center text-sm text-muted">
+              Tidak ada karakter yang cocok dengan pencarianmu.
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-              {meetupCharacters.map((character) => (
+              {filteredMeetupCharacters.map((character) => (
                 <button
                   key={character.id}
                   type="button"
