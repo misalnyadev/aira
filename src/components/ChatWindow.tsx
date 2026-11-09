@@ -587,12 +587,14 @@ export function ChatWindow({
           </button>
 
           {(onVideoCall || onAudioCall) && (
-            <div className="flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 shadow-md backdrop-blur-md">
+            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 ring-white/40 backdrop-blur-md ${
+              minimalBars ? "h-[42px]" : "h-10"
+            }`}>
               {onVideoCall && (
                 <button
                   type="button"
                   onClick={onVideoCall}
-                  className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70"
+                  className={`grid ${minimalBars ? "h-[34px] w-[34px]" : "h-8 w-8"} place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70`}
                   aria-label={`Video call dengan ${character.name}`}
                   title="Video call"
                 >
@@ -604,7 +606,7 @@ export function ChatWindow({
                 <button
                   type="button"
                   onClick={onAudioCall}
-                  className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70"
+                  className={`grid ${minimalBars ? "h-[34px] w-[34px]" : "h-8 w-8"} place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70`}
                   aria-label={`Panggilan suara dengan ${character.name}`}
                   title="Panggilan suara"
                 >
@@ -698,12 +700,14 @@ export function ChatWindow({
           </button>
 
           {(onVideoCall || onAudioCall) && (
-            <div className="flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 shadow-md backdrop-blur-md">
+            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 ring-white/40 backdrop-blur-md ${
+              minimalBars ? "h-[42px]" : "h-10"
+            }`}>
               {onVideoCall && (
                 <button
                   type="button"
                   onClick={onVideoCall}
-                  className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70"
+                  className={`grid ${minimalBars ? "h-[34px] w-[34px]" : "h-8 w-8"} place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70`}
                   aria-label={`Video call dengan ${character.name}`}
                   title="Video call"
                 >
@@ -715,7 +719,7 @@ export function ChatWindow({
                 <button
                   type="button"
                   onClick={onAudioCall}
-                  className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70"
+                  className={`grid ${minimalBars ? "h-[34px] w-[34px]" : "h-8 w-8"} place-items-center rounded-full text-ink transition hover:bg-surface/20 active:scale-95 active:opacity-70`}
                   aria-label={`Panggilan suara dengan ${character.name}`}
                   title="Panggilan suara"
                 >
