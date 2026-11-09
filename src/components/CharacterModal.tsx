@@ -127,6 +127,7 @@ export function CharacterModal({
   const resolvedProvider = providerId
     ? providers.find((p) => p.id === providerId)
     : providers.find((p) => p.isDefault) ?? providers[0];
+  const hasAiProvider = providers.some((provider) => provider.hasKey || provider.backupCount > 0);
 
   async function detectCharacterModels() {
     if (!resolvedProvider) {
@@ -194,7 +195,7 @@ export function CharacterModal({
     setCropSource(file);
   }
 
-  async function generateCharacterProfile() {
+  async function generateCharacterProfile(regenerateProfession = false) {
     if (generating) return;
     const nameProblem = name.trim() ? characterNameError(name) : null;
     if (nameProblem) {
@@ -209,8 +210,9 @@ export function CharacterModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          archetype: starterArchetype,
+          archetype: initial && regenerateProfession ? "custom" : starterArchetype,
           concept: starterConcept,
+          ...(regenerateProfession ? { fieldsToRegenerate: ["profession"] } : {}),
           name,
           age: age.trim() ? Number(age) : null,
           gender,
@@ -228,6 +230,16 @@ export function CharacterModal({
       if (!res.ok || !data?.draft) {
         throw new Error(data?.error || "Gagal membuat draf karakter.");
       }
+      if (regenerateProfession) {
+        const suggestion = (data.draft as { profession?: unknown }).profession;
+        if (typeof suggestion !== "string" || !suggestion.trim()) {
+          throw new Error("AI belum menghasilkan usulan profesi yang bisa dipakai. Coba lagi.");
+        }
+        setProfession(suggestion.trim());
+        setGenerateNotice("Usulan profesi terisi. Tinjau dan sesuaikan sebelum menyimpan.");
+        return;
+      }
+
       const draft = data.draft as {
         name: string;
         age: number | null;
@@ -617,7 +629,19 @@ export function CharacterModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Profesi (opsional)</label>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-ink-soft">Profesi (opsional)</label>
+                {initial && (
+                  <button
+                    type="button"
+                    disabled={generating || !hasAiProvider}
+                    onClick={() => void generateCharacterProfile(true)}
+                    className="shrink-0 text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generating ? "AI menyusun..." : "✨ Bantu isi dengan AI"}
+                  </button>
+                )}
+              </div>
               <input
                 value={profession}
                 onChange={(event) => setProfession(event.target.value)}
@@ -625,6 +649,23 @@ export function CharacterModal({
                 placeholder="Mis. konsultan karier"
                 className={FIELD}
               />
+              {initial && (
+                <div className="mt-2 space-y-1.5">
+                  <input
+                    value={starterConcept}
+                    onChange={(event) => setStarterConcept(event.target.value)}
+                    maxLength={800}
+                    placeholder="Arahan profesi baru (opsional)"
+                    aria-label="Arahan profesi baru untuk AI"
+                    className={FIELD}
+                  />
+                  {!hasAiProvider && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">Tambahkan API key terlebih dulu agar AI bisa membantu.</p>
+                  )}
+                  {generateNotice && <p aria-live="polite" className="text-[11px] text-emerald-700 dark:text-emerald-300">{generateNotice}</p>}
+                  {generateError && <p role="alert" className="text-[11px] text-rose-600 dark:text-rose-400">{generateError}</p>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -802,13 +843,13 @@ export function CharacterModal({
               </div>
               <button
                 type="button"
-                disabled={generating || providers.every((provider) => !provider.hasKey && provider.backupCount === 0)}
+                disabled={generating || !hasAiProvider}
                 onClick={() => void generateCharacterProfile()}
                 className="w-full rounded-xl border border-brand/30 bg-surface px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {generating ? "AI sedang menyusun draf..." : "✨ Isi field kosong dengan AI"}
               </button>
-              {providers.every((provider) => !provider.hasKey && provider.backupCount === 0) && (
+              {!hasAiProvider && (
                 <p className="text-[11px] text-amber-700 dark:text-amber-300">Tambahkan API key terlebih dulu agar AI bisa membuat draf.</p>
               )}
               {generateNotice && <p className="text-xs text-emerald-700 dark:text-emerald-300">{generateNotice}</p>}
