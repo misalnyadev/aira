@@ -11,6 +11,7 @@ import {
 } from "@/lib/characterMedia";
 import { normalizeChatBackground, parseChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeGender } from "@/lib/gender";
 import { normalizeOwnerProfileShareFields, parseOwnerProfileShareFields } from "@/lib/characterInvite";
 import {
   parseCharacterSkillPortfolio,
@@ -40,6 +41,7 @@ function serializeDetail(row: typeof characters.$inferSelect) {
   return {
     id: row.id,
     name: row.name,
+    gender: normalizeGender(row.gender) ?? "",
     avatarUrl: row.avatarUrl,
     shortBio: row.shortBio,
     skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
@@ -95,6 +97,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const {
     name,
+    gender,
     avatarUrl,
     shortBio,
     skillPortfolio,
@@ -120,6 +123,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     proactiveEnabled,
   } = body as {
     name?: string;
+    gender?: unknown;
     avatarUrl?: string | null;
     shortBio?: string;
     skillPortfolio?: unknown;
@@ -223,6 +227,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const updates: Partial<typeof characters.$inferInsert> = { updatedAt: new Date() };
+  if (gender !== undefined) {
+    const normalizedGender = normalizeGender(gender);
+    if (normalizedGender === null) {
+      return NextResponse.json({ error: "Pilih jenis kelamin/gender dari opsi yang tersedia." }, { status: 400 });
+    }
+    updates.gender = normalizedGender;
+  }
   if (name !== undefined) updates.name = name.trim();
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl || null;
   if (shortBio !== undefined) updates.shortBio = shortBio.trim();

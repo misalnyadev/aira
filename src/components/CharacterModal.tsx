@@ -6,6 +6,7 @@ import { compressImageFile } from "@/lib/compressImage";
 import { parseBibleFile } from "@/lib/characterBible";
 import { parseCharacterProfileDossier } from "@/lib/characterProfileDossier";
 import { OWNER_PROFILE_SHARE_OPTIONS, type OwnerProfileShareField } from "@/lib/characterInvite";
+import { GENDER_OPTIONS, type Gender } from "@/lib/gender";
 import {
   MAX_CHARACTER_SKILLS,
   MAX_SKILL_DESCRIPTION_CHARS,
@@ -61,6 +62,7 @@ export function CharacterModal({
   onSaved: () => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [gender, setGender] = useState<Gender>(initial?.gender ?? "");
   const [shortBio, setShortBio] = useState(initial?.shortBio ?? "");
   const [skillPortfolio, setSkillPortfolio] = useState<CharacterSkill[]>(initial?.skillPortfolio ?? []);
   const [teamRole, setTeamRole] = useState(initial?.teamRole ?? "");
@@ -333,6 +335,7 @@ export function CharacterModal({
     try {
       const payload = {
         name,
+        gender,
         shortBio,
         skillPortfolio: skillValidation.skills,
         teamRole,
@@ -457,6 +460,26 @@ export function CharacterModal({
               placeholder="Mis. Kirana"
               className={FIELD}
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-soft">
+              Jenis kelamin / gender (opsional)
+            </label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as Gender)}
+              className={FIELD}
+            >
+              {GENDER_OPTIONS.map(({ value, label }) => (
+                <option key={value || "unspecified"} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-muted">
+              Jika belum diatur, karakter mengikuti informasi eksplisit di Bible/kepribadian dan tidak menebak dari nama atau foto. Untuk “Lainnya”, jelaskan di kepribadian atau Bible.
+            </p>
           </div>
 
           <div>

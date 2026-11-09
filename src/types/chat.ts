@@ -4,6 +4,7 @@ import type { CharacterMedia } from "@/lib/characterMedia";
 import type { ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig } from "@/lib/hdVoice";
 import type { OwnerProfileShareField } from "@/lib/characterInvite";
+import type { Gender } from "@/lib/gender";
 import type { CharacterSkill } from "@/lib/characterSkills";
 
 export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
@@ -76,6 +77,7 @@ export type CharacterSummary = {
 export type CharacterDetail = {
   id: string;
   name: string;
+  gender: Gender;
   avatarUrl: string | null;
   shortBio: string;
   skillPortfolio: CharacterSkill[];

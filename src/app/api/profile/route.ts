@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeGender } from "@/lib/gender";
 import { EMPTY_PROFILE, normalizeProfile, type UserProfile } from "@/lib/userProfile";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export async function GET() {
     .select({
       displayName: users.displayName,
       nickname: users.nickname,
+      gender: users.gender,
       age: users.age,
       occupation: users.occupation,
       about: users.about,
@@ -34,7 +36,9 @@ export async function GET() {
     .where(eq(users.id, user.id))
     .limit(1);
 
-  const profile: UserProfile = row ?? EMPTY_PROFILE;
+  const profile: UserProfile = row
+    ? { ...row, gender: normalizeGender(row.gender) ?? "" }
+    : EMPTY_PROFILE;
   return NextResponse.json({ profile });
 }
 
@@ -52,16 +56,18 @@ export async function PATCH(req: Request) {
   const check = normalizeProfile(body);
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
 
-  const { displayName, nickname, age, occupation, about, avatarUrl } = check.profile;
+  const { displayName, nickname, gender, age, occupation, about, avatarUrl } = check.profile;
   const updateSet: {
     displayName: string;
     nickname: string;
+    gender?: string;
     age: number | null;
     occupation: string;
     about: string;
     avatarUrl?: string | null;
   } = { displayName, nickname, age, occupation, about };
 
+  if ("gender" in body) updateSet.gender = gender;
   if ("avatarUrl" in body) {
     updateSet.avatarUrl = avatarUrl ?? null;
   }
@@ -73,11 +79,15 @@ export async function PATCH(req: Request) {
     .returning({
       displayName: users.displayName,
       nickname: users.nickname,
+      gender: users.gender,
       age: users.age,
       occupation: users.occupation,
       about: users.about,
       avatarUrl: users.avatarUrl,
     });
 
-  return NextResponse.json({ profile: row ?? EMPTY_PROFILE });
+  const profile: UserProfile = row
+    ? { ...row, gender: normalizeGender(row.gender) ?? "" }
+    : EMPTY_PROFILE;
+  return NextResponse.json({ profile });
 }

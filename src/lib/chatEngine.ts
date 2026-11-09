@@ -33,6 +33,7 @@ import {
   parseCharacterMedia,
 } from "@/lib/characterMedia";
 import { getDailyPresenceForPrompt } from "@/lib/dailyPresence";
+import { normalizeGender } from "@/lib/gender";
 import { buildContinuityMemoryBlock } from "@/lib/continuityMemory";
 import { AUTO_MEMORY_BATCH_MIN } from "@/lib/limits";
 import {
@@ -97,6 +98,7 @@ export async function loadUserChatSettings(userId: string): Promise<{
     .select({
       displayName: users.displayName,
       nickname: users.nickname,
+      gender: users.gender,
       age: users.age,
       occupation: users.occupation,
       about: users.about,
@@ -112,6 +114,7 @@ export async function loadUserChatSettings(userId: string): Promise<{
     profile: {
       displayName: row.displayName,
       nickname: row.nickname,
+      gender: normalizeGender(row.gender) ?? "",
       age: row.age,
       occupation: row.occupation,
       about: row.about,

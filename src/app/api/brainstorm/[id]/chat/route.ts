@@ -144,7 +144,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // Untuk setiap karakter, generate balasan berurutan
   const assistantReplies: (typeof brainstormMessages.$inferSelect)[] = [];
-  const memberInfos = charRows.map((c) => ({ name: c.name, personality: c.personality, shortBio: c.shortBio }));
+  const memberInfos = charRows.map((c) => ({
+    name: c.name,
+    gender: c.gender,
+    personality: c.personality,
+    shortBio: c.shortBio,
+  }));
 
   // History yang berkembang selama giliran meja ini; userText ditambahkan oleh generateBubbles.
   const evolvingHistory = [...baseHistory];
