@@ -233,7 +233,7 @@ export function Composer({
               clearSurface
                 ? "rounded-full bg-surface/45 p-1.5 text-ink ring-1 ring-white/40 backdrop-blur-sm"
                 : transparent
-                  ? "rounded-full bg-surface/35 p-1.5 text-ink"
+                  ? "rounded-full bg-surface/55 p-1.5 text-ink dark:bg-surface/45"
                   : "p-[5px] text-ink-soft"
             }`}
             title="Kirim foto"
@@ -298,7 +298,7 @@ export function Composer({
               clearSurface
                 ? "bg-surface/45 ring-1 ring-white/40 backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
                 : transparent
-                  ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
+                  ? "bg-surface/55 hover:bg-surface/65 dark:bg-surface/45 dark:hover:bg-surface/55"
                   : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
             }`}
             title="Kirim"
