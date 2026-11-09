@@ -48,7 +48,9 @@ import type { UserProfile } from "@/lib/userProfile";
 import { buildSceneContinuityAnchor } from "@/lib/sceneTracker";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
 import {
+  buildCharacterProfessionPrompt,
   buildCharacterStarterPrompt,
+  parseCharacterProfessionSuggestion,
   parseCharacterStarterDraft,
   type CharacterStarterDraft,
   type CharacterStarterInput,
@@ -674,6 +676,44 @@ export async function generateCharacterStarterDraft({
     });
   }
   return draft;
+}
+
+/** Usulkan profesi baru berdasarkan profil karakter tanpa mengubah field lain. */
+export async function generateCharacterProfessionSuggestion({
+  userId,
+  candidates,
+  input,
+}: {
+  userId: string;
+  candidates: Provider[];
+  input: CharacterStarterInput;
+}): Promise<string> {
+  const raw = await runTextWithCandidates({
+    userId,
+    candidates,
+    character: {
+      id: "00000000-0000-0000-0000-000000000000",
+      userId,
+      providerId: null,
+      model: null,
+    },
+    systemPrompt: buildCharacterProfessionPrompt(input),
+    userText: "Usulkan satu profesi baru yang cocok dan keluarkan hanya frasanya.",
+    budgetMs: 25_000,
+    fallbackMessage: "Gagal membuat usulan profesi. Coba lagi.",
+  });
+  const profession = parseCharacterProfessionSuggestion(raw);
+  if (!profession) {
+    throw new AiProviderError("Model belum menghasilkan usulan profesi yang valid. Coba lagi.", {
+      retryable: false,
+    });
+  }
+  if (profession.trim().toLocaleLowerCase("id-ID") === input.profession.trim().toLocaleLowerCase("id-ID")) {
+    throw new AiProviderError("AI mengusulkan profesi yang sama. Tambahkan arahan lain lalu coba lagi.", {
+      retryable: false,
+    });
+  }
+  return profession;
 }
 
 /**

@@ -23,7 +23,11 @@ import {
 import { validateCharacterSkillPortfolio } from "@/lib/characterSkills";
 import { requireUser } from "@/lib/auth";
 import { parseBackupKeys } from "@/lib/providerPool";
-import { generateCharacterStarterDraft, pickProviderCandidates } from "@/lib/chatEngine";
+import {
+  generateCharacterProfessionSuggestion,
+  generateCharacterStarterDraft,
+  pickProviderCandidates,
+} from "@/lib/chatEngine";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,6 +54,14 @@ export async function POST(req: Request) {
   if (!isCharacterStarterArchetype(inputBody.archetype)) {
     return NextResponse.json({ error: "Pilih gaya awal karakter yang tersedia." }, { status: 400 });
   }
+  const rawFieldsToRegenerate = inputBody.fieldsToRegenerate;
+  if (
+    rawFieldsToRegenerate !== undefined &&
+    (!Array.isArray(rawFieldsToRegenerate) || rawFieldsToRegenerate.some((field) => field !== "profession"))
+  ) {
+    return NextResponse.json({ error: "Field yang diminta untuk diperbarui AI tidak valid." }, { status: 400 });
+  }
+  const regenerateProfession = Array.isArray(rawFieldsToRegenerate) && rawFieldsToRegenerate.includes("profession");
 
   if (inputBody.name !== undefined && typeof inputBody.name !== "string") {
     return NextResponse.json({ error: "Nama karakter harus berupa teks." }, { status: 400 });
@@ -127,6 +139,15 @@ export async function POST(req: Request) {
   };
 
   try {
+    if (regenerateProfession) {
+      const professionSuggestion = await generateCharacterProfessionSuggestion({
+        userId: user.id,
+        candidates,
+        input: starterInput,
+      });
+      return NextResponse.json({ draft: { profession: professionSuggestion } });
+    }
+
     const draft = await generateCharacterStarterDraft({
       userId: user.id,
       candidates,
@@ -138,9 +159,12 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ draft });
   } catch (error) {
+    const fallbackMessage = regenerateProfession
+      ? "Gagal membuat usulan profesi. Coba lagi."
+      : "Gagal membuat draf karakter. Coba lagi.";
     const message = error instanceof AiProviderError
       ? error.message
-      : toUserFacingError(error, "Gagal membuat draf karakter. Coba lagi.");
+      : toUserFacingError(error, fallbackMessage);
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
