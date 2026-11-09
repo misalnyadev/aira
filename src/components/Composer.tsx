@@ -224,7 +224,7 @@ export function Composer({
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
               transparent
-                ? "rounded-full bg-surface/75 p-1.5 text-ink backdrop-blur-md"
+                ? "rounded-full bg-surface/55 p-1.5 text-ink backdrop-blur-md"
                 : "p-[5px] text-ink-soft"
             }`}
             title="Kirim foto"
@@ -259,9 +259,9 @@ export function Composer({
               autoComplete="off"
               enterKeyHint="send"
               aria-label="Tulis pesan"
-              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/75 px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${
-                transparent ? "backdrop-blur-md" : "dark:bg-surface/40 dark:ring-line/40"
-              } ${multiline ? "rounded-2xl" : "rounded-full"}`}
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/55 px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 backdrop-blur-md transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:bg-surface/35 dark:ring-line/40 ${
+                multiline ? "rounded-2xl" : "rounded-full"
+              }`}
             />
             {dictation.supported && (
               <button
@@ -283,11 +283,7 @@ export function Composer({
           <button
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
-            className={`mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 ${
-              transparent
-                ? "backdrop-blur-md"
-                : "dark:bg-surface/40 dark:hover:bg-surface/60"
-            }`}
+            className="mb-0.5 shrink-0 rounded-full bg-surface/55 p-2.5 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 disabled:opacity-40 dark:bg-surface/35 dark:hover:bg-surface/50"
             title="Kirim"
             aria-label="Kirim pesan"
           >

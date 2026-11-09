@@ -74,7 +74,9 @@ export function BrainstormRoomView({
   canSpeak: boolean;
 }) {
   const bubbleStyle = bubble ?? DEFAULT_BUBBLE_STYLE;
+  const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [input, setInput] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -103,6 +105,35 @@ export function BrainstormRoomView({
     if (!imagePreview) return;
     return () => URL.revokeObjectURL(imagePreview);
   }, [imagePreview]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const composerElement = composerRef.current;
+    if (!root || !composerElement || typeof ResizeObserver === "undefined") return;
+
+    const updateComposerHeight = () => {
+      const scroller = scrollRef.current;
+      const wasAtBottom =
+        !scroller || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+      root.style.setProperty(
+        "--room-composer-height",
+        `${composerElement.getBoundingClientRect().height}px`
+      );
+      if (wasAtBottom && scroller) {
+        requestAnimationFrame(() => {
+          scroller.scrollTop = scroller.scrollHeight;
+        });
+      }
+    };
+    updateComposerHeight();
+
+    const observer = new ResizeObserver(updateComposerHeight);
+    observer.observe(composerElement);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--room-composer-height");
+    };
+  }, []);
 
   function syncInputSize(element: HTMLTextAreaElement) {
     element.style.height = "auto";
@@ -145,9 +176,9 @@ export function BrainstormRoomView({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-app">
+    <div ref={rootRef} className="relative flex h-full min-h-0 flex-1 flex-col bg-app">
       {/* Header */}
-      <div className="z-10 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
         <button onClick={onBack} className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50">
           <BackIcon className="h-[30px] w-[30px]" />
         </button>
@@ -196,9 +227,13 @@ export function BrainstormRoomView({
             const el = event.currentTarget;
             setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
           }}
-          className={`min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
-            !atBottom ? "pb-14 sm:pb-14" : ""
-          }`}
+          className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-4"
+          style={{
+            paddingTop: "calc(max(0.625rem, var(--safe-top)) + 3.875rem)",
+            paddingBottom: `calc(var(--room-composer-height, 4.5rem) + ${
+              atBottom ? "0.75rem" : "3.5rem"
+            })`,
+          }}
         >
           <div className="mx-auto w-full max-w-3xl space-y-3">
             {messages.length === 0 && !isTyping && (
@@ -340,7 +375,10 @@ export function BrainstormRoomView({
           </div>
         </div>
         {!atBottom && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 sm:px-4">
+          <div
+            className="pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4"
+            style={{ bottom: "calc(var(--room-composer-height, 4.5rem) + 0.5rem)" }}
+          >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <button
                 type="button"
@@ -350,7 +388,7 @@ export function BrainstormRoomView({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95"
               >
                 <ChevronDownIcon className="h-4 w-4" strokeWidth={1.5} />
               </button>
@@ -360,7 +398,10 @@ export function BrainstormRoomView({
       </div>
 
       {/* Composer */}
-      <div className="composer-bar shrink-0 bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
+      <div
+        ref={composerRef}
+        className="composer-bar absolute inset-x-0 bottom-0 z-30 bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5"
+      >
         <div className="mx-auto w-full max-w-3xl">
           {attachmentFile && (
             <div className="mb-2 flex items-center gap-2">
@@ -455,7 +496,7 @@ export function BrainstormRoomView({
                     void handleSend();
                   }
                 }}
-                className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/75 px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:bg-surface/40 dark:ring-line/40 ${
+                className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-surface/55 px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line/70 backdrop-blur-md transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:bg-surface/35 dark:ring-line/40 ${
                   multiline ? "rounded-2xl" : "rounded-full"
                 }`}
               />
@@ -464,7 +505,7 @@ export function BrainstormRoomView({
               type="button"
               onClick={() => void handleSend()}
               disabled={isTyping || sending || (!input.trim() && !attachmentFile)}
-              className="mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 dark:bg-surface/40 dark:hover:bg-surface/60"
+              className="mb-0.5 shrink-0 rounded-full bg-surface/55 p-2.5 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 disabled:opacity-40 dark:bg-surface/35 dark:hover:bg-surface/50"
               aria-label="Kirim"
               title="Kirim"
             >
