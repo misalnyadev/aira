@@ -503,13 +503,13 @@ export function ChatWindow({
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           <button
             onClick={onBack}
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-6 w-6" />
@@ -518,7 +518,7 @@ export function ChatWindow({
           <div className="min-w-0 flex-1">
             <button
               onClick={onOpenProfile}
-              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/55 py-1 pl-1 pr-3.5 text-left backdrop-blur-md transition hover:bg-surface/65 active:scale-[0.98] active:opacity-80"
+              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/55 py-1 pl-1 pr-3.5 text-left transition hover:bg-surface/65 active:scale-[0.98] active:opacity-80"
               aria-label={`Pengaturan ${character.name}`}
               title={`Pengaturan ${character.name}`}
             >
@@ -550,7 +550,7 @@ export function ChatWindow({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -560,7 +560,7 @@ export function ChatWindow({
 
           <button
             onClick={onOpenVoice}
-            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 sm:grid"
+            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 sm:grid"
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
@@ -573,7 +573,7 @@ export function ChatWindow({
           {onVideoCall && (
             <button
               onClick={onVideoCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               aria-label={`Video call dengan ${character.name}`}
               title="Video call"
             >
@@ -584,7 +584,7 @@ export function ChatWindow({
           {onAudioCall && (
             <button
               onClick={onAudioCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               aria-label={`Panggilan suara dengan ${character.name}`}
               title="Panggilan suara"
             >
@@ -594,14 +594,14 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           <button
             onClick={onBack}
             className={`shrink-0 p-[5px] text-ink-soft transition active:opacity-50 ${
-              visualMode === "meetup" ? "rounded-full bg-surface/35 backdrop-blur-sm" : ""
+              visualMode === "meetup" ? "rounded-full bg-surface/35" : ""
             } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
@@ -616,7 +616,7 @@ export function ChatWindow({
             <div
               className={`inline-flex min-w-0 max-w-full items-center gap-3 ${
                 visualMode === "meetup"
-                  ? "rounded-full bg-surface/35 py-1 pl-1 pr-3.5 backdrop-blur-sm"
+                  ? "rounded-full bg-surface/35 py-1 pl-1 pr-3.5"
                   : ""
               }`}
             >
@@ -644,7 +644,7 @@ export function ChatWindow({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink backdrop-blur-sm transition ${
+              className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink transition ${
                 visualMode === "meetup"
                   ? "bg-surface/35 hover:bg-surface/45"
                   : "bg-surface/55 hover:bg-surface/70"
@@ -660,7 +660,7 @@ export function ChatWindow({
           <button
             onClick={onOpenVoice}
             className={`relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex ${
-              visualMode === "meetup" ? "bg-surface/35 backdrop-blur-sm" : ""
+              visualMode === "meetup" ? "bg-surface/35" : ""
             }`}
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"

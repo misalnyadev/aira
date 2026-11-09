@@ -137,7 +137,7 @@ export function Composer({
   }
 
   return (
-    <div className="composer-bar bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] backdrop-blur-sm sm:px-3 sm:py-2.5">
+    <div className="composer-bar bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
@@ -158,7 +158,7 @@ export function Composer({
             <span
               className={`text-xs ${
                 transparent
-                  ? "rounded-full bg-surface/75 px-2.5 py-1 text-ink backdrop-blur-md"
+                  ? "rounded-full bg-surface/75 px-2.5 py-1 text-ink"
                   : "text-ink-soft"
               }`}
             >
@@ -172,7 +172,7 @@ export function Composer({
             <div
               className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium ${
                 transparent
-                  ? "bg-surface/80 text-ink ring-1 ring-line/65 backdrop-blur-md"
+                  ? "bg-surface/80 text-ink ring-1 ring-line/65"
                   : "bg-surface/90 text-ink ring-1 ring-line/70"
               }`}
             >
@@ -199,7 +199,7 @@ export function Composer({
               onClick={() => setVoiceNoteArmed((v) => !v)}
               className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
                 transparent
-                  ? "bg-surface/80 text-ink-soft ring-1 ring-line/65 backdrop-blur-md hover:text-ink"
+                  ? "bg-surface/80 text-ink-soft ring-1 ring-line/65 hover:text-ink"
                   : "bg-surface/90 text-ink-soft ring-1 ring-line/70 hover:text-ink"
               }`}
             >
@@ -224,7 +224,7 @@ export function Composer({
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
               transparent
-                ? "rounded-full bg-surface/35 p-1.5 text-ink backdrop-blur-sm"
+                ? "rounded-full bg-surface/35 p-1.5 text-ink"
                 : "p-[5px] text-ink-soft"
             }`}
             title="Kirim foto"
@@ -285,7 +285,7 @@ export function Composer({
             disabled={disabled || (!text.trim() && !imageFile)}
             className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
               transparent
-                ? "bg-surface/35 backdrop-blur-sm hover:bg-surface/45 dark:bg-surface/25"
+                ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
                 : "bg-transparent hover:bg-surface/20"
             }`}
             title="Kirim"
