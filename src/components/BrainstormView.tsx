@@ -96,8 +96,8 @@ export function BrainstormView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-3 py-4 pb-[calc(var(--tabbar-space)+1rem)] md:px-4">
-        <section className="mx-auto w-full max-w-[900px]">
+      <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
+        <section className="w-full">
           {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
               <p className="text-sm font-semibold text-ink">Belum ada karakter untuk diajak bertemu</p>
@@ -116,37 +116,35 @@ export function BrainstormView({
               Tidak ada karakter yang cocok dengan pencarianmu.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="divide-y divide-line/70">
               {filteredMeetupCharacters.map((character) => (
                 <button
                   key={character.id}
                   type="button"
                   onClick={() => onOpenMeetup(character.id)}
-                  className="rounded-2xl border border-line bg-surface p-3.5 text-left transition hover:bg-surface-2 active:scale-[0.99]"
+                  className="group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-surface-2 active:scale-[0.99]"
                   aria-label={`Temui ${character.name} tatap muka`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar name={character.name} src={character.avatarUrl} size={48} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                          <p className="min-w-0 truncate text-sm font-semibold text-ink">
-                            {character.name}
-                          </p>
-                          {character.threadKind === "guest_contact" && (
-                            <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
-                              Kontak
-                            </span>
-                          )}
-                        </div>
-                        <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
-                          Temui
-                        </span>
+                  <Avatar name={character.name} src={character.avatarUrl} size={48} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="min-w-0 truncate text-sm font-semibold text-ink">
+                          {character.name}
+                        </p>
+                        {character.threadKind === "guest_contact" && (
+                          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                            Kontak
+                          </span>
+                        )}
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">
-                        {character.shortBio || "Karakter pribadimu"}
-                      </p>
+                      <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
+                        Temui
+                      </span>
                     </div>
+                    <p className="mt-0.5 truncate text-xs text-ink-soft">
+                      {character.shortBio || "Karakter pribadimu"}
+                    </p>
                   </div>
                 </button>
               ))}
