@@ -113,64 +113,60 @@ export function CallsView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-[calc(var(--tabbar-space)+0.5rem)] md:px-6 md:pb-4">
-        <div className="mx-auto w-full max-w-2xl">
-          {filtered.length === 0 ? (
-            <div className="px-5 py-14 text-center">
-              {ownerThreads.length === 0 ? (
-                <>
-                  <h2 className="text-sm font-semibold text-ink">Belum ada chat 2 arah</h2>
-                  <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-soft">
-                    Daftar ini hanya menampilkan pengguna yang mengundang karakter milikmu dan
-                    sudah terhubung. Undangan masuk bisa ditinjau di Kontak Karakter.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onManageContacts}
-                    className="mt-4 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
-                  >
-                    Lihat undangan masuk
-                  </button>
-                </>
-              ) : (
-                <p className="text-sm text-muted">Tidak ada chat yang cocok dengan pencarianmu.</p>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-line/70">
-              {filtered.map((thread) => {
-                const selected = activeId === thread.id;
-                return (
-                  <button
-                    key={thread.id}
-                    type="button"
-                    onClick={() => onSelect(thread.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-3 text-left transition active:scale-[0.995] ${
-                      selected ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2/70"
-                    }`}
-                  >
-                    <Avatar
-                      name={thread.partnerName || thread.name}
-                      src={thread.avatarUrl}
-                      size={52}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-ink">
-                          {thread.name}
-                        </p>
-                        <time className="shrink-0 text-[11px] text-muted">
-                          {formatListTime(thread.updatedAt)}
-                        </time>
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-muted">{formatPreview(thread)}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      <div className="min-h-0 flex-1 divide-y divide-line/70 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
+        {filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            {ownerThreads.length === 0 ? (
+              <>
+                <h2 className="text-sm font-semibold text-ink">Belum ada chat 2 arah</h2>
+                <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-soft">
+                  Daftar ini hanya menampilkan pengguna yang mengundang karakter milikmu dan
+                  sudah terhubung. Undangan masuk bisa ditinjau di Kontak Karakter.
+                </p>
+                <button
+                  type="button"
+                  onClick={onManageContacts}
+                  className="mt-4 rounded-full bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong"
+                >
+                  Lihat undangan masuk
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-muted">Tidak ada chat yang cocok dengan pencarianmu.</p>
+            )}
+          </div>
+        ) : (
+          filtered.map((thread) => {
+            const selected = activeId === thread.id;
+            return (
+              <button
+                key={thread.id}
+                type="button"
+                onClick={() => onSelect(thread.id)}
+                className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
+                  selected ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2"
+                }`}
+              >
+                <Avatar
+                  name={thread.partnerName || thread.name}
+                  src={thread.avatarUrl}
+                  size={48}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {thread.name}
+                    </p>
+                    <time className="shrink-0 text-[11px] text-muted">
+                      {formatListTime(thread.updatedAt)}
+                    </time>
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-ink-soft">{formatPreview(thread)}</p>
+                </div>
+              </button>
+            );
+          })
+        )}
       </div>
     </main>
   );
