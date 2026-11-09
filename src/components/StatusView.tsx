@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { compressImageFile } from "@/lib/compressImage";
+import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import {
@@ -279,12 +281,18 @@ export function StatusView({
   sharedStatusId?: string | null;
   onSharedStatusHandled?: () => void;
 }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<StatusItem[]>([]);
   const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
   const [followBusyKeys, setFollowBusyKeys] = useState<Record<string, boolean>>({});
   const [commentLikeBusyIds, setCommentLikeBusyIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
+  const [showOwnReelGallery, setShowOwnReelGallery] = useState(false);
+  const [ownReels, setOwnReels] = useState<StatusItem[]>([]);
+  const [ownReelsLoading, setOwnReelsLoading] = useState(false);
+  const [ownReelsError, setOwnReelsError] = useState<string | null>(null);
+  const [ownReelActionError, setOwnReelActionError] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<StatusItem | null>(null);
   const [editCaption, setEditCaption] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -337,6 +345,38 @@ export function StatusView({
     } catch {}
     setLoading(false);
   }, []);
+
+  async function openOwnReelGallery() {
+    setShowComposer(false);
+    setShowOwnReelGallery(true);
+    setOwnReels([]);
+    setOwnReelsLoading(true);
+    setOwnReelsError(null);
+    setOwnReelActionError(null);
+    try {
+      const res = await fetch("/api/statuses?mine=reels", { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data?.reels)) {
+        throw new Error(data?.error || "Galeri reels tidak dapat dimuat.");
+      }
+      setOwnReels(
+        data.reels.filter((item: StatusItem) =>
+          item.kind === "reel" && item.userId === user.id && item.characterId === null
+        )
+      );
+    } catch (error) {
+      setOwnReelsError(error instanceof Error ? error.message : "Galeri reels tidak dapat dimuat.");
+    } finally {
+      setOwnReelsLoading(false);
+    }
+  }
+
+  function openOwnStoryComposer() {
+    setShowOwnReelGallery(false);
+    setComposeKind("status");
+    setComposeCharId("");
+    setShowComposer(true);
+  }
 
   useEffect(() => {
     load();
@@ -400,6 +440,9 @@ export function StatusView({
       };
     });
   }, [stories]);
+  const ownStoryProfileKey = `user:${user.id}`;
+  const ownStoryProfile = storyProfiles.find((profileStory) => profileStory.key === ownStoryProfileKey);
+  const otherStoryProfiles = storyProfiles.filter((profileStory) => profileStory.key !== ownStoryProfileKey);
   const viewerStories = useMemo(
     () => storyProfiles.find((profileStory) => profileStory.key === viewerProfileKey)?.stories ?? [],
     [storyProfiles, viewerProfileKey]
@@ -409,6 +452,8 @@ export function StatusView({
   const currentStoryId = currentViewerStory?.id;
   const currentStoryUsesVideoDuration = currentViewerStory?.mediaType === "video" && Boolean(currentViewerStory.videoUrl);
   const reels = useMemo(() => items.filter((x) => x.kind === "reel"), [items]);
+  const canManageStatus = (item: Pick<StatusItem, "userId">) =>
+    item.userId === user.id || Boolean(user.isAdmin);
 
   async function handleCreate() {
     setComposeErr(null);
@@ -751,12 +796,23 @@ export function StatusView({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Hapus status ini?")) return;
+  async function handleDelete(id: string, showGalleryError = false) {
+    const itemToDelete = ownReels.find((item) => item.id === id) || items.find((item) => item.id === id);
+    const confirmLabel = itemToDelete?.kind === "reel" ? "Hapus reel ini?" : "Hapus status ini?";
+    if (!confirm(confirmLabel)) return;
+    if (showGalleryError) setOwnReelActionError(null);
     try {
       const res = await fetch(`/api/statuses/${id}`, { method: "DELETE" });
-      if (res.ok) setItems((p) => p.filter((x) => x.id !== id));
-    } catch {}
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (showGalleryError) setOwnReelActionError(data?.error || "Gagal menghapus postingan.");
+        return;
+      }
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      setOwnReels((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      if (showGalleryError) setOwnReelActionError("Gagal menghapus postingan. Coba lagi.");
+    }
   }
 
   function beginEditStatus(item: StatusItem) {
@@ -787,6 +843,9 @@ export function StatusView({
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Gagal menyimpan perubahan.");
       setItems((prev) => prev.map((item) => (
+        item.id === editingItem.id ? { ...item, content, caption } : item
+      )));
+      setOwnReels((prev) => prev.map((item) => (
         item.id === editingItem.id ? { ...item, content, caption } : item
       )));
       setEditingItem(null);
@@ -1116,23 +1175,184 @@ export function StatusView({
         </div>
       )}
 
+      {showOwnReelGallery && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 px-0 pt-[max(0.5rem,var(--safe-top))] backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={() => setShowOwnReelGallery(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="own-reel-gallery-title"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[min(88dvh,100%)] min-h-0 w-full max-w-[560px] flex-col overflow-hidden rounded-t-[24px] border border-line bg-surface shadow-2xl sm:rounded-2xl"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3.5">
+              <div className="min-w-0">
+                <h2 id="own-reel-gallery-title" className="truncate text-base font-bold text-ink">
+                  Galeri Reels Anda
+                </h2>
+                <p className="mt-0.5 text-xs text-muted">
+                  {ownReelsLoading ? "Memuat..." : `${ownReels.length} reels pribadi`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOwnReelGallery(false)}
+                aria-label="Tutup galeri reels"
+                className="shrink-0 rounded-full p-2 text-ink-soft hover:bg-surface-2"
+              >
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {ownStoryProfile?.stories.length ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOwnReelGallery(false);
+                    openStoryProfile(ownStoryProfile.key);
+                  }}
+                  className="mb-3 flex w-full items-center justify-between rounded-2xl border border-line bg-surface-2 px-3.5 py-3 text-left text-sm font-semibold text-ink"
+                >
+                  <span>Lihat story aktif</span>
+                  <span className="rounded-full bg-surface px-2 py-0.5 text-xs text-ink-soft">
+                    {ownStoryProfile.stories.length}
+                  </span>
+                </button>
+              ) : null}
+
+              {ownReelsError ? (
+                <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-600">
+                  <span>{ownReelsError}</span>
+                  <button type="button" onClick={() => void openOwnReelGallery()} className="shrink-0 font-semibold underline">
+                    Coba lagi
+                  </button>
+                </div>
+              ) : null}
+              {ownReelActionError ? (
+                <div role="alert" className="mb-3 rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-600">
+                  {ownReelActionError}
+                </div>
+              ) : null}
+
+              {ownReelsLoading ? (
+                <div className="px-4 py-12 text-center text-sm text-muted">Memuat galeri reels...</div>
+              ) : ownReelsError ? null : ownReels.length === 0 ? (
+                <div className="flex flex-col items-center px-5 py-12 text-center">
+                  <FilmIcon className="h-8 w-8 text-muted" />
+                  <p className="mt-3 text-sm font-semibold text-ink">Belum ada reels pribadi</p>
+                  <p className="mt-1 text-xs text-muted">Reels yang kamu posting atas nama akunmu akan muncul di sini.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOwnReelGallery(false);
+                      setComposeKind("reel");
+                      setComposeCharId("");
+                      setShowComposer(true);
+                    }}
+                    className="mt-4 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white"
+                  >
+                    Buat Reel
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ownReels.map((reel) => {
+                    const reelCaption = reel.caption || reel.content || "Reel";
+                    return (
+                      <article key={reel.id} className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface-2">
+                        <div className="relative aspect-[3/4] overflow-hidden bg-black">
+                          {reel.mediaType === "image" && reel.imageUrl ? (
+                            <Image src={reel.imageUrl} alt="" fill sizes="(max-width: 560px) 33vw, 180px" unoptimized className="object-cover" />
+                          ) : reel.mediaType === "video" && reel.videoUrl ? (
+                            <FeedVideo src={reel.videoUrl} aspect="absolute inset-0 h-full w-full" muted />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-2">
+                              <p className="line-clamp-5 whitespace-pre-wrap text-center text-xs font-semibold text-white drop-shadow">
+                                {reel.content || reel.caption || "Reel"}
+                              </p>
+                            </div>
+                          )}
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-black/75 to-transparent px-2 pb-2 pt-8">
+                            <p className="truncate text-left text-[10px] font-medium text-white">{reelCaption}</p>
+                          </div>
+                          {reel.mediaType === "video" ? (
+                            <span className="pointer-events-none absolute right-1.5 top-1.5 z-[3] rounded-full bg-black/50 p-1 text-white">
+                              <FilmIcon className="h-3.5 w-3.5" />
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center justify-between gap-1 px-1.5 py-1.5">
+                          <span className="min-w-0 truncate text-[10px] text-muted">{timeAgo(reel.createdAt)}</span>
+                          <div className="flex shrink-0 items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowOwnReelGallery(false);
+                                beginEditStatus(reel);
+                              }}
+                              aria-label={`Edit reel: ${reelCaption}`}
+                              title="Edit reel"
+                              className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface hover:text-ink"
+                            >
+                              <PencilIcon className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(reel.id, true)}
+                              aria-label={`Hapus reel: ${reelCaption}`}
+                              title="Hapus reel"
+                              className="grid h-7 w-7 place-items-center rounded-full text-red-600 hover:bg-surface"
+                            >
+                              <TrashIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+
         <div className="mx-auto w-full max-w-[560px]">
           {/* Story strip ala IG — empat profil terlihat dalam satu layar */}
           <div className="border-b border-line bg-surface px-2 py-3">
             <div className="flex snap-x snap-mandatory gap-0 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+              <div className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => void openOwnReelGallery()}
+                    aria-label="Buka galeri reels Anda"
+                    className="block rounded-full"
+                  >
+                    <span className={`block rounded-full p-[2px] ${ownStoryProfile?.hasUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
+                      <span className="block rounded-full bg-surface p-[2px]">
+                        <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={56} />
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openOwnStoryComposer}
+                    aria-label="Buat cerita baru"
+                    className="absolute -bottom-0.5 -right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-ink text-white shadow-sm"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                <span className="w-full truncate text-center text-[12px] font-medium leading-tight">Cerita Anda</span>
+              </div>
               {loading ? (
                 <div className="px-3 py-6 text-sm text-muted">Memuat...</div>
-              ) : storyProfiles.length === 0 ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="flex h-[56px] w-[56px] items-center justify-center rounded-full border-2 border-dashed border-line bg-surface-2">
-                      <PlusIcon className="h-5 w-5 text-muted" />
-                    </div>
-                    <span className="text-[11px] text-muted">Belum ada story</span>
-                  </div>
-                </div>
               ) : (
-                storyProfiles.map((profileStory) => {
+                otherStoryProfiles.map((profileStory) => {
                   const s = profileStory.story;
                   const name = s.characterName || s.userDisplayName || s.userNickname || "Kamu";
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
@@ -1199,17 +1419,19 @@ export function StatusView({
                           <div className="truncate text-[11px] text-white/80 drop-shadow">{it.kind === "reel" ? "Reels" : "Status"} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}</div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setMenuFor(menuFor === it.id ? null : it.id)}
-                        className="pointer-events-auto -mr-1 rounded-full p-2 text-white active:scale-90"
-                        aria-label="Opsi"
-                      >
-                        <IgMoreIcon className="h-5 w-5 text-white drop-shadow" />
-                      </button>
+                      {canManageStatus(it) ? (
+                        <button
+                          onClick={() => setMenuFor(menuFor === it.id ? null : it.id)}
+                          className="pointer-events-auto -mr-1 rounded-full p-2 text-white active:scale-90"
+                          aria-label="Opsi postingan"
+                        >
+                          <IgMoreIcon className="h-5 w-5 text-white drop-shadow" />
+                        </button>
+                      ) : null}
                     </div>
 
                     {/* Popover opsi burger */}
-                    {menuFor === it.id && (
+                    {menuFor === it.id && canManageStatus(it) && (
                       <div className="absolute right-2 top-11 z-20 min-w-[160px] overflow-hidden rounded-2xl border border-line bg-surface py-1 shadow-xl">
                         <button
                           onClick={() => beginEditStatus(it)}
@@ -1235,7 +1457,7 @@ export function StatusView({
                       </div>
                     )}
                     {/* tap backdrop tutup menu */}
-                    {menuFor === it.id && (
+                    {menuFor === it.id && canManageStatus(it) && (
                       <button
                         aria-label="Tutup menu"
                         onClick={() => setMenuFor(null)}
@@ -1533,11 +1755,13 @@ export function StatusView({
               <button onClick={() => setFullScreenId(null)} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-              <button onClick={() => { const id = activeFsId || fullScreenId; setMenuFor((prev) => prev === id ? null : id); }} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi">
-                <IgMoreIcon className="h-5 w-5 text-white" />
-              </button>
+              {canManageStatus(activeIt) ? (
+                <button onClick={() => { const id = activeFsId || fullScreenId; setMenuFor((prev) => prev === id ? null : id); }} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/10 active:scale-90" aria-label="Opsi postingan">
+                  <IgMoreIcon className="h-5 w-5 text-white" />
+                </button>
+              ) : null}
             </div>
-            {menuFor === activeIt.id && (
+            {menuFor === activeIt.id && canManageStatus(activeIt) && (
               <div
                 className="absolute right-3 z-40 min-w-[160px] overflow-hidden rounded-2xl border border-white/10 bg-[#121212]/95 py-1 text-white shadow-xl backdrop-blur-xl"
                 style={{ top: "calc(var(--safe-top) + 3.75rem)" }}
