@@ -137,7 +137,7 @@ export function Composer({
   }
 
   return (
-    <div className="composer-bar bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
+    <div className="composer-bar bg-surface/10 px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] backdrop-blur-sm sm:px-3 sm:py-2.5">
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
