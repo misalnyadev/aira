@@ -269,7 +269,7 @@ export function Composer({
               enterKeyHint="send"
               aria-label="Tulis pesan"
               className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
-                clearSurface ? "bg-surface/85 dark:bg-surface/75 backdrop-blur-sm" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
+                clearSurface ? "bg-surface/85 dark:bg-surface/75 backdrop-blur-md" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
               } ${
                 multiline ? "rounded-2xl" : "rounded-full"
               }`}
@@ -295,9 +295,11 @@ export function Composer({
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
             className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
-              transparent
-                ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
-                : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
+              clearSurface
+                ? "bg-surface/45 shadow-md backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
+                : transparent
+                  ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
+                  : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
             }`}
             title="Kirim"
             aria-label="Kirim pesan"
