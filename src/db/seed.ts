@@ -1,9 +1,8 @@
 /**
  * Seed manual (opsional).
  *
- * Karakter awal otomatis diberikan saat pendaftaran, jadi skrip ini hanya
- * berguna untuk keadaan darurat: memberi karakter awal ke akun yang sudah ada
- * (misalnya pendaftaran sempat gagal di tengah jalan).
+ * Pendaftaran sekarang memakai wizard pembuatan karakter. Skrip ini tetap
+ * tersedia untuk seed contoh secara manual saat pengembangan / keadaan darurat.
  *
  * Jalankan: npx -y tsx src/db/seed.ts nama@email.com
  */

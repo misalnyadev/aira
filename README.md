@@ -13,9 +13,9 @@ Aplikasi chat privat untuk **latihan pendalaman karakter/peran**. Karakter teras
 | 1 | Buat database gratis di **Neon** → salin `DATABASE_URL` | 3 menit |
 | 2 | Upload kode ke **GitHub** | 5 menit |
 | 3 | Import repo di **Vercel** + tempel `DATABASE_URL` → Deploy | 5 menit |
-| 4 | Buka link Vercel → ⚙️ Pengaturan → isi API key Gemini/Grok/OpenRouter | 2 menit |
+| 4 | Buka link Vercel → daftar dengan kode undangan → ikuti onboarding API key dan karakter pertama | 2 menit |
 
-Tabel database dibuat **otomatis** saat aplikasi pertama kali dibuka — tidak perlu menjalankan perintah migrasi apa pun. Setiap akun baru langsung mendapat **satu karakter awal** sebagai contoh.
+Tabel database dibuat **otomatis** saat aplikasi pertama kali dibuka — tidak perlu menjalankan perintah migrasi apa pun. Pengguna baru memilih sendiri karakter pertamanya lewat wizard; akun pertama tetap mengambil alih data legacy dan hanya melewati wizard bila karakter serta API key sudah tersedia.
 
 ---
 
@@ -218,7 +218,7 @@ src/
    │  ├─ providerDefaults.ts
    │  └─ index.ts
    ├─ dbReady.ts                    # buat tabel otomatis (deploy tanpa migrasi manual)
-   ├─ seedDemo.ts                   # karakter awal (Kirana) untuk akun baru
+   ├─ seedDemo.ts                   # seed contoh manual (Kirana), bukan untuk pendaftaran reguler
    ├─ compressImage.ts              # kompresi gambar di browser sebelum upload
    └─ uploads.ts                    # simpan/baca gambar: disk ATAU database
 .github/workflows/ci.yml            # type-check + build otomatis tiap push
@@ -236,6 +236,8 @@ Aplikasi ini memakai akun email + kata sandi.
 - Saat masuk dengan email yang tidak terdaftar, pemeriksaan tetap dijalankan terhadap hash umpan supaya lama responsnya tidak membocorkan email mana yang punya akun.
 
 **Data lama tidak hilang.** Karakter dan API key dari versi sebelum ada login otomatis jadi milik **akun pertama** yang mendaftar. Karena itu urutannya penting: daftarkan akun sendiri dulu, baru bagikan link.
+
+Saat daftar, isi minimal nama tampilan akun; panggilan, gender, usia, kesibukan, dan cerita tentang diri sendiri boleh ditambahkan. Pengguna baru lalu diarahkan untuk menyimpan API key miliknya dan membuat karakter pertama. Profil karakter mendukung foto, nama unik di dalam akun, usia, gender, asal, profesi, keahlian, serta Bible. Tombol **Isi field kosong dengan AI** membuat draf persona/Bible dari template teman curhat & refleksi, motivator realistis, teman ngobrol asmara, konsultan ide & karier, atau arahan kustom. Draf bisa diedit; foto tetap diunggah sendiri. Akun lama tidak dipaksa masuk wizard; akun pertama yang mengambil data legacy melewatinya bila karakter serta API key legacy sudah tersedia.
 
 ## Navigasi 5 menu & tema tampilan
 

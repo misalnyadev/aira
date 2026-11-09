@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
@@ -21,6 +21,10 @@ import {
 import { normalizeCharacterVoice, parseCharacterVoice } from "@/lib/hdVoice";
 import {
   MAX_BIBLE_CHARS,
+  MAX_CHARACTER_AGE,
+  MAX_CHARACTER_ORIGIN_CHARS,
+  MAX_CHARACTER_PROFESSION_CHARS,
+  MIN_CHARACTER_AGE,
   MAX_GREETING_CHARS,
   MAX_MEMORY_SUMMARY_CHARS,
   MAX_OWNER_RELATIONSHIP_CHARS,
@@ -32,6 +36,12 @@ import {
 import { findOwnedCharacter } from "@/lib/owned";
 import { deleteR2Object } from "@/lib/r2";
 import { removeStoredImages } from "@/lib/uploads";
+import {
+  characterNameError,
+  cleanCharacterName,
+  isCharacterNameUniqueViolation,
+  normalizeCharacterName,
+} from "@/lib/characterNames";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +53,9 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     id: row.id,
     name: row.name,
     gender: normalizeGender(row.gender) ?? "",
+    age: row.age,
+    origin: row.origin,
+    profession: row.profession,
     avatarUrl: row.avatarUrl,
     shortBio: row.shortBio,
     skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
@@ -102,6 +115,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const {
     name,
     gender,
+    age,
+    origin,
+    profession,
     avatarUrl,
     shortBio,
     skillPortfolio,
@@ -130,6 +146,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   } = body as {
     name?: string;
     gender?: unknown;
+    age?: unknown;
+    origin?: unknown;
+    profession?: unknown;
     avatarUrl?: string | null;
     shortBio?: string;
     skillPortfolio?: unknown;
@@ -157,6 +176,36 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     storyAutoFrequency?: unknown;
   };
 
+  let normalizedAge: number | null | undefined;
+  if (age !== undefined) {
+    if (age === null || (typeof age === "string" && !age.trim())) {
+      normalizedAge = null;
+    } else if (typeof age === "number") {
+      normalizedAge = age;
+    } else if (typeof age === "string") {
+      normalizedAge = Number(age.trim());
+    } else {
+      return NextResponse.json({ error: "Usia karakter harus berupa angka." }, { status: 400 });
+    }
+    if (
+      normalizedAge !== null &&
+      (!Number.isInteger(normalizedAge) || normalizedAge < MIN_CHARACTER_AGE || normalizedAge > MAX_CHARACTER_AGE)
+    ) {
+      return NextResponse.json({ error: `Usia karakter harus antara ${MIN_CHARACTER_AGE} dan ${MAX_CHARACTER_AGE}.` }, { status: 400 });
+    }
+  }
+  if (origin !== undefined && typeof origin !== "string") {
+    return NextResponse.json({ error: "Asal karakter harus berupa teks." }, { status: 400 });
+  }
+  if (profession !== undefined && typeof profession !== "string") {
+    return NextResponse.json({ error: "Profesi karakter harus berupa teks." }, { status: 400 });
+  }
+  if (typeof origin === "string" && origin.trim().length > MAX_CHARACTER_ORIGIN_CHARS) {
+    return NextResponse.json({ error: `Asal karakter maksimal ${MAX_CHARACTER_ORIGIN_CHARS} karakter.` }, { status: 400 });
+  }
+  if (typeof profession === "string" && profession.trim().length > MAX_CHARACTER_PROFESSION_CHARS) {
+    return NextResponse.json({ error: `Profesi karakter maksimal ${MAX_CHARACTER_PROFESSION_CHARS} karakter.` }, { status: 400 });
+  }
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
     return NextResponse.json(
       { error: `Kepribadian maksimal ${MAX_PERSONALITY_CHARS.toLocaleString("id-ID")} karakter.` },
@@ -235,6 +284,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const updates: Partial<typeof characters.$inferInsert> = { updatedAt: new Date() };
+  let requestedName: string | undefined;
+  if (name !== undefined) {
+    if (typeof name !== "string") {
+      return NextResponse.json({ error: "Nama karakter harus berupa teks." }, { status: 400 });
+    }
+    const normalizedName = cleanCharacterName(name);
+    const nameError = characterNameError(normalizedName);
+    if (nameError) return NextResponse.json({ error: nameError }, { status: 400 });
+    requestedName = normalizedName;
+    updates.name = normalizedName;
+  }
   if (gender !== undefined) {
     const normalizedGender = normalizeGender(gender);
     if (normalizedGender === null) {
@@ -242,7 +302,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
     updates.gender = normalizedGender;
   }
-  if (name !== undefined) updates.name = name.trim();
+  if (age !== undefined) updates.age = normalizedAge ?? null;
+  if (origin !== undefined) updates.origin = origin.trim();
+  if (profession !== undefined) updates.profession = profession.trim();
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl || null;
   if (shortBio !== undefined) updates.shortBio = shortBio.trim();
   if (skillValidation?.ok) updates.skillPortfolio = JSON.stringify(skillValidation.skills);
@@ -316,11 +378,55 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
    * Kalau diperiksa sesudahnya, baris milik orang lain sudah terlanjur
    * berubah — dan tidak ada cara mengembalikannya.
    */
-  const [row] = await db
-    .update(characters)
-    .set(updates)
-    .where(and(eq(characters.id, id), eq(characters.userId, user.id)))
-    .returning();
+  let row: typeof characters.$inferSelect | undefined;
+  try {
+    if (requestedName !== undefined) {
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('aira:character-name'), hashtext(${user.id}))`);
+        const [current] = await tx
+          .select({ name: characters.name })
+          .from(characters)
+          .where(and(eq(characters.id, id), eq(characters.userId, user.id)))
+          .limit(1);
+        if (!current) return { kind: "not_found" as const };
+
+        if (normalizeCharacterName(current.name) !== normalizeCharacterName(requestedName)) {
+          const otherNames = await tx
+            .select({ name: characters.name })
+            .from(characters)
+            .where(and(eq(characters.userId, user.id), ne(characters.id, id)));
+          if (otherNames.some((ownerRow) => normalizeCharacterName(ownerRow.name) === normalizeCharacterName(requestedName))) {
+            return { kind: "duplicate" as const };
+          }
+        }
+
+        const [updatedRow] = await tx
+          .update(characters)
+          .set(updates)
+          .where(and(eq(characters.id, id), eq(characters.userId, user.id)))
+          .returning();
+        return updatedRow
+          ? { kind: "updated" as const, row: updatedRow }
+          : { kind: "not_found" as const };
+      });
+      if (result.kind === "duplicate") {
+        return NextResponse.json({ error: `Nama “${requestedName}” sudah dipakai karakter lain di akunmu.` }, { status: 409 });
+      }
+      if (result.kind === "not_found") return NextResponse.json(NOT_FOUND, { status: 404 });
+      row = result.row;
+    } else {
+      [row] = await db
+        .update(characters)
+        .set(updates)
+        .where(and(eq(characters.id, id), eq(characters.userId, user.id)))
+        .returning();
+    }
+  } catch (error) {
+    if (isCharacterNameUniqueViolation(error)) {
+      return NextResponse.json({ error: "Nama karakter sudah dipakai karakter lain di akunmu." }, { status: 409 });
+    }
+    throw error;
+  }
 
   if (!row) return NextResponse.json(NOT_FOUND, { status: 404 });
 

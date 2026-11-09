@@ -31,6 +31,18 @@ import {
 } from "@/lib/limits";
 import { effectiveCharacterLimit, parseQuotaDiscussion } from "@/lib/quotaRules";
 import { formatVoiceNotePreview } from "@/lib/voiceNote";
+import {
+  characterNameError,
+  cleanCharacterName,
+  isCharacterNameUniqueViolation,
+  normalizeCharacterName,
+} from "@/lib/characterNames";
+import {
+  MAX_CHARACTER_AGE,
+  MAX_CHARACTER_ORIGIN_CHARS,
+  MAX_CHARACTER_PROFESSION_CHARS,
+  MIN_CHARACTER_AGE,
+} from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -43,10 +55,8 @@ export async function GET() {
   if (!user) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   /*
-   * Tidak ada lagi seed otomatis di sini.
-   * Dulu karakter contoh dibuat ulang setiap kali daftar dimuat — akibatnya
-   * karakter yang sudah dihapus muncul lagi. Sekarang seed hanya terjadi
-   * sekali saat pendaftaran (lihat /api/auth/register).
+   * Tidak ada seed otomatis: akun baru memilih sendiri karakter pertamanya
+   * lewat wizard onboarding, sementara data legacy tetap diambil akun pertama.
    */
 
   const lastMessageSub = db
@@ -62,6 +72,9 @@ export async function GET() {
     .select({
       id: characters.id,
       name: characters.name,
+      age: characters.age,
+      origin: characters.origin,
+      profession: characters.profession,
       avatarUrl: characters.avatarUrl,
       shortBio: characters.shortBio,
       skillPortfolio: characters.skillPortfolio,
@@ -104,6 +117,9 @@ export async function GET() {
       return {
         id: row.id,
         name: row.name,
+        age: row.age,
+        origin: row.origin,
+        profession: row.profession,
         avatarUrl: row.avatarUrl,
         shortBio: row.shortBio,
         skillPortfolio: parseCharacterSkillPortfolio(row.skillPortfolio),
@@ -210,6 +226,9 @@ export async function POST(req: Request) {
   const {
     name,
     gender,
+    age,
+    origin,
+    profession,
     avatarUrl,
     shortBio,
     skillPortfolio,
@@ -226,6 +245,9 @@ export async function POST(req: Request) {
   } = body as {
     name?: string;
     gender?: unknown;
+    age?: unknown;
+    origin?: unknown;
+    profession?: unknown;
     avatarUrl?: string;
     shortBio?: string;
     skillPortfolio?: unknown;
@@ -246,8 +268,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pilih jenis kelamin/gender dari opsi yang tersedia." }, { status: 400 });
   }
 
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "Nama karakter wajib diisi." }, { status: 400 });
+  if (name !== undefined && typeof name !== "string") {
+    return NextResponse.json({ error: "Nama karakter harus berupa teks." }, { status: 400 });
+  }
+  const normalizedName = cleanCharacterName(name ?? "");
+  const nameError = characterNameError(normalizedName);
+  if (nameError) return NextResponse.json({ error: nameError }, { status: 400 });
+  const normalizedAge = age === undefined || age === null || (typeof age === "string" && !age.trim())
+    ? null
+    : typeof age === "number" ? age : typeof age === "string" ? Number(age.trim()) : Number.NaN;
+  if (normalizedAge !== null && (!Number.isInteger(normalizedAge) || normalizedAge < MIN_CHARACTER_AGE || normalizedAge > MAX_CHARACTER_AGE)) {
+    return NextResponse.json({ error: `Usia karakter harus antara ${MIN_CHARACTER_AGE} dan ${MAX_CHARACTER_AGE}.` }, { status: 400 });
+  }
+  if (origin !== undefined && typeof origin !== "string") {
+    return NextResponse.json({ error: "Asal karakter harus berupa teks." }, { status: 400 });
+  }
+  if (profession !== undefined && typeof profession !== "string") {
+    return NextResponse.json({ error: "Profesi karakter harus berupa teks." }, { status: 400 });
+  }
+  if (typeof origin === "string" && origin.trim().length > MAX_CHARACTER_ORIGIN_CHARS) {
+    return NextResponse.json({ error: `Asal karakter maksimal ${MAX_CHARACTER_ORIGIN_CHARS} karakter.` }, { status: 400 });
+  }
+  if (typeof profession === "string" && profession.trim().length > MAX_CHARACTER_PROFESSION_CHARS) {
+    return NextResponse.json({ error: `Profesi karakter maksimal ${MAX_CHARACTER_PROFESSION_CHARS} karakter.` }, { status: 400 });
   }
   if (!personality?.trim()) {
     return NextResponse.json({ error: "Deskripsi kepribadian wajib diisi." }, { status: 400 });
@@ -255,6 +298,14 @@ export async function POST(req: Request) {
   const skillValidation = validateCharacterSkillPortfolio(skillPortfolio ?? []);
   if (!skillValidation.ok) {
     return NextResponse.json({ error: skillValidation.error }, { status: 400 });
+  }
+
+  const existingNames = await db
+    .select({ name: characters.name })
+    .from(characters)
+    .where(eq(characters.userId, user.id));
+  if (existingNames.some((row) => normalizeCharacterName(row.name) === normalizeCharacterName(normalizedName))) {
+    return NextResponse.json({ error: `Nama “${normalizedName}” sudah dipakai oleh karakter lain di akunmu.` }, { status: 409 });
   }
 
   // Batas jumlah karakter milik sendiri dijaga ketat di server sesuai peran & kuota akun.
@@ -329,42 +380,72 @@ export async function POST(req: Request) {
     );
   }
 
-  const [row] = await db
-    .insert(characters)
-    .values({
-      userId: user.id,
-      name: name.trim(),
-      gender: normalizedGender,
-      avatarUrl: avatarUrl?.trim() || null,
-      shortBio: (shortBio ?? "").trim(),
-      skillPortfolio: JSON.stringify(skillValidation.skills),
-      personality: personality.trim(),
-      bible: (bible ?? "").trim(),
-      ownerRelationship:
-        typeof ownerRelationship === "string" ? ownerRelationship.trim() : "",
-      greeting: (greeting ?? "").trim(),
-      teamRole: (teamRole ?? "").trim(),
-      sharedTeamMemory: (sharedTeamMemory ?? "").trim(),
-      shareTeamMemory: shareTeamMemory === true,
-      shareOwnerProfileFields: JSON.stringify(
-        normalizeOwnerProfileShareFields(shareOwnerProfileFields)
-      ),
-      providerId: providerId || null,
-      model: model?.trim() || null,
-      chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
-      meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
-      bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
-      meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
-    })
-    .returning();
+  let row: typeof characters.$inferSelect | undefined;
+  try {
+    const result = await db.transaction(async (tx) => {
+      // Serialisasi nama per akun juga melindungi DB legacy yang belum bisa
+      // memakai unique index karena sudah berisi nama duplikat lama.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('aira:character-name'), hashtext(${user.id}))`);
+      const ownerRows = await tx
+        .select({ name: characters.name })
+        .from(characters)
+        .where(eq(characters.userId, user.id));
+      if (ownerRows.some((ownerRow) => normalizeCharacterName(ownerRow.name) === normalizeCharacterName(normalizedName))) {
+        return { duplicate: true as const, row: null };
+      }
 
-  if (row.greeting) {
-    await db.insert(messages).values({
-      characterId: row.id,
-      role: "assistant",
-      content: row.greeting,
+      const [createdRow] = await tx
+        .insert(characters)
+        .values({
+          userId: user.id,
+          name: normalizedName,
+          gender: normalizedGender,
+          age: normalizedAge,
+          origin: typeof origin === "string" ? origin.trim() : "",
+          profession: typeof profession === "string" ? profession.trim() : "",
+          avatarUrl: avatarUrl?.trim() || null,
+          shortBio: (shortBio ?? "").trim(),
+          skillPortfolio: JSON.stringify(skillValidation.skills),
+          personality: personality.trim(),
+          bible: (bible ?? "").trim(),
+          ownerRelationship:
+            typeof ownerRelationship === "string" ? ownerRelationship.trim() : "",
+          greeting: (greeting ?? "").trim(),
+          teamRole: (teamRole ?? "").trim(),
+          sharedTeamMemory: (sharedTeamMemory ?? "").trim(),
+          shareTeamMemory: shareTeamMemory === true,
+          shareOwnerProfileFields: JSON.stringify(
+            normalizeOwnerProfileShareFields(shareOwnerProfileFields)
+          ),
+          providerId: providerId || null,
+          model: model?.trim() || null,
+          chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+          meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+          bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+          meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+        })
+        .returning();
+
+      if (createdRow?.greeting) {
+        await tx.insert(messages).values({
+          characterId: createdRow.id,
+          role: "assistant",
+          content: createdRow.greeting,
+        });
+      }
+      return { duplicate: false as const, row: createdRow ?? null };
     });
+    if (result.duplicate) {
+      return NextResponse.json({ error: `Nama “${normalizedName}” sudah dipakai karakter lain di akunmu.` }, { status: 409 });
+    }
+    row = result.row ?? undefined;
+  } catch (error) {
+    if (isCharacterNameUniqueViolation(error)) {
+      return NextResponse.json({ error: `Nama “${normalizedName}” sudah dipakai karakter lain di akunmu.` }, { status: 409 });
+    }
+    throw error;
   }
+  if (!row) return NextResponse.json({ error: "Gagal membuat karakter." }, { status: 500 });
 
   return NextResponse.json({ character: row }, { status: 201 });
 }

@@ -1,15 +1,15 @@
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, messages } from "@/db/schema";
 import { DEFAULT_BUBBLE_STYLE } from "@/lib/bubbleStyle";
 import { DEFAULT_CHAT_BACKGROUND } from "@/lib/chatBackground";
+import { normalizeCharacterName } from "@/lib/characterNames";
 
 /**
- * Karakter awal untuk setiap akun baru.
+ * Contoh karakter Kirana untuk seed manual / pengembangan.
  *
- * Hanya SATU, dan sengaja ditulis lengkap supaya sekaligus jadi contoh format
- * bible peran: orang bisa melihat sendiri bagian mana yang membuat karakter
- * terasa punya kepribadian, bukan seperti chatbot biasa. Setelah terbiasa,
- * tinggal ganti isinya dengan bible dari AK Talent.
+ * Pendaftaran akun baru sekarang memakai onboarding dan pilihan draf AI;
+ * seed ini tidak dipanggil otomatis. Naskah tetap berguna untuk pengujian lokal.
  */
 const STARTER_BIBLE = `PERAN
 Kirana Prameswari, 24 tahun, talent kecantikan (beauty talent) di bawah naungan agensi AK Talent. Sudah tiga tahun jadi wajah produk skincare lokal. Bukan selebriti besar — masih naik, masih sering deg-degan sebelum syuting.
@@ -61,33 +61,42 @@ Konteks: Ngobrol santai lewat chat soal kerjaan, syuting, dan hal-hal kecil seha
 };
 
 /**
- * Beri karakter awal ke akun baru.
- *
- * Tidak dipanggil untuk akun pertama — akun pertama mengambil alih data lama
- * (lihat `adoptLegacyData`), jadi kalau di-seed juga hasilnya dobel.
+ * Buat karakter contoh secara manual untuk akun tertentu.
+ * Pendaftaran reguler tidak memanggil fungsi ini.
  */
 export async function seedStarterCharacter(userId: string): Promise<string | null> {
-  const [row] = await db
-    .insert(characters)
-    .values({
-      ...STARTER_CHARACTER,
-      userId,
-      chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
-      meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
-      bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
-      meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
-    })
-    .returning({ id: characters.id });
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('aira:character-name'), hashtext(${userId}))`);
+    const existingNames = await tx
+      .select({ name: characters.name })
+      .from(characters)
+      .where(eq(characters.userId, userId));
+    if (existingNames.some((row) => normalizeCharacterName(row.name) === normalizeCharacterName(STARTER_CHARACTER.name))) {
+      return null;
+    }
 
-  if (!row) return null;
+    const [row] = await tx
+      .insert(characters)
+      .values({
+        ...STARTER_CHARACTER,
+        userId,
+        chatBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+        meetupBackground: JSON.stringify(DEFAULT_CHAT_BACKGROUND),
+        bubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+        meetupBubbleStyle: JSON.stringify(DEFAULT_BUBBLE_STYLE),
+      })
+      .returning({ id: characters.id });
 
-  if (STARTER_CHARACTER.greeting) {
-    await db.insert(messages).values({
-      characterId: row.id,
-      role: "assistant",
-      content: STARTER_CHARACTER.greeting,
-    });
-  }
+    if (!row) return null;
 
-  return row.id;
+    if (STARTER_CHARACTER.greeting) {
+      await tx.insert(messages).values({
+        characterId: row.id,
+        role: "assistant",
+        content: STARTER_CHARACTER.greeting,
+      });
+    }
+
+    return row.id;
+  });
 }

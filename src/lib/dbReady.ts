@@ -14,6 +14,7 @@ const DDL = [
     "email" text NOT NULL UNIQUE,
     "password_hash" text NOT NULL,
     "gender" text NOT NULL DEFAULT '',
+    "onboarding_completed" boolean NOT NULL DEFAULT true,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE TABLE IF NOT EXISTS "sessions" (
@@ -38,6 +39,9 @@ const DDL = [
     "id" uuid PRIMARY KEY NOT NULL,
     "name" text NOT NULL,
     "gender" text NOT NULL DEFAULT '',
+    "age" integer,
+    "origin" text DEFAULT '' NOT NULL,
+    "profession" text DEFAULT '' NOT NULL,
     "avatar_url" text,
     "short_bio" text DEFAULT '' NOT NULL,
     "personality" text DEFAULT '' NOT NULL,
@@ -84,6 +88,9 @@ const DDL = [
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "gender" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "age" integer`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "origin" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "profession" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bible" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "owner_relationship" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
@@ -178,6 +185,18 @@ const DDL = [
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "browsing_enabled" boolean NOT NULL DEFAULT false`,
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "backup_keys" text NOT NULL DEFAULT '[]'`,
   sql`CREATE INDEX IF NOT EXISTS "characters_user_id_idx" ON "characters" ("user_id")`,
+  sql`DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM "characters"
+        GROUP BY COALESCE("user_id"::text, '__legacy__'), lower(trim("name"))
+        HAVING count(*) > 1
+      ) THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS "characters_user_name_unique_idx"
+        ON "characters" ("user_id", lower(trim("name")))
+        WHERE "user_id" IS NOT NULL;
+      END IF;
+    END $$`,
   sql`CREATE INDEX IF NOT EXISTS "api_providers_user_id_idx" ON "api_providers" ("user_id")`,
   sql`CREATE TABLE IF NOT EXISTS "tts_clips" (
     "id" uuid PRIMARY KEY NOT NULL,
@@ -195,6 +214,7 @@ const DDL = [
   sql`CREATE INDEX IF NOT EXISTS "tts_clips_user_created_idx" ON "tts_clips" ("user_id", "created_at" DESC)`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_admin" boolean NOT NULL DEFAULT false`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "character_quota" integer NOT NULL DEFAULT 1`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "onboarding_completed" boolean NOT NULL DEFAULT true`,
   sql`CREATE TABLE IF NOT EXISTS "character_quota_requests" (
     "id" uuid PRIMARY KEY NOT NULL,
     "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,

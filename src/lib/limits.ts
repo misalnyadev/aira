@@ -32,6 +32,13 @@ export const MAX_GREETING_CHARS = 1_000;
 /** Batas status singkat di bawah nama karakter. */
 export const MAX_SHORT_BIO_CHARS = 120;
 
+/** Batas detail profil karakter yang diisi terpisah agar mudah diedit. */
+export const MAX_CHARACTER_NAME_CHARS = 80;
+export const MAX_CHARACTER_ORIGIN_CHARS = 120;
+export const MAX_CHARACTER_PROFESSION_CHARS = 100;
+export const MIN_CHARACTER_AGE = 1;
+export const MAX_CHARACTER_AGE = 120;
+
 /** Batas label peran karakter di Tim 1. */
 export const MAX_TEAM_ROLE_CHARS = 120;
 

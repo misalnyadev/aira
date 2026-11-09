@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       passwordHash: users.passwordHash,
       isAdmin: users.isAdmin,
       characterQuota: users.characterQuota,
+      onboardingCompleted: users.onboardingCompleted,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
       email: row.email,
       isAdmin: Boolean(row.isAdmin),
       characterQuota: row.characterQuota,
+      onboardingCompleted: Boolean(row.onboardingCompleted),
     },
   });
 }

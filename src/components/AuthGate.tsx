@@ -11,6 +11,8 @@ import { useKeyboardPan } from "@/lib/keyboardPan";
 import { useSafeTop } from "@/lib/safeTop";
 import { useScrollGuard } from "@/lib/scrollGuard";
 import { ThemeQuickToggle } from "./ThemeToggle";
+import { GENDER_OPTIONS, type Gender } from "@/lib/gender";
+import { MAX_AGE, MAX_ABOUT_CHARS, MAX_DISPLAY_NAME_CHARS, MAX_NICKNAME_CHARS, MAX_OCCUPATION_CHARS, MIN_AGE } from "@/lib/limits";
 
 type AuthContextValue = {
   user: AuthUser;
@@ -18,6 +20,8 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
   /** Dipanggil saat API membalas 401 — sesi sudah tidak berlaku. */
   expire: () => void;
+  /** Menutup wizard hanya setelah API key dan karakter pertama tersimpan. */
+  completeOnboarding: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -45,6 +49,12 @@ export function AuthGate({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [gender, setGender] = useState<Gender>("");
+  const [age, setAge] = useState("");
+  const [occupation, setOccupation] = useState("");
+  const [about, setAbout] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,9 +74,13 @@ export function AuthGate({
     setError("Sesi kamu sudah berakhir. Silakan masuk lagi.");
   }, []);
 
+  const completeOnboarding = useCallback(() => {
+    setUser((current) => current ? { ...current, onboardingCompleted: true } : current);
+  }, []);
+
   const contextValue = useMemo<AuthContextValue | null>(
-    () => (user ? { user, signOut, expire } : null),
-    [user, signOut, expire]
+    () => (user ? { user, signOut, expire, completeOnboarding } : null),
+    [user, signOut, expire, completeOnboarding]
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,7 +94,14 @@ export function AuthGate({
     const result =
       mode === "login"
         ? await apiLogin(email, password)
-        : await apiRegister(email, password, inviteCode);
+        : await apiRegister(email, password, inviteCode, {
+            displayName,
+            nickname,
+            gender,
+            age: age.trim() ? Number(age) : null,
+            occupation,
+            about,
+          });
 
     setBusy(false);
 
@@ -112,7 +133,7 @@ export function AuthGate({
             </h1>
             <p className="mt-1.5 text-sm text-ink-soft">
               {isRegister
-                ? "Buat akun pakai kode undangan."
+                ? "Buat akun dengan kode undangan dan isi profil singkat."
                 : "Masuk untuk melanjutkan percakapanmu."}
             </p>
           </div>
@@ -146,6 +167,80 @@ export function AuthGate({
                 className={FIELD}
               />
             </div>
+
+            {isRegister && (
+              <div className="space-y-3 rounded-2xl border border-line bg-surface-2/50 p-3.5">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">Profil akun</h2>
+                  <p className="mt-0.5 text-[11px] text-muted">Nama wajib diisi; detail lainnya boleh dilengkapi nanti.</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-soft">Nama kamu</label>
+                  <input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    autoComplete="name"
+                    required
+                    maxLength={MAX_DISPLAY_NAME_CHARS}
+                    placeholder="Nama tampilan"
+                    className={FIELD}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-soft">Panggilan (opsional)</label>
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    maxLength={MAX_NICKNAME_CHARS}
+                    placeholder="Mau dipanggil apa?"
+                    className={FIELD}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-soft">Usia</label>
+                    <input
+                      type="number"
+                      min={MIN_AGE}
+                      max={MAX_AGE}
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="Opsional"
+                      className={FIELD}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-soft">Gender</label>
+                    <select value={gender} onChange={(e) => setGender(e.target.value as Gender)} className={FIELD}>
+                      {GENDER_OPTIONS.map(({ value, label }) => (
+                        <option key={value || "unspecified"} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-soft">Kesibukan (opsional)</label>
+                  <input
+                    value={occupation}
+                    onChange={(e) => setOccupation(e.target.value)}
+                    maxLength={MAX_OCCUPATION_CHARS}
+                    placeholder="Pekerjaan atau kegiatan"
+                    className={FIELD}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-soft">Tentang kamu (opsional)</label>
+                  <textarea
+                    value={about}
+                    onChange={(e) => setAbout(e.target.value)}
+                    maxLength={MAX_ABOUT_CHARS}
+                    rows={2}
+                    placeholder="Hal yang ingin karakter tahu tentangmu"
+                    className={`${FIELD} resize-none`}
+                  />
+                </div>
+              </div>
+            )}
 
             {isRegister && (
               <div>

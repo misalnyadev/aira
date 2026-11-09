@@ -55,6 +55,8 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   /** Kuota maksimal pembuatan karakter milik sendiri (bawaan 1 untuk user biasa). */
   characterQuota: integer("character_quota").notNull().default(1),
+  /** Existing accounts keep the completed default; only new signups enter first-run setup. */
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(true),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -100,6 +102,12 @@ export const characters = pgTable("characters", {
   userId: uuid("user_id"),
   name: text("name").notNull(),
   gender: text("gender").notNull().default(""),
+  /** Usia karakter fiktif; null untuk karakter lama yang belum mengaturnya. */
+  age: integer("age"),
+  /** Kota/daerah asal karakter, bila diisi. */
+  origin: text("origin").notNull().default(""),
+  /** Profesi atau peran karakter, bila diisi. */
+  profession: text("profession").notNull().default(""),
   /** Bisa berupa path `/uploads/...` (lokal) atau `/api/attachments/{id}` (Vercel). */
   avatarUrl: text("avatar_url"),
   shortBio: text("short_bio").notNull().default(""),
@@ -172,7 +180,11 @@ export const characters = pgTable("characters", {
     .$defaultFn(() => generateCharacterPin()),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("characters_user_name_unique_idx")
+    .on(table.userId, sql`lower(trim(${table.name}))`)
+    .where(sql`${table.userId} IS NOT NULL`),
+]);
 
 export const messages = pgTable("messages", {
   id: uuid("id")
