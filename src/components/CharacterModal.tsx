@@ -172,11 +172,25 @@ export function CharacterModal({
         maxSize: 512,
         quality: 0.86,
       });
-      const fd = new FormData();
-      fd.append("file", compressed);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal mengunggah foto.");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": compressed.type || "image/jpeg" },
+        body: compressed,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: unknown;
+        url?: unknown;
+      } | null;
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : `Gagal mengunggah foto (HTTP ${res.status}).`
+        );
+      }
+      if (typeof data?.url !== "string" || !data.url) {
+        throw new Error("Server tidak mengembalikan alamat foto.");
+      }
       setAvatarUrl(data.url);
       setCropSource(null);
     } catch (err) {

@@ -7,7 +7,7 @@ import {
   sanitizeAttachmentFileName,
 } from "@/lib/chatAttachmentTypes";
 import { extractChatDocument } from "@/lib/extractChatDocument";
-import { saveUploadedFile } from "@/lib/uploads";
+import { saveUploadedFile, storeImage } from "@/lib/uploads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +21,35 @@ export async function POST(req: Request) {
   const user = await requireUser();
   if (!user) {
     return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
+  }
+
+  const contentType = (req.headers.get("content-type") ?? "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+
+  // Avatar uploads send raw image bytes, avoiding multipart parsing for this request.
+  if (contentType.startsWith("image/")) {
+    const buffer = Buffer.from(await req.arrayBuffer());
+    if (!buffer.length) {
+      return NextResponse.json({ error: "Data gambar kosong." }, { status: 400 });
+    }
+    if (buffer.length > MAX_IMAGE_SIZE) {
+      return NextResponse.json(
+        { error: "Ukuran gambar terlalu besar (maksimal 6MB)." },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const url = await storeImage(buffer, contentType, "avatar", user.id);
+      return NextResponse.json({ url });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Gagal menyimpan gambar." },
+        { status: 500 }
+      );
+    }
   }
 
   const formData = await req.formData();
