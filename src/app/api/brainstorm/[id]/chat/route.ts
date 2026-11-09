@@ -86,7 +86,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       {
         error:
           roomMode === "scene"
-            ? "Reka Adegan perlu 1–3 karakter."
+            ? "Adegan perlu 1–3 karakter."
             : "Brainstorm perlu 2–3 karakter.",
       },
       { status: 400 }
