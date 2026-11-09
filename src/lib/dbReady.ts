@@ -13,6 +13,7 @@ const DDL = [
     "id" uuid PRIMARY KEY NOT NULL,
     "email" text NOT NULL UNIQUE,
     "password_hash" text NOT NULL,
+    "gender" text NOT NULL DEFAULT '',
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE TABLE IF NOT EXISTS "sessions" (
@@ -36,6 +37,7 @@ const DDL = [
   sql`CREATE TABLE IF NOT EXISTS "characters" (
     "id" uuid PRIMARY KEY NOT NULL,
     "name" text NOT NULL,
+    "gender" text NOT NULL DEFAULT '',
     "avatar_url" text,
     "short_bio" text DEFAULT '' NOT NULL,
     "personality" text DEFAULT '' NOT NULL,
@@ -81,11 +83,13 @@ const DDL = [
   // Semua memakai IF NOT EXISTS / DEFAULT supaya aman dijalankan berulang.
   sql`ALTER TABLE "api_providers" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "gender" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "bible" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "owner_relationship" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "attachments" ADD COLUMN IF NOT EXISTS "user_id" uuid`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "display_name" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nickname" text NOT NULL DEFAULT ''`,
+  sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "gender" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "age" integer`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "occupation" text NOT NULL DEFAULT ''`,
   sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "about" text NOT NULL DEFAULT ''`,

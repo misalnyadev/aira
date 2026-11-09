@@ -1,3 +1,4 @@
+import { normalizeGender, type Gender } from "./gender";
 import {
   MAX_ABOUT_CHARS,
   MAX_AGE,
@@ -18,6 +19,7 @@ const MAX_AVATAR_URL_CHARS = 500;
 export type UserProfile = {
   displayName: string;
   nickname: string;
+  gender: Gender;
   age: number | null;
   occupation: string;
   about: string;
@@ -27,6 +29,7 @@ export type UserProfile = {
 export const EMPTY_PROFILE: UserProfile = {
   displayName: "",
   nickname: "",
+  gender: "",
   age: null,
   occupation: "",
   about: "",
@@ -39,6 +42,7 @@ export function hasProfileContent(profile: UserProfile | null | undefined): bool
   return Boolean(
     profile.displayName?.trim() ||
       profile.nickname?.trim() ||
+      profile.gender ||
       profile.occupation?.trim() ||
       profile.about?.trim() ||
       profile.age
@@ -57,6 +61,7 @@ export type ProfileCheck = { ok: true; profile: UserProfile } | { ok: false; err
 export function normalizeProfile(input: {
   displayName?: unknown;
   nickname?: unknown;
+  gender?: unknown;
   age?: unknown;
   occupation?: unknown;
   about?: unknown;
@@ -66,8 +71,13 @@ export function normalizeProfile(input: {
 
   const displayName = str(input.displayName);
   const nickname = str(input.nickname);
+  const gender = normalizeGender(input.gender);
   const occupation = str(input.occupation);
   const about = str(input.about);
+
+  if (gender === null) {
+    return { ok: false, error: "Pilih jenis kelamin/gender dari opsi yang tersedia." };
+  }
 
   if (displayName.length > MAX_DISPLAY_NAME_CHARS) {
     return { ok: false, error: `Nama maksimal ${MAX_DISPLAY_NAME_CHARS} karakter.` };
@@ -112,6 +122,6 @@ export function normalizeProfile(input: {
 
   return {
     ok: true,
-    profile: { displayName, nickname, age, occupation, about, avatarUrl },
+    profile: { displayName, nickname, gender, age, occupation, about, avatarUrl },
   };
 }

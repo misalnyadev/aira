@@ -1,8 +1,10 @@
 import type { UserProfile } from "@/lib/userProfile";
+import { genderLabel } from "@/lib/gender";
 
 export const OWNER_PROFILE_SHARE_OPTIONS = [
   { field: "displayName", label: "Nama tampilan" },
   { field: "nickname", label: "Panggilan" },
+  { field: "gender", label: "Gender / jenis kelamin" },
   { field: "age", label: "Usia" },
   { field: "occupation", label: "Kesibukan" },
   { field: "about", label: "Cerita singkat tentang pemilik" },
@@ -56,6 +58,7 @@ export function buildInvitedCharacterContext({
   const profileValues: Partial<Record<OwnerProfileShareField, string>> = {
     displayName: ownerProfile?.displayName ?? "",
     nickname: ownerProfile?.nickname ?? "",
+    gender: genderLabel(ownerProfile?.gender),
     age: ownerProfile?.age ? `${ownerProfile.age} tahun` : "",
     occupation: ownerProfile?.occupation ?? "",
     about: ownerProfile?.about ?? "",
@@ -63,6 +66,7 @@ export function buildInvitedCharacterContext({
   const profileLabels: Record<OwnerProfileShareField, string> = {
     displayName: "Nama tampilan pemilik",
     nickname: "Panggilan pemilik",
+    gender: "Gender pemilik",
     age: "Usia pemilik",
     occupation: "Kesibukan pemilik",
     about: "Cerita singkat pemilik",
@@ -78,7 +82,7 @@ export function buildInvitedCharacterContext({
   return `=== BRIEF UNDANGAN: IDENTITASMU TETAP SAMA ===
 Kamu tetap ${characterName}, karakter yang dibuat dan dimiliki oleh pemilik aslimu. Kamu sedang hadir sebagai talent/tamu undangan dari pemilikmu untuk berbicara dengan pengguna lain; pengundang saat ini bukan pemilikmu dan kamu bukan karakter baru miliknya.
 Profil "Tentang lawan bicara" pada prompt ini merujuk kepada pengundang saat ini, bukan pemilikmu. Jangan mencampur identitas, hubungan, atau cerita mereka.
-${ownerIdentity ? `Identitas pemilik yang boleh kamu sebut: ${ownerIdentity}.` : "Pemilik aslimu tetap ada, tetapi nama dan detail profilnya tidak diizinkan untuk dibagikan dalam sesi undangan ini."}
+${ownerIdentity ? `Identitas pemilik yang boleh kamu sebut: ${ownerIdentity}.` : "Nama pemilik tidak diizinkan untuk dibagikan dalam sesi undangan ini; gunakan hanya fakta profil yang tercantum di daftar izin."}
 - Tetap berbicara sebagai dirimu sendiri. Kamu boleh menyebut bahwa kamu datang sebagai undangan/talent bila relevan, tetapi jangan mengaku sebagai pemilikmu atau membuat janji atas nama pemilik.
 - Kamu tetap mengenal rekan Tim 1 hanya melalui konteks Tim 1 yang memang diberikan dan diizinkan. Jangan mengarang anggota, hubungan, atau kejadian tim yang tidak ada di konteks.
 - Untuk pertanyaan tentang pemilikmu, gunakan hanya fakta yang tercantum pada daftar izin di bawah. Jangan menyimpulkan detail privat lain dari Bible, ingatan, atau hal yang tidak diberikan. Jika tidak ada fakta yang diizinkan atau pertanyaannya menyangkut hal privat, jawab sopan bahwa kamu tidak bisa membagikannya.

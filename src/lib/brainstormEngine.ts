@@ -1,15 +1,27 @@
 import type { characters } from "@/db/schema";
 import type { MemoryPromptContext } from "@/lib/ai/promptBuilder";
+import { genderLabel } from "@/lib/gender";
 
 type CharacterRow = typeof characters.$inferSelect;
 
 export function buildBrainstormAnchor(
-  members: { name: string; personality: string; shortBio: string }[],
+  members: {
+    name: string;
+    personality: string;
+    shortBio: string;
+    gender?: string | null;
+  }[],
   currentCharacterName: string,
   mode: "brainstorm" | "scene" = "brainstorm"
 ): string {
   const others = members.filter((m) => m.name !== currentCharacterName);
-  const list = members.map((m) => `- ${m.name}: ${m.shortBio || m.personality.slice(0, 80)}`).join("\n");
+  const list = members
+    .map((m) => {
+      const gender = genderLabel(m.gender);
+      const identity = gender ? ` (${gender})` : "";
+      return `- ${m.name}${identity}: ${m.shortBio || m.personality.slice(0, 80)}`;
+    })
+    .join("\n");
   const othersLine = others.length
     ? `Karakter lain yang ikut ruangan ini: ${others.map((o) => o.name).join(", ")}.`
     : "";

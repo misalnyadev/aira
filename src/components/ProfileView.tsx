@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { QuotaRequestSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
+import { GENDER_OPTIONS, type Gender } from "@/lib/gender";
 import { compressImageFile } from "@/lib/compressImage";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import {
@@ -101,6 +102,7 @@ export function ProfileView({
   const [nickname, setNickname] = useState(
     profile.nickname.slice(0, MAX_NICKNAME_CHARS)
   );
+  const [gender, setGender] = useState<Gender>(profile.gender ?? "");
   const [age, setAge] = useState(profile.age ? String(profile.age) : "");
   const [occupation, setOccupation] = useState(profile.occupation);
   const [about, setAbout] = useState(profile.about);
@@ -179,6 +181,7 @@ export function ProfileView({
         body: JSON.stringify({
           displayName,
           nickname,
+          gender,
           age: age.trim() === "" ? null : age.trim(),
           occupation,
           about,
@@ -469,6 +472,26 @@ export function ProfileView({
                   {charCount(occupation, MAX_OCCUPATION_CHARS)}
                 </p>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Jenis kelamin / gender (opsional)
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as Gender)}
+                className={FIELD}
+              >
+                {GENDER_OPTIONS.map(({ value, label }) => (
+                  <option key={value || "unspecified"} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-muted">
+                Kalau tidak diisi, karakter tidak akan menebak dari nama atau foto. Untuk “Lainnya”, kamu bisa menambahkan detail di cerita singkat.
+              </p>
             </div>
 
             <div>

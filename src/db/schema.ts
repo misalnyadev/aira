@@ -26,6 +26,7 @@ export const users = pgTable("users", {
    */
   displayName: text("display_name").notNull().default(""),
   nickname: text("nickname").notNull().default(""),
+  gender: text("gender").notNull().default(""),
   age: integer("age"),
   occupation: text("occupation").notNull().default(""),
   about: text("about").notNull().default(""),
@@ -98,6 +99,7 @@ export const characters = pgTable("characters", {
   /** Pemilik karakter. Null hanya untuk data lama sebelum ada sistem akun. */
   userId: uuid("user_id"),
   name: text("name").notNull(),
+  gender: text("gender").notNull().default(""),
   /** Bisa berupa path `/uploads/...` (lokal) atau `/api/attachments/{id}` (Vercel). */
   avatarUrl: text("avatar_url"),
   shortBio: text("short_bio").notNull().default(""),

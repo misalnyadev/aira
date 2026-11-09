@@ -13,6 +13,7 @@ import { parseCharacterMedia } from "@/lib/characterMedia";
 import { DEFAULT_CHAT_BACKGROUND, parseOptionalChatBackground } from "@/lib/chatBackground";
 import { loadActiveContactThreadsForUser } from "@/lib/contactsServer";
 import { ensureDb } from "@/lib/dbReady";
+import { normalizeGender } from "@/lib/gender";
 import { normalizeOwnerProfileShareFields } from "@/lib/characterInvite";
 import {
   parseCharacterSkillPortfolio,
@@ -208,6 +209,7 @@ export async function POST(req: Request) {
 
   const {
     name,
+    gender,
     avatarUrl,
     shortBio,
     skillPortfolio,
@@ -223,6 +225,7 @@ export async function POST(req: Request) {
     shareOwnerProfileFields,
   } = body as {
     name?: string;
+    gender?: unknown;
     avatarUrl?: string;
     shortBio?: string;
     skillPortfolio?: unknown;
@@ -237,6 +240,11 @@ export async function POST(req: Request) {
     shareTeamMemory?: boolean;
     shareOwnerProfileFields?: unknown;
   };
+
+  const normalizedGender = normalizeGender(gender);
+  if (normalizedGender === null) {
+    return NextResponse.json({ error: "Pilih jenis kelamin/gender dari opsi yang tersedia." }, { status: 400 });
+  }
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Nama karakter wajib diisi." }, { status: 400 });
@@ -326,6 +334,7 @@ export async function POST(req: Request) {
     .values({
       userId: user.id,
       name: name.trim(),
+      gender: normalizedGender,
       avatarUrl: avatarUrl?.trim() || null,
       shortBio: (shortBio ?? "").trim(),
       skillPortfolio: JSON.stringify(skillValidation.skills),

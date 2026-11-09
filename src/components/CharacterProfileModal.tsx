@@ -6,6 +6,7 @@ import type { CharacterMedia } from "@/lib/characterMedia";
 import { DEFAULT_CHAT_BACKGROUND, type ChatBackground } from "@/lib/chatBackground";
 import type { CharacterVoiceConfig, TtsAccountSummary } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
+import { genderLabel } from "@/lib/gender";
 import type { CharacterDetail } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
@@ -54,6 +55,7 @@ export function CharacterProfileModal({
 }) {
   const [showBible, setShowBible] = useState(false);
   const hasBible = Boolean(character.bible?.trim());
+  const characterGenderLabel = genderLabel(character.gender);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -96,6 +98,9 @@ export function CharacterProfileModal({
             <Avatar name={character.name} src={character.avatarUrl} size={104} ring />
             <h3 className="mt-2 font-display text-xl font-bold text-ink">{character.name}</h3>
             {character.shortBio && <p className="text-sm text-ink-soft">{character.shortBio}</p>}
+            {characterGenderLabel && (
+              <p className="text-xs text-muted">Jenis kelamin / gender: {characterGenderLabel}</p>
+            )}
             {providerLabel && (
               <span className="rounded-full bg-surface-2 px-3 py-1 text-[12px] font-medium text-ink-soft">
                 {providerLabel}
