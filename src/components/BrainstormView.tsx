@@ -138,7 +138,7 @@ export function BrainstormView({
                           </span>
                         )}
                       </div>
-                      <span className="shrink-0 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink">
+                      <span className="shrink-0 rounded-full bg-brand px-2.5 py-1 text-[11px] leading-4 font-semibold text-brand-ink">
                         Temui
                       </span>
                     </div>
