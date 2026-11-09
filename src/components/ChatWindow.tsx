@@ -503,7 +503,7 @@ export function ChatWindow({
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/55 px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
@@ -594,13 +594,15 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/55 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           <button
             onClick={onBack}
-            className={`shrink-0 p-[5px] text-ink-soft transition active:opacity-50 ${showBackOnDesktop ? "" : "md:hidden"}`}
+            className={`shrink-0 p-[5px] text-ink-soft transition active:opacity-50 ${
+              visualMode === "meetup" ? "rounded-full bg-surface/35 backdrop-blur-sm" : ""
+            } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-[30px] w-[30px]" />
@@ -608,33 +610,45 @@ export function ChatWindow({
 
           <button
             onClick={onOpenProfile}
-            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            className="flex min-w-0 flex-1 items-center text-left"
             title="Lihat profil karakter"
           >
-            <Avatar name={character.name} src={character.avatarUrl} size={40} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
-              <p
-                className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}
-                title={
-                  isTyping || isSpeaking || sceneLabel
-                    ? undefined
-                    : `${presenceLine} · ${wibAmbient.label} WIB`
-                }
-              >
-                {isTyping
-                  ? "sedang mengetik..."
-                  : isSpeaking
-                    ? "sedang berbicara..."
-                    : sceneLabel ?? presenceLine}
-              </p>
+            <div
+              className={`inline-flex min-w-0 max-w-full items-center gap-3 ${
+                visualMode === "meetup"
+                  ? "rounded-full bg-surface/35 py-1 pl-1 pr-3.5 backdrop-blur-sm"
+                  : ""
+              }`}
+            >
+              <Avatar name={character.name} src={character.avatarUrl} size={40} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+                <p
+                  className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}
+                  title={
+                    isTyping || isSpeaking || sceneLabel
+                      ? undefined
+                      : `${presenceLine} · ${wibAmbient.label} WIB`
+                  }
+                >
+                  {isTyping
+                    ? "sedang mengetik..."
+                    : isSpeaking
+                      ? "sedang berbicara..."
+                      : sceneLabel ?? presenceLine}
+                </p>
+              </div>
             </div>
           </button>
 
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="flex shrink-0 items-center gap-1 rounded-full bg-surface/55 px-2.5 py-1.5 text-xs font-semibold text-ink backdrop-blur-md transition hover:bg-surface/70"
+              className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink backdrop-blur-sm transition ${
+                visualMode === "meetup"
+                  ? "bg-surface/35 hover:bg-surface/45"
+                  : "bg-surface/55 hover:bg-surface/70"
+              }`}
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -645,7 +659,9 @@ export function ChatWindow({
 
           <button
             onClick={onOpenVoice}
-            className="relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex"
+            className={`relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex ${
+              visualMode === "meetup" ? "bg-surface/35 backdrop-blur-sm" : ""
+            }`}
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
