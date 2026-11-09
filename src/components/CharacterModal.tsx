@@ -1132,6 +1132,7 @@ export function CharacterModal({
           source={cropSource}
           title="Atur Foto Karakter"
           busy={uploading}
+          error={error}
           onCancel={() => setCropSource(null)}
           onConfirm={uploadCroppedAvatar}
           onPickAnother={() => fileRef.current?.click()}

@@ -937,6 +937,7 @@ export function ProfileView({
           source={cropSource}
           title="Atur Foto Profil Saya"
           busy={uploading}
+          error={error}
           onCancel={() => setCropSource(null)}
           onConfirm={uploadCroppedAvatar}
           onPickAnother={() => fileRef.current?.click()}

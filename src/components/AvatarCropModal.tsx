@@ -17,6 +17,7 @@ export function AvatarCropModal({
   source,
   title = "Atur Foto Profil",
   busy = false,
+  error = null,
   onCancel,
   onConfirm,
   onPickAnother,
@@ -25,6 +26,7 @@ export function AvatarCropModal({
   source: File | string;
   title?: string;
   busy?: boolean;
+  error?: string | null;
   onCancel: () => void;
   onConfirm: (croppedFile: File) => Promise<void> | void;
   onPickAnother?: () => void;
@@ -429,9 +431,9 @@ export function AvatarCropModal({
             </div>
           </div>
 
-          {loadError && (
+          {(loadError || error) && (
             <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-300">
-              {loadError}
+              {loadError || error}
             </p>
           )}
         </div>
