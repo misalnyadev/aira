@@ -230,9 +230,11 @@ export function Composer({
             onClick={() => fileRef.current?.click()}
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
-              transparent
-                ? "rounded-full bg-surface/35 p-1.5 text-ink"
-                : "p-[5px] text-ink-soft"
+              clearSurface
+                ? "rounded-full bg-surface/45 p-1.5 text-ink shadow-md backdrop-blur-sm"
+                : transparent
+                  ? "rounded-full bg-surface/35 p-1.5 text-ink"
+                  : "p-[5px] text-ink-soft"
             }`}
             title="Kirim foto"
             aria-label="Lampirkan foto"
