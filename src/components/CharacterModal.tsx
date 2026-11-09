@@ -192,7 +192,7 @@ export function CharacterModal({
     setCropSource(file);
   }
 
-  async function generateCharacterProfile(regenerateProfession = false) {
+  async function generateCharacterProfile() {
     if (generating) return;
     const nameProblem = name.trim() ? characterNameError(name) : null;
     if (nameProblem) {
@@ -209,7 +209,6 @@ export function CharacterModal({
         body: JSON.stringify({
           archetype: initial ? "custom" : starterArchetype,
           concept: starterConcept,
-          ...(regenerateProfession ? { fieldsToRegenerate: ["profession"] } : {}),
           name,
           age: age.trim() ? Number(age) : null,
           gender,
@@ -227,16 +226,6 @@ export function CharacterModal({
       if (!res.ok || !data?.draft) {
         throw new Error(data?.error || "Gagal membuat draf karakter.");
       }
-      if (regenerateProfession) {
-        const suggestion = (data.draft as { profession?: unknown }).profession;
-        if (typeof suggestion !== "string" || !suggestion.trim()) {
-          throw new Error("AI belum menghasilkan usulan profesi yang bisa dipakai. Coba lagi.");
-        }
-        setProfession(suggestion.trim());
-        setGenerateNotice("Usulan profesi terisi. Tinjau dan sesuaikan sebelum menyimpan.");
-        return;
-      }
-
       const draft = data.draft as {
         name: string;
         age: number | null;
@@ -630,19 +619,9 @@ export function CharacterModal({
               />
             </div>
             <div>
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <label className="block text-xs font-medium text-ink-soft">Profesi (opsional)</label>
-                {initial && (
-                  <button
-                    type="button"
-                    disabled={generating || !hasAiProvider}
-                    onClick={() => void generateCharacterProfile(true)}
-                    className="shrink-0 text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {generating ? "AI menyusun..." : "✨ Usulkan profesi"}
-                  </button>
-                )}
-              </div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Profesi (opsional)
+              </label>
               <input
                 value={profession}
                 onChange={(event) => setProfession(event.target.value)}
@@ -653,7 +632,7 @@ export function CharacterModal({
               {initial && (
                 <div className="mt-2 space-y-1.5">
                   <p className="text-[11px] leading-relaxed text-muted">
-                    AI melengkapi field teks yang kosong tanpa menimpa isian lain. Untuk usulan profesi saja, gunakan tombol di label Profesi.
+                    AI melengkapi field teks yang kosong tanpa menimpa isian lain, termasuk profesi yang sudah kamu isi.
                   </p>
                   <label className="block text-[11px] font-medium text-ink-soft">
                     Arahan tambahan untuk AI (opsional)
@@ -672,7 +651,7 @@ export function CharacterModal({
                     onClick={() => void generateCharacterProfile()}
                     className="w-full rounded-xl border border-brand/30 bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {generating ? "AI sedang melengkapi..." : "✨ Isi field kosong dengan AI"}
+                    {generating ? "AI sedang melengkapi..." : "✨ Bantu isi field kosong dengan AI"}
                   </button>
                   {!hasAiProvider && (
                     <p className="text-[11px] text-amber-700 dark:text-amber-300">Tambahkan API key terlebih dulu agar AI bisa membantu.</p>
