@@ -12,6 +12,7 @@ import {
 import { normalizeChatBackground, parseChatBackground } from "@/lib/chatBackground";
 import { ensureDb } from "@/lib/dbReady";
 import { normalizeGender } from "@/lib/gender";
+import { normalizeCharacterStoryFrequency, parseCharacterStoryFrequency } from "@/lib/characterStoryAuto";
 import { normalizeOwnerProfileShareFields, parseOwnerProfileShareFields } from "@/lib/characterInvite";
 import {
   parseCharacterSkillPortfolio,
@@ -66,6 +67,9 @@ function serializeDetail(row: typeof characters.$inferSelect) {
     memoryUpdatedAt: row.memoryUpdatedAt ? row.memoryUpdatedAt.toISOString() : null,
     browsingEnabled: Boolean(row.browsingEnabled),
     proactiveEnabled: Boolean(row.proactiveEnabled),
+    storyAutoEnabled: Boolean(row.storyAutoEnabled),
+    storyAutoFrequency: normalizeCharacterStoryFrequency(row.storyAutoFrequency),
+    storyAutoLastAttemptAt: row.storyAutoLastAttemptAt?.toISOString() ?? null,
     invitePin: row.invitePin ?? null,
   };
 }
@@ -121,6 +125,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     shareOwnerProfileFields,
     browsingEnabled,
     proactiveEnabled,
+    storyAutoEnabled,
+    storyAutoFrequency,
   } = body as {
     name?: string;
     gender?: unknown;
@@ -147,6 +153,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     shareOwnerProfileFields?: unknown;
     browsingEnabled?: boolean;
     proactiveEnabled?: boolean;
+    storyAutoEnabled?: unknown;
+    storyAutoFrequency?: unknown;
   };
 
   if (personality !== undefined && personality.trim().length > MAX_PERSONALITY_CHARS) {
@@ -282,6 +290,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (typeof proactiveEnabled === "boolean") {
     updates.proactiveEnabled = proactiveEnabled;
+  }
+  if (storyAutoEnabled !== undefined && typeof storyAutoEnabled !== "boolean") {
+    return NextResponse.json({ error: "Status otomatis harus bernilai aktif atau nonaktif." }, { status: 400 });
+  }
+  if (typeof storyAutoEnabled === "boolean") {
+    updates.storyAutoEnabled = storyAutoEnabled;
+  }
+  if (storyAutoFrequency !== undefined) {
+    const normalizedFrequency = parseCharacterStoryFrequency(storyAutoFrequency);
+    if (!normalizedFrequency) {
+      return NextResponse.json({ error: "Frekuensi Story otomatis tidak valid." }, { status: 400 });
+    }
+    updates.storyAutoFrequency = normalizedFrequency;
   }
   if (typeof memorySummary === "string") {
     const trimmed = memorySummary.trim();

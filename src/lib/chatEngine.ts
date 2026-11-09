@@ -4,6 +4,7 @@ import { apiProviders, characters, messages, users, type ProviderType } from "@/
 import {
   AiProviderError,
   BUBBLE_DELIMITER,
+  buildStoryTalentSystemPrompt,
   buildSystemPrompt,
   generateCharacterReply,
   isKeyRotatableError,
@@ -61,6 +62,11 @@ import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
 
 export type Character = typeof characters.$inferSelect;
 export type Provider = typeof apiProviders.$inferSelect;
+type CharacterModelContext = Pick<Character, "id" | "userId" | "providerId" | "model">;
+export type ProfileStoryCharacter = Pick<
+  Character,
+  "id" | "userId" | "name" | "gender" | "shortBio" | "personality" | "bible" | "skillPortfolio" | "providerId" | "model"
+>;
 
 export const NO_PROVIDER_ERROR =
   "Belum ada API key yang dikonfigurasi. Buka Pengaturan (⚙️) untuk menambahkan API key Gemini, Groq, OpenRouter, atau custom.";
@@ -298,7 +304,7 @@ async function healDeadModelForCandidate({
   keys,
 }: {
   userId: string;
-  character: Character;
+  character: CharacterModelContext;
   candidate: Provider;
   deadModel: string;
   keys: string[];
@@ -512,13 +518,15 @@ async function runTextWithCandidates({
   systemPrompt,
   userText,
   budgetMs = 15_000,
+  fallbackMessage = "Gagal merangkum ingatan.",
 }: {
   userId: string;
   candidates: Provider[];
-  character: Character;
+  character: CharacterModelContext;
   systemPrompt: string;
   userText: string;
   budgetMs?: number;
+  fallbackMessage?: string;
 }): Promise<string> {
   const startedAt = Date.now();
   let lastError: unknown = null;
@@ -576,7 +584,50 @@ async function runTextWithCandidates({
     }
   }
 
-  throw new AiProviderError(toUserFacingError(lastError, "Gagal merangkum ingatan."));
+  throw new AiProviderError(toUserFacingError(lastError, fallbackMessage));
+}
+
+/**
+ * Buat satu StoryTalent teks dari profil karakter saja.
+ * Riwayat chat, profil pemilik, dan memori karakter sengaja tidak dimuat.
+ */
+export async function generateProfileStoryPost({
+  userId,
+  character,
+  candidates,
+}: {
+  userId: string;
+  character: ProfileStoryCharacter;
+  candidates: Provider[];
+}): Promise<string> {
+  const systemPrompt = buildStoryTalentSystemPrompt({
+    name: character.name,
+    gender: character.gender,
+    shortBio: character.shortBio,
+    personality: character.personality,
+    bible: character.bible,
+    skillPortfolio: character.skillPortfolio,
+  });
+  const raw = await runTextWithCandidates({
+    userId,
+    candidates,
+    character,
+    systemPrompt,
+    userText:
+      "Tulis satu StoryTalent singkat yang cocok untuk dipublikasikan sekarang. Ikuti aturan mode StoryTalent dan profil karaktermu saja.",
+    budgetMs: 25_000,
+    fallbackMessage: "Gagal membuat Story otomatis untuk karakter ini.",
+  });
+  const content = splitIntoBubbles(raw)
+    .slice(0, 2)
+    .map((bubble) => bubble.trim())
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 700)
+    .trim();
+
+  if (!content) throw new AiProviderError("Model tidak menghasilkan isi Story.");
+  return content;
 }
 
 /**

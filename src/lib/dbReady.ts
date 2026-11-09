@@ -222,6 +222,13 @@ const DDL = [
   sql`ALTER TABLE "messages" ADD COLUMN IF NOT EXISTS "is_voice_note" boolean DEFAULT false NOT NULL`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_enabled" boolean DEFAULT false NOT NULL`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "proactive_last_at" timestamp with time zone`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "story_auto_enabled" boolean DEFAULT false NOT NULL`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "story_auto_frequency" text DEFAULT 'every_other_day' NOT NULL`,
+  sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "story_auto_last_attempt_at" timestamp with time zone`,
+  sql`DO $$ BEGIN
+      ALTER TABLE "characters" ADD CONSTRAINT "characters_story_auto_frequency_check"
+      CHECK ("story_auto_frequency" IN ('daily', 'every_other_day'));
+    EXCEPTION WHEN duplicate_object THEN null; END $$`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "invite_pin" text`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "characters_invite_pin_idx" ON "characters" ("invite_pin") WHERE "invite_pin" IS NOT NULL`,
   sql`CREATE TABLE IF NOT EXISTS "character_contacts" (

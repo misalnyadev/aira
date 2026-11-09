@@ -6,6 +6,7 @@ import type { CharacterVoiceConfig } from "@/lib/hdVoice";
 import type { OwnerProfileShareField } from "@/lib/characterInvite";
 import type { Gender } from "@/lib/gender";
 import type { CharacterSkill } from "@/lib/characterSkills";
+import type { CharacterStoryFrequency } from "@/lib/characterStoryAuto";
 
 export type ProviderType = "gemini" | "groq" | "openrouter" | "custom" | "grok";
 
@@ -105,6 +106,9 @@ export type CharacterDetail = {
   memoryUpdatedAt: string | null;
   browsingEnabled: boolean;
   proactiveEnabled: boolean;
+  storyAutoEnabled: boolean;
+  storyAutoFrequency: CharacterStoryFrequency;
+  storyAutoLastAttemptAt: string | null;
   invitePin?: string | null;
 };
 

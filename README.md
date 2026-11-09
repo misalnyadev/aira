@@ -70,7 +70,7 @@ git push -u origin main
    | Name | Value |
    |---|---|
    | `DATABASE_URL` | connection string Neon dari Langkah 1 |
-   | `CRON_SECRET` | secret acak untuk pembersihan Story otomatis; buat dengan `openssl rand -hex 32` |
+   | `CRON_SECRET` | secret acak untuk endpoint Cron Story (pembersihan & StoryTalent otomatis); buat dengan `openssl rand -hex 32` |
 
    Simpan `CRON_SECRET` juga di Environment Variables Vercel untuk **Production**. Jangan bagikan nilainya.
 
@@ -161,7 +161,7 @@ Efeknya:
 
 Vercel Cron menjalankan pembersihan harian sekitar pukul **00.00 WIB**. Story yang sudah melewati masa 24 jam dihapus pada jadwal berikutnya (penghapusan fisik dapat terlambat hingga sekitar 24 jam), termasuk video/gambar dan gambar komentar; baris komentar ikut terhapus melalui cascade database. **Reels permanen tidak disentuh.** Jika penghapusan media gagal, baris Story dipertahankan agar bisa dicoba lagi pada jadwal berikutnya.
 
-Atur `CRON_SECRET` di Vercel → **Settings → Environment Variables → Production**. Tanpa secret tersebut, endpoint cron menolak berjalan dan Story tidak dibersihkan. Secret acak dapat dibuat dengan `openssl rand -hex 32`.
+Atur `CRON_SECRET` di Vercel → **Settings → Environment Variables → Production**. Tanpa secret tersebut, endpoint cron menolak berjalan: Story kedaluwarsa tidak dibersihkan dan StoryTalent otomatis untuk karakter tidak diterbitkan. Cron StoryTalent berjalan setiap hari sekitar pukul 18.00 WIB. Secret acak dapat dibuat dengan `openssl rand -hex 32`.
 
 ---
 

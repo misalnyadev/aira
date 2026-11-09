@@ -21,6 +21,7 @@ import {
 } from "@/lib/chatBackground";
 import { compressImageFile } from "@/lib/compressImage";
 import { isDictating } from "@/lib/dictation";
+import type { CharacterStoryFrequency } from "@/lib/characterStoryAuto";
 import {
   DEFAULT_TTS_ACCOUNT_SUMMARY,
   resolveVoiceTarget,
@@ -1296,6 +1297,21 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     }
   }
 
+  function handleCharacterStoryAutoSync(
+    id: string,
+    next: { enabled: boolean; frequency: CharacterStoryFrequency }
+  ) {
+    setProfileDetail((cur) =>
+      cur && cur.id === id
+        ? {
+            ...cur,
+            storyAutoEnabled: next.enabled,
+            storyAutoFrequency: next.frequency,
+          }
+        : cur
+    );
+  }
+
   function handleCharacterMemorySync(id: string, next: MemoryPatch) {
     setCharacters((prev) =>
       prev.map((c) =>
@@ -1886,6 +1902,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           character={profileDetail}
           mode={profileMode}
           providerLabel={profileProviderLabel}
+          hasProvider={providers.some(
+            (provider) => provider.hasKey || (provider.type === "custom" && Boolean(provider.baseUrl))
+          )}
           ttsSummary={ttsSummary}
           voiceSettings={voice}
           onClose={() => setShowProfile(false)}
@@ -1906,6 +1925,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
           onVoiceChange={(next) => handleCharacterVoice(profileDetail.id, next)}
           onMediaChange={(next) => handleCharacterMedia(profileDetail.id, next)}
           onMemoryChange={(next) => handleCharacterMemorySync(profileDetail.id, next)}
+          onStoryAutoChange={(next) => handleCharacterStoryAutoSync(profileDetail.id, next)}
           onNotice={showToast}
         />
       )}

@@ -160,6 +160,12 @@ export const characters = pgTable("characters", {
   proactiveEnabled: boolean("proactive_enabled").notNull().default(false),
   /** Waktu terakhir karakter mengirim sapaan duluan otomatis (penjaga anti-spam). */
   proactiveLastAt: timestamp("proactive_last_at", { withTimezone: true }),
+  /** Publikasikan StoryTalent teks otomatis dari profil karakter bila dinyalakan pemilik. */
+  storyAutoEnabled: boolean("story_auto_enabled").notNull().default(false),
+  /** Jeda publikasi Story otomatis: setiap hari atau setiap dua hari. */
+  storyAutoFrequency: text("story_auto_frequency").notNull().default("every_other_day"),
+  /** Waktu terakhir job otomatis mencoba membuat Story untuk karakter ini. */
+  storyAutoLastAttemptAt: timestamp("story_auto_last_attempt_at", { withTimezone: true }),
   /** Kode PIN bawaan karakter untuk diundang sebagai kontak oleh pengguna lain. */
   invitePin: text("invite_pin")
     .unique()
