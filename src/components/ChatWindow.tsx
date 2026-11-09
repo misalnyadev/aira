@@ -183,10 +183,41 @@ export function ChatWindow({
   const hideMessages = visualMode === "meetup" && Boolean(bubbleStyle.hideMessages);
   const canToggleHideMessages = visualMode === "meetup" && Boolean(onToggleHideChat);
   const minimalBars = Boolean(bubbleStyle.minimalBars);
+  const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
   const backdrop = chatBackgroundProps(background, isDark);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const composerElement = composerRef.current;
+    if (!root || !composerElement || typeof ResizeObserver === "undefined") return;
+
+    const updateComposerHeight = () => {
+      const scroller = scrollRef.current;
+      const wasAtBottom =
+        !scroller || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 120;
+      root.style.setProperty(
+        "--chat-composer-height",
+        `${composerElement.getBoundingClientRect().height}px`
+      );
+      if (wasAtBottom && scroller) {
+        requestAnimationFrame(() => {
+          scroller.scrollTop = scroller.scrollHeight;
+        });
+      }
+    };
+    updateComposerHeight();
+
+    const observer = new ResizeObserver(updateComposerHeight);
+    observer.observe(composerElement);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--chat-composer-height");
+    };
+  }, []);
 
   // Aktivitas harian mengikuti jam WIB — diperbarui tiap menit & saat tab kembali aktif.
   const [wibNow, setWibNow] = useState(() => new Date());
@@ -430,6 +461,7 @@ export function ChatWindow({
 
   return (
     <div
+      ref={rootRef}
       onClick={onScreenTap}
       className={`chat-wallpaper flex h-full min-h-0 flex-1 flex-col ${backdrop.className}`}
       style={backdrop.style}
@@ -471,13 +503,13 @@ export function ChatWindow({
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
         <div
-          className={`z-10 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           <button
             onClick={onBack}
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-6 w-6" />
@@ -486,7 +518,7 @@ export function ChatWindow({
           <div className="min-w-0 flex-1">
             <button
               onClick={onOpenProfile}
-              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/75 py-1 pl-1 pr-3.5 text-left ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface/85 active:scale-[0.98] active:opacity-80"
+              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/55 py-1 pl-1 pr-3.5 text-left backdrop-blur-md transition hover:bg-surface/65 active:scale-[0.98] active:opacity-80"
               aria-label={`Pengaturan ${character.name}`}
               title={`Pengaturan ${character.name}`}
             >
@@ -518,7 +550,7 @@ export function ChatWindow({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -528,7 +560,7 @@ export function ChatWindow({
 
           <button
             onClick={onOpenVoice}
-            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 sm:grid"
+            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 sm:grid"
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
@@ -541,7 +573,7 @@ export function ChatWindow({
           {onVideoCall && (
             <button
               onClick={onVideoCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               aria-label={`Video call dengan ${character.name}`}
               title="Video call"
             >
@@ -552,7 +584,7 @@ export function ChatWindow({
           {onAudioCall && (
             <button
               onClick={onAudioCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/65 text-ink ring-1 ring-line/65 backdrop-blur-md transition hover:bg-surface/80 active:scale-95 active:opacity-70"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink backdrop-blur-md transition hover:bg-surface/65 active:scale-95 active:opacity-70"
               aria-label={`Panggilan suara dengan ${character.name}`}
               title="Panggilan suara"
             >
@@ -562,7 +594,7 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`z-10 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
@@ -602,7 +634,7 @@ export function ChatWindow({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-ink ring-1 ring-line transition hover:bg-line/60"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-surface/55 px-2.5 py-1.5 text-xs font-semibold text-ink backdrop-blur-md transition hover:bg-surface/70"
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -648,7 +680,10 @@ export function ChatWindow({
       )}
 
       {!hideMessages && hasChatVisual && !chatVideoFull && (
-        <div className="px-3 pt-3 sm:px-4">
+        <div
+          className="px-3 sm:px-4"
+          style={{ paddingTop: "calc(max(0.625rem, var(--safe-top)) + 3.875rem)" }}
+        >
           <div className="mx-auto w-full max-w-lg">
             {useMeetupExpressions ? (
               <ChatCallStagePanel
@@ -683,19 +718,26 @@ export function ChatWindow({
               const el = e.currentTarget;
               setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
             }}
-            className={`flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 ${
-              !atBottom
-                ? canToggleHideMessages
-                  ? "pb-24 sm:pb-24"
-                  : "pb-12 sm:pb-12"
-                : canToggleHideMessages
-                  ? "pb-12 sm:pb-12"
-                  : ""
-            } ${
+            className={`flex-1 overflow-y-auto px-3 sm:px-4 ${
               minimalBars
                 ? "[-webkit-mask-image:linear-gradient(to_bottom,transparent,black_16px)] [mask-image:linear-gradient(to_bottom,transparent,black_16px)]"
                 : ""
             }`}
+            style={{
+              paddingTop:
+                hasChatVisual && !chatVideoFull
+                  ? "0.75rem"
+                  : "calc(max(0.625rem, var(--safe-top)) + 3.875rem)",
+              paddingBottom: `calc(var(--chat-composer-height, 4.5rem) + ${
+                !atBottom
+                  ? canToggleHideMessages
+                    ? "6rem"
+                    : "3rem"
+                  : canToggleHideMessages
+                    ? "3rem"
+                    : "0.75rem"
+              })`,
+            }}
           >
             <div className="mx-auto w-full max-w-3xl">
               {items.map(({ message: m, divider }) => (
@@ -868,14 +910,22 @@ export function ChatWindow({
         )}
 
         {!hideMessages && !atBottom && onOpenNotes && (
-          <div className="pointer-events-none absolute inset-x-0 top-2 z-20 px-3 sm:px-4">
+          <div
+            className="pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4"
+            style={{
+              top:
+                hasChatVisual && !chatVideoFull
+                  ? "0.5rem"
+                  : "calc(max(0.625rem, var(--safe-top)) + 3.625rem)",
+            }}
+          >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <button
                 type="button"
                 onClick={onOpenNotes}
                 aria-label={`Catatan Kita bersama ${character.name}`}
                 title="Catatan & Janji Kita"
-                className="pointer-events-auto relative grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+                className="pointer-events-auto relative grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95"
               >
                 <NotesBoardIcon className="h-4 w-4" />
                 {activeNotesCount > 0 && (
@@ -891,9 +941,12 @@ export function ChatWindow({
         )}
         {!hideMessages && !atBottom && (
           <div
-            className={`pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4 ${
-              canToggleHideMessages ? "bottom-14" : "bottom-2"
-            }`}
+            className="pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4"
+            style={{
+              bottom: `calc(var(--chat-composer-height, 4.5rem) + ${
+                canToggleHideMessages ? "3.5rem" : "0.5rem"
+              })`,
+            }}
           >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <button
@@ -904,7 +957,7 @@ export function ChatWindow({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95"
               >
                 <ChevronDownIcon className="h-4 w-4" strokeWidth={1.5} />
               </button>
@@ -913,9 +966,10 @@ export function ChatWindow({
         )}
         {canToggleHideMessages && (
           <div
-            className={`pointer-events-none absolute inset-x-0 bottom-2 z-20 px-3 transition-opacity sm:px-4 ${
+            className={`pointer-events-none absolute inset-x-0 z-20 px-3 transition-opacity sm:px-4 ${
               composerVisible ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
+            style={{ bottom: "calc(var(--chat-composer-height, 4.5rem) + 0.5rem)" }}
           >
             <div className="mx-auto flex w-full max-w-3xl justify-end">
               <button
@@ -928,7 +982,7 @@ export function ChatWindow({
                 aria-label={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
                 aria-pressed={hideMessages}
                 title={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
-                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-ink shadow-md ring-1 ring-line/70 backdrop-blur-md transition hover:bg-surface active:scale-95 disabled:pointer-events-none"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 disabled:pointer-events-none"
               >
                 {hideMessages ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -939,6 +993,7 @@ export function ChatWindow({
 
       {composer && (
         <div
+          ref={composerRef}
           onClick={(e) => e.stopPropagation()}
           onInputCapture={(e) => handleComposerActivity(e.target)}
           onKeyDownCapture={(e) => {
@@ -946,7 +1001,7 @@ export function ChatWindow({
               clearComposerActivity();
             }
           }}
-          className={`z-10 shrink-0 transition-all duration-200 ${
+          className={`absolute inset-x-0 bottom-0 z-30 transition-all duration-200 ${
             composerVisible
               ? "translate-y-0 opacity-100"
               : "pointer-events-none translate-y-2 opacity-0"
