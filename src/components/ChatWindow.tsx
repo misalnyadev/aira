@@ -512,7 +512,7 @@ export function ChatWindow({
           <button
             onClick={onBack}
             className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
-              visualMode === "meetup" ? "bg-surface/45 shadow-md backdrop-blur-sm" : "bg-surface/45 backdrop-blur-md"
+              visualMode === "meetup" ? "bg-surface/45 ring-1 ring-white/40 backdrop-blur-sm" : "bg-surface/45 backdrop-blur-md"
             } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
@@ -628,7 +628,7 @@ export function ChatWindow({
             onClick={onBack}
             className={`shrink-0 p-[5px] transition active:opacity-50 ${
               visualMode === "meetup"
-                ? "rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-sm"
+                ? "rounded-full bg-surface/45 text-ink ring-1 ring-white/40 backdrop-blur-sm"
                 : "text-ink-soft"
             } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}

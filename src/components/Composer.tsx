@@ -231,7 +231,7 @@ export function Composer({
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
               clearSurface
-                ? "rounded-full bg-surface/45 p-1.5 text-ink shadow-md backdrop-blur-sm"
+                ? "rounded-full bg-surface/45 p-1.5 text-ink ring-1 ring-white/40 backdrop-blur-sm"
                 : transparent
                   ? "rounded-full bg-surface/35 p-1.5 text-ink"
                   : "p-[5px] text-ink-soft"
@@ -296,7 +296,7 @@ export function Composer({
             disabled={disabled || (!text.trim() && !imageFile)}
             className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
               clearSurface
-                ? "bg-surface/45 shadow-md backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
+                ? "bg-surface/45 ring-1 ring-white/40 backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
                 : transparent
                   ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
                   : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
