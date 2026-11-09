@@ -1578,7 +1578,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
             key={character.id}
             onSend={handleSend}
             disabled={typingFor === character.id}
-            transparent={Boolean(characterBubble.minimalBars || characterHidden)}
+            transparent={Boolean(characterBubble.minimalBars || characterHidden || isMeetup)}
             blurOnSend={characterHidden}
             onSent={() => setPeekCharId(null)}
             onWake={() => setPeekCharId(character.id)}
