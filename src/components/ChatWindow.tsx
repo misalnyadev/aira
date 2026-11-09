@@ -524,7 +524,7 @@ export function ChatWindow({
               onClick={onOpenProfile}
               className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
                 visualMode === "meetup"
-                  ? "bg-surface/55 hover:bg-surface/65 dark:bg-surface/45 dark:hover:bg-surface/55"
+                  ? "bg-surface/70 hover:bg-surface/75 dark:bg-surface/60 dark:hover:bg-surface/65"
                   : "bg-surface/55 backdrop-blur-md hover:bg-surface/65"
               }`}
               aria-label={`Pengaturan ${character.name}`}
@@ -642,7 +642,7 @@ export function ChatWindow({
             <div
               className={`inline-flex min-w-0 max-w-full items-center gap-3 ${
                 visualMode === "meetup"
-                  ? "rounded-full bg-surface/55 py-1 pl-1 pr-3.5 dark:bg-surface/45"
+                  ? "rounded-full bg-surface/70 py-1 pl-1 pr-3.5 dark:bg-surface/60"
                   : ""
               }`}
             >
