@@ -104,7 +104,7 @@ export async function POST(req: Request) {
   };
   if (mode === "meetup") {
     return NextResponse.json(
-      { error: "Tatap Muka hanya untuk pengguna dan satu karakter. Gunakan Reka Adegan untuk adegan grup." },
+      { error: "Tatap Muka hanya untuk pengguna dan satu karakter. Untuk adegan grup, gunakan menu Adegan." },
       { status: 400 }
     );
   }
@@ -116,9 +116,9 @@ export async function POST(req: Request) {
   const maxMembers = 3;
   const selectionHint =
     roomMode === "scene"
-      ? "Pilih 1–3 karakter untuk Reka Adegan."
+      ? "Pilih 1–3 karakter untuk Adegan."
       : "Pilih 2–3 karakter untuk Brainstorm.";
-  const defaultTitle = roomMode === "scene" ? "Reka Adegan Baru" : "Meja Diskusi Baru";
+  const defaultTitle = roomMode === "scene" ? "Adegan Baru" : "Meja Diskusi Baru";
   const cleanTitle = title?.trim() || defaultTitle;
 
   if (!Array.isArray(characterIds) || characterIds.length < minMembers || characterIds.length > maxMembers) {

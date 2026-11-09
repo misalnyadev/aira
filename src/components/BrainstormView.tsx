@@ -60,13 +60,13 @@ export function BrainstormView({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-app">
       <MenuHeader
         title="MeetUp"
-        description="Tatap Muka - Brainstorm - Reka Adegan"
+        description="Tatap Muka - Brainstorm - Adegan"
         actions={
           <MenuHeaderIconButton
             onClick={() => openCreate(canBrainstorm ? "brainstorm" : "scene")}
             disabled={!canCreateRoom}
             aria-label="Buat ruang bersama"
-            title={canCreateRoom ? "Buat Brainstorm atau Reka Adegan" : "Buat karakter terlebih dulu"}
+            title={canCreateRoom ? "Buat Brainstorm atau Adegan" : "Buat karakter terlebih dulu"}
           >
             <PlusIcon className="h-5 w-5" />
           </MenuHeaderIconButton>
@@ -173,7 +173,7 @@ export function BrainstormView({
                   ? "Buat meja untuk meminta beberapa karakter menanggapi topik secara bergiliran."
                   : characters.length === 0
                     ? "Buat karakter dulu. Brainstorm memerlukan setidaknya dua karakter."
-                    : "Tatap Muka dan Reka Adegan sudah bisa dimulai; tambahkan satu karakter lagi untuk Brainstorm."}
+                    : "Tatap Muka dan Adegan sudah bisa dimulai; tambahkan satu karakter lagi untuk Brainstorm."}
               </p>
               {canBrainstorm ? (
                 <button
@@ -198,7 +198,7 @@ export function BrainstormView({
 
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
-            <h2 className="text-sm font-bold text-ink">Reka Adegan</h2>
+            <h2 className="text-sm font-bold text-ink">Adegan</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               Adegan bersama 1–3 karakter. Default-nya latihan; tandai canon bila masuk cerita utama.
             </p>
@@ -207,12 +207,12 @@ export function BrainstormView({
           {sceneRooms.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
               <h3 className="text-sm font-semibold text-ink">
-                {canCreateRoom ? "Belum ada Reka Adegan" : "Buat karakter untuk mulai Reka Adegan"}
+                {canCreateRoom ? "Belum ada Adegan" : "Buat karakter untuk mulai Adegan"}
               </h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
                 {canCreateRoom
                   ? "Mainkan adegan dengan satu sampai tiga karakter; pilih Latihan atau bagian cerita utama saat membuatnya."
-                  : "Reka Adegan memerlukan minimal satu karakter."}
+                  : "Adegan memerlukan minimal satu karakter."}
               </p>
               {canCreateRoom ? (
                 <button
@@ -349,13 +349,13 @@ function CreateSharedRoomModal({
 
   async function handleCreate() {
     if (!canCreate) {
-      setError(mode === "scene" ? "Pilih 1–3 karakter untuk Reka Adegan." : "Pilih 2–3 karakter untuk Brainstorm.");
+      setError(mode === "scene" ? "Pilih 1–3 karakter untuk Adegan." : "Pilih 2–3 karakter untuk Brainstorm.");
       return;
     }
     setBusy(true);
     setError(null);
     const fallbackTitle =
-      mode === "scene" ? `Reka Adegan — ${picked.length} karakter` : `Brainstorm — ${picked.length} karakter`;
+      mode === "scene" ? `Adegan — ${picked.length} karakter` : `Brainstorm — ${picked.length} karakter`;
     const ok = await onCreate(title.trim() || fallbackTitle, picked, mode, mode === "scene" && sceneCanonical);
     if (!ok) setError("Gagal membuat ruang. Coba lagi.");
     setBusy(false);
@@ -375,7 +375,7 @@ function CreateSharedRoomModal({
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
             <h2 className="font-display text-[15px] font-bold text-ink">
-              {mode === "scene" ? "Buat Reka Adegan" : "Buat Meja Brainstorm"}
+              {mode === "scene" ? "Buat Adegan" : "Buat Meja Brainstorm"}
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               {mode === "scene" ? "Pilih 1–3 karakter untuk bermain adegan." : "Pilih 2–3 karakter untuk berdiskusi."}
@@ -405,7 +405,7 @@ function CreateSharedRoomModal({
                 }`}
                 aria-pressed={mode === value}
               >
-                {value === "scene" ? "Reka Adegan" : "Brainstorm"}
+                {value === "scene" ? "Adegan" : "Brainstorm"}
               </button>
             ))}
           </div>

@@ -194,7 +194,7 @@ export function BrainstormRoomView({
               : mode === "meetup"
                 ? "Tatap Muka · ruang yang sama"
                 : mode === "scene"
-                  ? `Reka Adegan · ${sceneCanonical ? "Canon" : "Latihan"}`
+                  ? `Adegan · ${sceneCanonical ? "Canon" : "Latihan"}`
                   : "Brainstorm · diskusi bersama"}
           </p>
         </div>
@@ -246,7 +246,7 @@ export function BrainstormRoomView({
                   {mode === "meetup"
                     ? "Mulai pertemuan tatap muka"
                     : mode === "scene"
-                      ? "Mulai Reka Adegan"
+                      ? "Mulai Adegan"
                       : "Mulai diskusi di meja ini"}
                 </p>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
