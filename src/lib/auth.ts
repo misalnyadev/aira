@@ -14,6 +14,7 @@ export type AuthUser = {
   email: string;
   isAdmin: boolean;
   characterQuota: number;
+  onboardingCompleted: boolean;
 };
 
 function hashToken(token: string): string {
@@ -54,6 +55,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       email: users.email,
       isAdmin: users.isAdmin,
       characterQuota: users.characterQuota,
+      onboardingCompleted: users.onboardingCompleted,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -66,6 +68,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     email: row.email,
     isAdmin: Boolean(row.isAdmin),
     characterQuota: row.characterQuota ?? DEFAULT_USER_CHARACTER_QUOTA,
+    onboardingCompleted: Boolean(row.onboardingCompleted),
   };
 }
 

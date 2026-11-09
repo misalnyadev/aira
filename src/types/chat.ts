@@ -32,6 +32,9 @@ export type CharacterSummary = {
   id: string;
   name: string;
   avatarUrl: string | null;
+  age?: number | null;
+  origin?: string;
+  profession?: string;
   shortBio: string;
   /** Portofolio keahlian dan layanan yang diatur pemilik karakter. */
   skillPortfolio?: CharacterSkill[];
@@ -79,6 +82,9 @@ export type CharacterDetail = {
   id: string;
   name: string;
   gender: Gender;
+  age: number | null;
+  origin: string;
+  profession: string;
   avatarUrl: string | null;
   shortBio: string;
   skillPortfolio: CharacterSkill[];

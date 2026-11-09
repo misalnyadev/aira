@@ -47,6 +47,12 @@ import {
 import type { UserProfile } from "@/lib/userProfile";
 import { buildSceneContinuityAnchor } from "@/lib/sceneTracker";
 import { extractWebBrowsePlan, gatherWebContext } from "@/lib/webBrowse";
+import {
+  buildCharacterStarterPrompt,
+  parseCharacterStarterDraft,
+  type CharacterStarterDraft,
+  type CharacterStarterInput,
+} from "@/lib/characterStarter";
 
 /**
  * Mesin balasan bersama.
@@ -65,7 +71,7 @@ export type Provider = typeof apiProviders.$inferSelect;
 type CharacterModelContext = Pick<Character, "id" | "userId" | "providerId" | "model">;
 export type ProfileStoryCharacter = Pick<
   Character,
-  "id" | "userId" | "name" | "gender" | "shortBio" | "personality" | "bible" | "skillPortfolio" | "providerId" | "model"
+  "id" | "userId" | "name" | "gender" | "age" | "origin" | "profession" | "shortBio" | "personality" | "bible" | "skillPortfolio" | "providerId" | "model"
 >;
 
 export const NO_PROVIDER_ERROR =
@@ -603,6 +609,9 @@ export async function generateProfileStoryPost({
   const systemPrompt = buildStoryTalentSystemPrompt({
     name: character.name,
     gender: character.gender,
+    age: character.age,
+    origin: character.origin,
+    profession: character.profession,
     shortBio: character.shortBio,
     personality: character.personality,
     bible: character.bible,
@@ -628,6 +637,43 @@ export async function generateProfileStoryPost({
 
   if (!content) throw new AiProviderError("Model tidak menghasilkan isi Story.");
   return content;
+}
+
+/**
+ * Buat draf karakter terstruktur memakai API provider milik akun, tanpa memuat chat atau profil pemilik.
+ */
+export async function generateCharacterStarterDraft({
+  userId,
+  candidates,
+  input,
+  existingNames,
+}: {
+  userId: string;
+  candidates: Provider[];
+  input: CharacterStarterInput;
+  existingNames: string[];
+}): Promise<CharacterStarterDraft> {
+  const raw = await runTextWithCandidates({
+    userId,
+    candidates,
+    character: {
+      id: "00000000-0000-0000-0000-000000000000",
+      userId,
+      providerId: null,
+      model: null,
+    },
+    systemPrompt: buildCharacterStarterPrompt(input, existingNames),
+    userText: "Buat satu draf karakter sesuai data dan aturan system prompt. Keluarkan hanya JSON valid.",
+    budgetMs: 25_000,
+    fallbackMessage: "Gagal membuat draf karakter. Periksa provider atau coba lagi.",
+  });
+  const draft = parseCharacterStarterDraft(raw);
+  if (!draft) {
+    throw new AiProviderError("Model belum menghasilkan format profil yang valid. Coba lagi.", {
+      retryable: false,
+    });
+  }
+  return draft;
 }
 
 /**

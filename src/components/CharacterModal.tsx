@@ -15,7 +15,17 @@ import {
   type CharacterSkill,
 } from "@/lib/characterSkills";
 import {
+  CHARACTER_STARTER_ARCHETYPES,
+  type CharacterStarterArchetype,
+} from "@/lib/characterStarter";
+import { characterNameError, cleanCharacterName, normalizeCharacterName } from "@/lib/characterNames";
+import {
   MAX_BIBLE_CHARS,
+  MAX_CHARACTER_AGE,
+  MAX_CHARACTER_NAME_CHARS,
+  MAX_CHARACTER_ORIGIN_CHARS,
+  MAX_CHARACTER_PROFESSION_CHARS,
+  MIN_CHARACTER_AGE,
   MAX_OWNER_RELATIONSHIP_CHARS,
   MAX_PERSONALITY_CHARS,
   MAX_SHORT_BIO_CHARS,
@@ -53,16 +63,23 @@ function charCount(value: string, max: number) {
 export function CharacterModal({
   initial,
   providers,
+  existingNames = [],
+  onboardingMode = false,
   onClose,
   onSaved,
 }: {
   initial?: CharacterDetail | null;
   providers: ProviderSummary[];
+  existingNames?: string[];
+  onboardingMode?: boolean;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [gender, setGender] = useState<Gender>(initial?.gender ?? "");
+  const [age, setAge] = useState(initial?.age?.toString() ?? "");
+  const [origin, setOrigin] = useState(initial?.origin ?? "");
+  const [profession, setProfession] = useState(initial?.profession ?? "");
   const [shortBio, setShortBio] = useState(initial?.shortBio ?? "");
   const [skillPortfolio, setSkillPortfolio] = useState<CharacterSkill[]>(initial?.skillPortfolio ?? []);
   const [teamRole, setTeamRole] = useState(initial?.teamRole ?? "");
@@ -83,6 +100,11 @@ export function CharacterModal({
   const [detectingModels, setDetectingModels] = useState(false);
   const [detectError, setDetectError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateNotice, setGenerateNotice] = useState<string | null>(null);
+  const [starterArchetype, setStarterArchetype] = useState<CharacterStarterArchetype>("supportive_friend");
+  const [starterConcept, setStarterConcept] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<string | null>(null);
@@ -170,6 +192,72 @@ export function CharacterModal({
       return;
     }
     setCropSource(file);
+  }
+
+  async function generateCharacterProfile() {
+    if (generating) return;
+    const nameProblem = name.trim() ? characterNameError(name) : null;
+    if (nameProblem) {
+      setGenerateError(nameProblem);
+      return;
+    }
+    setGenerating(true);
+    setGenerateError(null);
+    setGenerateNotice(null);
+    try {
+      const res = await fetch("/api/characters/generate-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          archetype: starterArchetype,
+          concept: starterConcept,
+          name,
+          age: age.trim() ? Number(age) : null,
+          gender,
+          origin,
+          profession,
+          skillPortfolio,
+          shortBio,
+          personality,
+          bible,
+          greeting,
+          excludeCharacterId: initial?.id ?? null,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.draft) {
+        throw new Error(data?.error || "Gagal membuat draf karakter.");
+      }
+      const draft = data.draft as {
+        name: string;
+        age: number | null;
+        gender: Gender;
+        origin: string;
+        profession: string;
+        shortBio: string;
+        skillPortfolio: CharacterSkill[];
+        personality: string;
+        bible: string;
+        greeting: string;
+      };
+      if (!name.trim()) setName(draft.name);
+      if (!age.trim() && draft.age !== null) setAge(String(draft.age));
+      if (!gender && draft.gender) setGender(draft.gender);
+      if (!origin.trim()) setOrigin(draft.origin);
+      if (!profession.trim()) setProfession(draft.profession);
+      if (!shortBio.trim()) setShortBio(draft.shortBio);
+      if (!skillPortfolio.some((skill) => skill.title.trim() || skill.description.trim())) {
+        setSkillPortfolio(draft.skillPortfolio);
+      }
+      if (!personality.trim()) setPersonality(draft.personality);
+      if (!bible.trim()) setBible(draft.bible);
+      if (!greeting.trim()) setGreeting(draft.greeting);
+      setGenerateNotice("Draf siap. Tinjau dan sesuaikan sebelum membuat karakter; foto tetap diunggah sendiri.");
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Gagal membuat draf karakter.");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function handleBibleFile(file: File) {
@@ -312,7 +400,20 @@ export function CharacterModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!name.trim()) return setError("Nama karakter wajib diisi.");
+    const normalizedName = cleanCharacterName(name);
+    const nameProblem = characterNameError(normalizedName);
+    if (nameProblem) return setError(nameProblem);
+    const duplicateName = existingNames.some((existingName) => {
+      if (initial && normalizeCharacterName(existingName) === normalizeCharacterName(initial.name)) return false;
+      return normalizeCharacterName(existingName) === normalizeCharacterName(normalizedName);
+    });
+    if (duplicateName) return setError(`Nama “${normalizedName}” sudah dipakai karakter lain di akunmu.`);
+    const parsedAge = age.trim() ? Number(age) : null;
+    if (parsedAge !== null && (!Number.isInteger(parsedAge) || parsedAge < MIN_CHARACTER_AGE || parsedAge > MAX_CHARACTER_AGE)) {
+      return setError(`Usia karakter harus antara ${MIN_CHARACTER_AGE} dan ${MAX_CHARACTER_AGE}.`);
+    }
+    if (origin.length > MAX_CHARACTER_ORIGIN_CHARS) return setError(`Asal maksimal ${MAX_CHARACTER_ORIGIN_CHARS} karakter.`);
+    if (profession.length > MAX_CHARACTER_PROFESSION_CHARS) return setError(`Profesi maksimal ${MAX_CHARACTER_PROFESSION_CHARS} karakter.`);
     if (!personality.trim()) return setError("Deskripsi kepribadian wajib diisi.");
     if (teamRole.length > MAX_TEAM_ROLE_CHARS) {
       return setError(`Peran Tim 1 maksimal ${MAX_TEAM_ROLE_CHARS} karakter.`);
@@ -334,8 +435,11 @@ export function CharacterModal({
     setBusy(true);
     try {
       const payload = {
-        name,
+        name: normalizedName,
         gender,
+        age: parsedAge,
+        origin,
+        profession,
         shortBio,
         skillPortfolio: skillValidation.skills,
         teamRole,
@@ -379,9 +483,12 @@ export function CharacterModal({
         aria-label={initial ? "Edit Karakter" : "Buat Karakter Baru"}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 className="font-display text-lg font-bold text-ink">
-            {initial ? "Edit Karakter" : "Buat Karakter Baru"}
-          </h2>
+          <div>
+            <h2 className="font-display text-lg font-bold text-ink">
+              {onboardingMode ? "Buat Karakter Pertamamu" : initial ? "Edit Karakter" : "Buat Karakter Baru"}
+            </h2>
+            {onboardingMode && <p className="mt-0.5 text-[11px] text-muted">Isi sendiri atau minta AI membuat draf yang bisa kamu ubah.</p>}
+          </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
@@ -457,29 +564,68 @@ export function CharacterModal({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={MAX_CHARACTER_NAME_CHARS}
               placeholder="Mis. Kirana"
               className={FIELD}
             />
+            <p className="mt-1 text-[11px] text-muted">Nama unik di akunmu · {name.length}/{MAX_CHARACTER_NAME_CHARS}.</p>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">
-              Jenis kelamin / gender (opsional)
-            </label>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value as Gender)}
-              className={FIELD}
-            >
-              {GENDER_OPTIONS.map(({ value, label }) => (
-                <option key={value || "unspecified"} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[11px] text-muted">
-              Jika belum diatur, karakter mengikuti informasi eksplisit di Bible/kepribadian dan tidak menebak dari nama atau foto. Untuk “Lainnya”, jelaskan di kepribadian atau Bible.
-            </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Usia (opsional)</label>
+              <input
+                type="number"
+                min={MIN_CHARACTER_AGE}
+                max={MAX_CHARACTER_AGE}
+                value={age}
+                onChange={(event) => setAge(event.target.value)}
+                placeholder="Mis. 28"
+                className={FIELD}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                Jenis kelamin / gender (opsional)
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as Gender)}
+                className={FIELD}
+              >
+                {GENDER_OPTIONS.map(({ value, label }) => (
+                  <option key={value || "unspecified"} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-muted">
+                Untuk “Lainnya”, jelaskan di Bible bila perlu.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Asal (opsional)</label>
+              <input
+                value={origin}
+                onChange={(event) => setOrigin(event.target.value)}
+                maxLength={MAX_CHARACTER_ORIGIN_CHARS}
+                placeholder="Mis. Bogor"
+                className={FIELD}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Profesi (opsional)</label>
+              <input
+                value={profession}
+                onChange={(event) => setProfession(event.target.value)}
+                maxLength={MAX_CHARACTER_PROFESSION_CHARS}
+                placeholder="Mis. konsultan karier"
+                className={FIELD}
+              />
+            </div>
           </div>
 
           <div>
@@ -495,7 +641,7 @@ export function CharacterModal({
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
           </div>
 
-          <div className="space-y-2.5 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-2.5 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-ink">Impor dossier karakter</p>
@@ -620,7 +766,57 @@ export function CharacterModal({
             </button>
           </div>
 
-          <div className="space-y-2 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+          {!initial && (
+            <section className="space-y-3 rounded-2xl border border-brand/20 bg-brand/5 p-3.5">
+              <div>
+                <h3 className="text-sm font-semibold text-ink">Buat draf dengan AI</h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                  Pilih arah karakter. AI mengisi field teks yang masih kosong, termasuk Bible, kepribadian, keahlian, dan sapaan; isianmu yang sudah ada tidak ditimpa.
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-soft">Gaya awal</label>
+                <select
+                  value={starterArchetype}
+                  onChange={(event) => setStarterArchetype(event.target.value as CharacterStarterArchetype)}
+                  className={FIELD}
+                >
+                  {CHARACTER_STARTER_ARCHETYPES.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-muted">
+                  {CHARACTER_STARTER_ARCHETYPES.find((item) => item.id === starterArchetype)?.description}
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-soft">Arahan tambahan (opsional)</label>
+                <textarea
+                  value={starterConcept}
+                  onChange={(event) => setStarterConcept(event.target.value)}
+                  rows={2}
+                  maxLength={800}
+                  placeholder="Mis. suka kopi, humor receh, bicaranya hangat tapi blak-blakan."
+                  className={`${FIELD} resize-none`}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={generating || providers.every((provider) => !provider.hasKey && provider.backupCount === 0)}
+                onClick={() => void generateCharacterProfile()}
+                className="w-full rounded-xl border border-brand/30 bg-surface px-3 py-2.5 text-sm font-semibold text-ink transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {generating ? "AI sedang menyusun draf..." : "✨ Isi field kosong dengan AI"}
+              </button>
+              {providers.every((provider) => !provider.hasKey && provider.backupCount === 0) && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">Tambahkan API key terlebih dulu agar AI bisa membuat draf.</p>
+              )}
+              {generateNotice && <p className="text-xs text-emerald-700 dark:text-emerald-300">{generateNotice}</p>}
+              {generateError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{generateError}</p>}
+            </section>
+          )}
+
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-2 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
               <label className="block text-xs font-semibold text-ink">
                 Hubungan dengan pemilik
@@ -641,7 +837,7 @@ export function CharacterModal({
             <p className="text-[11px]">{charCount(ownerRelationship, MAX_OWNER_RELATIONSHIP_CHARS)}</p>
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
               <p className="text-xs font-semibold text-ink">Memori Tim 1</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
@@ -691,7 +887,7 @@ export function CharacterModal({
             </p>
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
               <p className="text-xs font-semibold text-ink">Info profil pemilik saat diundang</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
@@ -789,7 +985,7 @@ export function CharacterModal({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className={`${onboardingMode ? "hidden " : ""}grid grid-cols-1 gap-2 sm:grid-cols-2`}>
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-soft">Provider AI</label>
               <select
@@ -882,7 +1078,7 @@ export function CharacterModal({
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || generating || uploading}
             className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-60"
           >
             {busy ? "Menyimpan..." : initial ? "Simpan Perubahan" : "Buat Karakter"}

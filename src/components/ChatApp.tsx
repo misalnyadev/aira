@@ -53,6 +53,7 @@ import {
   useVoiceSettings,
 } from "@/lib/voice";
 import { AddContactModal } from "./AddContactModal";
+import { FirstRunOnboarding } from "./FirstRunOnboarding";
 import { useAuth } from "./AuthGate";
 import { Avatar } from "./Avatar";
 import { BrainstormRoomView } from "./BrainstormRoomView";
@@ -93,7 +94,7 @@ function contactMeetupBubbleStorageKey(userId: string, threadId: string) {
 }
 
 export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusId?: string | null }) {
-  const { user, expire } = useAuth();
+  const { user, expire, completeOnboarding } = useAuth();
   const [voice, setVoice] = useVoiceSettings(user.id);
   const speechSupported = useSpeechSupported();
   const isSpeaking = useIsSpeaking();
@@ -1615,6 +1616,19 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
     );
   }
 
+  if (!user.onboardingCompleted) {
+    return (
+      <FirstRunOnboarding
+        profile={profile}
+        providers={providers}
+        characters={characters}
+        onProvidersChanged={fetchProviders}
+        onCharactersChanged={fetchCharacters}
+        onComplete={completeOnboarding}
+      />
+    );
+  }
+
   const adminTotalPending =
     pendingQuotaRequestsCount + pendingAdminContactsCount;
 
@@ -1864,6 +1878,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       {showCreate && (
         <CharacterModal
           providers={providers}
+          existingNames={characters.map((character) => character.name)}
           onClose={() => setShowCreate(false)}
           onSaved={fetchCharacters}
         />
@@ -1873,6 +1888,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         <CharacterModal
           initial={editDetail}
           providers={providers}
+          existingNames={characters.map((character) => character.name)}
           onClose={() => setEditDetail(null)}
           onSaved={async () => {
             await fetchCharacters();

@@ -5,6 +5,7 @@ export type AuthUser = {
   email: string;
   isAdmin?: boolean;
   characterQuota?: number;
+  onboardingCompleted: boolean;
 };
 
 type Result = { ok: true; user: AuthUser } | { ok: false; error: string };
@@ -33,9 +34,17 @@ export function login(email: string, password: string): Promise<Result> {
 export function register(
   email: string,
   password: string,
-  inviteCode: string
+  inviteCode: string,
+  profile: {
+    displayName: string;
+    nickname: string;
+    gender: string;
+    age: number | null;
+    occupation: string;
+    about: string;
+  }
 ): Promise<Result> {
-  return post("/api/auth/register", { email, password, inviteCode });
+  return post("/api/auth/register", { email, password, inviteCode, profile });
 }
 
 export async function logout(): Promise<void> {
