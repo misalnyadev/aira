@@ -9,6 +9,7 @@ export function Composer({
   onSend,
   disabled,
   transparent = false,
+  clearSurface = false,
   blurOnSend = false,
   onSent,
   onWake,
@@ -19,6 +20,8 @@ export function Composer({
   disabled?: boolean;
   /** Latar kaca tipis untuk tombol composer pada Tatap Muka / mode bar minimalis. */
   transparent?: boolean;
+  /** Hilangkan permukaan bar dan input hanya untuk latar video Tatap Muka. */
+  clearSurface?: boolean;
   /** Tutup papan ketik otomatis sesudah pesan terkirim (dipakai pada mode sembunyikan chat). */
   blurOnSend?: boolean;
   /** Dipanggil sesudah pesan berhasil dikirim dari kolom ketik. */
@@ -137,7 +140,11 @@ export function Composer({
   }
 
   return (
-    <div className="composer-bar bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
+    <div
+      className={`composer-bar px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5 ${
+        clearSurface ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
+      }`}
+    >
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
@@ -259,7 +266,9 @@ export function Composer({
               autoComplete="off"
               enterKeyHint="send"
               aria-label="Tulis pesan"
-              className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-transparent px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
+                clearSurface ? "bg-transparent" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
+              } ${
                 multiline ? "rounded-2xl" : "rounded-full"
               }`}
             />
@@ -286,7 +295,7 @@ export function Composer({
             className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
               transparent
                 ? "bg-surface/35 hover:bg-surface/45 dark:bg-surface/25"
-                : "bg-transparent hover:bg-surface/20"
+                : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
             }`}
             title="Kirim"
             aria-label="Kirim pesan"

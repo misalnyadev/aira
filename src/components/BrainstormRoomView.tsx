@@ -178,7 +178,11 @@ export function BrainstormRoomView({
   return (
     <div ref={rootRef} className="relative flex h-full min-h-0 flex-1 flex-col bg-app">
       {/* Header */}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+      <div
+        className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4 ${
+          mode === "meetup" ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
+        }`}
+      >
         <button onClick={onBack} className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50">
           <BackIcon className="h-[30px] w-[30px]" />
         </button>
@@ -400,7 +404,9 @@ export function BrainstormRoomView({
       {/* Composer */}
       <div
         ref={composerRef}
-        className="composer-bar absolute inset-x-0 bottom-0 z-30 bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5"
+        className={`composer-bar absolute inset-x-0 bottom-0 z-30 px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5 ${
+          mode === "meetup" ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
+        }`}
       >
         <div className="mx-auto w-full max-w-3xl">
           {attachmentFile && (
@@ -500,9 +506,11 @@ export function BrainstormRoomView({
                     void handleSend();
                   }
                 }}
-                className={`relative top-1 max-h-[120px] w-full resize-none border-none bg-transparent px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
-                  multiline ? "rounded-2xl" : "rounded-full"
-                }`}
+                className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
+                  mode === "meetup"
+                    ? "bg-transparent"
+                    : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
+                } ${multiline ? "rounded-2xl" : "rounded-full"}`}
               />
             </div>
             <button
@@ -512,7 +520,7 @@ export function BrainstormRoomView({
               className={`mb-0.5 shrink-0 rounded-full p-2.5 text-ink transition active:scale-95 disabled:opacity-40 ${
                 mode === "meetup"
                   ? "bg-surface/35 hover:bg-surface/45"
-                  : "bg-transparent hover:bg-surface/20"
+                  : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:hover:bg-surface/50"
               }`}
               aria-label="Kirim"
               title="Kirim"
