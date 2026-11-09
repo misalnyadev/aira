@@ -20,7 +20,7 @@ export function Composer({
   disabled?: boolean;
   /** Latar kaca tipis untuk tombol composer pada Tatap Muka / mode bar minimalis. */
   transparent?: boolean;
-  /** Hilangkan permukaan bar dan input hanya untuk latar video Tatap Muka. */
+  /** Hilangkan bidang bar Tatap Muka; input tetap memakai latar translucent agar teks terbaca. */
   clearSurface?: boolean;
   /** Tutup papan ketik otomatis sesudah pesan terkirim (dipakai pada mode sembunyikan chat). */
   blurOnSend?: boolean;
@@ -267,7 +267,7 @@ export function Composer({
               enterKeyHint="send"
               aria-label="Tulis pesan"
               className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 ring-line/70 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm dark:ring-line/40 ${
-                clearSurface ? "bg-surface/35 dark:bg-surface/25" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
+                clearSurface ? "bg-surface/55 dark:bg-surface/40" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
               } ${
                 multiline ? "rounded-2xl" : "rounded-full"
               }`}
