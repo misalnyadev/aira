@@ -30,7 +30,9 @@ export async function GET(req: Request) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
 
-  const requestedStatusId = new URL(req.url).searchParams.get("id");
+  const searchParams = new URL(req.url).searchParams;
+  const requestedStatusId = searchParams.get("id");
+  const onlyMyReels = searchParams.get("mine") === "reels";
   const now = new Date();
 
   // ambil semua status yang belum kedaluwarsa (status 24j) + reel permanen
@@ -62,7 +64,13 @@ export async function GET(req: Request) {
             or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now)),
             eq(characterStatuses.id, requestedStatusId)
           )
-        : or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now))
+        : onlyMyReels
+          ? and(
+              eq(characterStatuses.userId, user.id),
+              isNull(characterStatuses.characterId),
+              eq(characterStatuses.kind, "reel")
+            )
+          : or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now))
     )
     .orderBy(desc(characterStatuses.createdAt))
     .limit(requestedStatusId ? 1 : 120);
