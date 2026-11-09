@@ -207,7 +207,7 @@ export function CharacterModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          archetype: initial && regenerateProfession ? "custom" : starterArchetype,
+          archetype: initial ? "custom" : starterArchetype,
           concept: starterConcept,
           ...(regenerateProfession ? { fieldsToRegenerate: ["profession"] } : {}),
           name,
@@ -261,7 +261,11 @@ export function CharacterModal({
       if (!personality.trim()) setPersonality(draft.personality);
       if (!bible.trim()) setBible(draft.bible);
       if (!greeting.trim()) setGreeting(draft.greeting);
-      setGenerateNotice("Draf siap. Tinjau dan sesuaikan sebelum membuat karakter; foto tetap diunggah sendiri.");
+      setGenerateNotice(
+        initial
+          ? "Draf selesai. Field kosong diisi dan isian yang sudah ada dipertahankan. Tinjau sebelum menyimpan perubahan."
+          : "Draf siap. Tinjau dan sesuaikan sebelum membuat karakter; foto tetap diunggah sendiri."
+      );
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : "Gagal membuat draf karakter.");
     } finally {
@@ -635,7 +639,7 @@ export function CharacterModal({
                     onClick={() => void generateCharacterProfile(true)}
                     className="shrink-0 text-[11px] font-semibold text-ink-soft underline decoration-dotted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {generating ? "AI menyusun..." : "✨ Bantu isi dengan AI"}
+                    {generating ? "AI menyusun..." : "✨ Usulkan profesi"}
                   </button>
                 )}
               </div>
@@ -648,14 +652,28 @@ export function CharacterModal({
               />
               {initial && (
                 <div className="mt-2 space-y-1.5">
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    AI melengkapi field teks yang kosong tanpa menimpa isian lain. Untuk usulan profesi saja, gunakan tombol di label Profesi.
+                  </p>
+                  <label className="block text-[11px] font-medium text-ink-soft">
+                    Arahan tambahan untuk AI (opsional)
+                  </label>
                   <input
                     value={starterConcept}
                     onChange={(event) => setStarterConcept(event.target.value)}
                     maxLength={800}
-                    placeholder="Arahan profesi baru (opsional)"
-                    aria-label="Arahan profesi baru untuk AI"
+                    placeholder="Mis. pertahankan karakter yang hangat dan lugas."
+                    aria-label="Arahan tambahan untuk AI"
                     className={FIELD}
                   />
+                  <button
+                    type="button"
+                    disabled={generating || !hasAiProvider}
+                    onClick={() => void generateCharacterProfile()}
+                    className="w-full rounded-xl border border-brand/30 bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generating ? "AI sedang melengkapi..." : "✨ Isi field kosong dengan AI"}
+                  </button>
                   {!hasAiProvider && (
                     <p className="text-[11px] text-amber-700 dark:text-amber-300">Tambahkan API key terlebih dulu agar AI bisa membantu.</p>
                   )}
