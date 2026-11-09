@@ -73,29 +73,31 @@ export function BrainstormView({
         }
       />
 
+      <div className="px-3 pb-2.5 pt-2.5">
+        <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
+          <input
+            value={meetupQuery}
+            onChange={(event) => setMeetupQuery(event.target.value)}
+            placeholder="Cari karakter untuk Tatap Muka..."
+            aria-label="Cari karakter untuk Tatap Muka"
+            className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+          />
+          {meetupQuery && (
+            <button
+              type="button"
+              onClick={() => setMeetupQuery("")}
+              aria-label="Bersihkan pencarian"
+              className="rounded-full p-0.5 text-muted transition hover:text-ink"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-3 py-4 pb-[calc(var(--tabbar-space)+1rem)] md:px-4">
         <section className="mx-auto w-full max-w-[900px]">
-          <div className="mb-3 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
-            <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
-            <input
-              value={meetupQuery}
-              onChange={(event) => setMeetupQuery(event.target.value)}
-              placeholder="Cari karakter untuk Tatap Muka..."
-              aria-label="Cari karakter untuk Tatap Muka"
-              className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
-            />
-            {meetupQuery && (
-              <button
-                type="button"
-                onClick={() => setMeetupQuery("")}
-                aria-label="Bersihkan pencarian"
-                className="rounded-full p-0.5 text-muted transition hover:text-ink"
-              >
-                <XIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
           {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
               <p className="text-sm font-semibold text-ink">Belum ada karakter untuk diajak bertemu</p>
