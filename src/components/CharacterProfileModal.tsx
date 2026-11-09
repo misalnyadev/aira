@@ -8,10 +8,12 @@ import type { CharacterVoiceConfig, TtsAccountSummary } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
 import { genderLabel } from "@/lib/gender";
 import type { CharacterDetail } from "@/types/chat";
+import type { CharacterStoryFrequency } from "@/lib/characterStoryAuto";
 import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { CharacterMediaSection } from "./CharacterMediaSection";
 import { CharacterMemorySection, type MemoryPatch } from "./CharacterMemorySection";
+import { CharacterStoryAutoSection } from "./CharacterStoryAutoSection";
 import { CharacterVoiceSection } from "./CharacterVoiceSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
 import { PencilIcon, TrashIcon, XIcon } from "./icons";
@@ -20,6 +22,7 @@ export function CharacterProfileModal({
   character,
   mode,
   providerLabel,
+  hasProvider,
   ttsSummary,
   voiceSettings,
   onClose,
@@ -33,11 +36,13 @@ export function CharacterProfileModal({
   onVoiceChange,
   onMediaChange,
   onMemoryChange,
+  onStoryAutoChange,
   onNotice,
 }: {
   character: CharacterDetail;
   mode: "chat" | "meetup";
   providerLabel: string;
+  hasProvider: boolean;
   ttsSummary: TtsAccountSummary;
   voiceSettings: VoiceSettings;
   onClose: () => void;
@@ -51,6 +56,7 @@ export function CharacterProfileModal({
   onVoiceChange: (next: CharacterVoiceConfig | null) => void;
   onMediaChange: (next: CharacterMedia | null) => void;
   onMemoryChange: (next: MemoryPatch) => void;
+  onStoryAutoChange: (next: { enabled: boolean; frequency: CharacterStoryFrequency }) => void;
   onNotice?: (msg: string) => void;
 }) {
   const [showBible, setShowBible] = useState(false);
@@ -158,6 +164,16 @@ export function CharacterProfileModal({
               onChange={onMemoryChange}
               onNotice={onNotice}
             />
+            <div className="mt-3">
+              <CharacterStoryAutoSection
+                characterId={character.id}
+                characterName={character.name}
+                enabled={character.storyAutoEnabled}
+                frequency={character.storyAutoFrequency}
+                hasProvider={hasProvider}
+                onChange={onStoryAutoChange}
+              />
+            </div>
           </div>
 
           {mode === "chat" ? (

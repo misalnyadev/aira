@@ -13,9 +13,11 @@ import {
 export { AiProviderError, isKeyRotatableError, isProviderFallbackError, toUserFacingError };
 export {
   buildSystemPrompt,
+  buildStoryTalentSystemPrompt,
   splitIntoBubbles,
   BUBBLE_DELIMITER,
   type MemoryPromptContext,
+  type StoryTalentPromptProfile,
 } from "./promptBuilder";
 export type { ChatTurn } from "./types";
 
