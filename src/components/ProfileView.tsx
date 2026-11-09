@@ -5,6 +5,7 @@ import type { QuotaRequestSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { GENDER_OPTIONS, type Gender } from "@/lib/gender";
 import { compressImageFile } from "@/lib/compressImage";
+import { uploadAvatarImage } from "@/lib/avatarUploadClient";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import {
   MAX_ABOUT_CHARS,
@@ -146,26 +147,8 @@ export function ProfileView({
         maxSize: 512,
         quality: 0.86,
       });
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": compressed.type || "image/jpeg" },
-        body: compressed,
-      });
-      const data = (await res.json().catch(() => null)) as {
-        error?: unknown;
-        url?: unknown;
-      } | null;
-      if (!res.ok) {
-        throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : `Gagal mengunggah foto (HTTP ${res.status}).`
-        );
-      }
-      if (typeof data?.url !== "string" || !data.url) {
-        throw new Error("Server tidak mengembalikan alamat foto.");
-      }
-      setAvatarUrl(data.url);
+      const url = await uploadAvatarImage(compressed);
+      setAvatarUrl(url);
       setCropSource(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengunggah foto.");
