@@ -503,7 +503,7 @@ export function ChatWindow({
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/10 px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/55 px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
@@ -594,7 +594,7 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/10 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-surface/55 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] backdrop-blur-sm transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
