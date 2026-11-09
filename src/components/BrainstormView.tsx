@@ -60,7 +60,7 @@ export function BrainstormView({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-app">
       <MenuHeader
         title="MeetUp"
-        description="Tatap Muka berdua, diskusi Brainstorm, atau Reka Adegan"
+        description="Tatap Muka - Brainstorm - Reka Adegan"
         actions={
           <MenuHeaderIconButton
             onClick={() => openCreate(canBrainstorm ? "brainstorm" : "scene")}
