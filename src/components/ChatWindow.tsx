@@ -503,13 +503,17 @@ export function ChatWindow({
       {/* Header — ikut tersembunyi penuh saat mode hide aktif */}
       {minimalBars ? (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-2.5 pb-2 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+            visualMode === "meetup" ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
+          } ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           <button
             onClick={onBack}
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition active:scale-95 active:opacity-70 ${showBackOnDesktop ? "" : "md:hidden"}`}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
+              visualMode === "meetup" ? "bg-surface/35" : "bg-surface/45 backdrop-blur-md"
+            } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
             <BackIcon className="h-6 w-6" />
@@ -518,7 +522,11 @@ export function ChatWindow({
           <div className="min-w-0 flex-1">
             <button
               onClick={onOpenProfile}
-              className="inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full bg-surface/55 py-1 pl-1 pr-3.5 text-left transition hover:bg-surface/65 active:scale-[0.98] active:opacity-80"
+              className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
+                visualMode === "meetup"
+                  ? "bg-surface/35 hover:bg-surface/45"
+                  : "bg-surface/55 backdrop-blur-md hover:bg-surface/65"
+              }`}
               aria-label={`Pengaturan ${character.name}`}
               title={`Pengaturan ${character.name}`}
             >
@@ -550,7 +558,11 @@ export function ChatWindow({
           {isSpeaking && (
             <button
               onClick={onStopSpeaking}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
+                visualMode === "meetup"
+                  ? "bg-surface/35 hover:bg-surface/45"
+                  : "bg-surface/45 backdrop-blur-md hover:bg-surface/65"
+              }`}
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
@@ -560,7 +572,11 @@ export function ChatWindow({
 
           <button
             onClick={onOpenVoice}
-            className="relative hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 sm:grid"
+            className={`relative hidden h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition sm:grid ${
+              visualMode === "meetup"
+                ? "bg-surface/35 hover:bg-surface/45"
+                : "bg-surface/45 backdrop-blur-md hover:bg-surface/65"
+            }`}
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
@@ -573,7 +589,11 @@ export function ChatWindow({
           {onVideoCall && (
             <button
               onClick={onVideoCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
+                visualMode === "meetup"
+                  ? "bg-surface/35 hover:bg-surface/45"
+                  : "bg-surface/45 backdrop-blur-md hover:bg-surface/65"
+              }`}
               aria-label={`Video call dengan ${character.name}`}
               title="Video call"
             >
@@ -584,7 +604,11 @@ export function ChatWindow({
           {onAudioCall && (
             <button
               onClick={onAudioCall}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/45 text-ink transition hover:bg-surface/65 active:scale-95 active:opacity-70"
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
+                visualMode === "meetup"
+                  ? "bg-surface/35 hover:bg-surface/45"
+                  : "bg-surface/45 backdrop-blur-md hover:bg-surface/65"
+              }`}
               aria-label={`Panggilan suara dengan ${character.name}`}
               title="Panggilan suara"
             >
@@ -594,7 +618,9 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+            visualMode === "meetup" ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
+          } ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
@@ -647,7 +673,7 @@ export function ChatWindow({
               className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink transition ${
                 visualMode === "meetup"
                   ? "bg-surface/35 hover:bg-surface/45"
-                  : "bg-surface/55 hover:bg-surface/70"
+                  : "bg-surface/55 backdrop-blur-md hover:bg-surface/70"
               }`}
               title="Hentikan suara"
               aria-label="Hentikan suara"
