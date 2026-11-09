@@ -147,7 +147,7 @@ export function BrainstormRoomView({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-app">
       {/* Header */}
-      <div className="top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
+      <div className="z-10 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] sm:px-4">
         <button onClick={onBack} className="shrink-0 p-[5px] text-ink-soft transition active:opacity-50">
           <BackIcon className="h-[30px] w-[30px]" />
         </button>
@@ -360,7 +360,7 @@ export function BrainstormRoomView({
       </div>
 
       {/* Composer */}
-      <div className="composer-bar bottom-bar shrink-0 px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
+      <div className="composer-bar shrink-0 bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
         <div className="mx-auto w-full max-w-3xl">
           {attachmentFile && (
             <div className="mb-2 flex items-center gap-2">
@@ -464,7 +464,7 @@ export function BrainstormRoomView({
               type="button"
               onClick={() => void handleSend()}
               disabled={isTyping || sending || (!input.trim() && !attachmentFile)}
-              className="mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink ring-1 ring-line/70 transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 dark:bg-surface/40 dark:ring-line/40 dark:hover:bg-surface/60"
+              className="mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 dark:bg-surface/40 dark:hover:bg-surface/60"
               aria-label="Kirim"
               title="Kirim"
             >

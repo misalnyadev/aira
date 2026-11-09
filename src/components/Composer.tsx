@@ -137,11 +137,7 @@ export function Composer({
   }
 
   return (
-    <div
-      className={`composer-bar px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5 ${
-        transparent ? "bg-transparent" : "bottom-bar"
-      }`}
-    >
+    <div className="composer-bar bg-transparent px-2.5 py-2 pb-[max(0.5rem,calc(env(safe-area-inset-bottom)-0.625rem))] sm:px-3 sm:py-2.5">
       <div className="mx-auto w-full max-w-3xl">
         {imagePreview && (
           <div className="mb-2 flex items-center gap-2">
@@ -228,7 +224,7 @@ export function Composer({
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
               transparent
-                ? "rounded-full bg-surface/75 p-1.5 text-ink ring-1 ring-line/70 backdrop-blur-md"
+                ? "rounded-full bg-surface/75 p-1.5 text-ink backdrop-blur-md"
                 : "p-[5px] text-ink-soft"
             }`}
             title="Kirim foto"
@@ -287,10 +283,10 @@ export function Composer({
           <button
             onClick={handleSubmit}
             disabled={disabled || (!text.trim() && !imageFile)}
-            className={`mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink ring-1 ring-line/70 transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 ${
+            className={`mb-0.5 shrink-0 rounded-full bg-surface/75 p-2.5 text-ink transition hover:bg-surface/90 active:scale-95 disabled:opacity-40 ${
               transparent
                 ? "backdrop-blur-md"
-                : "dark:bg-surface/40 dark:ring-line/40 dark:hover:bg-surface/60"
+                : "dark:bg-surface/40 dark:hover:bg-surface/60"
             }`}
             title="Kirim"
             aria-label="Kirim pesan"

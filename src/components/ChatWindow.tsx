@@ -562,7 +562,7 @@ export function ChatWindow({
         </div>
       ) : (
         <div
-          className={`top-bar z-10 flex items-center gap-2 px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
+          className={`z-10 flex items-center gap-2 bg-transparent px-2 pb-2.5 pt-[max(0.625rem,var(--safe-top))] transition-opacity duration-200 sm:px-4 ${
             hideMessages ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
