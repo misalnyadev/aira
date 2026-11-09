@@ -1539,7 +1539,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         background={characterBackground}
         bubble={characterBubble}
         visualMode={options.mode}
-        sceneLabel={isMeetup ? "Tatap Muka · kalian berdua hadir langsung" : undefined}
+        sceneLabel={isMeetup ? "Tatap muka - langsung" : undefined}
         showBackOnDesktop={isMeetup}
         composerVisible={!characterHidden || peekCharId === character.id}
         onScreenTap={characterHidden ? () => handleHiddenScreenTap(character.id) : undefined}
