@@ -156,7 +156,7 @@ export function Sidebar({
                         </span>
                       )}
                       {c.threadKind === "owner_contact" && (
-                        <span className="ml-1.5 inline-block rounded-full bg-emerald-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span className="ml-1.5 inline-block rounded-full bg-[#4687fe]/15 px-1.5 py-0.2 text-[10px] font-semibold text-[#205ac4] dark:text-[#79aaff]">
                           2 Arah
                         </span>
                       )}
