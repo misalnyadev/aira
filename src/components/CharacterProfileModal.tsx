@@ -103,7 +103,7 @@ export function CharacterProfileModal({
           <div className="flex flex-col items-center gap-2 text-center">
             <span className="rounded-full ring-2 ring-accent/35 ring-offset-2 ring-offset-surface dark:ring-accent/40"><Avatar name={character.name} src={character.avatarUrl} size={104} /></span>
             <h3 className="mt-2 font-display text-xl font-bold text-accent-text">{character.name}</h3>
-            {character.shortBio && <p className="text-sm text-ink-soft">{character.shortBio}</p>}
+            {character.shortBio && <p className="text-sm text-copy-soft">{character.shortBio}</p>}
             {characterGenderLabel && (
               <p className="text-xs text-muted">Jenis kelamin / gender: {characterGenderLabel}</p>
             )}

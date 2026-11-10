@@ -103,7 +103,7 @@ export function ThemeSegmented() {
             <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">Kontras teks kurang pada latar utama. Coba warna yang lebih {customTheme.base === "light" ? "gelap" : "terang"} agar lebih mudah dibaca.</p>
           )}
         </div>
-        <p className="text-xs text-ink-soft">Warna aksen dan teks utama berlaku pada bagian yang sudah mendukung tema Kustom; beberapa teks dan gelembung chat masih memakai warna bawaan. Pilihan tersimpan di perangkat ini.</p>
+        <p className="text-xs text-ink-soft">Warna aksen dan teks berlaku pada bagian yang sudah mendukung tema Kustom; beberapa teks, ikon, dan gelembung chat masih memakai warna bawaan. Pilihan tersimpan di perangkat ini.</p>
       </div>
     )}
     </div>

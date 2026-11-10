@@ -159,7 +159,7 @@ export function CharactersView({
               </span>
             )}
           </div>
-          <p className="text-xs text-ink-soft">
+          <p className="text-xs text-copy-soft">
             {characters.length}/{limit}{" "}
             {isAdmin ? "karakter tersimpan" : "slot karakter milikmu"}
           </p>
@@ -298,7 +298,7 @@ export function CharactersView({
 
                   {full && !showReqForm && (
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="min-w-0 flex-1 text-xs leading-relaxed text-ink-soft">
+                      <p className="min-w-0 flex-1 text-xs leading-relaxed text-copy-soft">
                         Slot karaktermu sudah penuh (<b>{characters.length}/{limit}</b>). Akun standar mendapat 1 karakter bawaan — ingin membuat karakter lagi?
                       </p>
                       <button
@@ -398,7 +398,7 @@ export function CharactersView({
               <p className="font-display text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
                 Belum ada karakter
               </p>
-              <p className="mt-1 text-xs text-ink-soft">
+              <p className="mt-1 text-xs text-copy-soft">
                 Buat karakter pertamamu — tulis kepribadian atau impor naskah bible perannya.
               </p>
               <button
@@ -447,14 +447,14 @@ export function CharactersView({
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-ink-soft">
+                      <p className="truncate text-xs text-copy-soft">
                         {c.shortBio || "Tanpa status singkat"}
                       </p>
                     </div>
                   </div>
 
                   {c.preview && (
-                    <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-ink-soft">
+                    <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-copy-soft">
                       {c.preview}
                     </p>
                   )}

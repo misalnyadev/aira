@@ -190,7 +190,7 @@ export function Sidebar({
                       {formatListTime(c.updatedAt)}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-ink-soft">
+                  <p className="mt-0.5 truncate text-xs text-copy-soft">
                     {c.preview || c.shortBio || "Mulai obrolan baru"}
                   </p>
                 </div>

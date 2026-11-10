@@ -283,7 +283,7 @@ export function CharacterMemorySection({
                 Teman Perencanaan & Sadar Waktu
               </span>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+            <p className="mt-1 text-xs leading-relaxed text-copy-soft">
               Tahu hari & jam WIB saat ini, mencatat rencana ber-tanggal secara otomatis, dan bisa
               mengingat pembahasan minggu-minggu lalu.
             </p>
@@ -416,7 +416,7 @@ export function CharacterMemorySection({
                 Browsing Internet & Baca Link
               </span>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+            <p className="mt-1 text-xs leading-relaxed text-copy-soft">
               Bisa membaca link aplikasi/web (<code className="text-[11px]">https://...</code>) yang
               kamu kirim di chat untuk memberi masukan ide, serta mencari info terbaru di internet.
             </p>
@@ -451,7 +451,7 @@ export function CharacterMemorySection({
                 👋 Nyapa Duluan Secara Alami
               </span>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+            <p className="mt-1 text-xs leading-relaxed text-copy-soft">
               Saat kamu membuka chat setelah jeda beberapa jam atau ganti hari, karakter bisa
               menyapa duluan sesuai jam WIB &amp; obrolan terakhir tanpa spam.
             </p>

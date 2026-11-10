@@ -366,7 +366,7 @@ export function AdminPanelSection({
             <h2 className="text-sm font-bold text-accent-text">
               Pusat Pengelolaan Admin &amp; Member
             </h2>
-            <p className="mt-0.5 text-xs text-ink-soft">
+            <p className="mt-0.5 text-xs text-copy-soft">
               Kelola kode undangan member, persetujuan kuota slot karakter, dan peran akun.
             </p>
           </div>
@@ -463,7 +463,7 @@ export function AdminPanelSection({
                       : "Pendaftaran Ditutup"}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-ink-soft">
+                <p className="mt-0.5 text-xs text-copy-soft">
                   Lihat, salin, atau ganti kode invite pendaftaran akun baru tanpa redeploy
                 </p>
               </div>
@@ -537,7 +537,7 @@ export function AdminPanelSection({
                   }}
                   className="min-w-0 space-y-2"
                 >
-                  <label className="block text-xs font-medium text-ink-soft">
+                  <label className="block text-xs font-medium text-copy-soft">
                     Ganti kode undangan baru (tidak membedakan huruf besar/kecil)
                   </label>
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
@@ -636,7 +636,7 @@ export function AdminPanelSection({
                     {pending.length} menunggu
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-ink-soft">
+                <p className="mt-0.5 text-xs text-copy-soft">
                   Setujui atau sesuaikan jumlah slot karakter yang diminta member
                 </p>
               </div>
@@ -685,7 +685,7 @@ export function AdminPanelSection({
                         </div>
 
                         {r.reason ? (
-                          <p className="whitespace-pre-wrap break-words rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-ink-soft">
+                          <p className="whitespace-pre-wrap break-words rounded-lg bg-surface px-3 py-2 text-xs leading-relaxed text-copy-soft">
                             “{r.reason}”
                           </p>
                         ) : (
@@ -810,7 +810,7 @@ export function AdminPanelSection({
                     {users.length} akun
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-ink-soft">
+                <p className="mt-0.5 text-xs text-copy-soft">
                   Atur kuota slot karakter &amp; peran Admin/Member per akun
                 </p>
               </div>
@@ -1004,7 +1004,7 @@ export function AdminPanelSection({
                   <h3 className="text-sm font-bold text-accent-text">
                     Riwayat Keputusan Kuota Terakhir
                   </h3>
-                  <p className="mt-0.5 text-xs text-ink-soft">
+                  <p className="mt-0.5 text-xs text-copy-soft">
                     {resolved.length} keputusan persetujuan/penolakan terbaru
                   </p>
                 </div>

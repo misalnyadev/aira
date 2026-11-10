@@ -311,7 +311,7 @@ export function CharacterVoiceSection({
       <p className="text-[11px] leading-relaxed text-muted">{activeHint}</p>
 
       {missingKeyNote && (
-        <p className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
+        <p className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-[11px] leading-relaxed text-copy-soft">
           {missingKeyNote}
         </p>
       )}
@@ -383,7 +383,7 @@ export function CharacterVoiceSection({
             </button>
           </div>
           <div className="space-y-1 pt-1">
-            <label className="block text-[11px] font-semibold text-ink-soft">Gaya bicara khas karakter ini (opsional)</label>
+            <label className="block text-[11px] font-semibold text-copy-soft">Gaya bicara khas karakter ini (opsional)</label>
             <input
               type="text"
               value={customStyle}

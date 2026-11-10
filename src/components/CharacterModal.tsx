@@ -562,7 +562,7 @@ export function CharacterModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">Nama Karakter</label>
+            <label className="mb-1 block text-xs font-medium text-copy-soft">Nama Karakter</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -575,7 +575,7 @@ export function CharacterModal({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Usia (opsional)</label>
+              <label className="mb-1 block text-xs font-medium text-copy-soft">Usia (opsional)</label>
               <input
                 type="number"
                 min={MIN_CHARACTER_AGE}
@@ -587,7 +587,7 @@ export function CharacterModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
+              <label className="mb-1 block text-xs font-medium text-copy-soft">
                 Jenis kelamin / gender (opsional)
               </label>
               <select
@@ -609,7 +609,7 @@ export function CharacterModal({
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Asal (opsional)</label>
+              <label className="mb-1 block text-xs font-medium text-copy-soft">Asal (opsional)</label>
               <input
                 value={origin}
                 onChange={(event) => setOrigin(event.target.value)}
@@ -619,7 +619,7 @@ export function CharacterModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
+              <label className="mb-1 block text-xs font-medium text-copy-soft">
                 Profesi (opsional)
               </label>
               <input
@@ -634,7 +634,7 @@ export function CharacterModal({
                   <p className="text-[11px] leading-relaxed text-muted">
                     AI melengkapi field teks yang kosong tanpa menimpa isian lain, termasuk profesi yang sudah kamu isi.
                   </p>
-                  <label className="block text-[11px] font-medium text-ink-soft">
+                  <label className="block text-[11px] font-medium text-copy-soft">
                     Arahan tambahan untuk AI (opsional)
                   </label>
                   <input
@@ -664,7 +664,7 @@ export function CharacterModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">
+            <label className="mb-1 block text-xs font-medium text-copy-soft">
               Status singkat (tampil di bawah nama)
             </label>
             <input
@@ -680,7 +680,7 @@ export function CharacterModal({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-accent-text">Impor dossier karakter</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                   Satu berkas JSON per karakter; boleh memuat Bible, kepribadian, portofolio,
                   hubungan dengan pemilik, dan konteks tim. Field yang tidak ada tetap. Izin berbagi
                   Tim 1 tidak diubah. Tinjau hasilnya sebelum menyimpan.
@@ -741,7 +741,7 @@ export function CharacterModal({
           <div className="space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
             <div>
               <p className="text-xs font-semibold text-accent-text">Keahlian & layanan</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+              <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                 Atur hal yang bisa dibantu karakter ini. Contoh: Musthzen—IT & produksi, Arissa—menulis & analisis, Kirana—komunikasi & bisnis. Portofolio tampil di pratinjau undangan dan menjadi konteks saat ia berbicara; ini bukan klaim sertifikasi atau izin otomatis memakai alat.
               </p>
             </div>
@@ -805,12 +805,12 @@ export function CharacterModal({
             <section className="space-y-3 rounded-2xl border border-brand/20 bg-brand/5 p-3.5">
               <div>
                 <h3 className="text-sm font-semibold text-accent-text">Buat draf dengan AI</h3>
-                <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                   Pilih arah karakter. AI mengisi field teks yang masih kosong, termasuk Bible, kepribadian, keahlian, dan sapaan; isianmu yang sudah ada tidak ditimpa.
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">Gaya awal</label>
+                <label className="mb-1 block text-xs font-medium text-copy-soft">Gaya awal</label>
                 <select
                   value={starterArchetype}
                   onChange={(event) => setStarterArchetype(event.target.value as CharacterStarterArchetype)}
@@ -825,7 +825,7 @@ export function CharacterModal({
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">Arahan tambahan (opsional)</label>
+                <label className="mb-1 block text-xs font-medium text-copy-soft">Arahan tambahan (opsional)</label>
                 <textarea
                   value={starterConcept}
                   onChange={(event) => setStarterConcept(event.target.value)}
@@ -856,7 +856,7 @@ export function CharacterModal({
               <label className="block text-xs font-semibold text-accent-text">
                 Hubungan dengan pemilik
               </label>
-              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+              <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                 Jelaskan hubungan khusus karakter ini denganmu. Hanya dipakai saat pemilik akun berbicara dengan karakter ini; tidak masuk Memori Tim 1 atau sesi undangan. Selaraskan dengan Bible dan jangan masukkan hal sensitif yang tak ingin diproses model.
               </p>
             </div>
@@ -875,12 +875,12 @@ export function CharacterModal({
           <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div>
               <p className="text-xs font-semibold text-accent-text">Memori Tim 1</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+              <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                 Semua karakter di akunmu masuk Tim 1 secara default. Catatan relasi yang dibagikan membantu mereka saling mengenal.
               </p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Peran di tim</label>
+              <label className="mb-1 block text-xs font-medium text-copy-soft">Peran di tim</label>
               <input
                 value={teamRole}
                 onChange={(e) => setTeamRole(e.target.value)}
@@ -891,7 +891,7 @@ export function CharacterModal({
               <p className="mt-1 text-[11px]">{charCount(teamRole, MAX_TEAM_ROLE_CHARS)}</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
+              <label className="mb-1 block text-xs font-medium text-copy-soft">
                 Memori bersama & relasi Tim 1
               </label>
               <textarea
@@ -906,7 +906,7 @@ export function CharacterModal({
                 {charCount(sharedTeamMemory, MAX_SHARED_TEAM_MEMORY_CHARS)}
               </p>
             </div>
-            <label className="flex items-start gap-2 text-xs text-ink-soft">
+            <label className="flex items-start gap-2 text-xs text-copy-soft">
               <input
                 type="checkbox"
                 checked={shareTeamMemory}
@@ -925,13 +925,13 @@ export function CharacterModal({
           <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div>
               <p className="text-xs font-semibold text-accent-text">Info profil pemilik saat diundang</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+              <p className="mt-1 text-[11px] leading-relaxed text-copy-soft">
                 Karakter tetap tahu bahwa ia milikmu dan hadir sebagai tamu. Centang hanya fakta profilmu yang boleh masuk ke brief dan dibagikan saat ia diundang.
               </p>
             </div>
             <div className="space-y-2">
               {OWNER_PROFILE_SHARE_OPTIONS.map(({ field, label }) => (
-                <label key={field} className="flex items-center gap-2 text-xs text-ink-soft">
+                <label key={field} className="flex items-center gap-2 text-xs text-copy-soft">
                   <input
                     type="checkbox"
                     checked={shareOwnerProfileFields.includes(field)}
@@ -954,7 +954,7 @@ export function CharacterModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">
+            <label className="mb-1 block text-xs font-medium text-copy-soft">
               Kepribadian & latar belakang karakter
             </label>
             <textarea
@@ -1008,7 +1008,7 @@ export function CharacterModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">
+            <label className="mb-1 block text-xs font-medium text-copy-soft">
               Pesan pembuka pertama (opsional)
             </label>
             <textarea
@@ -1022,7 +1022,7 @@ export function CharacterModal({
 
           <div className={`${onboardingMode ? "hidden " : ""}grid grid-cols-1 gap-2 sm:grid-cols-2`}>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Provider AI</label>
+              <label className="mb-1 block text-xs font-medium text-copy-soft">Provider AI</label>
               <select
                 value={providerId}
                 onChange={(e) => {
@@ -1042,7 +1042,7 @@ export function CharacterModal({
             </div>
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
-                <label className="block text-xs font-medium text-ink-soft">
+                <label className="block text-xs font-medium text-copy-soft">
                   Model (opsional)
                 </label>
                 {providers.length > 0 && (

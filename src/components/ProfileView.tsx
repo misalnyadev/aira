@@ -412,7 +412,7 @@ export function ProfileView({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                <label className="mb-1 block text-xs font-medium text-copy-soft">
                   Nama
                 </label>
                 <input
@@ -427,7 +427,7 @@ export function ProfileView({
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                <label className="mb-1 block text-xs font-medium text-copy-soft">
                   Panggilan di chat
                 </label>
                 <input
@@ -445,7 +445,7 @@ export function ProfileView({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                <label className="mb-1 block text-xs font-medium text-copy-soft">
                   Usia
                 </label>
                 <input
@@ -460,7 +460,7 @@ export function ProfileView({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-ink-soft">
+                <label className="mb-1 block text-xs font-medium text-copy-soft">
                   Kesibukan
                 </label>
                 <input
@@ -476,7 +476,7 @@ export function ProfileView({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
+              <label className="mb-1 block text-xs font-medium text-copy-soft">
                 Jenis kelamin / gender (opsional)
               </label>
               <select
@@ -496,7 +496,7 @@ export function ProfileView({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">
+              <label className="mb-1 block text-xs font-medium text-copy-soft">
                 Cerita singkat tentang kamu
               </label>
               <textarea
@@ -580,7 +580,7 @@ export function ProfileView({
                     style={{ width: `${usageRatio}%` }}
                   />
                 </div>
-                <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
+                <p className="mt-2 text-[11px] leading-relaxed text-copy-soft">
                   {effectiveIsAdmin
                     ? "Sebagai Admin, kamu bebas membuat banyak karakter dan dapat mengatur kuota seluruh member."
                     : "Setiap akun Member diberikan 1 slot karakter bawaan. Untuk menambah slot karakter baru, ajukan permintaan ke Admin di bawah."}
@@ -615,7 +615,7 @@ export function ProfileView({
                   <h3 className="text-sm font-bold text-accent-text">
                     Karakter Saya
                   </h3>
-                  <p className="mt-0.5 text-xs text-ink-soft">
+                  <p className="mt-0.5 text-xs text-copy-soft">
                     {characters.length === 0
                       ? "Kelola karakter — buat baru, atur profil & PIN."
                       : `${characters.length} karakter · ${characters.length}/${characterLimit} slot terpakai`}
@@ -659,7 +659,7 @@ export function ProfileView({
 
                   {characters.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-line bg-surface p-4 text-center">
-                      <p className="text-xs font-medium text-ink-soft">
+                      <p className="text-xs font-medium text-copy-soft">
                         Belum ada karakter. Buat karakter pertamamu untuk mulai chat.
                       </p>
                       {onNewCharacter && (
@@ -684,7 +684,7 @@ export function ProfileView({
                             <p className="truncate text-sm font-bold text-accent-text">
                               {ch.name}
                             </p>
-                            <p className="truncate text-[11px] text-ink-soft">
+                            <p className="truncate text-[11px] text-copy-soft">
                               {ch.shortBio || ch.invitePin || "Tanpa deskripsi"}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -791,7 +791,7 @@ export function ProfileView({
                     <h3 className="text-sm font-bold text-accent-text">
                       Permintaan Tambah Slot Karakter
                     </h3>
-                    <p className="mt-0.5 text-xs text-ink-soft">
+                    <p className="mt-0.5 text-xs text-copy-soft">
                       Ingin membuat lebih dari {characterLimit} karakter? Ajukan tambahan slot ke Admin.
                     </p>
                   </div>
