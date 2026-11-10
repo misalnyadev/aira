@@ -188,7 +188,7 @@ export function BrainstormRoomView({
         </button>
         <div className={`min-w-0 flex-1 ${mode === "meetup" ? "" : "rounded-full px-3 py-1 ring-1 ring-accent/40 dark:ring-accent/45"}`}>
           <p className={`truncate text-sm font-semibold ${mode === "meetup" ? "text-ink" : "text-accent-text"}`}>{roomTitle}</p>
-          <p className="truncate text-xs text-ink-soft">
+          <p className="truncate text-xs text-copy-soft">
             {isTyping
               ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : mode === "scene" ? "sedang bermain adegan..." : "sedang diskusi...")
               : mode === "meetup"
@@ -242,14 +242,14 @@ export function BrainstormRoomView({
           <div className="mx-auto w-full max-w-3xl space-y-3">
             {messages.length === 0 && !isTyping && (
               <div className="py-10 text-center">
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-copy">
                   {mode === "meetup"
                     ? "Mulai pertemuan tatap muka"
                     : mode === "scene"
                       ? "Mulai Adegan"
                       : "Mulai diskusi di meja ini"}
                 </p>
-                <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+                <p className="mx-auto mt-1 max-w-sm text-sm text-copy-soft">
                   {mode === "meetup"
                     ? members.length === 1
                       ? `Kamu dan ${members[0].name} berada di ruangan yang sama. Mulai bicara; tidak ada panggilan video atau telepon.`
