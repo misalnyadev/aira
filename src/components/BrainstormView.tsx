@@ -116,7 +116,7 @@ export function BrainstormView({
               Tidak ada karakter yang cocok dengan pencarianmu.
             </div>
           ) : (
-            <div className="divide-y divide-line/70">
+            <div className="divide-y divide-[#4687fe]/25 dark:divide-[#d5b767]/30">
               {filteredMeetupCharacters.map((character) => (
                 <button
                   key={character.id}
@@ -161,7 +161,7 @@ export function BrainstormView({
           </div>
 
           {brainstormRooms.length === 0 ? (
-            <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
+            <div className="rounded-2xl border border-[#4687fe]/25 bg-surface px-5 py-7 text-center dark:border-[#d5b767]/30">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-2">
                 <MeetupIcon className="h-6 w-6 text-ink-soft" />
               </div>
@@ -205,7 +205,7 @@ export function BrainstormView({
           </div>
 
           {sceneRooms.length === 0 ? (
-            <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
+            <div className="rounded-2xl border border-[#4687fe]/25 bg-surface px-5 py-7 text-center dark:border-[#d5b767]/30">
               <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 {canCreateRoom ? "Belum ada Adegan" : "Buat karakter untuk mulai Adegan"}
               </h3>
@@ -266,7 +266,7 @@ function RoomCards({
       {rooms.map((room) => (
         <div
           key={room.id}
-          className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+          className="flex items-center gap-2 rounded-2xl border border-[#4687fe]/25 bg-surface px-3.5 py-3 transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/30 dark:hover:bg-surface-2"
         >
           <button
             type="button"
@@ -302,7 +302,7 @@ function RoomCards({
                 onDeleteRoom(room.id);
               }
             }}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#205ac4] hover:bg-rose-500/10 hover:text-rose-600 dark:text-[#e8cf75] dark:hover:text-rose-400"
             aria-label={`Hapus ${room.mode === "scene" ? "adegan" : "meja"} ${room.title}`}
             title={room.mode === "scene" ? "Hapus adegan" : "Hapus meja"}
           >
