@@ -129,7 +129,7 @@ export function BrainstormView({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-1.5">
-                        <p className="min-w-0 truncate text-sm font-semibold text-ink">
+                        <p className="min-w-0 truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                           {character.name}
                         </p>
                         {character.threadKind === "guest_contact" && (
@@ -154,7 +154,7 @@ export function BrainstormView({
 
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
-            <h2 className="text-sm font-bold text-ink">Brainstorm</h2>
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Brainstorm</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               Diskusi ide 2–3 karakter. Usulan dan rencana bisa diingat sebagai rencana, bukan kejadian cerita.
             </p>
@@ -198,7 +198,7 @@ export function BrainstormView({
 
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
-            <h2 className="text-sm font-bold text-ink">Adegan</h2>
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Adegan</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               Adegan bersama 1–3 karakter. Default-nya latihan; tandai canon bila masuk cerita utama.
             </p>
@@ -282,7 +282,7 @@ function RoomCards({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
-                <p className="truncate text-sm font-semibold text-ink">{room.title}</p>
+                <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{room.title}</p>
                 {room.mode === "scene" && (
                   <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
                     {room.sceneCanonical ? "Canon" : "Latihan"}
@@ -455,7 +455,7 @@ function CreateSharedRoomModal({
                 >
                   <Avatar name={character.name} src={character.avatarUrl} size={40} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{character.name}</p>
+                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{character.name}</p>
                     <p className="truncate text-xs text-ink-soft">{character.shortBio || "Tanpa bio"}</p>
                     <p className="mt-0.5 text-[10px] text-muted">
                       Ingatan jangka panjang: {character.memoryEnabled ? "aktif" : "nonaktif"}

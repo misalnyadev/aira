@@ -609,7 +609,7 @@ export function ProfileView({
                 className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50 sm:px-5"
               >
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-ink">
+                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     Karakter Saya
                   </h3>
                   <p className="mt-0.5 text-xs text-ink-soft">
@@ -678,7 +678,7 @@ export function ProfileView({
                         >
                           <Avatar name={ch.name} src={ch.avatarUrl} size={40} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold text-ink">
+                            <p className="truncate text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                               {ch.name}
                             </p>
                             <p className="truncate text-[11px] text-ink-soft">

@@ -148,7 +148,7 @@ export function Sidebar({
                 <button type="button" onClick={() => onSelect(c.id)} className="min-w-0 flex-1 text-left" aria-label={`Buka chat ${c.name}`}>
                 <div className="min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-ink">
+                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                       {c.name}
                       {c.threadKind === "guest_contact" && (
                         <span className="ml-1.5 inline-block rounded-full bg-surface-2 px-1.5 py-0.2 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
