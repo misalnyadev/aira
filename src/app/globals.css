@@ -16,9 +16,10 @@
   --ink-soft: #52525b;
   --muted: #71717a;
 
-  --brand: #18181b;
-  --brand-strong: #09090b;
-  --brand-ink: #ffffff;
+  /* Warna aksi utama HeyTalent: biru AK Talent dengan teks kontras. */
+  --brand: #4687fe;
+  --brand-strong: #78a8ff;
+  --brand-ink: #07152f;
 
   --bubble-out: #e4e4e7;
   --bubble-out-ink: #0a0a0a;
@@ -43,9 +44,10 @@
   --ink-soft: #a1a1aa;
   --muted: #71717a;
 
-  --brand: #fafafa;
-  --brand-strong: #e4e4e7;
-  --brand-ink: #0a0a0a;
+  /* Tema gelap memakai emas AiKreator untuk aksi utama. */
+  --brand: #d5b767;
+  --brand-strong: #e8cf75;
+  --brand-ink: #211804;
 
   --bubble-out: #262626;
   --bubble-out-ink: #fafafa;
