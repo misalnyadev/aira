@@ -31,6 +31,8 @@ export function Sidebar({
   onOpenSettings,
   hasProviders,
   pendingContactsCount = 0,
+  contactUpdates,
+  onOpenUpdate,
 }: {
   characters: CharacterSummary[];
   activeId: string | null;
@@ -40,6 +42,8 @@ export function Sidebar({
   onOpenSettings: () => void;
   hasProviders: boolean;
   pendingContactsCount?: number;
+  contactUpdates: Record<string, { storyId?: string; reelId?: string }>;
+  onOpenUpdate: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
 
@@ -130,16 +134,19 @@ export function Sidebar({
         ) : (
           filtered.map((c) => {
             const active = activeId === c.id;
+            const update = c.threadKind === "guest_contact" && c.sourceCharacterId ? contactUpdates[c.sourceCharacterId] : undefined;
+            const label = update?.storyId && update?.reelId ? "Story dan Reel baru" : update?.storyId ? "Story baru" : update?.reelId ? "Reel baru" : null;
+            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-blue-700 via-white to-blue-400" : update?.storyId ? "bg-blue-600" : "bg-white ring-1 ring-blue-500";
             return (
-              <button
+              <div
                 key={c.id}
-                onClick={() => onSelect(c.id)}
                 className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
                   active ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2"
                 }`}
               >
-                <Avatar name={c.name} src={c.avatarUrl} size={48} />
-                <div className="min-w-0 flex-1">
+                {label && update ? <button type="button" onClick={() => onOpenUpdate(update.storyId || update.reelId!)} aria-label={`${label} dari ${c.name}`} title={label} className={`shrink-0 rounded-full p-[3px] ${ring}`}><span className="block rounded-full bg-surface p-[2px]"><Avatar name={c.name} src={c.avatarUrl} size={42} /></span></button> : <button type="button" onClick={() => onSelect(c.id)} aria-label={`Buka chat ${c.name}`} className="shrink-0 p-[5px]"><Avatar name={c.name} src={c.avatarUrl} size={42} /></button>}
+                <button type="button" onClick={() => onSelect(c.id)} className="min-w-0 flex-1 text-left" aria-label={`Buka chat ${c.name}`}>
+                <div className="min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-semibold text-ink">
                       {c.name}
@@ -183,7 +190,8 @@ export function Sidebar({
                     {c.preview || c.shortBio || "Mulai obrolan baru"}
                   </p>
                 </div>
-              </button>
+                </button>
+              </div>
             );
           })
         )}
