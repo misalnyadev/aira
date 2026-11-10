@@ -857,8 +857,8 @@ export function AdminPanelSection({
                         onClick={() => setRoleFilter(f.id)}
                         className={`min-w-0 truncate rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                           roleFilter === f.id
-                            ? "bg-surface text-ink shadow-2xs"
-                            : "text-ink-soft hover:text-ink"
+                            ? "bg-surface text-[#205ac4] shadow-2xs ring-1 ring-[#4687fe]/35 dark:text-[#e8cf75] dark:ring-[#d5b767]/40"
+                            : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
                         }`}
                       >
                         {f.label}
@@ -896,7 +896,7 @@ export function AdminPanelSection({
                                   {label}
                                 </span>
                                 {u.isAdmin ? (
-                                  <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
+                                  <span className="shrink-0 rounded-full bg-[#4687fe]/15 px-2 py-0.5 text-[10px] font-bold text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]">
                                     Admin
                                   </span>
                                 ) : (

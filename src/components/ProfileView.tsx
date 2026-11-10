@@ -550,7 +550,7 @@ export function ProfileView({
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                         effectiveIsAdmin
-                          ? "bg-ink text-surface"
+                          ? "bg-[#4687fe]/15 text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]"
                           : "bg-surface-2 text-ink-soft ring-1 ring-line"
                       }`}
                     >
