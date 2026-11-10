@@ -1351,7 +1351,7 @@ export function StatusView({
                           ) : reel.mediaType === "video" && reel.videoUrl ? (
                             <FeedVideo src={reel.videoUrl} aspect="absolute inset-0 h-full w-full" muted />
                           ) : (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-2">
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#0d1a35] via-[#1c3e75] to-[#2c5ba0] p-2">
                               <p className="line-clamp-5 whitespace-pre-wrap text-center text-xs font-semibold text-white drop-shadow">
                                 {reel.content || reel.caption || "Reel"}
                               </p>
@@ -1482,7 +1482,7 @@ export function StatusView({
                         onClickMedia={() => { setFullScreenId(it.id); const fm = mutedMap[it.id]; if (fm !== undefined) setFullMuted(fm); else setFullMuted(true); }}
                       />
                     ) : (
-                      <div className={`w-full cursor-pointer bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
+                      <div className={`w-full cursor-pointer bg-gradient-to-br from-[#0d1a35] via-[#1c3e75] to-[#2c5ba0] px-6 py-10 ${it.kind === "reel" ? "aspect-[9/16] flex items-center justify-center" : ""}`}>
                         <p className="whitespace-pre-wrap text-center text-[18px] font-semibold leading-relaxed text-white drop-shadow">{it.content || it.caption || "—"}</p>
                       </div>
                     )}
@@ -1816,7 +1816,7 @@ export function StatusView({
                 onError={finishCurrentStory}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 px-8 py-28 text-center">
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#0d1a35] via-[#1c3e75] to-[#2c5ba0] px-8 py-28 text-center">
                 <p className="whitespace-pre-wrap text-xl font-semibold leading-relaxed text-white drop-shadow-lg">
                   {currentStory.content || currentStory.caption}
                 </p>
@@ -1951,7 +1951,7 @@ export function StatusView({
                           }}
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 via-pink-500 to-amber-400 p-8 text-center">
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0d1a35] via-[#1c3e75] to-[#2c5ba0] p-8 text-center">
                           <p className="whitespace-pre-wrap text-xl font-semibold text-white">{item.content || item.caption}</p>
                         </div>
                       )}

@@ -70,6 +70,7 @@ export function NavRail({
                 )}
               </span>
               <span>{label}</span>
+              {active && <span aria-hidden="true" className="h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#d5b767]" />}
             </button>
           );
         })}
@@ -109,7 +110,7 @@ export function MobileTabBar({
               key={id}
               onClick={() => onChange(id)}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
+              className={`relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
                 active
                   ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] shadow-xs dark:bg-[#4687fe]/20 dark:text-[#79aaff]"
                   : "text-ink-soft hover:bg-[#4687fe]/10 hover:text-[#205ac4] dark:hover:text-[#79aaff]"
@@ -128,6 +129,7 @@ export function MobileTabBar({
                 )}
               </span>
               <span className="max-w-full truncate px-1">{label}</span>
+              {active && <span aria-hidden="true" className="absolute bottom-0.5 h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#d5b767]" />}
             </button>
           );
         })}
