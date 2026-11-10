@@ -41,6 +41,9 @@ export type ProfileTab = "identity" | "account" | "admin";
 const FIELD =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
 
+const PROFILE_FIELD =
+  "w-full rounded-xl border border-[#4687fe]/40 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-[#205ac4] dark:border-[#d5b767]/40 dark:focus:border-[#e8cf75] sm:text-sm";
+
 function charCount(value: string, max: number) {
   const over = value.length > max;
   return (
@@ -354,10 +357,10 @@ export function ProfileView({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="group relative rounded-full"
+                className="group relative rounded-full ring-2 ring-[#4687fe]/35 ring-offset-2 ring-offset-surface dark:ring-[#d5b767]/40"
                 title="Unggah foto profil"
               >
-                <Avatar name={previewName} src={avatarUrl} size={96} ring />
+                <Avatar name={previewName} src={avatarUrl} size={96} />
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition group-hover:bg-black/35">
                   <CameraIcon className="h-6 w-6 text-white opacity-0 transition group-hover:opacity-100" />
                 </div>
@@ -417,7 +420,7 @@ export function ProfileView({
                   onChange={(e) => setDisplayName(e.target.value)}
                   maxLength={MAX_DISPLAY_NAME_CHARS}
                   placeholder="Mis. Adi"
-                  className={FIELD}
+                  className={PROFILE_FIELD}
                 />
                 <p className="mt-1 text-[11px]">
                   {charCount(displayName, MAX_DISPLAY_NAME_CHARS)}
@@ -432,7 +435,7 @@ export function ProfileView({
                   onChange={(e) => setNickname(e.target.value)}
                   maxLength={MAX_NICKNAME_CHARS}
                   placeholder="Mis. Mas Adi / Kak"
-                  className={FIELD}
+                  className={PROFILE_FIELD}
                 />
                 <p className="mt-1 text-[11px]">
                   {charCount(nickname, MAX_NICKNAME_CHARS)}
@@ -453,7 +456,7 @@ export function ProfileView({
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   placeholder="Opsional"
-                  className={FIELD}
+                  className={PROFILE_FIELD}
                 />
               </div>
               <div>
@@ -464,7 +467,7 @@ export function ProfileView({
                   value={occupation}
                   onChange={(e) => setOccupation(e.target.value)}
                   placeholder="Mis. fotografer · Bogor"
-                  className={FIELD}
+                  className={PROFILE_FIELD}
                 />
                 <p className="mt-1 text-[11px]">
                   {charCount(occupation, MAX_OCCUPATION_CHARS)}
@@ -479,7 +482,7 @@ export function ProfileView({
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
-                className={FIELD}
+                className={PROFILE_FIELD}
               >
                 {GENDER_OPTIONS.map(({ value, label }) => (
                   <option key={value || "unspecified"} value={value}>
@@ -501,7 +504,7 @@ export function ProfileView({
                 onChange={(e) => setAbout(e.target.value)}
                 rows={4}
                 placeholder="Hobi, kebiasaan, selera obrolan, atau hubunganmu dengan karakter..."
-                className={`${FIELD} resize-none`}
+                className={`${PROFILE_FIELD} resize-none`}
               />
               <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
                 <span className="text-muted">Boleh dikosongkan kapan saja.</span>
