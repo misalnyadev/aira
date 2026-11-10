@@ -187,7 +187,7 @@ export function BrainstormRoomView({
           <BackIcon className="h-[30px] w-[30px]" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink">{roomTitle}</p>
+          <p className={`truncate text-sm font-semibold ${mode === "meetup" ? "text-ink" : "text-[#205ac4] dark:text-[#e8cf75]"}`}>{roomTitle}</p>
           <p className="truncate text-xs text-ink-soft">
             {isTyping
               ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : mode === "scene" ? "sedang bermain adegan..." : "sedang diskusi...")
@@ -276,7 +276,7 @@ export function BrainstormRoomView({
                     )}
                     <div className="space-y-1.5">
                       {!isUser && char && (
-                        <p className="mb-1 ml-1 text-[11px] font-semibold text-ink-soft">{char.name}</p>
+                        <p className={`mb-1 ml-1 text-[11px] font-semibold ${mode === "meetup" ? "text-ink-soft" : "text-[#205ac4] dark:text-[#e8cf75]"}`}>{char.name}</p>
                       )}
                       {displayParts.map((part, pIdx) => (
                         <div
