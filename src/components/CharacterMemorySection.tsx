@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MAX_MEMORY_SUMMARY_CHARS } from "@/lib/limits";
+import { MemoryOutlineIcon, WebOutlineIcon } from "./icons";
 
 export type MemoryPatch = {
   memoryEnabled: boolean;
@@ -277,8 +278,9 @@ export function CharacterMemorySection({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
+              <MemoryOutlineIcon className="h-4 w-4 shrink-0 text-[#205ac4] dark:text-[#79aaff]" />
               <span className="text-sm font-semibold text-ink">
-                🧠 Teman Perencanaan & Sadar Waktu
+                Teman Perencanaan & Sadar Waktu
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-ink-soft">
@@ -409,8 +411,9 @@ export function CharacterMemorySection({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
+              <WebOutlineIcon className="h-4 w-4 shrink-0 text-[#205ac4] dark:text-[#79aaff]" />
               <span className="text-sm font-semibold text-ink">
-                🌐 Browsing Internet & Baca Link
+                Browsing Internet & Baca Link
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-ink-soft">

@@ -22,6 +22,7 @@ import { Avatar } from "./Avatar";
 import { AvatarCropModal } from "./AvatarCropModal";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import {
+  BibleOutlineIcon,
   CameraIcon,
   ChatSquareIcon,
   CheckIcon,
@@ -688,8 +689,8 @@ export function ProfileView({
                                 PIN {ch.invitePin}
                               </span>
                               {ch.hasBible && (
-                                <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] font-bold text-surface">
-                                  Bible
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#205ac4] dark:text-[#79aaff]">
+                                  <BibleOutlineIcon className="h-3 w-3" /> Bible
                                 </span>
                               )}
                             </div>

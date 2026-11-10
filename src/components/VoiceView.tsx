@@ -123,7 +123,7 @@ function VoiceAccordionCard({
               <span
                 className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                   badgeTone === "active"
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    ? "bg-[#4687fe]/15 text-[#205ac4] dark:text-[#79aaff]"
                     : "bg-surface-2 text-ink-soft"
                 }`}
               >
@@ -1064,7 +1064,7 @@ function TtsProviderKeySection({
                         dari Setelan
                       </span>
                       {isPrimaryActive && (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                        <span className="rounded-full bg-[#4687fe]/15 px-2 py-0.5 text-[10px] font-bold text-[#205ac4] dark:text-[#79aaff]">
                           dipakai aktif
                         </span>
                       )}

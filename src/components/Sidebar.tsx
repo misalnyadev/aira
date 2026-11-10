@@ -5,7 +5,7 @@ import type { CharacterSummary } from "@/types/chat";
 import type { UserProfile } from "@/lib/userProfile";
 import { Avatar } from "./Avatar";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
-import { PlusIcon, SearchIcon, XIcon } from "./icons";
+import { BibleOutlineIcon, MemoryOutlineIcon, PlusIcon, SearchIcon, WebOutlineIcon, XIcon } from "./icons";
 
 function formatListTime(iso: string) {
   const d = new Date(iso);
@@ -161,24 +161,28 @@ export function Sidebar({
                         </span>
                       )}
                       {c.hasBible && (
-                        <span className="ml-1 text-[11px]" title="Memakai bible peran">
-                          📖
+                        <span role="img" aria-label="Memakai bible peran" className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]" title="Memakai bible peran">
+                          <BibleOutlineIcon className="h-4 w-4" />
                         </span>
                       )}
                       {c.memoryEnabled && (
                         <span
-                          className="ml-1 text-[11px]"
+                          role="img"
+                          aria-label="Ingatan jangka panjang dan sadar waktu aktif"
+                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
                           title="Ingatan jangka panjang & sadar waktu aktif"
                         >
-                          🧠
+                          <MemoryOutlineIcon className="h-4 w-4" />
                         </span>
                       )}
                       {c.browsingEnabled && (
                         <span
-                          className="ml-1 text-[11px]"
+                          role="img"
+                          aria-label="Browsing internet dan baca link aktif"
+                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
                           title="Browsing internet & baca link aktif"
                         >
-                          🌐
+                          <WebOutlineIcon className="h-4 w-4" />
                         </span>
                       )}
                     </p>

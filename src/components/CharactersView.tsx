@@ -6,6 +6,9 @@ import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import { MAX_CHARACTERS } from "@/lib/limits";
 import { Avatar } from "./Avatar";
 import {
+  BibleOutlineIcon,
+  MemoryOutlineIcon,
+  WebOutlineIcon,
   ChatsIcon,
   PencilIcon,
   PlusIcon,
@@ -422,25 +425,25 @@ export function CharactersView({
                         {c.hasBible && (
                           <span
                             title="Memakai bible peran"
-                            className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:text-[#79aaff]"
                           >
-                            📖 Bible
+                            <BibleOutlineIcon className="h-3.5 w-3.5" /> Bible
                           </span>
                         )}
                         {c.memoryEnabled && (
                           <span
                             title="Ingatan jangka panjang & sadar waktu aktif"
-                            className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:text-[#79aaff]"
                           >
-                            🧠 Ingatan
+                            <MemoryOutlineIcon className="h-3.5 w-3.5" /> Ingatan
                           </span>
                         )}
                         {c.browsingEnabled && (
                           <span
                             title="Browsing internet & baca link aktif"
-                            className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:text-[#79aaff]"
                           >
-                            🌐 Web
+                            <WebOutlineIcon className="h-3.5 w-3.5" /> Web
                           </span>
                         )}
                       </div>

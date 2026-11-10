@@ -35,7 +35,7 @@ import {
 } from "@/lib/limits";
 import { Avatar } from "./Avatar";
 import { AvatarCropModal } from "./AvatarCropModal";
-import { CameraIcon, XIcon } from "./icons";
+import { BibleOutlineIcon, CameraIcon, XIcon } from "./icons";
 
 const FIELD =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:py-2 sm:text-sm";
@@ -969,8 +969,8 @@ export function CharacterModal({
 
           <div className="rounded-2xl border border-line bg-surface-2/70 p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="text-xs font-semibold text-ink">
-                📖 Bible peran (acuan utama)
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink">
+                <BibleOutlineIcon className="h-4 w-4 text-[#205ac4] dark:text-[#79aaff]" /> Bible peran (acuan utama)
               </label>
               <button
                 type="button"
