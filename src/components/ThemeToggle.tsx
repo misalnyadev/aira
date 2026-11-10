@@ -90,7 +90,7 @@ export function ThemeSegmented() {
           Warna aksen
           <input type="color" value={customTheme.accent} onChange={(event) => setCustomTheme({ ...customTheme, accent: event.target.value })} aria-label="Pilih warna aksen" className="h-9 w-12 cursor-pointer rounded border border-line bg-surface p-1" />
         </label>
-        <p className="text-xs text-ink-soft">Tahap awal: warna aksen berlaku pada tombol utama dan beberapa kontrol. Bagian lainnya masih memakai warna tema bawaan. Pilihan tersimpan di perangkat ini.</p>
+        <p className="text-xs text-ink-soft">Warna aksen digunakan pada tombol dan bagian yang sudah mendukung tema Kustom. Beberapa bagian masih memakai warna bawaan. Pilihan tersimpan di perangkat ini.</p>
       </div>
     )}
     </div>
