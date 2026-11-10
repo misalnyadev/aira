@@ -1208,7 +1208,7 @@ export function StatusView({
                 onChange={(e) => setComposeText(e.target.value.slice(0, 700))}
                 placeholder="Apa yang kamu pikirkan? (maks 700)"
                 rows={3}
-                className="w-full rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-ink/30"
+                className="w-full rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm text-copy outline-none focus:border-ink/30"
               />
             )}
 
@@ -1236,7 +1236,7 @@ export function StatusView({
               value={composeCaption}
               onChange={(e) => setComposeCaption(e.target.value.slice(0, 500))}
               placeholder={composeMedia === "text" ? "Caption (opsional)" : "Tulis caption..."}
-              className="w-full rounded-full border border-line bg-surface-2 px-4 py-2.5 text-sm outline-none focus:border-ink/30"
+              className="w-full rounded-full border border-line bg-surface-2 px-4 py-2.5 text-sm text-copy outline-none focus:border-ink/30"
             />
 
             {composeErr && <div className="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-medium text-red-600">{composeErr}</div>}
@@ -1589,7 +1589,7 @@ export function StatusView({
                     <ExpandableCaption
                       author={displayName}
                       text={it.caption || it.content}
-                      className="px-3 pb-1 text-sm leading-[18px] text-ink"
+                      className="px-3 pb-1 text-sm leading-[18px] text-copy"
                     />
                   ) : null}
                   {it.commentCount > 0 && reelCommentsFor !== it.id && (
@@ -1740,7 +1740,7 @@ export function StatusView({
                   onChange={(e) => setEditContent(e.target.value.slice(0, 700))}
                   placeholder="Isi status..."
                   rows={5}
-                  className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-ink/30"
+                  className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm text-copy outline-none focus:border-ink/30"
                 />
               )}
               <textarea
@@ -1748,7 +1748,7 @@ export function StatusView({
                 onChange={(e) => setEditCaption(e.target.value.slice(0, 500))}
                 placeholder={editingItem.mediaType === "text" ? "Caption (opsional)" : "Edit caption..."}
                 rows={3}
-                className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none focus:border-ink/30"
+                className="w-full resize-y rounded-2xl border border-line bg-surface-2 px-3 py-2.5 text-sm text-copy outline-none focus:border-ink/30"
               />
               {editErr && <div className="rounded-xl bg-red-500/10 px-3 py-2 text-sm text-red-600">{editErr}</div>}
               <div className="flex gap-2 pt-1">

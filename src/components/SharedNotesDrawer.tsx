@@ -208,7 +208,7 @@ export function SharedNotesDrawer({
                         ? "Judul referensi atau keterangan link..."
                         : "Mis: Jumat revisi naskah babak 2 bareng..."
                   }
-                  className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                  className="w-full resize-none rounded-xl border border-line bg-surface px-3 py-2 text-base text-copy placeholder:text-muted focus:border-ink focus:outline-none"
                 />
 
                 {(kind === "link" || url.length > 0) && (
@@ -217,7 +217,7 @@ export function SharedNotesDrawer({
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-base text-copy placeholder:text-muted focus:border-ink focus:outline-none"
                   />
                 )}
 
@@ -251,7 +251,7 @@ export function SharedNotesDrawer({
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full rounded-xl border border-line bg-surface px-3 py-1.5 text-base text-ink focus:border-ink focus:outline-none"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-1.5 text-base text-copy focus:border-ink focus:outline-none"
                   />
                 </div>
 
@@ -312,7 +312,7 @@ export function SharedNotesDrawer({
             </p>
           ) : filteredNotes.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center">
-              <p className="text-xs font-medium text-ink-soft">
+              <p className="text-xs font-medium text-copy-soft">
                 {filter === "done"
                   ? "Belum ada catatan yang ditandai selesai."
                   : "Belum ada catatan aktif di kategori ini."}
@@ -362,7 +362,7 @@ export function SharedNotesDrawer({
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <p
-                        className={`break-words text-[13px] leading-snug text-ink ${
+                        className={`break-words text-[13px] leading-snug text-copy ${
                           item.done ? "line-through opacity-75" : "font-medium"
                         }`}
                       >
@@ -391,7 +391,7 @@ export function SharedNotesDrawer({
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="truncate font-semibold text-ink underline decoration-dotted underline-offset-2"
+                            className="truncate font-semibold text-copy underline decoration-dotted underline-offset-2"
                           >
                             Buka link ↗
                           </a>
