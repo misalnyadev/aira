@@ -8,7 +8,7 @@ import { ensureDb } from "@/lib/dbReady";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   await ensureDb();
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Kamu belum masuk." }, { status: 401 });
@@ -24,8 +24,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "Kamu sudah mengikuti profil ini." }, { status: 400 });
   }
 
-  const targetCondition = status.characterId
-    ? eq(statusFollows.targetCharacterId, status.characterId)
+  const accountTarget = new URL(req.url).searchParams.get("target") === "account";
+  const characterId = accountTarget ? null : status.characterId;
+  const targetCondition = characterId
+    ? eq(statusFollows.targetCharacterId, characterId)
     : eq(statusFollows.targetUserId, status.userId);
   const [existing] = await db
     .select({ id: statusFollows.id })
@@ -39,8 +41,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   } else {
     await db.insert(statusFollows).values({
       followerUserId: user.id,
-      targetUserId: status.characterId ? null : status.userId,
-      targetCharacterId: status.characterId,
+      targetUserId: characterId ? null : status.userId,
+      targetCharacterId: characterId,
     });
   }
 
