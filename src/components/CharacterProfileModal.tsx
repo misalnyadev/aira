@@ -118,7 +118,7 @@ export function CharacterProfileModal({
             <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-accent-text">
               Tentang karakter
             </h4>
-            <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl bg-accent/10 p-3.5 text-sm leading-relaxed text-ink">
+            <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl bg-accent/10 p-3.5 text-sm leading-relaxed text-copy">
               {character.personality}
             </p>
           </div>
@@ -141,7 +141,7 @@ export function CharacterProfileModal({
                 acuan utama setiap balasan.
               </p>
               {showBible && (
-                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3 text-xs leading-relaxed text-ink">
+                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3 text-xs leading-relaxed text-copy">
                   {character.bible}
                 </pre>
               )}

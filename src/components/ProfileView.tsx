@@ -39,10 +39,10 @@ import type { CharacterSummary } from "@/types/chat";
 export type ProfileTab = "identity" | "account" | "admin";
 
 const FIELD =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-copy outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
 
 const PROFILE_FIELD =
-  "w-full rounded-xl border border-accent/40 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-accent-text dark:border-accent/40 dark:focus:border-accent-text sm:text-sm";
+  "w-full rounded-xl border border-accent/40 bg-surface px-3.5 py-2.5 text-base text-copy outline-none transition placeholder:text-muted focus:border-accent-text dark:border-accent/40 dark:focus:border-accent-text sm:text-sm";
 
 function charCount(value: string, max: number) {
   const over = value.length > max;
@@ -759,7 +759,7 @@ export function ProfileView({
                         <button
                           type="button"
                           onClick={onNewCharacter}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-surface-2"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-copy transition hover:bg-surface-2"
                         >
                           <PlusIcon className="h-3.5 w-3.5" /> Buat Karakter Baru
                         </button>
@@ -811,7 +811,7 @@ export function ProfileView({
                     <span className="inline-block rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
                       Menunggu Persetujuan Admin
                     </span>
-                    <p className="break-words text-xs leading-relaxed text-ink">
+                    <p className="break-words text-xs leading-relaxed text-copy">
                       Kamu mengajukan penambahan kuota menjadi{" "}
                       <b>{latestQuotaRequest?.requestedQuota} slot karakter</b>.
                       {latestQuotaRequest?.reason
@@ -870,7 +870,7 @@ export function ProfileView({
                               onClick={() => setAddSlots(n)}
                               className={`rounded-xl border py-2 text-xs font-semibold transition ${
                                 addSlots === n
-                                  ? "border-ink bg-surface-2 text-ink shadow-2xs"
+                                  ? "border-ink bg-surface-2 text-copy shadow-2xs"
                                   : "border-line text-ink-soft hover:bg-surface-2"
                               }`}
                             >

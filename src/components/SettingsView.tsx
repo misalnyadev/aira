@@ -33,7 +33,7 @@ import {
 } from "./icons";
 
 const FIELD =
-  "w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-accent-text sm:py-2 sm:text-sm";
+  "w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3.5 py-2.5 text-base text-copy outline-none transition placeholder:text-muted focus:border-accent-text sm:py-2 sm:text-sm";
 
 type TestState = { status: "testing" | "ok" | "fail"; message?: string };
 
@@ -714,7 +714,7 @@ export function SettingsView({
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="truncate text-sm font-medium text-ink">{p.label}</span>
+                            <span className="truncate text-sm font-medium text-copy">{p.label}</span>
                             {p.isDefault && (
                               <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent-text">
                                 default
@@ -783,7 +783,7 @@ export function SettingsView({
                         <p
                           className={`mt-1 text-xs ${
                             test.status === "ok"
-                              ? "text-ink"
+                              ? "text-copy"
                               : test.status === "fail"
                                 ? "text-rose-600 dark:text-rose-400"
                                 : "text-ink-soft"
@@ -804,7 +804,7 @@ export function SettingsView({
 
             <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-accent/30 dark:border-accent/35 px-3.5 py-2.5">
               <div className="min-w-0">
-                <span className="block text-sm text-ink">Pindah provider saat key gagal</span>
+                <span className="block text-sm text-copy">Pindah provider saat key gagal</span>
                 <span className="block text-[11px] text-muted">
                   Otomatis memakai provider lain saat semua key kena limit
                 </span>
@@ -1052,7 +1052,7 @@ export function SettingsView({
                         value={modelQuery}
                         onChange={(e) => setModelQuery(e.target.value)}
                         placeholder="Cari model yang tersedia..."
-                        className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+                        className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-base text-copy outline-none placeholder:text-muted sm:text-sm"
                       />
                       <button
                         type="button"
@@ -1093,7 +1093,7 @@ export function SettingsView({
                               }`}
                             >
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm text-ink">{m.id}</span>
+                                <span className="block truncate text-sm text-copy">{m.id}</span>
                                 {m.label && m.label !== m.id && (
                                   <span className="block truncate text-[12px] text-muted">
                                     {m.label}
@@ -1192,7 +1192,7 @@ export function SettingsView({
               <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3.5 py-3">
                 <div className="min-w-0">
                   <p className="text-xs text-muted">Masuk sebagai</p>
-                  <p className="truncate text-sm font-medium text-ink">{user.email}</p>
+                  <p className="truncate text-sm font-medium text-copy">{user.email}</p>
                 </div>
                 <button
                   type="button"

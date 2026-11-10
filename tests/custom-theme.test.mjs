@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { customAccentPalette, customAccentText, parseCustomTheme } from '../src/lib/customTheme.ts';
+import { customAccentPalette, customAccentText, customTextContrast, parseCustomTheme } from '../src/lib/customTheme.ts';
 import { THEME_INIT_SCRIPT } from '../src/lib/theme.ts';
 
 function luminance(hex) {
@@ -17,6 +17,14 @@ test('custom settings validate untrusted saved data', () => {
   assert.deepEqual(parseCustomTheme('{bad'), { base: 'light', accent: '#ad3ebf' });
   assert.deepEqual(parseCustomTheme('{"base":"dark","accent":"red"}'), { base: 'light', accent: '#ad3ebf' });
   assert.deepEqual(parseCustomTheme('{"base":"dark","accent":"#FF00AA"}'), { base: 'dark', accent: '#ff00aa' });
+  assert.deepEqual(parseCustomTheme('{"base":"dark","accent":"#ff00aa","textColor":"#ABCDEF"}'), { base: 'dark', accent: '#ff00aa', textColor: '#abcdef' });
+  assert.deepEqual(parseCustomTheme('{"base":"dark","accent":"#ff00aa","textColor":"bad"}'), { base: 'dark', accent: '#ff00aa' });
+});
+test('text contrast detects unreadable combinations', () => {
+  assert.ok(customTextContrast('#ffffff', 'light') < 4.5);
+  assert.ok(customTextContrast('#000000', 'dark') < 4.5);
+  assert.ok(customTextContrast('#000000', 'light') >= 4.5);
+  assert.ok(customTextContrast('#ffffff', 'dark') >= 4.5);
 });
 test('custom button text and hover retain at least 4.5 contrast', () => {
   for (let r = 0; r <= 255; r += 17) for (let g = 0; g <= 255; g += 17) for (let b = 0; b <= 255; b += 17) {
@@ -42,13 +50,14 @@ test('accent text remains readable on normal and softly tinted surfaces', () => 
   }
 });
 test('initial script applies custom palette and dark base before render', () => {
-  const values = { 'aisherly-theme': 'custom', 'aisherly-custom-theme': JSON.stringify({ base: 'dark', accent: '#ff00aa' }) };
+  const values = { 'aisherly-theme': 'custom', 'aisherly-custom-theme': JSON.stringify({ base: 'dark', accent: '#ff00aa', textColor: '#ABCDEF' }) };
   const styles = {};
   const classes = [];
   const root = { classList: { add: (name) => classes.push(name) }, style: { setProperty: (k, v) => { styles[k] = v; } } };
   const document = { documentElement: root, querySelectorAll: () => [] };
   vm.runInNewContext(THEME_INIT_SCRIPT, { document, navigator: {}, localStorage: { getItem: (k) => values[k] }, window: { matchMedia: () => ({ matches: false }) } });
   assert.ok(classes.includes('dark'));
+  assert.equal(styles['--copy'], '#abcdef');
   const palette = customAccentPalette('#ff00aa');
   assert.equal(styles['--accent'], palette.brand);
   assert.equal(styles['--accent-text'], customAccentText('#ff00aa', 'dark'));
@@ -76,22 +85,25 @@ test('switching modes persists custom settings and clears overrides', async () =
   globalThis.window = { matchMedia: () => ({ matches: false, addEventListener() {} }), addEventListener: (event, handler) => { handlers[event] = handler; } };
   globalThis.document = { documentElement: { classList: { toggle() {} }, style: { setProperty: (k, v) => props.set(k, v), removeProperty: (k) => props.delete(k) } }, querySelectorAll: () => [] };
   try {
-    setCustomTheme({ base: 'dark', accent: '#ff00aa' });
+    setCustomTheme({ base: 'dark', accent: '#ff00aa', textColor: '#abcdef' });
     setTheme('custom');
     assert.equal(getIsDarkSnapshot(), true);
     assert.equal(props.get('--brand'), '#ff00aa');
+    assert.equal(props.get('--copy'), '#abcdef');
     assert.equal(props.get('--accent'), '#ff00aa');
     assert.equal(props.get('--accent-text'), customAccentText('#ff00aa', 'dark'));
     assert.equal(saved.get('aisherly-theme'), 'custom');
     setTheme('light');
     assert.equal(getIsDarkSnapshot(), false);
     assert.equal(props.has('--brand'), false);
+    assert.equal(props.has('--copy'), false);
     assert.equal(props.has('--accent'), false);
     assert.equal(props.has('--accent-text'), false);
     setTheme('custom');
     assert.equal(props.get('--brand'), '#ff00aa');
     handlers.storage({ key: 'aisherly-custom-theme', newValue: '{invalid' });
     assert.equal(props.get('--brand'), '#ad3ebf');
+    assert.equal(props.has('--copy'), false);
     assert.equal(getIsDarkSnapshot(), false);
   } finally {
     delete globalThis.localStorage;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme, type ThemeChoice } from "@/lib/theme";
+import { customTextContrast } from "@/lib/customTheme";
 import { MonitorIcon, MoonIcon, SunIcon } from "./icons";
 
 /**
@@ -90,7 +91,19 @@ export function ThemeSegmented() {
           Warna aksen
           <input type="color" value={customTheme.accent} onChange={(event) => setCustomTheme({ ...customTheme, accent: event.target.value })} aria-label="Pilih warna aksen" className="h-9 w-12 cursor-pointer rounded border border-line bg-surface p-1" />
         </label>
-        <p className="text-xs text-ink-soft">Warna aksen digunakan pada tombol dan bagian yang sudah mendukung tema Kustom. Beberapa bagian masih memakai warna bawaan. Pilihan tersimpan di perangkat ini.</p>
+        <div className="space-y-2">
+          <label className="flex items-center justify-between gap-3 text-xs font-semibold text-ink">
+            Warna teks utama
+            <input type="color" value={customTheme.textColor ?? (customTheme.base === "light" ? "#0a0a0a" : "#fafafa")} onChange={(event) => setCustomTheme({ ...customTheme, textColor: event.target.value })} aria-label="Pilih warna teks utama" className="h-9 w-12 cursor-pointer rounded border border-line bg-surface p-1" />
+          </label>
+          {customTheme.textColor && (
+            <button type="button" onClick={() => { const { textColor: _textColor, ...rest } = customTheme; setCustomTheme(rest); }} className="text-xs font-semibold text-accent-text underline">Gunakan warna teks bawaan</button>
+          )}
+          {customTheme.textColor && customTextContrast(customTheme.textColor, customTheme.base) < 4.5 && (
+            <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">Kontras teks kurang pada latar utama. Coba warna yang lebih {customTheme.base === "light" ? "gelap" : "terang"} agar lebih mudah dibaca.</p>
+          )}
+        </div>
+        <p className="text-xs text-ink-soft">Warna aksen dan teks utama berlaku pada bagian yang sudah mendukung tema Kustom; beberapa teks dan gelembung chat masih memakai warna bawaan. Pilihan tersimpan di perangkat ini.</p>
       </div>
     )}
     </div>
