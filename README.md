@@ -71,8 +71,11 @@ git push -u origin main
    |---|---|
    | `DATABASE_URL` | connection string Neon dari Langkah 1 |
    | `CRON_SECRET` | secret acak untuk endpoint Cron Story (pembersihan & StoryTalent otomatis); buat dengan `openssl rand -hex 32` |
+   | `RESEND_API_KEY` | API key Resend untuk email pemulihan kata sandi |
+   | `PASSWORD_RESET_FROM` | alamat pengirim yang domainnya sudah diverifikasi di Resend, misalnya `HeyTalent <no-reply@domainmu.com>` |
+   | `APP_URL` | URL utama aplikasi, misalnya `https://aisherly-xxxx.vercel.app` |
 
-   Simpan `CRON_SECRET` juga di Environment Variables Vercel untuk **Production**. Jangan bagikan nilainya.
+   Simpan `CRON_SECRET` di Environment Variables Vercel untuk **Production**. `RESEND_API_KEY`, `PASSWORD_RESET_FROM`, dan `APP_URL` juga diperlukan agar fitur **Lupa kata sandi** bisa mengirim tautan reset; atur nilainya di Vercel lalu redeploy. Domain pada `PASSWORD_RESET_FROM` harus sudah diverifikasi di Resend. Jangan bagikan `CRON_SECRET` atau `RESEND_API_KEY`.
 
 5. Klik **Deploy** → tunggu 1–2 menit → **Continue to Dashboard**.
 6. Link aplikasi kamu ada di bagian atas, bentuknya:

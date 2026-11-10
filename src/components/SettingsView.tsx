@@ -16,6 +16,7 @@ import { readClipboardText } from "@/lib/clipboard";
 import { useKeepFieldVisible } from "@/lib/keepFieldVisible";
 import type { TtsAccountSummary } from "@/lib/hdVoice";
 import type { VoiceSettings } from "@/lib/voice";
+import { changePassword as apiChangePassword } from "@/lib/authClient";
 import { useAuth } from "./AuthGate";
 import { MenuHeader } from "./MenuHeader";
 import { Switch } from "./Switch";
@@ -150,6 +151,12 @@ export function SettingsView({
   const [busy, setBusy] = useState(false);
   const [fallbackBusy, setFallbackBusy] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tests, setTests] = useState<Record<string, TestState>>({});
   // Pemilih & detektor otomatis model hidup dari API key provider
@@ -569,6 +576,26 @@ export function SettingsView({
         [p.id]: { status: "fail", message: "Koneksi gagal." },
       }));
     }
+  }
+
+  async function handleChangePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setPasswordBusy(true);
+
+    const result = await apiChangePassword(currentPassword, newPassword, confirmPassword);
+    setPasswordBusy(false);
+
+    if (!result.ok) {
+      setPasswordError(result.error);
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordSuccess(result.message);
   }
 
   async function handleToggleAutoFallback(next: boolean) {
@@ -1178,6 +1205,90 @@ export function SettingsView({
                 >
                   {signingOut ? "Keluar..." : "Keluar"}
                 </button>
+              </div>
+
+              <div className="rounded-xl border border-line bg-surface p-3.5">
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-ink">Ganti kata sandi</h3>
+                  <p className="mt-0.5 text-xs text-ink-soft">
+                    Sesi akunmu di perangkat lain akan dikeluarkan setelah kata sandi berubah.
+                  </p>
+                </div>
+                <form onSubmit={handleChangePassword} className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                      Kata sandi saat ini
+                    </label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(event) => {
+                        setCurrentPassword(event.target.value);
+                        setPasswordError(null);
+                        setPasswordSuccess(null);
+                      }}
+                      autoComplete="current-password"
+                      maxLength={200}
+                      required
+                      className={FIELD}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                      Kata sandi baru
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => {
+                        setNewPassword(event.target.value);
+                        setPasswordError(null);
+                        setPasswordSuccess(null);
+                      }}
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={200}
+                      required
+                      className={FIELD}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                      Ulangi kata sandi baru
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        setPasswordError(null);
+                        setPasswordSuccess(null);
+                      }}
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={200}
+                      required
+                      className={FIELD}
+                    />
+                  </div>
+                  {passwordError && (
+                    <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+                      {passwordError}
+                    </p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                      {passwordSuccess}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={passwordBusy}
+                    className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-60"
+                  >
+                    {passwordBusy ? "Menyimpan..." : "Ubah kata sandi"}
+                  </button>
+                </form>
               </div>
 
               {onOpenAccountManagement && (

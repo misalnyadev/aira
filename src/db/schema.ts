@@ -76,6 +76,17 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Token reset kata sandi satu kali; yang disimpan hanya SHA-256 token. */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+});
+
 export const apiProviders = pgTable("api_providers", {
   id: uuid("id")
     .primaryKey()
