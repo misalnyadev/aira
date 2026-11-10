@@ -183,11 +183,11 @@ export function BrainstormRoomView({
           mode === "meetup" ? "bg-transparent" : "bg-surface/55 backdrop-blur-sm"
         }`}
       >
-        <button onClick={onBack} aria-label="Kembali" className={`shrink-0 p-[5px] transition active:opacity-50 ${mode === "meetup" ? "text-ink-soft" : "rounded-full text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"}`}>
+        <button onClick={onBack} aria-label="Kembali" className={`shrink-0 p-[5px] transition active:opacity-50 ${mode === "meetup" ? "text-ink-soft" : "rounded-full text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45"}`}>
           <BackIcon className="h-[30px] w-[30px]" />
         </button>
-        <div className={`min-w-0 flex-1 ${mode === "meetup" ? "" : "rounded-full px-3 py-1 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"}`}>
-          <p className={`truncate text-sm font-semibold ${mode === "meetup" ? "text-ink" : "text-[#205ac4] dark:text-[#e8cf75]"}`}>{roomTitle}</p>
+        <div className={`min-w-0 flex-1 ${mode === "meetup" ? "" : "rounded-full px-3 py-1 ring-1 ring-accent/40 dark:ring-accent/45"}`}>
+          <p className={`truncate text-sm font-semibold ${mode === "meetup" ? "text-ink" : "text-accent-text"}`}>{roomTitle}</p>
           <p className="truncate text-xs text-ink-soft">
             {isTyping
               ? typingLabel || (mode === "meetup" ? "sedang berbicara..." : mode === "scene" ? "sedang bermain adegan..." : "sedang diskusi...")
@@ -207,7 +207,7 @@ export function BrainstormRoomView({
         </div>
         <button
           onClick={onClear}
-          className={`hidden shrink-0 rounded-full px-2.5 py-1.5 text-xs font-medium sm:inline-flex ${mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-[#205ac4] ring-1 ring-[#4687fe]/40 hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10"}`}
+          className={`hidden shrink-0 rounded-full px-2.5 py-1.5 text-xs font-medium sm:inline-flex ${mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-accent-text ring-1 ring-accent/40 hover:bg-accent/10 dark:text-accent-text dark:ring-accent/45 dark:hover:bg-accent/10"}`}
           title="Hapus obrolan meja"
         >
           Bersihkan
@@ -216,7 +216,7 @@ export function BrainstormRoomView({
           onClick={() => {
             if (confirm("Hapus meja dan semua obrolannya?")) onDeleteRoom();
           }}
-          className={`grid h-9 w-9 place-items-center rounded-full ${mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-[#205ac4] ring-1 ring-[#4687fe]/40 hover:bg-rose-500/10 hover:text-rose-600 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:text-rose-400"}`}
+          className={`grid h-9 w-9 place-items-center rounded-full ${mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-accent-text ring-1 ring-accent/40 hover:bg-rose-500/10 hover:text-rose-600 dark:text-accent-text dark:ring-accent/45 dark:hover:text-rose-400"}`}
           aria-label="Hapus meja"
         >
           <TrashIcon className="h-4 w-4" />
@@ -276,7 +276,7 @@ export function BrainstormRoomView({
                     )}
                     <div className="space-y-1.5">
                       {!isUser && char && (
-                        <p className={`mb-1 ml-1 text-[11px] font-semibold ${mode === "meetup" ? "text-ink-soft" : "text-[#205ac4] dark:text-[#e8cf75]"}`}>{char.name}</p>
+                        <p className={`mb-1 ml-1 text-[11px] font-semibold ${mode === "meetup" ? "text-ink-soft" : "text-accent-text"}`}>{char.name}</p>
                       )}
                       {displayParts.map((part, pIdx) => (
                         <div
@@ -343,7 +343,7 @@ export function BrainstormRoomView({
                                       onSpeak(part, `${m.id}-${pIdx}`, m.characterId);
                                     }
                                   }}
-                                  className={`rounded-full p-1 transition ${speakingId === `${m.id}-${pIdx}` && audible ? (mode === "meetup" ? "bg-ink text-white" : "bg-brand text-brand-ink") : mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-[#205ac4] hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"}`}
+                                  className={`rounded-full p-1 transition ${speakingId === `${m.id}-${pIdx}` && audible ? (mode === "meetup" ? "bg-ink text-white" : "bg-brand text-brand-ink") : mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-accent-text hover:bg-accent/10 dark:text-accent-text dark:hover:bg-accent/10"}`}
                                   title="Putar suara karakter"
                                 >
                                   <SpeakerIcon className="h-3.5 w-3.5" />
@@ -392,7 +392,7 @@ export function BrainstormRoomView({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className={`pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 ${mode === "meetup" ? "text-ink" : "text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"}`}
+                className={`pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 ${mode === "meetup" ? "text-ink" : "text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45"}`}
               >
                 <ChevronDownIcon className="h-4 w-4" strokeWidth={1.5} />
               </button>
@@ -474,7 +474,7 @@ export function BrainstormRoomView({
               className={`mb-0.5 shrink-0 p-[5px] transition active:opacity-50 disabled:opacity-50 ${
                 mode === "meetup"
                   ? "rounded-full bg-surface/35 text-ink"
-                  : "rounded-full text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
+                  : "rounded-full text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45"
               }`}
             >
               <PlusIcon className="h-[30px] w-[30px]" />
@@ -506,7 +506,7 @@ export function BrainstormRoomView({
                     void handleSend();
                   }
                 }}
-                className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 text-base text-ink outline-none ring-1 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${mode === "meetup" ? "ring-line/70 dark:ring-line/40" : "ring-[#4687fe]/40 dark:ring-[#d5b767]/45"} ${
+                className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 text-base text-ink outline-none ring-1 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${mode === "meetup" ? "ring-line/70 dark:ring-line/40" : "ring-accent/40 dark:ring-accent/45"} ${
                   mode === "meetup"
                     ? "bg-transparent"
                     : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
@@ -520,7 +520,7 @@ export function BrainstormRoomView({
               className={`mb-0.5 shrink-0 rounded-full p-2.5 transition active:scale-95 disabled:opacity-40 ${
                 mode === "meetup"
                   ? "bg-surface/35 text-ink hover:bg-surface/45"
-                  : "bg-surface/55 text-[#205ac4] ring-1 ring-[#4687fe]/40 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-surface/50"
+                  : "bg-surface/55 text-accent-text ring-1 ring-accent/40 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:text-accent-text dark:ring-accent/45 dark:hover:bg-surface/50"
               }`}
               aria-label="Kirim"
               title="Kirim"
