@@ -1163,13 +1163,13 @@ export function StatusView({
             <div className="flex gap-2">
               <button
                 onClick={() => setComposeKind("status")}
-                className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${composeKind === "status" ? "bg-ink text-white" : "bg-surface-2 text-ink-soft"}`}
+                className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${composeKind === "status" ? "bg-brand text-brand-ink" : "bg-surface-2 text-ink-soft"}`}
               >
                 Story 24j
               </button>
               <button
                 onClick={() => setComposeKind("reel")}
-                className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${composeKind === "reel" ? "bg-ink text-white" : "bg-surface-2 text-ink-soft"}`}
+                className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold ${composeKind === "reel" ? "bg-brand text-brand-ink" : "bg-surface-2 text-ink-soft"}`}
               >
                 Reels permanen
               </button>
@@ -1228,7 +1228,7 @@ export function StatusView({
                 <button onClick={() => videoRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-line bg-surface-2 px-3 py-3 text-sm font-medium">
                   <FilmIcon className="h-4 w-4" /> Pilih video (max 40MB)
                 </button>
-                {composeVideoKey && <div className="rounded-xl bg-ink px-3 py-2 text-xs text-white">Video siap ✓ {composeVideoKey.slice(0, 28)}…</div>}
+                {composeVideoKey && <div className="rounded-xl bg-brand px-3 py-2 text-xs text-brand-ink">Video siap ✓ {composeVideoKey.slice(0, 28)}…</div>}
               </div>
             )}
 
@@ -1248,7 +1248,7 @@ export function StatusView({
               <button
                 disabled={composeBusy}
                 onClick={handleCreate}
-                className="flex-1 rounded-full bg-ink px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                className="flex-1 rounded-full bg-brand px-3 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
               >
                 {composeBusy ? "Menyimpan..." : `Posting ${composeKind === "reel" ? "Reel" : "Story"}`}
               </button>
@@ -1334,7 +1334,7 @@ export function StatusView({
                       setComposeCharId("");
                       setShowComposer(true);
                     }}
-                    className="mt-4 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white"
+                    className="mt-4 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink"
                   >
                     Buat Reel
                   </button>
@@ -1424,7 +1424,7 @@ export function StatusView({
                     type="button"
                     onClick={openOwnStoryComposer}
                     aria-label="Buat cerita baru"
-                    className="absolute -bottom-0.5 -right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-ink text-white shadow-sm"
+                    className="absolute -bottom-0.5 -right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-brand text-brand-ink shadow-sm"
                   >
                     <PlusIcon className="h-4 w-4" />
                   </button>
@@ -1639,7 +1639,7 @@ export function StatusView({
                           placeholder="Tulis komentar..."
                           className="flex-1 rounded-full border border-line bg-white px-4 py-2 text-sm outline-none"
                         />
-                        <button onClick={() => sendComment(it.id)} className="rounded-full bg-ink p-2.5 text-white">
+                        <button onClick={() => sendComment(it.id)} className="rounded-full bg-brand p-2.5 text-brand-ink">
                           <SendIcon className="h-4 w-4" />
                         </button>
                       </div>
@@ -1764,7 +1764,7 @@ export function StatusView({
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={editBusy}
-                  className="flex-1 rounded-full bg-ink px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                  className="flex-1 rounded-full bg-brand px-3 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
                 >
                   {editBusy ? "Menyimpan..." : "Simpan"}
                 </button>
