@@ -24,6 +24,13 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
   sql`CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions" ("user_id")`,
+  sql`CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
+    "user_id" uuid PRIMARY KEY NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "token_hash" text NOT NULL UNIQUE,
+    "expires_at" timestamp with time zone NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "consumed_at" timestamp with time zone
+  )`,
   sql`CREATE TABLE IF NOT EXISTS "api_providers" (
     "id" uuid PRIMARY KEY NOT NULL,
     "type" text NOT NULL,

@@ -5,6 +5,7 @@ import {
   login as apiLogin,
   logout as apiLogout,
   register as apiRegister,
+  requestPasswordReset,
   type AuthUser,
 } from "@/lib/authClient";
 import { useKeyboardPan } from "@/lib/keyboardPan";
@@ -32,7 +33,7 @@ export function useAuth(): AuthContextValue {
   return value;
 }
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot";
 
 const FIELD =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
@@ -57,6 +58,7 @@ export function AuthGate({
   const [about, setAbout] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useSafeTop();
   useScrollGuard();
@@ -89,7 +91,19 @@ export function AuthGate({
       document.activeElement.blur();
     }
     setError(null);
+    setNotice(null);
     setBusy(true);
+
+    if (mode === "forgot") {
+      const result = await requestPasswordReset(email);
+      setBusy(false);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setNotice(result.message);
+      return;
+    }
 
     const result =
       mode === "login"
@@ -118,6 +132,7 @@ export function AuthGate({
 
   if (!user) {
     const isRegister = mode === "register";
+    const isForgot = mode === "forgot";
 
     return (
       <div className="app-shell flex flex-col bg-app">
@@ -134,7 +149,9 @@ export function AuthGate({
             <p className="mt-1.5 text-sm text-ink-soft">
               {isRegister
                 ? "Buat akun dengan kode undangan dan isi profil singkat."
-                : "Masuk untuk melanjutkan percakapanmu."}
+                : isForgot
+                  ? "Masukkan email akunmu untuk menerima tautan reset kata sandi."
+                  : "Masuk untuk melanjutkan percakapanmu."}
             </p>
           </div>
 
@@ -147,26 +164,33 @@ export function AuthGate({
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setNotice(null);
+                }}
                 autoComplete="email"
                 required
+                maxLength={254}
                 placeholder="nama@email.com"
                 className={FIELD}
               />
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-ink-soft">Kata sandi</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isRegister ? "new-password" : "current-password"}
-                required
-                placeholder={isRegister ? "Minimal 8 karakter, ada angkanya" : "Kata sandi"}
-                className={FIELD}
-              />
-            </div>
+            {!isForgot && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-ink-soft">Kata sandi</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={isRegister ? "new-password" : "current-password"}
+                  required
+                  maxLength={200}
+                  placeholder={isRegister ? "Minimal 8 karakter, ada angkanya" : "Kata sandi"}
+                  className={FIELD}
+                />
+              </div>
+            )}
 
             {isRegister && (
               <div className="space-y-3 rounded-2xl border border-line bg-surface-2/50 p-3.5">
@@ -265,25 +289,58 @@ export function AuthGate({
                 {error}
               </p>
             )}
+            {notice && (
+              <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                {notice}
+              </p>
+            )}
 
             <button
               type="submit"
               disabled={busy}
               className="w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-ink transition hover:bg-brand-strong active:scale-[0.99] disabled:opacity-60"
             >
-              {busy ? "Memproses..." : isRegister ? "Daftar" : "Masuk"}
+              {busy
+                ? isForgot
+                  ? "Mengirim..."
+                  : "Memproses..."
+                : isRegister
+                  ? "Daftar"
+                  : isForgot
+                    ? "Kirim tautan reset"
+                    : "Masuk"}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                setMode(isRegister ? "login" : "register");
+                setMode(isForgot || isRegister ? "login" : "register");
+                setPassword("");
                 setError(null);
+                setNotice(null);
               }}
               className="w-full py-1 text-center text-sm text-ink-soft transition hover:text-ink"
             >
-              {isRegister ? "Sudah punya akun? Masuk" : "Punya kode undangan? Daftar"}
+              {isForgot
+                ? "Kembali ke masuk"
+                : isRegister
+                  ? "Sudah punya akun? Masuk"
+                  : "Punya kode undangan? Daftar"}
             </button>
+            {!isRegister && !isForgot && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("forgot");
+                  setPassword("");
+                  setError(null);
+                  setNotice(null);
+                }}
+                className="w-full py-1 text-center text-sm text-ink-soft transition hover:text-ink"
+              >
+                Lupa kata sandi?
+              </button>
+            )}
           </form>
         </div>
         </div>

@@ -17,7 +17,7 @@ export type AuthUser = {
   onboardingCompleted: boolean;
 };
 
-function hashToken(token: string): string {
+export function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
@@ -26,7 +26,7 @@ export async function createSession(userId: string): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
-  await db.insert(sessions).values({ id: hashToken(token), userId, expiresAt });
+  await db.insert(sessions).values({ id: hashSessionToken(token), userId, expiresAt });
 
   // Bersihkan sesi kedaluwarsa sekali-sekali; tidak perlu sering.
   await db.delete(sessions).where(lt(sessions.expiresAt, new Date())).catch(() => undefined);
@@ -59,7 +59,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.id, hashToken(token)), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.id, hashSessionToken(token)), gt(sessions.expiresAt, new Date())))
     .limit(1);
 
   if (!row) return null;
@@ -77,7 +77,7 @@ export async function destroySession(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (token) {
-    await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
+    await db.delete(sessions).where(eq(sessions.id, hashSessionToken(token)));
   }
   jar.delete(SESSION_COOKIE);
 }
