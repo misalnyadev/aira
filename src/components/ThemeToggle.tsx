@@ -47,7 +47,7 @@ export function ThemeSegmented() {
     <div
       role="radiogroup"
       aria-label="Tema tampilan"
-      className="grid grid-cols-3 gap-1.5 rounded-xl bg-surface-2 p-1"
+      className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#4687fe]/10 p-1 dark:bg-[#d5b767]/10"
     >
       {options.map(({ value, label, Icon }) => {
         const active = choice === value;

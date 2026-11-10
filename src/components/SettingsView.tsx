@@ -33,7 +33,7 @@ import {
 } from "./icons";
 
 const FIELD =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:py-2 sm:text-sm";
+  "w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] sm:py-2 sm:text-sm";
 
 type TestState = { status: "testing" | "ok" | "fail"; message?: string };
 
@@ -60,7 +60,7 @@ function SettingsAccordionCard({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -72,7 +72,7 @@ function SettingsAccordionCard({
                     ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                     : badgeTone === "dark"
                       ? "bg-[#4687fe]/15 font-bold text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]"
-                      : "bg-surface-2 text-ink-soft"
+                      : "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft"
                 }`}
               >
                 {badge}
@@ -81,17 +81,17 @@ function SettingsAccordionCard({
           </div>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
         </div>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75]">
           <ChevronDownIcon
             className={`h-4 w-4 transition-transform duration-200 ${
-              open ? "rotate-180 text-ink" : ""
+              open ? "rotate-180" : ""
             }`}
           />
         </span>
       </button>
 
       {open && (
-        <div className="border-t border-line px-4 py-4">{children}</div>
+        <div className="border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 px-4 py-4">{children}</div>
       )}
     </section>
   );
@@ -692,7 +692,7 @@ export function SettingsView({
                   <button
                     type="button"
                     onClick={startCreate}
-                    className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-line/60"
+                    className="flex items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2.5 py-1 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
                   >
                     <PlusIcon className="h-3.5 w-3.5" /> Tambah
                   </button>
@@ -700,7 +700,7 @@ export function SettingsView({
               </div>
 
               {providers.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-xs text-muted">
+                <p className="rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-3 text-xs text-muted">
                   Belum ada provider tersimpan. Tambahkan minimal satu API key di bawah untuk mulai
                   mengobrol.
                 </p>
@@ -710,18 +710,18 @@ export function SettingsView({
                   const test = tests[p.id];
                   const keyCount = (p.hasKey ? 1 : 0) + (p.backupCount ?? 0);
                   return (
-                    <div key={p.id} className="rounded-xl border border-line px-3.5 py-2.5">
+                    <div key={p.id} className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-2.5">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="truncate text-sm font-medium text-ink">{p.label}</span>
                             {p.isDefault && (
-                              <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
+                              <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                                 default
                               </span>
                             )}
                             {keyCount > 1 && (
-                              <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line">
+                              <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
                                 {keyCount} key
                               </span>
                             )}
@@ -743,7 +743,7 @@ export function SettingsView({
                             disabled={test?.status === "testing"}
                             title="Tes koneksi"
                             aria-label={`Tes koneksi ${p.label}`}
-                            className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+                            className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-40"
                           >
                             <BoltIcon className="h-4 w-4" />
                           </button>
@@ -752,7 +752,7 @@ export function SettingsView({
                             onClick={() => startEdit(p)}
                             title="Edit provider"
                             aria-label={`Edit ${p.label}`}
-                            className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                            className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
@@ -762,7 +762,7 @@ export function SettingsView({
                               onClick={() => handleSetDefault(p.id)}
                               title="Jadikan default"
                               aria-label={`Jadikan ${p.label} provider default`}
-                              className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                              className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
                             >
                               <CheckIcon className="h-4 w-4" />
                             </button>
@@ -802,7 +802,7 @@ export function SettingsView({
               </div>
             )}
 
-            <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-line px-3.5 py-2.5">
+            <div className="mt-2.5 flex items-center justify-between gap-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-2.5">
               <div className="min-w-0">
                 <span className="block text-sm text-ink">Pindah provider saat key gagal</span>
                 <span className="block text-[11px] text-muted">
@@ -819,7 +819,7 @@ export function SettingsView({
 
           {/* Form tambah / edit provider */}
           {formOpen && (
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-line pt-4">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   {editing ? `Edit provider (${editing.label})` : "Provider baru"}
@@ -896,7 +896,7 @@ export function SettingsView({
                     <button
                       type="button"
                       onClick={() => void pastePrimaryKey()}
-                      className="rounded-lg border border-[#4687fe]/40 bg-surface-2 px-2 py-0.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
+                      className="rounded-lg border border-[#4687fe]/40 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2 py-0.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                     >
                       Tempel
                     </button>
@@ -935,7 +935,7 @@ export function SettingsView({
                 />
 
                 {editing && !backupTouched && editing.backupCount > 0 && (
-                  <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-ink-soft">
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs text-ink-soft">
                     <span className="truncate">
                       {editing.backupCount} key cadangan tersimpan (
                       {editing.maskedBackupKeys.join(", ")})
@@ -968,7 +968,7 @@ export function SettingsView({
                     <button
                       type="button"
                       onClick={() => void pasteBackupKey(index)}
-                      className="shrink-0 rounded-lg border border-[#4687fe]/40 bg-surface-2 px-2 py-1.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
+                      className="shrink-0 rounded-lg border border-[#4687fe]/40 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2 py-1.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                     >
                       Tempel
                     </button>
@@ -976,7 +976,7 @@ export function SettingsView({
                       type="button"
                       onClick={() => removeBackupSlot(index)}
                       aria-label={`Hapus key cadangan ${index + 1}`}
-                      className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-rose-500"
+                      className="shrink-0 rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-rose-500"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -1046,8 +1046,8 @@ export function SettingsView({
                 )}
 
                 {showModels ? (
-                  <div className="mt-2 overflow-hidden rounded-xl border border-line bg-surface">
-                    <div className="flex items-center gap-1 border-b border-line px-2.5 py-1">
+                  <div className="mt-2 overflow-hidden rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface">
+                    <div className="flex items-center gap-1 border-b border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1">
                       <input
                         value={modelQuery}
                         onChange={(e) => setModelQuery(e.target.value)}
@@ -1059,7 +1059,7 @@ export function SettingsView({
                         onClick={() => void loadModels()}
                         disabled={modelsBusy}
                         aria-label="Muat ulang daftar model"
-                        className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 disabled:opacity-50"
+                        className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
                       >
                         <RefreshIcon className={`h-4 w-4 ${modelsBusy ? "animate-spin" : ""}`} />
                       </button>
@@ -1089,7 +1089,7 @@ export function SettingsView({
                                 setShowModels(false);
                               }}
                               className={`flex w-full items-center gap-2 px-3 py-2 text-left transition ${
-                                active ? "bg-ink/[0.06]" : "hover:bg-surface-2"
+                                active ? "bg-[#4687fe]/10 dark:bg-[#d5b767]/10" : "hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
                               }`}
                             >
                               <span className="min-w-0 flex-1">
@@ -1101,7 +1101,7 @@ export function SettingsView({
                                 )}
                               </span>
                               {isRecommended && (
-                                <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[11px] font-semibold text-ink">
+                                <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                                   tersedia & disarankan
                                 </span>
                               )}
@@ -1131,7 +1131,7 @@ export function SettingsView({
                             className={`rounded-full px-2.5 py-1 text-xs transition ${
                               active
                                 ? "bg-brand font-semibold text-brand-ink"
-                                : "bg-surface-2 text-ink-soft hover:text-ink"
+                                : "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
                             }`}
                           >
                             {m}
@@ -1156,7 +1156,7 @@ export function SettingsView({
                   type="checkbox"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
-                  className="rounded accent-ink"
+                  className="rounded accent-[#4687fe] dark:accent-[#d5b767]"
                 />
                 Jadikan provider default
               </label>
@@ -1189,7 +1189,7 @@ export function SettingsView({
             onToggle={() => toggleSection("account")}
           >
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2/40 px-3.5 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3.5 py-3">
                 <div className="min-w-0">
                   <p className="text-xs text-muted">Masuk sebagai</p>
                   <p className="truncate text-sm font-medium text-ink">{user.email}</p>
@@ -1201,13 +1201,13 @@ export function SettingsView({
                     setSigningOut(true);
                     await signOut();
                   }}
-                  className="shrink-0 rounded-xl border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-60"
+                  className="shrink-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3.5 py-2 text-xs font-semibold text-ink-soft transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-60"
                 >
                   {signingOut ? "Keluar..." : "Keluar"}
                 </button>
               </div>
 
-              <div className="rounded-xl border border-line bg-surface p-3.5">
+              <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3.5">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Ganti kata sandi</h3>
                   <p className="mt-0.5 text-xs text-ink-soft">
@@ -1277,7 +1277,7 @@ export function SettingsView({
                     </p>
                   )}
                   {passwordSuccess && (
-                    <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+                    <p className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-sm text-[#205ac4] dark:text-[#e8cf75]">
                       {passwordSuccess}
                     </p>
                   )}
@@ -1295,7 +1295,7 @@ export function SettingsView({
                 <button
                   type="button"
                   onClick={onOpenAccountManagement}
-                  className="w-full rounded-xl border border-[#4687fe]/40 bg-surface-2 px-3.5 py-2.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
+                  className="w-full rounded-xl border border-[#4687fe]/40 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3.5 py-2.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                 >
                   {effectiveIsAdmin
                     ? "Buka Halaman Panel Admin & Kelola Member →"
