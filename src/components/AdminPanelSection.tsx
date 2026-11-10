@@ -360,10 +360,10 @@ export function AdminPanelSection({
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-3.5">
       {/* Header Ringkasan Panel Admin */}
-      <div className="min-w-0 rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30">
+      <div className="min-w-0 rounded-2xl border border-accent/25 bg-surface p-4 shadow-2xs dark:border-accent/30">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+            <h2 className="text-sm font-bold text-accent-text">
               Pusat Pengelolaan Admin &amp; Member
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -376,7 +376,7 @@ export function AdminPanelSection({
             disabled={loading || refreshing}
             title="Muat ulang data Admin"
             aria-label="Muat ulang data panel Admin"
-            className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/20 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/20 disabled:opacity-50"
+            className="shrink-0 rounded-full bg-accent/10 p-2 text-accent-text ring-1 ring-accent/40 transition hover:bg-accent/20 dark:text-accent-text dark:ring-accent/45 dark:hover:bg-accent/20 disabled:opacity-50"
           >
             <RefreshIcon
               className={`h-4 w-4 ${loading || refreshing ? "animate-spin" : ""}`}
@@ -385,8 +385,8 @@ export function AdminPanelSection({
         </div>
 
         <div className="mt-3.5 grid grid-cols-3 gap-2">
-          <div className="min-w-0 rounded-xl bg-[#4687fe]/10 dark:bg-surface-2/70 px-2 py-2.5 text-center">
-            <span className="block truncate text-base font-extrabold text-[#205ac4] dark:text-[#e8cf75]">
+          <div className="min-w-0 rounded-xl bg-accent/10 dark:bg-surface-2/70 px-2 py-2.5 text-center">
+            <span className="block truncate text-base font-extrabold text-accent-text">
               {loading ? "…" : users.length}
             </span>
             <span className="block truncate text-[11px] text-muted">Akun</span>
@@ -395,7 +395,7 @@ export function AdminPanelSection({
             className={`min-w-0 rounded-xl px-2 py-2.5 text-center ${
               pending.length > 0
                 ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
-                : "bg-[#4687fe]/10 dark:bg-surface-2/70 text-ink"
+                : "bg-accent/10 dark:bg-surface-2/70 text-ink"
             }`}
           >
             <span className="block truncate text-base font-extrabold">
@@ -405,8 +405,8 @@ export function AdminPanelSection({
               Req Slot
             </span>
           </div>
-          <div className="min-w-0 rounded-xl bg-[#4687fe]/10 dark:bg-surface-2/70 px-2 py-2.5 text-center">
-            <span className="block truncate text-base font-extrabold text-[#205ac4] dark:text-[#e8cf75]">
+          <div className="min-w-0 rounded-xl bg-accent/10 dark:bg-surface-2/70 px-2 py-2.5 text-center">
+            <span className="block truncate text-base font-extrabold text-accent-text">
               {loading ? "…" : totalCharacters}
             </span>
             <span className="block truncate text-[11px] text-muted">
@@ -423,13 +423,13 @@ export function AdminPanelSection({
       )}
 
       {feedback && (
-        <p className="break-words rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3.5 py-2.5 text-xs text-[#205ac4] dark:text-[#e8cf75]">
+        <p className="break-words rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3.5 py-2.5 text-xs text-accent-text">
           ✓ {feedback}
         </p>
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-6 text-center text-xs text-muted">
+        <div className="rounded-2xl border border-accent/30 dark:border-accent/35 bg-surface p-6 text-center text-xs text-muted">
           Memuat daftar member &amp; pengajuan slot...
         </div>
       ) : (
@@ -437,22 +437,22 @@ export function AdminPanelSection({
           <PasswordResetRequestsSection />
 
           {/* 0. Kode Undangan Pendaftaran Member (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
             <button
               type="button"
               onClick={() => setInviteOpen((v) => !v)}
               aria-expanded={inviteOpen}
-              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-accent/10 dark:hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <h3 className="text-sm font-bold text-accent-text">
                     Kode Undangan Pendaftaran
                   </h3>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                       signupInvite?.enabled
-                        ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
+                        ? "bg-accent/15 text-accent-text"
                         : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                     }`}
                   >
@@ -467,7 +467,7 @@ export function AdminPanelSection({
                   Lihat, salin, atau ganti kode invite pendaftaran akun baru tanpa redeploy
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -478,14 +478,14 @@ export function AdminPanelSection({
             </button>
 
             {inviteOpen && (
-              <div className="min-w-0 space-y-3 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-surface-2/50 px-3.5 py-2.5">
+              <div className="min-w-0 space-y-3 border-t border-accent/25 p-4 dark:border-accent/30">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 dark:bg-surface-2/50 px-3.5 py-2.5">
                   <div className="min-w-0 flex-1">
                     <span className="block text-[11px] text-muted">
                       Kode undangan aktif saat ini
                     </span>
                     {signupInvite?.enabled && signupInvite.code ? (
-                      <span className="mt-0.5 block break-all font-mono text-sm font-bold tracking-wider text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="mt-0.5 block break-all font-mono text-sm font-bold tracking-wider text-accent-text">
                         {showInviteCode
                           ? signupInvite.code
                           : "•".repeat(
@@ -506,7 +506,7 @@ export function AdminPanelSection({
                         onClick={() => setShowInviteCode((v) => !v)}
                         title={showInviteCode ? "Sembunyikan kode" : "Lihat kode"}
                         aria-label={showInviteCode ? "Sembunyikan kode" : "Lihat kode"}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2 hover:text-ink"
+                        className="inline-flex items-center gap-1 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-accent/10 dark:hover:bg-surface-2 hover:text-ink"
                       >
                         {showInviteCode ? (
                           <>
@@ -521,7 +521,7 @@ export function AdminPanelSection({
                       <button
                         type="button"
                         onClick={() => void handleCopyInviteCode()}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2 hover:text-ink"
+                        className="inline-flex items-center gap-1 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-accent/10 dark:hover:bg-surface-2 hover:text-ink"
                       >
                         <CopyIcon className="h-3.5 w-3.5" />
                         {inviteCopied ? "✓ Tersalin" : "Salin"}
@@ -551,7 +551,7 @@ export function AdminPanelSection({
                       autoCorrect="off"
                       autoCapitalize="off"
                       spellCheck={false}
-                      className="w-full min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                      className="w-full min-w-0 flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-accent-text focus:outline-none"
                     />
                     <div className="flex shrink-0 gap-1.5">
                       <button
@@ -559,7 +559,7 @@ export function AdminPanelSection({
                         onClick={() =>
                           setDraftInviteCode(randomInviteSuggestion())
                         }
-                        className="flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-[#4687fe]/20 dark:hover:bg-line/60 hover:text-ink sm:flex-none"
+                        className="flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 dark:bg-surface-2 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-accent/20 dark:hover:bg-line/60 hover:text-ink sm:flex-none"
                       >
                         Acak
                       </button>
@@ -577,7 +577,7 @@ export function AdminPanelSection({
                   </div>
                 </form>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-accent/30 dark:border-accent/35 pt-2.5">
                   <span className="text-[11px] text-muted">
                     Langsung berlaku tanpa perlu redeploy Vercel.
                   </span>
@@ -614,23 +614,23 @@ export function AdminPanelSection({
           </section>
 
           {/* 1. Permintaan Tambah Slot (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
             <button
               type="button"
               onClick={() => setRequestsOpen((v) => !v)}
               aria-expanded={requestsOpen}
-              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-accent/10 dark:hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <h3 className="text-sm font-bold text-accent-text">
                     Permintaan Tambah Slot Karakter
                   </h3>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                       pending.length > 0
                         ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                        : "bg-[#4687fe]/10 dark:bg-surface-2 text-muted"
+                        : "bg-accent/10 dark:bg-surface-2 text-muted"
                     }`}
                   >
                     {pending.length} menunggu
@@ -640,7 +640,7 @@ export function AdminPanelSection({
                   Setujui atau sesuaikan jumlah slot karakter yang diminta member
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -651,9 +651,9 @@ export function AdminPanelSection({
             </button>
 
             {requestsOpen && (
-              <div className="min-w-0 space-y-2.5 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
+              <div className="min-w-0 space-y-2.5 border-t border-accent/25 p-4 dark:border-accent/30">
                 {pending.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-3 text-center text-xs text-muted">
+                  <p className="rounded-xl border border-dashed border-accent/30 dark:border-accent/35 px-3.5 py-3 text-center text-xs text-muted">
                     Tidak ada pengajuan tambah slot yang menunggu saat ini.
                   </p>
                 ) : (
@@ -671,14 +671,14 @@ export function AdminPanelSection({
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                            <p className="truncate text-sm font-semibold text-accent-text">
                               {nameLabel}
                             </p>
                             <p className="truncate text-xs text-muted">
                               {r.email}
                             </p>
                           </div>
-                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75] ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
+                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-accent-text ring-1 ring-accent/30 dark:ring-accent/35">
                             {r.characterCount}/{r.currentQuota} → minta{" "}
                             {r.requestedQuota} slot
                           </span>
@@ -724,11 +724,11 @@ export function AdminPanelSection({
                                   [r.id]: Math.max(1, quotaVal - 1),
                                 }))
                               }
-                              className="h-7 w-7 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-xs font-bold text-ink hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                              className="h-7 w-7 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface text-xs font-bold text-ink hover:bg-accent/10 dark:hover:bg-surface-2"
                             >
                               -
                             </button>
-                            <span className="min-w-[2.2rem] text-center text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                            <span className="min-w-[2.2rem] text-center text-xs font-bold text-accent-text">
                               {quotaVal}
                             </span>
                             <button
@@ -739,7 +739,7 @@ export function AdminPanelSection({
                                   [r.id]: Math.min(30, quotaVal + 1),
                                 }))
                               }
-                              className="h-7 w-7 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-xs font-bold text-ink hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                              className="h-7 w-7 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface text-xs font-bold text-ink hover:bg-accent/10 dark:hover:bg-surface-2"
                             >
                               +
                             </button>
@@ -756,7 +756,7 @@ export function AdminPanelSection({
                             }))
                           }
                           placeholder="Catatan singkat untuk member (opsional)..."
-                          className="w-full min-w-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                          className="w-full min-w-0 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none"
                         />
 
                         <div className="flex min-w-0 gap-2">
@@ -779,7 +779,7 @@ export function AdminPanelSection({
                             onClick={() =>
                               void handleResolveRequest(r, "reject")
                             }
-                            className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
                           >
                             <XIcon className="h-3.5 w-3.5" />
                             Tolak
@@ -794,19 +794,19 @@ export function AdminPanelSection({
           </section>
 
           {/* 2. Daftar Admin & Member (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
             <button
               type="button"
               onClick={() => setMembersOpen((v) => !v)}
               aria-expanded={membersOpen}
-              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2/50"
+              className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-accent/10 dark:hover:bg-surface-2/50"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <h3 className="text-sm font-bold text-accent-text">
                     Daftar Akun Admin &amp; Member
                   </h3>
-                  <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
+                  <span className="shrink-0 rounded-full bg-accent/10 dark:bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
                     {users.length} akun
                   </span>
                 </div>
@@ -814,7 +814,7 @@ export function AdminPanelSection({
                   Atur kuota slot karakter &amp; peran Admin/Member per akun
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -825,9 +825,9 @@ export function AdminPanelSection({
             </button>
 
             {membersOpen && (
-              <div className="min-w-0 space-y-3 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
+              <div className="min-w-0 space-y-3 border-t border-accent/25 p-4 dark:border-accent/30">
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-[#4687fe]/10 dark:bg-surface-2 px-3 py-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-accent/10 dark:bg-surface-2 px-3 py-2">
                     <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
                     <input
                       value={query}
@@ -846,7 +846,7 @@ export function AdminPanelSection({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-[#4687fe]/10 dark:bg-surface-2 p-1">
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-accent/10 dark:bg-surface-2 p-1">
                     {(
                       [
                         { id: "all", label: "Semua" },
@@ -860,8 +860,8 @@ export function AdminPanelSection({
                         onClick={() => setRoleFilter(f.id)}
                         className={`min-w-0 truncate rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                           roleFilter === f.id
-                            ? "bg-surface text-[#205ac4] shadow-2xs ring-1 ring-[#4687fe]/35 dark:text-[#e8cf75] dark:ring-[#d5b767]/40"
-                            : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                            ? "bg-surface text-accent-text shadow-2xs ring-1 ring-accent/35 dark:text-accent-text dark:ring-accent/40"
+                            : "text-ink-soft hover:text-accent-text"
                         }`}
                       >
                         {f.label}
@@ -889,21 +889,21 @@ export function AdminPanelSection({
                       return (
                         <div
                           key={u.id}
-                          className="min-w-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-surface-2/30 p-3"
+                          className="min-w-0 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 dark:bg-surface-2/30 p-3"
                         >
                           <div className="flex min-w-0 items-center gap-2.5">
                             <Avatar name={label} src={u.avatarUrl} size={38} />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                                <span className="truncate text-sm font-semibold text-accent-text">
                                   {label}
                                 </span>
                                 {u.isAdmin ? (
-                                  <span className="shrink-0 rounded-full bg-[#4687fe]/15 px-2 py-0.5 text-[10px] font-bold text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]">
+                                  <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent-text dark:bg-accent/15 dark:text-accent-text">
                                     Admin
                                   </span>
                                 ) : (
-                                  <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
+                                  <span className="shrink-0 rounded-full bg-accent/10 dark:bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-accent/30 dark:ring-accent/35">
                                     Member
                                   </span>
                                 )}
@@ -921,7 +921,7 @@ export function AdminPanelSection({
                             </div>
                           </div>
 
-                          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-2.5">
+                          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-accent/30 dark:border-accent/35 pt-2.5">
                             {u.isAdmin ? (
                               <span className="text-[11px] text-muted">
                                 Akses penuh Admin ({u.effectiveLimit} karakter)
@@ -939,11 +939,11 @@ export function AdminPanelSection({
                                       [u.id]: Math.max(1, qVal - 1),
                                     }))
                                   }
-                                  className="h-6 w-6 rounded-md border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-xs font-bold text-ink hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                                  className="h-6 w-6 rounded-md border border-accent/30 dark:border-accent/35 bg-surface text-xs font-bold text-ink hover:bg-accent/10 dark:hover:bg-surface-2"
                                 >
                                   -
                                 </button>
-                                <span className="min-w-[1.8rem] text-center text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                                <span className="min-w-[1.8rem] text-center text-xs font-bold text-accent-text">
                                   {qVal}
                                 </span>
                                 <button
@@ -954,7 +954,7 @@ export function AdminPanelSection({
                                       [u.id]: Math.min(30, qVal + 1),
                                     }))
                                   }
-                                  className="h-6 w-6 rounded-md border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-xs font-bold text-ink hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                                  className="h-6 w-6 rounded-md border border-accent/30 dark:border-accent/35 bg-surface text-xs font-bold text-ink hover:bg-accent/10 dark:hover:bg-surface-2"
                                 >
                                   +
                                 </button>
@@ -993,22 +993,22 @@ export function AdminPanelSection({
 
           {/* 3. Riwayat Keputusan Kuota (Dropdown v) */}
           {resolved.length > 0 && (
-            <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+            <section className="min-w-0 overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
               <button
                 type="button"
                 onClick={() => setHistoryOpen((v) => !v)}
                 aria-expanded={historyOpen}
-                className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2/50"
+                className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-accent/10 dark:hover:bg-surface-2/50"
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <h3 className="text-sm font-bold text-accent-text">
                     Riwayat Keputusan Kuota Terakhir
                   </h3>
                   <p className="mt-0.5 text-xs text-ink-soft">
                     {resolved.length} keputusan persetujuan/penolakan terbaru
                   </p>
                 </div>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45">
                   <ChevronDownIcon
                   strokeWidth={1.6}
                     className={`h-4 w-4 transition-transform duration-200 ${
@@ -1019,11 +1019,11 @@ export function AdminPanelSection({
               </button>
 
               {historyOpen && (
-                <div className="min-w-0 space-y-2 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
+                <div className="min-w-0 space-y-2 border-t border-accent/25 p-4 dark:border-accent/30">
                   {resolved.map((h) => (
                     <div
                       key={h.id}
-                      className="min-w-0 space-y-1.5 rounded-lg bg-[#4687fe]/10 dark:bg-surface-2/60 px-3 py-2 text-xs"
+                      className="min-w-0 space-y-1.5 rounded-lg bg-accent/10 dark:bg-surface-2/60 px-3 py-2 text-xs"
                     >
                       <div className="flex min-w-0 items-center justify-between gap-2">
                         <span className="min-w-0 flex-1 truncate text-ink-soft">
@@ -1033,7 +1033,7 @@ export function AdminPanelSection({
                         <span
                           className={`shrink-0 font-semibold ${
                             h.status === "approved"
-                              ? "text-[#205ac4] dark:text-[#e8cf75]"
+                              ? "text-accent-text"
                               : "text-rose-500"
                           }`}
                         >
