@@ -291,7 +291,7 @@ export function ProfileView({
       <div className="shrink-0 px-4 pb-3 pt-2 sm:px-5">
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
         <div
-          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-surface-2 p-1 ${
+          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-surface-2 p-1 ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 ${
             effectiveIsAdmin ? "grid-cols-3" : "grid-cols-2"
           }`}
         >
@@ -301,7 +301,7 @@ export function ProfileView({
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "identity"
                 ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                : "text-ink-soft ring-1 ring-[#4687fe]/20 hover:text-[#205ac4] dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
             }`}
           >
             Profil Diri
@@ -313,7 +313,7 @@ export function ProfileView({
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "account"
                 ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                : "text-ink-soft ring-1 ring-[#4687fe]/20 hover:text-[#205ac4] dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
             }`}
           >
             {effectiveIsAdmin ? "Akun Saya" : "Akun & Kuota"}
@@ -326,7 +326,7 @@ export function ProfileView({
               className={`inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                 tab === "admin"
                   ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                  : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                  : "text-ink-soft ring-1 ring-[#4687fe]/20 hover:text-[#205ac4] dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
               }`}
             >
               <span className="truncate">Panel Admin</span>
@@ -347,7 +347,7 @@ export function ProfileView({
         {tab === "identity" && (
           <form
             onSubmit={handleSubmit}
-            className="mx-auto max-w-xl space-y-5 rounded-3xl border border-line bg-surface p-5 shadow-xs sm:p-6"
+            className="mx-auto max-w-xl space-y-5 rounded-3xl border border-[#4687fe]/25 bg-surface p-5 shadow-xs dark:border-[#d5b767]/30 sm:p-6"
           >
             {/* Avatar */}
             <div className="flex flex-col items-center gap-2">
@@ -539,7 +539,7 @@ export function ProfileView({
         {tab === "account" && (
           <div className="mx-auto max-w-xl space-y-4">
             {/* Kartu Status Akun */}
-            <section className="rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
+            <section className="rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30 sm:p-5">
               <div className="flex items-center gap-3">
                 <Avatar name={previewName} src={avatarUrl} size={52} />
                 <div className="min-w-0 flex-1">
@@ -601,7 +601,7 @@ export function ProfileView({
             </section>
 
             {/* Menu Karakter — compact dropdown “v” (pengganti shortcut Panel Admin) */}
-            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+            <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
               <button
                 type="button"
                 onClick={() => setCharsOpen((v) => !v)}
@@ -630,15 +630,15 @@ export function ProfileView({
                     </span>
                   )}
                   <span
-                    className={`grid h-7 w-7 place-items-center rounded-full border border-line bg-surface-2 text-ink-soft transition ${charsOpen ? "rotate-180 bg-surface text-ink" : ""}`}
+                    className={`grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-surface-2 text-[#205ac4] transition dark:border-[#d5b767]/45 dark:text-[#e8cf75] ${charsOpen ? "rotate-180 bg-surface" : ""}`}
                   >
-                    <ChevronDownIcon className="h-3.5 w-3.5" />
+                    <ChevronDownIcon strokeWidth={1.6} className="h-3.5 w-3.5" />
                   </span>
                 </span>
               </button>
 
               {charsOpen && (
-                <div className="border-t border-line bg-surface-2/40 px-3 py-3 sm:px-4">
+                <div className="border-t border-[#4687fe]/25 bg-surface-2/40 px-3 py-3 dark:border-[#d5b767]/30 sm:px-4">
                   {pendingOwnerContactsCount > 0 && onOpenContactsModal && (
                     <button
                       type="button"
@@ -782,7 +782,7 @@ export function ProfileView({
 
             {!effectiveIsAdmin && (
               /* Khusus Member: Pengajuan Tambah Slot Karakter ke Admin */
-              <section className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
+              <section className="space-y-3 rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
