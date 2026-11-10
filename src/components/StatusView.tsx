@@ -275,6 +275,7 @@ export function StatusView({
   onSharedStatusHandled,
   chatCharacterIds = [],
   onOpenCharacterChat,
+  onReturnToChat,
 }: {
   profile: UserProfile;
   characters: CharacterSummary[];
@@ -283,9 +284,11 @@ export function StatusView({
   onSharedStatusHandled?: () => void;
   chatCharacterIds?: string[];
   onOpenCharacterChat?: (characterId: string) => void;
+  onReturnToChat?: () => void;
 }) {
   const { user } = useAuth();
   const [items, setItems] = useState<StatusItem[]>([]);
+  const [returnToChat, setReturnToChat] = useState(false);
   const [profileItem, setProfileItem] = useState<StatusItem | null>(null);
   const [profilePosts, setProfilePosts] = useState<StatusItem[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -443,9 +446,21 @@ export function StatusView({
     return () => window.clearTimeout(focusTimer);
   }, [replyingTo]);
 
+  const markStoryViewed = useCallback((story: StatusItem) => {
+    if (story.viewedByMe || viewedStoryIdsRef.current.has(story.id)) return;
+    viewedStoryIdsRef.current.add(story.id);
+    void fetch(`/api/statuses/${story.id}`, { method: "POST" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Gagal menyimpan status dilihat.");
+        setItems((prev) => prev.map((item) => item.id === story.id ? { ...item, viewedByMe: true } : item));
+      })
+      .catch(() => { viewedStoryIdsRef.current.delete(story.id); });
+  }, []);
+
   useEffect(() => {
     if (!sharedStatusId || loading || handledSharedStatusRef.current === sharedStatusId) return;
     const openSharedItem = (sharedItem: StatusItem) => {
+      if (sharedStatusFromChat) setReturnToChat(true);
       if (sharedStatusFromChat && sharedItem.kind === "status" && sharedItem.characterId) {
         if (requestedChatStoryRef.current === sharedStatusId) return;
         requestedChatStoryRef.current = sharedStatusId;
@@ -459,12 +474,11 @@ export function StatusView({
             const profileStories = combined.filter((post) => post.kind === "status" && post.characterId === sharedItem.characterId);
             const index = profileStories.findIndex((post) => post.id === sharedItem.id);
             if (index < 0) return;
-            setItems(combined.map((post) => post.id === sharedItem.id ? { ...post, viewedByMe: true } : post));
+            setItems(combined);
             setViewerProfileKey(statusProfileKey(sharedItem));
             setViewerIdx(index);
             setStoryProgress(0);
-            viewedStoryIdsRef.current.add(sharedItem.id);
-            void fetch(`/api/statuses/${sharedItem.id}`, { method: "POST" }).catch(() => undefined);
+            markStoryViewed(sharedItem);
             handledSharedStatusRef.current = selectedId;
             onSharedStatusHandled?.();
           });
@@ -497,7 +511,7 @@ export function StatusView({
         handledSharedStatusRef.current = sharedStatusId;
         onSharedStatusHandled?.();
       });
-  }, [sharedStatusId, sharedStatusFromChat, loading, items, mutedMap, onSharedStatusHandled]);
+  }, [sharedStatusId, sharedStatusFromChat, loading, items, mutedMap, onSharedStatusHandled, markStoryViewed]);
 
   const stories = useMemo(() => items.filter((x) => x.kind === "status"), [items]);
   const storyProfiles = useMemo(() => {
@@ -918,12 +932,6 @@ export function StatusView({
     }
   }
 
-  const markStoryViewed = useCallback((story: StatusItem) => {
-    if (story.viewedByMe || viewedStoryIdsRef.current.has(story.id)) return;
-    viewedStoryIdsRef.current.add(story.id);
-    fetch(`/api/statuses/${story.id}`, { method: "POST" }).catch(() => undefined);
-    setItems((prev) => prev.map((item) => (item.id === story.id ? { ...item, viewedByMe: true } : item)));
-  }, []);
 
   const openStoryProfile = useCallback((profileKey: string) => {
     const selectedProfile = storyProfiles.find((profileStory) => profileStory.key === profileKey);
@@ -942,12 +950,13 @@ export function StatusView({
       setViewerIdx(null);
       setViewerProfileKey(null);
       setStoryProgress(0);
+      if (returnToChat && !profileItem) onReturnToChat?.();
       return;
     }
     setViewerIdx(index);
     setStoryProgress(0);
     markStoryViewed(story);
-  }, [markStoryViewed]);
+  }, [markStoryViewed, returnToChat, profileItem, onReturnToChat]);
 
   const finishCurrentStory = useCallback(() => {
     if (viewerIdx === null) return;
@@ -956,8 +965,9 @@ export function StatusView({
       setViewerIdx(null);
       setViewerProfileKey(null);
       setStoryProgress(0);
+      if (returnToChat && !profileItem) onReturnToChat?.();
     }
-  }, [viewerIdx, viewerStories.length, moveStoryTo]);
+  }, [viewerIdx, viewerStories.length, moveStoryTo, returnToChat, profileItem, onReturnToChat]);
 
   // foto/teks berjalan 5 detik; video mengikuti currentTime/duration dan selesai saat ended
   useEffect(() => {
@@ -1773,6 +1783,7 @@ export function StatusView({
           setViewerIdx(null);
           setViewerProfileKey(null);
           setStoryProgress(0);
+          if (returnToChat) onReturnToChat?.();
         };
         return (
           <div className="fixed inset-0 z-50 overflow-hidden bg-black text-white">
@@ -1882,7 +1893,7 @@ export function StatusView({
           <div className="fixed inset-0 z-[60] bg-black overflow-hidden">
             {/* header global — cuma back + opsi */}
             <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 pt-[max(0.7rem,var(--safe-top))] pb-3 text-white z-30 pointer-events-none">
-              <button onClick={() => setFullScreenId(null)} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
+              <button onClick={() => { setFullScreenId(null); if (returnToChat) onReturnToChat?.(); }} className="pointer-events-auto rounded-full bg-black/25 p-2 backdrop-blur-md border border-white/15 active:scale-90" aria-label="Kembali">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5"><path d="M15 18L9 12l6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
               {canManageStatus(activeIt) ? (

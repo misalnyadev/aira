@@ -1870,6 +1870,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               characters={characters}
               sharedStatusId={sharedStatusId}
               sharedStatusFromChat={statusFromChat}
+              onReturnToChat={() => handleViewChange("chats")}
               onSharedStatusHandled={handleSharedStatusHandled}
               chatCharacterIds={chatThreads.map((thread) => thread.sourceCharacterId || thread.id)}
               onOpenCharacterChat={(characterId) => {
