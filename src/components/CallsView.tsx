@@ -113,7 +113,7 @@ export function CallsView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 divide-y divide-line/70 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
+      <div className="min-h-0 flex-1 divide-y divide-[#4687fe]/25 dark:divide-[#d5b767]/30 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
             {ownerThreads.length === 0 ? (

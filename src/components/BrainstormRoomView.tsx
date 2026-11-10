@@ -216,7 +216,7 @@ export function BrainstormRoomView({
           onClick={() => {
             if (confirm("Hapus meja dan semua obrolannya?")) onDeleteRoom();
           }}
-          className="grid h-9 w-9 place-items-center rounded-full text-ink-soft hover:bg-surface-2 hover:text-ink"
+          className={`grid h-9 w-9 place-items-center rounded-full ${mode === "meetup" ? "text-ink-soft hover:bg-surface-2 hover:text-ink" : "text-[#205ac4] hover:bg-rose-500/10 hover:text-rose-600 dark:text-[#e8cf75] dark:hover:text-rose-400"}`}
           aria-label="Hapus meja"
         >
           <TrashIcon className="h-4 w-4" />
