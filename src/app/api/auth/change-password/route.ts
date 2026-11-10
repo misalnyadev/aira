@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { db } from "@/db";
-import { passwordResetTokens, sessions, users } from "@/db/schema";
+import { passwordResetRequests, passwordResetTokens, sessions, users } from "@/db/schema";
 import { hashSessionToken, requireUser, SESSION_COOKIE } from "@/lib/auth";
 import { checkPasswordStrength, hashPassword, verifyPassword } from "@/lib/password";
 
@@ -73,6 +73,15 @@ export async function POST(req: Request) {
     await tx
       .delete(sessions)
       .where(and(eq(sessions.userId, user.id), ne(sessions.id, currentSessionId)));
+    await tx
+      .update(passwordResetRequests)
+      .set({ status: "completed", resolvedAt: new Date(), resolvedBy: user.id, contactInfo: "" })
+      .where(
+        and(
+          eq(passwordResetRequests.userId, user.id),
+          eq(passwordResetRequests.status, "pending")
+        )
+      );
     await tx
       .update(passwordResetTokens)
       .set({ consumedAt: new Date() })

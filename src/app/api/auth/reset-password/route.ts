@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { passwordResetTokens, sessions, users } from "@/db/schema";
+import { passwordResetRequests, passwordResetTokens, sessions, users } from "@/db/schema";
 import { destroySession } from "@/lib/auth";
 import { ensureDb } from "@/lib/dbReady";
 import { checkPasswordStrength, hashPassword } from "@/lib/password";
@@ -47,7 +47,41 @@ export async function POST(req: Request) {
   const now = new Date();
   const tokenHash = hashResetToken(token);
   const resetUserId = await db.transaction(async (tx) => {
-    // Klaim token di awal transaksi agar tidak bisa dipakai dua kali bersamaan.
+    const [candidate] = await tx
+      .select({ userId: passwordResetTokens.userId })
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.tokenHash, tokenHash),
+          gt(passwordResetTokens.expiresAt, now),
+          isNull(passwordResetTokens.consumedAt)
+        )
+      )
+      .limit(1);
+    if (!candidate) return null;
+
+    const [lockedUser] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, candidate.userId))
+      .for("update")
+      .limit(1);
+    if (!lockedUser) return null;
+
+    // Lock the pending request before the token, matching Admin and password-change transaction order.
+    await tx
+      .select({ id: passwordResetRequests.id })
+      .from(passwordResetRequests)
+      .where(
+        and(
+          eq(passwordResetRequests.userId, candidate.userId),
+          eq(passwordResetRequests.status, "pending")
+        )
+      )
+      .for("update")
+      .limit(1);
+
+    // Claim the token atomically so concurrent submissions can only succeed once.
     const [reset] = await tx
       .update(passwordResetTokens)
       .set({ consumedAt: now })
@@ -59,11 +93,19 @@ export async function POST(req: Request) {
         )
       )
       .returning({ userId: passwordResetTokens.userId });
-
     if (!reset) return null;
 
     await tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, reset.userId));
     await tx.delete(sessions).where(eq(sessions.userId, reset.userId));
+    await tx
+      .update(passwordResetRequests)
+      .set({ status: "completed", resolvedAt: now, resolvedBy: reset.userId, contactInfo: "" })
+      .where(
+        and(
+          eq(passwordResetRequests.userId, reset.userId),
+          eq(passwordResetRequests.status, "pending")
+        )
+      );
     return reset.userId;
   });
 
