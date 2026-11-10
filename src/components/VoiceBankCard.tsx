@@ -210,7 +210,7 @@ export function VoiceBankCard({
       : "Tersimpan di Cloud R2 & perangkat — tetap berbunyi walau tanpa API key";
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+    <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
       <button
         type="button"
         onClick={onToggle}
@@ -219,7 +219,7 @@ export function VoiceBankCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-ink">Bank Rekaman Suara</h2>
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Bank Rekaman Suara</h2>
             <span
               className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                 r2Enabled
@@ -247,13 +247,13 @@ export function VoiceBankCard({
           <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
           <span className="block text-[11px] text-muted">Cloudflare R2 (PC &amp; HP)</span>
-          <span className="mt-0.5 block text-xs font-bold text-ink">
+          <span className="mt-0.5 block text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
             {cloudCount} klip · {formatBytes(cloudBytes)}
           </span>
         </div>
         <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
           <span className="block text-[11px] text-muted">Lokal perangkat ini</span>
-          <span className="mt-0.5 block text-xs font-bold text-ink">
+          <span className="mt-0.5 block text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
             {localStats.count} klip · {formatBytes(localStats.bytes)}
           </span>
         </div>

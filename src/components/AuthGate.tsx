@@ -144,7 +144,7 @@ export function AuthGate({
 
           <div className="m-auto w-full max-w-sm py-6">
           <div className="mb-6 text-center">
-            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">
               HeyTalent
             </h1>
             <p className="mt-1.5 text-sm text-ink-soft">
@@ -219,7 +219,7 @@ export function AuthGate({
             {isRegister && (
               <div className="space-y-3 rounded-2xl border border-line bg-surface-2/50 p-3.5">
                 <div>
-                  <h2 className="text-sm font-semibold text-ink">Profil akun</h2>
+                  <h2 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Profil akun</h2>
                   <p className="mt-0.5 text-[11px] text-muted">Nama wajib diisi; detail lainnya boleh dilengkapi nanti.</p>
                 </div>
                 <div>

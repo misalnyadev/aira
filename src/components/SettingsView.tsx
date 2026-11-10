@@ -55,7 +55,7 @@ function SettingsAccordionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+    <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
       <button
         type="button"
         onClick={onToggle}
@@ -1209,7 +1209,7 @@ export function SettingsView({
 
               <div className="rounded-xl border border-line bg-surface p-3.5">
                 <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-ink">Ganti kata sandi</h3>
+                  <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Ganti kata sandi</h3>
                   <p className="mt-0.5 text-xs text-ink-soft">
                     Sesi akunmu di perangkat lain akan dikeluarkan setelah kata sandi berubah.
                   </p>

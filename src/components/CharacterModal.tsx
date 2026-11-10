@@ -486,7 +486,7 @@ export function CharacterModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-lg font-bold text-ink">
+            <h2 className="font-display text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">
               {onboardingMode ? "Buat Karakter Pertamamu" : initial ? "Edit Karakter" : "Buat Karakter Baru"}
             </h2>
             {onboardingMode && <p className="mt-0.5 text-[11px] text-muted">Isi sendiri atau minta AI membuat draf yang bisa kamu ubah.</p>}
@@ -679,7 +679,7 @@ export function CharacterModal({
           <div className={`${onboardingMode ? "hidden " : ""}space-y-2.5 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-ink">Impor dossier karakter</p>
+                <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Impor dossier karakter</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                   Satu berkas JSON per karakter; boleh memuat Bible, kepribadian, portofolio,
                   hubungan dengan pemilik, dan konteks tim. Field yang tidak ada tetap. Izin berbagi
@@ -740,7 +740,7 @@ export function CharacterModal({
 
           <div className="space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5">
             <div>
-              <p className="text-xs font-semibold text-ink">Keahlian & layanan</p>
+              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Keahlian & layanan</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Atur hal yang bisa dibantu karakter ini. Contoh: Musthzen—IT & produksi, Arissa—menulis & analisis, Kirana—komunikasi & bisnis. Portofolio tampil di pratinjau undangan dan menjadi konteks saat ia berbicara; ini bukan klaim sertifikasi atau izin otomatis memakai alat.
               </p>
@@ -804,7 +804,7 @@ export function CharacterModal({
           {!initial && (
             <section className="space-y-3 rounded-2xl border border-brand/20 bg-brand/5 p-3.5">
               <div>
-                <h3 className="text-sm font-semibold text-ink">Buat draf dengan AI</h3>
+                <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Buat draf dengan AI</h3>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                   Pilih arah karakter. AI mengisi field teks yang masih kosong, termasuk Bible, kepribadian, keahlian, dan sapaan; isianmu yang sudah ada tidak ditimpa.
                 </p>
@@ -853,7 +853,7 @@ export function CharacterModal({
 
           <div className={`${onboardingMode ? "hidden " : ""}space-y-2 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
-              <label className="block text-xs font-semibold text-ink">
+              <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 Hubungan dengan pemilik
               </label>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
@@ -874,7 +874,7 @@ export function CharacterModal({
 
           <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
-              <p className="text-xs font-semibold text-ink">Memori Tim 1</p>
+              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Memori Tim 1</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Semua karakter di akunmu masuk Tim 1 secara default. Catatan relasi yang dibagikan membantu mereka saling mengenal.
               </p>
@@ -924,7 +924,7 @@ export function CharacterModal({
 
           <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-line bg-surface-2/70 p-3.5`}>
             <div>
-              <p className="text-xs font-semibold text-ink">Info profil pemilik saat diundang</p>
+              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Info profil pemilik saat diundang</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Karakter tetap tahu bahwa ia milikmu dan hadir sebagai tamu. Centang hanya fakta profilmu yang boleh masuk ke brief dan dibagikan saat ia diundang.
               </p>
@@ -969,7 +969,7 @@ export function CharacterModal({
 
           <div className="rounded-2xl border border-line bg-surface-2/70 p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink">
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 <BibleOutlineIcon className="h-4 w-4 text-ink" /> Bible peran (acuan utama)
               </label>
               <button

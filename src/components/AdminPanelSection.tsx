@@ -363,7 +363,7 @@ export function AdminPanelSection({
       <div className="min-w-0 rounded-2xl border border-line bg-surface p-4 shadow-2xs">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-bold text-ink">
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
               Pusat Pengelolaan Admin &amp; Member
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -386,7 +386,7 @@ export function AdminPanelSection({
 
         <div className="mt-3.5 grid grid-cols-3 gap-2">
           <div className="min-w-0 rounded-xl bg-surface-2/70 px-2 py-2.5 text-center">
-            <span className="block truncate text-base font-extrabold text-ink">
+            <span className="block truncate text-base font-extrabold text-[#205ac4] dark:text-[#e8cf75]">
               {loading ? "…" : users.length}
             </span>
             <span className="block truncate text-[11px] text-muted">Akun</span>
@@ -406,7 +406,7 @@ export function AdminPanelSection({
             </span>
           </div>
           <div className="min-w-0 rounded-xl bg-surface-2/70 px-2 py-2.5 text-center">
-            <span className="block truncate text-base font-extrabold text-ink">
+            <span className="block truncate text-base font-extrabold text-[#205ac4] dark:text-[#e8cf75]">
               {loading ? "…" : totalCharacters}
             </span>
             <span className="block truncate text-[11px] text-muted">
@@ -437,7 +437,7 @@ export function AdminPanelSection({
           <PasswordResetRequestsSection />
 
           {/* 0. Kode Undangan Pendaftaran Member (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
             <button
               type="button"
               onClick={() => setInviteOpen((v) => !v)}
@@ -446,7 +446,7 @@ export function AdminPanelSection({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-ink">
+                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     Kode Undangan Pendaftaran
                   </h3>
                   <span
@@ -484,7 +484,7 @@ export function AdminPanelSection({
                       Kode undangan aktif saat ini
                     </span>
                     {signupInvite?.enabled && signupInvite.code ? (
-                      <span className="mt-0.5 block break-all font-mono text-sm font-bold tracking-wider text-ink">
+                      <span className="mt-0.5 block break-all font-mono text-sm font-bold tracking-wider text-[#205ac4] dark:text-[#e8cf75]">
                         {showInviteCode
                           ? signupInvite.code
                           : "•".repeat(
@@ -613,7 +613,7 @@ export function AdminPanelSection({
           </section>
 
           {/* 1. Permintaan Tambah Slot (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
             <button
               type="button"
               onClick={() => setRequestsOpen((v) => !v)}
@@ -622,7 +622,7 @@ export function AdminPanelSection({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-ink">
+                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     Permintaan Tambah Slot Karakter
                   </h3>
                   <span
@@ -669,14 +669,14 @@ export function AdminPanelSection({
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-ink">
+                            <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                               {nameLabel}
                             </p>
                             <p className="truncate text-xs text-muted">
                               {r.email}
                             </p>
                           </div>
-                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-ink ring-1 ring-line">
+                          <span className="shrink-0 rounded-full bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75] ring-1 ring-line">
                             {r.characterCount}/{r.currentQuota} → minta{" "}
                             {r.requestedQuota} slot
                           </span>
@@ -726,7 +726,7 @@ export function AdminPanelSection({
                             >
                               -
                             </button>
-                            <span className="min-w-[2.2rem] text-center text-xs font-bold text-ink">
+                            <span className="min-w-[2.2rem] text-center text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
                               {quotaVal}
                             </span>
                             <button
@@ -792,7 +792,7 @@ export function AdminPanelSection({
           </section>
 
           {/* 2. Daftar Admin & Member (Dropdown v) */}
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
             <button
               type="button"
               onClick={() => setMembersOpen((v) => !v)}
@@ -801,7 +801,7 @@ export function AdminPanelSection({
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-ink">
+                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     Daftar Akun Admin &amp; Member
                   </h3>
                   <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
@@ -892,7 +892,7 @@ export function AdminPanelSection({
                             <Avatar name={label} src={u.avatarUrl} size={38} />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="truncate text-sm font-semibold text-ink">
+                                <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                                   {label}
                                 </span>
                                 {u.isAdmin ? (
@@ -940,7 +940,7 @@ export function AdminPanelSection({
                                 >
                                   -
                                 </button>
-                                <span className="min-w-[1.8rem] text-center text-xs font-bold text-ink">
+                                <span className="min-w-[1.8rem] text-center text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
                                   {qVal}
                                 </span>
                                 <button
@@ -990,7 +990,7 @@ export function AdminPanelSection({
 
           {/* 3. Riwayat Keputusan Kuota (Dropdown v) */}
           {resolved.length > 0 && (
-            <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+            <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
               <button
                 type="button"
                 onClick={() => setHistoryOpen((v) => !v)}
@@ -998,7 +998,7 @@ export function AdminPanelSection({
                 className="flex w-full min-w-0 items-center justify-between gap-2.5 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-bold text-ink">
+                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     Riwayat Keputusan Kuota Terakhir
                   </h3>
                   <p className="mt-0.5 text-xs text-ink-soft">

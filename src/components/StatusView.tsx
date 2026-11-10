@@ -1271,7 +1271,7 @@ export function StatusView({
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3.5">
               <div className="min-w-0">
-                <h2 id="own-reel-gallery-title" className="truncate text-base font-bold text-ink">
+                <h2 id="own-reel-gallery-title" className="truncate text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
                   Galeri Reels Anda
                 </h2>
                 <p className="mt-0.5 text-xs text-muted">
@@ -1324,7 +1324,7 @@ export function StatusView({
               ) : ownReelsError ? null : ownReels.length === 0 ? (
                 <div className="flex flex-col items-center px-5 py-12 text-center">
                   <FilmIcon className="h-8 w-8 text-muted" />
-                  <p className="mt-3 text-sm font-semibold text-ink">Belum ada reels pribadi</p>
+                  <p className="mt-3 text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada reels pribadi</p>
                   <p className="mt-1 text-xs text-muted">Reels yang kamu posting atas nama akunmu akan muncul di sini.</p>
                   <button
                     type="button"
@@ -1722,7 +1722,7 @@ export function StatusView({
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
             <div className="flex items-center justify-between gap-3">
-              <h2 id="status-edit-title" className="text-base font-bold text-ink">Edit postingan</h2>
+              <h2 id="status-edit-title" className="text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">Edit postingan</h2>
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}

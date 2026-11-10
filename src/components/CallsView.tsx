@@ -118,7 +118,7 @@ export function CallsView({
           <div className="px-4 py-12 text-center">
             {ownerThreads.length === 0 ? (
               <>
-                <h2 className="text-sm font-semibold text-ink">Belum ada chat 2 arah</h2>
+                <h2 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada chat 2 arah</h2>
                 <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-soft">
                   Daftar ini hanya menampilkan pengguna yang mengundang karakter milikmu dan
                   sudah terhubung. Undangan masuk bisa ditinjau di Kontak Karakter.
@@ -154,7 +154,7 @@ export function CallsView({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-ink">
+                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                       {thread.name}
                     </p>
                     <time className="shrink-0 text-[11px] text-muted">

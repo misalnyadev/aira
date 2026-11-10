@@ -399,7 +399,7 @@ export function CharacterVoiceSection({
 
       {/* Gaya Balasan Gelembung Voice Note (VN) */}
       <div className="space-y-1.5 border-t border-line pt-3">
-        <span className="block text-xs font-semibold text-ink">
+        <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
           🎙️ Gelembung Voice Note (VN) di Chat
         </span>
         <div className="flex flex-wrap gap-1.5">

@@ -85,7 +85,7 @@ export function CharacterProfileModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div className="flex min-w-0 items-center gap-2">
-            <h2 className="truncate font-display text-lg font-bold text-ink">Profil Karakter</h2>
+            <h2 className="truncate font-display text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">Profil Karakter</h2>
             <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
               {mode === "meetup" ? "Tatap Muka" : "Chat"}
             </span>
@@ -102,7 +102,7 @@ export function CharacterProfileModal({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-6">
           <div className="flex flex-col items-center gap-2 text-center">
             <Avatar name={character.name} src={character.avatarUrl} size={104} ring />
-            <h3 className="mt-2 font-display text-xl font-bold text-ink">{character.name}</h3>
+            <h3 className="mt-2 font-display text-xl font-bold text-[#205ac4] dark:text-[#e8cf75]">{character.name}</h3>
             {character.shortBio && <p className="text-sm text-ink-soft">{character.shortBio}</p>}
             {characterGenderLabel && (
               <p className="text-xs text-muted">Jenis kelamin / gender: {characterGenderLabel}</p>
@@ -126,7 +126,7 @@ export function CharacterProfileModal({
           {hasBible && (
             <div className="mt-5">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink">
+                <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   <BibleOutlineIcon className="h-4 w-4 text-ink" /> Bible peran
                 </h4>
                 <button

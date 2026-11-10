@@ -61,7 +61,7 @@ export function CharacterStoryAutoSection({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <FilmIcon className="h-4 w-4 shrink-0 text-ink-soft" />
-            <h4 className="text-sm font-semibold text-ink">StoryTalent Otomatis</h4>
+            <h4 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">StoryTalent Otomatis</h4>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-soft">
             Story teks dipublikasikan sekitar pukul 18.00 WIB, mengikuti kepribadian dan Bible {characterName}.

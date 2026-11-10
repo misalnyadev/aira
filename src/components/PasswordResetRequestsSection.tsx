@@ -170,7 +170,7 @@ export function PasswordResetRequestsSection() {
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="text-sm font-bold text-ink">Pemulihan Kata Sandi</h3>
+              <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Pemulihan Kata Sandi</h3>
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${requests.length > 0 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-surface-2 text-muted"}`}>
                 {loading ? "…" : `${requests.length} menunggu`}
               </span>
@@ -230,7 +230,7 @@ export function PasswordResetRequestsSection() {
                   <article key={request.id} className="min-w-0 space-y-3 rounded-xl border border-line bg-surface-2/40 p-3.5">
                     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-semibold text-ink">{memberName}</p>
+                        <p className="break-words text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{memberName}</p>
                         <p className="break-all text-xs text-muted">{request.email}</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted ring-1 ring-line">
@@ -240,7 +240,7 @@ export function PasswordResetRequestsSection() {
 
                     {request.contactInfo ? (
                       <div className="rounded-lg bg-surface px-3 py-2 text-xs text-ink-soft">
-                        <span className="font-semibold text-ink">Kontak tambahan: </span>
+                        <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">Kontak tambahan: </span>
                         <span className="break-words">{request.contactInfo}</span>
                       </div>
                     ) : (
@@ -260,7 +260,7 @@ export function PasswordResetRequestsSection() {
 
                     {issuedLink && (
                       <div className="space-y-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
-                        <p className="text-xs font-semibold text-ink">Tautan reset — kedaluwarsa {formatDate(issuedLink.expiresAt)}</p>
+                        <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Tautan reset — kedaluwarsa {formatDate(issuedLink.expiresAt)}</p>
                         <p className="break-all rounded-lg bg-surface px-2.5 py-2 font-mono text-[11px] leading-relaxed text-ink select-all">
                           {issuedLink.url}
                         </p>
