@@ -42,7 +42,7 @@ const FIELD =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-sm";
 
 const PROFILE_FIELD =
-  "w-full rounded-xl border border-[#4687fe]/40 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-[#205ac4] dark:border-[#d5b767]/40 dark:focus:border-[#e8cf75] sm:text-sm";
+  "w-full rounded-xl border border-accent/40 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-accent-text dark:border-accent/40 dark:focus:border-accent-text sm:text-sm";
 
 function charCount(value: string, max: number) {
   const over = value.length > max;
@@ -294,7 +294,7 @@ export function ProfileView({
       <div className="shrink-0 px-4 pb-3 pt-2 sm:px-5">
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
         <div
-          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-[#4687fe]/10 p-1 dark:bg-surface-2 ${
+          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-accent/10 p-1 dark:bg-surface-2 ${
             effectiveIsAdmin ? "grid-cols-3" : "grid-cols-2"
           }`}
         >
@@ -303,8 +303,8 @@ export function ProfileView({
             onClick={() => selectTab("identity")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "identity"
-                ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                ? "bg-surface text-accent-text shadow-xs dark:text-accent-text"
+                : "text-ink-soft hover:text-accent-text"
             }`}
           >
             Profil Diri
@@ -315,8 +315,8 @@ export function ProfileView({
             onClick={() => selectTab("account")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "account"
-                ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                ? "bg-surface text-accent-text shadow-xs dark:text-accent-text"
+                : "text-ink-soft hover:text-accent-text"
             }`}
           >
             {effectiveIsAdmin ? "Akun Saya" : "Akun & Kuota"}
@@ -328,8 +328,8 @@ export function ProfileView({
               onClick={() => selectTab("admin")}
               className={`inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                 tab === "admin"
-                  ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
-                  : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
+                  ? "bg-surface text-accent-text shadow-xs dark:text-accent-text"
+                  : "text-ink-soft hover:text-accent-text"
               }`}
             >
               <span className="truncate">Panel Admin</span>
@@ -350,14 +350,14 @@ export function ProfileView({
         {tab === "identity" && (
           <form
             onSubmit={handleSubmit}
-            className="mx-auto max-w-xl space-y-5 rounded-3xl border border-[#4687fe]/25 bg-surface p-5 shadow-xs dark:border-[#d5b767]/30 sm:p-6"
+            className="mx-auto max-w-xl space-y-5 rounded-3xl border border-accent/25 bg-surface p-5 shadow-xs dark:border-accent/30 sm:p-6"
           >
             {/* Avatar */}
             <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="group relative rounded-full ring-2 ring-[#4687fe]/35 ring-offset-2 ring-offset-surface dark:ring-[#d5b767]/40"
+                className="group relative rounded-full ring-2 ring-accent/35 ring-offset-2 ring-offset-surface dark:ring-accent/40"
                 title="Unggah foto profil"
               >
                 <Avatar name={previewName} src={avatarUrl} size={96} />
@@ -542,19 +542,19 @@ export function ProfileView({
         {tab === "account" && (
           <div className="mx-auto max-w-xl space-y-4">
             {/* Kartu Status Akun */}
-            <section className="rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30 sm:p-5">
+            <section className="rounded-2xl border border-accent/25 bg-surface p-4 shadow-2xs dark:border-accent/30 sm:p-5">
               <div className="flex items-center gap-3">
                 <Avatar name={previewName} src={avatarUrl} size={52} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                    <span className="truncate text-base font-bold text-accent-text">
                       {previewName}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                         effectiveIsAdmin
-                          ? "bg-[#4687fe]/15 text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]"
-                          : "bg-[#4687fe]/10 text-ink-soft ring-1 ring-[#4687fe]/20 dark:bg-surface-2 dark:ring-line"
+                          ? "bg-accent/15 text-accent-text dark:bg-accent/15 dark:text-accent-text"
+                          : "bg-accent/10 text-ink-soft ring-1 ring-accent/20 dark:bg-surface-2 dark:ring-line"
                       }`}
                     >
                       {effectiveIsAdmin ? "Admin" : "Member"}
@@ -565,18 +565,18 @@ export function ProfileView({
               </div>
 
               {/* Pemakaian Slot Karakter */}
-              <div className="mt-4 rounded-xl bg-[#4687fe]/10 p-3.5 dark:bg-surface-2/70">
+              <div className="mt-4 rounded-xl bg-accent/10 p-3.5 dark:bg-surface-2/70">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                  <span className="font-semibold text-accent-text">
                     Kuota Karakter Milik Sendiri
                   </span>
-                  <span className="font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <span className="font-bold text-accent-text">
                     {characterCount} / {characterLimit} slot
                   </span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#4687fe]/20 dark:bg-line">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-accent/20 dark:bg-line">
                   <div
-                    className="h-full rounded-full bg-[#4687fe] transition-all dark:bg-[#d5b767]"
+                    className="h-full rounded-full bg-accent transition-all dark:bg-accent"
                     style={{ width: `${usageRatio}%` }}
                   />
                 </div>
@@ -604,7 +604,7 @@ export function ProfileView({
             </section>
 
             {/* Menu Karakter — compact dropdown “v” (pengganti shortcut Panel Admin) */}
-            <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+            <section className="overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
               <button
                 type="button"
                 onClick={() => setCharsOpen((v) => !v)}
@@ -612,7 +612,7 @@ export function ProfileView({
                 className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50 sm:px-5"
               >
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                  <h3 className="text-sm font-bold text-accent-text">
                     Karakter Saya
                   </h3>
                   <p className="mt-0.5 text-xs text-ink-soft">
@@ -633,7 +633,7 @@ export function ProfileView({
                     </span>
                   )}
                   <span
-                    className={`grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] ${charsOpen ? "rotate-180" : ""}`}
+                    className={`grid h-7 w-7 place-items-center rounded-full border border-accent/40 bg-accent/10 text-accent-text transition dark:border-accent/45 dark:bg-accent/10 dark:text-accent-text ${charsOpen ? "rotate-180" : ""}`}
                   >
                     <ChevronDownIcon strokeWidth={1.6} className="h-3.5 w-3.5" />
                   </span>
@@ -641,7 +641,7 @@ export function ProfileView({
               </button>
 
               {charsOpen && (
-                <div className="border-t border-[#4687fe]/25 bg-[#4687fe]/10 px-3 py-3 dark:border-[#d5b767]/30 dark:bg-surface-2/40 sm:px-4">
+                <div className="border-t border-accent/25 bg-accent/10 px-3 py-3 dark:border-accent/30 dark:bg-surface-2/40 sm:px-4">
                   {pendingOwnerContactsCount > 0 && onOpenContactsModal && (
                     <button
                       type="button"
@@ -681,18 +681,18 @@ export function ProfileView({
                         >
                           <Avatar name={ch.name} src={ch.avatarUrl} size={40} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                            <p className="truncate text-sm font-bold text-accent-text">
                               {ch.name}
                             </p>
                             <p className="truncate text-[11px] text-ink-soft">
                               {ch.shortBio || ch.invitePin || "Tanpa deskripsi"}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              <span className="rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-soft dark:bg-line">
+                              <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-soft dark:bg-line">
                                 PIN {ch.invitePin}
                               </span>
                               {ch.hasBible && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent-text">
                                   <BibleOutlineIcon className="h-3 w-3 text-ink" /> Bible
                                 </span>
                               )}
@@ -704,7 +704,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onChatCharacter(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-accent/40 bg-accent/10 text-accent-text transition hover:bg-accent/20 dark:border-accent/45 dark:bg-accent/10 dark:text-accent-text dark:hover:bg-accent/20"
                                   title="Chat"
                                   aria-label={`Chat dengan ${ch.name}`}
                                 >
@@ -715,7 +715,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onOpenCharacterProfile(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-accent/40 bg-accent/10 text-accent-text transition hover:bg-accent/20 dark:border-accent/45 dark:bg-accent/10 dark:text-accent-text dark:hover:bg-accent/20"
                                   title="Profil"
                                   aria-label={`Profil ${ch.name}`}
                                 >
@@ -728,7 +728,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onEditCharacter(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-accent/40 bg-accent/10 text-accent-text transition hover:bg-accent/20 dark:border-accent/45 dark:bg-accent/10 dark:text-accent-text dark:hover:bg-accent/20"
                                   title="Edit"
                                   aria-label={`Edit ${ch.name}`}
                                 >
@@ -785,10 +785,10 @@ export function ProfileView({
 
             {!effectiveIsAdmin && (
               /* Khusus Member: Pengajuan Tambah Slot Karakter ke Admin */
-              <section className="space-y-3 rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30 sm:p-5">
+              <section className="space-y-3 rounded-2xl border border-accent/25 bg-surface p-4 shadow-2xs dark:border-accent/30 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                    <h3 className="text-sm font-bold text-accent-text">
                       Permintaan Tambah Slot Karakter
                     </h3>
                     <p className="mt-0.5 text-xs text-ink-soft">
@@ -800,7 +800,7 @@ export function ProfileView({
                     onClick={() => void onQuotaChanged?.()}
                     title="Muat ulang status kuota"
                     aria-label="Muat ulang status kuota"
-                    className="rounded-full bg-[#4687fe]/10 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/20 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/20"
+                    className="rounded-full bg-accent/10 p-2 text-accent-text ring-1 ring-accent/40 transition hover:bg-accent/20 dark:bg-accent/10 dark:text-accent-text dark:ring-accent/45 dark:hover:bg-accent/20"
                   >
                     <RefreshIcon className="h-4 w-4" />
                   </button>
