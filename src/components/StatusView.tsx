@@ -40,6 +40,8 @@ type StatusItem = {
   expiresAt: string | null;
   createdAt: string;
   characterName: string | null;
+  characterBio: string | null;
+  userBio: string | null;
   characterAvatar: string | null;
   userDisplayName: string | null;
   userNickname: string | null;
@@ -278,6 +280,13 @@ export function StatusView({
 }) {
   const { user } = useAuth();
   const [items, setItems] = useState<StatusItem[]>([]);
+  const [profileItem, setProfileItem] = useState<StatusItem | null>(null);
+  const [profilePosts, setProfilePosts] = useState<StatusItem[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const profileRequestRef = useRef(0);
   const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
   const [followError, setFollowError] = useState<string | null>(null);
   const [followBusyKeys, setFollowBusyKeys] = useState<Record<string, boolean>>({});
@@ -341,6 +350,49 @@ export function StatusView({
     } catch {}
     setLoading(false);
   }, []);
+
+  async function openTalentProfile(item: StatusItem) {
+    const request = ++profileRequestRef.current;
+    setProfileItem(item);
+    setProfilePosts([]);
+    setProfileLoading(true);
+    setProfileError(null);
+    setInviteMessage(null);
+    try {
+      const key = item.characterId ? "characterId" : "userId";
+      const id = item.characterId || item.userId;
+      const res = await fetch(`/api/statuses?${key}=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data?.statuses)) throw new Error(data?.error || "Profil belum dapat dimuat.");
+      if (profileRequestRef.current !== request) return;
+      setProfilePosts(data.statuses);
+      if (data.statuses.length) setProfileItem(data.statuses[0]);
+    } catch (error) {
+      if (profileRequestRef.current === request) setProfileError(error instanceof Error ? error.message : "Profil belum dapat dimuat.");
+    } finally {
+      if (profileRequestRef.current === request) setProfileLoading(false);
+    }
+  }
+
+  function closeTalentProfile() {
+    profileRequestRef.current++;
+    setProfileItem(null);
+  }
+
+  async function inviteFromProfile(item: StatusItem) {
+    setInviteBusy(true);
+    setInviteMessage(null);
+    try {
+      const res = await fetch("/api/contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statusId: item.id }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Undangan belum dapat dikirim.");
+      setInviteMessage("Undangan terkirim. Menunggu persetujuan pemilik karakter.");
+    } catch (error) {
+      setInviteMessage(error instanceof Error ? error.message : "Undangan belum dapat dikirim.");
+    } finally {
+      setInviteBusy(false);
+    }
+  }
 
   async function openOwnReelGallery() {
     setShowComposer(false);
@@ -1387,7 +1439,7 @@ export function StatusView({
 
                     {/* Banner transparan IG: avatar + nama di atas konten, burger kanan */}
                     <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/65 via-black/25 to-transparent px-3 pb-8 pt-2.5">
-                      <div className="pointer-events-auto flex min-w-0 items-center gap-2.5">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); void openTalentProfile(it); }} aria-label={`Buka profil ${displayName}`} className="pointer-events-auto flex min-w-0 items-center gap-2.5 text-left">
                         <span className="rounded-full bg-white p-[2px] shadow-sm">
                           <Avatar name={displayName} src={avatar} size={32} />
                         </span>
@@ -1398,7 +1450,7 @@ export function StatusView({
                           </div>
                           <div className="truncate text-[11px] text-white/80 drop-shadow">{it.followerCount} pengikut · {it.kind === "reel" ? "Reels" : "Status"} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}</div>
                         </div>
-                      </div>
+                      </button>
                       {canManageStatus(it) ? (
                         <button
                           onClick={() => setMenuFor(menuFor === it.id ? null : it.id)}
@@ -1552,6 +1604,58 @@ export function StatusView({
         </div>
       </div>
 
+      {profileItem && (() => {
+        const name = profileItem.characterName || profileItem.userDisplayName || profileItem.userNickname || "Member";
+        const avatar = profileItem.characterAvatar || profileItem.userAvatar;
+        const storiesInProfile = profilePosts.filter((post) => post.kind === "status");
+        const reelsInProfile = profilePosts.filter((post) => post.kind === "reel");
+        const openPost = (post: StatusItem) => {
+          const combined = [...items, ...profilePosts.filter((p) => !items.some((i) => i.id === p.id))];
+          setItems(combined);
+          closeTalentProfile();
+          setFullScreenId(null);
+          if (post.kind === "status") {
+            const profileStories = combined.filter((p) => p.kind === "status" && statusProfileKey(p) === statusProfileKey(post));
+            setViewerProfileKey(statusProfileKey(post));
+            setViewerIdx(profileStories.findIndex((p) => p.id === post.id));
+            setStoryProgress(0);
+            markStoryViewed(post);
+          } else {
+            setViewerIdx(null);
+            setFullScreenId(post.id);
+          }
+        };
+        return <div className="fixed inset-0 z-[90] overflow-y-auto bg-app text-ink" role="dialog" aria-modal="true" aria-label={`Profil ${name}`}>
+          <div className="mx-auto min-h-full max-w-[560px] pb-8">
+            <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
+              <button type="button" onClick={closeTalentProfile} className="rounded-full px-2 py-1 text-2xl" aria-label="Kembali">‹</button>
+              <h2 className="truncate text-lg font-bold">{name}</h2>
+            </header>
+            <div className="px-4 py-5">
+              <div className="flex items-center gap-5">
+                <span className="rounded-full bg-gradient-to-tr from-blue-700 via-blue-400 to-white p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
+                <div><div className="font-bold">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
+              </div>
+              {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && <p className="mt-4 whitespace-pre-wrap text-sm">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
+                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-blue-500 bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
+                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
+              </div>
+              {inviteMessage && <p role="status" className="mt-2 text-sm text-ink-soft">{inviteMessage}</p>}
+              {followError && <p role="alert" className="mt-2 text-sm text-red-600">{followError}</p>}
+            </div>
+            {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
+              <div className="border-t border-line px-4 py-3 text-sm font-semibold">Story aktif · {storiesInProfile.length}</div>
+              <div className="flex gap-2 overflow-x-auto px-4 pb-4">{storiesInProfile.length ? storiesInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} className="shrink-0 rounded-full border-2 border-blue-500 p-1" aria-label={`Lihat story ${name}`}><Avatar name={name} src={avatar} size={48} /></button>) : <span className="text-sm text-muted">Belum ada Story aktif.</span>}</div>
+              <div className="border-t border-line px-4 py-3 text-sm font-semibold">Reels · {reelsInProfile.length}{profilePosts.length === 120 ? "+" : ""}</div>
+              {reelsInProfile.length ? <div className="grid grid-cols-3 gap-0.5">{reelsInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} aria-label={`Buka Reel ${name}`} className="relative aspect-[3/4] overflow-hidden bg-surface-2 text-sm">{post.imageUrl ? <img src={post.imageUrl} alt="" className="h-full w-full object-cover" /> : post.videoUrl ? <video src={post.videoUrl} muted preload="metadata" className="h-full w-full object-cover" /> : <span className="line-clamp-4 p-2">{post.content || post.caption || "Reel"}</span>}</button>)}</div> : <p className="px-4 text-sm text-muted">Belum ada Reel.</p>}
+              {profilePosts.length === 120 && <p className="p-4 text-xs text-muted">Menampilkan hingga 120 postingan terbaru.</p>}
+            </>}
+          </div>
+        </div>;
+      })()}
+
       {editingItem && (
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 px-0 pb-0 pt-[max(0.5rem,var(--safe-top))] backdrop-blur-sm sm:items-center sm:p-4"
@@ -1683,13 +1787,13 @@ export function StatusView({
                 ))}
               </div>
               <div className="mt-3 flex items-center justify-between px-1">
-                <div className="flex min-w-0 items-center gap-2">
+                <button type="button" onClick={() => void openTalentProfile(currentStory)} aria-label={`Buka profil ${displayName}`} className="flex min-w-0 items-center gap-2 text-left">
                   <Avatar name={displayName} src={avatar} size={32} />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{displayName}</div>
                     <div className="text-xs text-white/75">{timeAgo(currentStory.createdAt)} · {currentStory.followerCount} pengikut</div>
                   </div>
-                </div>
+                </button>
                 <button onClick={closeViewer} className="rounded-full bg-black/30 p-2 backdrop-blur-md" aria-label="Tutup status">
                   <XIcon className="h-5 w-5" />
                 </button>
@@ -1848,7 +1952,7 @@ export function StatusView({
                         <span className="rounded-full bg-white p-[2px] shadow">
                           <Avatar name={dName} src={av} size={28} />
                         </span>
-                        <span className="text-[13px] font-semibold drop-shadow">{dName} · {item.followerCount} pengikut</span>
+                        <button type="button" onClick={() => void openTalentProfile(item)} className="text-left text-[13px] font-semibold drop-shadow" aria-label={`Buka profil ${dName}`}>{dName} · {item.followerCount} pengikut</button>
                         <span className="text-[11px] text-white/70 drop-shadow">• {item.kind === "reel" ? "Reels" : "Status"} • {timeAgo(item.createdAt)}</span>
                         {item.canFollow ? (
                           <button

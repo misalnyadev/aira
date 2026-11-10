@@ -32,6 +32,12 @@ export async function GET(req: Request) {
 
   const searchParams = new URL(req.url).searchParams;
   const requestedStatusId = searchParams.get("id");
+  const profileCharacterId = searchParams.get("characterId");
+  const profileUserId = searchParams.get("userId");
+  const profileId = profileCharacterId || profileUserId;
+  if (profileId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) {
+    return NextResponse.json({ error: "Profil tidak valid." }, { status: 400 });
+  }
   const onlyMyReels = searchParams.get("mine") === "reels";
   const now = new Date();
 
@@ -50,6 +56,8 @@ export async function GET(req: Request) {
       expiresAt: characterStatuses.expiresAt,
       createdAt: characterStatuses.createdAt,
       characterName: characters.name,
+      characterBio: characters.shortBio,
+      userBio: users.about,
       characterAvatar: characters.avatarUrl,
       userDisplayName: users.displayName,
       userNickname: users.nickname,
@@ -64,6 +72,10 @@ export async function GET(req: Request) {
             or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now)),
             eq(characterStatuses.id, requestedStatusId)
           )
+        : profileCharacterId || profileUserId
+          ? and(or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, now)),
+              profileCharacterId ? eq(characterStatuses.characterId, profileCharacterId)
+                : and(eq(characterStatuses.userId, profileUserId!), isNull(characterStatuses.characterId)))
         : onlyMyReels
           ? and(
               eq(characterStatuses.userId, user.id),
