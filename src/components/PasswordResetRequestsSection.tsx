@@ -254,7 +254,7 @@ export function PasswordResetRequestsSection() {
                     {issuedLink && (
                       <div className="space-y-2 rounded-xl border border-accent/25 bg-accent/[0.06] p-3 dark:border-accent/30 dark:bg-accent/[0.06]">
                         <p className="text-xs font-semibold text-accent-text">Tautan reset — kedaluwarsa {formatDate(issuedLink.expiresAt)}</p>
-                        <p className="text-xs text-ink-soft">Tautan hanya tampil sekali. Salin dan kirim secara pribadi.</p>
+                        <p className="text-xs text-copy-soft">Tautan hanya tampil sekali. Salin dan kirim secara pribadi.</p>
                         <p className="break-all rounded-lg bg-surface px-2.5 py-2 font-mono text-[11px] leading-relaxed text-ink select-all">
                           {issuedLink.url}
                         </p>

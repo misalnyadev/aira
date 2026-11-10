@@ -92,6 +92,7 @@
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-copy: var(--copy, var(--ink));
+  --color-copy-soft: var(--copy, var(--ink-soft));
   --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
   --color-brand: var(--brand);

@@ -101,7 +101,7 @@ export function BrainstormView({
           {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
               <p className="text-sm font-semibold text-accent-text">Belum ada karakter untuk diajak bertemu</p>
-              <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+              <p className="mx-auto mt-1 max-w-md text-sm text-copy-soft">
                 Buat karakter dulu, lalu pilih satu untuk memulai pertemuan berdua.
               </p>
               <button
@@ -142,7 +142,7 @@ export function BrainstormView({
                         Temui
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-ink-soft">
+                    <p className="mt-0.5 truncate text-xs text-copy-soft">
                       {character.shortBio || "Karakter pribadimu"}
                     </p>
                   </div>
@@ -155,7 +155,7 @@ export function BrainstormView({
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
             <h2 className="text-sm font-bold text-accent-text">Brainstorm</h2>
-            <p className="mt-0.5 text-xs text-ink-soft">
+            <p className="mt-0.5 text-xs text-copy-soft">
               Diskusi ide 2–3 karakter. Usulan dan rencana bisa diingat sebagai rencana, bukan kejadian cerita.
             </p>
           </div>
@@ -168,7 +168,7 @@ export function BrainstormView({
               <h3 className="mt-3 text-sm font-semibold text-accent-text">
                 {canBrainstorm ? "Belum ada meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
               </h3>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+              <p className="mx-auto mt-1 max-w-sm text-sm text-copy-soft">
                 {canBrainstorm
                   ? "Buat meja untuk meminta beberapa karakter menanggapi topik secara bergiliran."
                   : characters.length === 0
@@ -199,7 +199,7 @@ export function BrainstormView({
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
             <h2 className="text-sm font-bold text-accent-text">Adegan</h2>
-            <p className="mt-0.5 text-xs text-ink-soft">
+            <p className="mt-0.5 text-xs text-copy-soft">
               Adegan bersama 1–3 karakter. Default-nya latihan; tandai canon bila masuk cerita utama.
             </p>
           </div>
@@ -209,7 +209,7 @@ export function BrainstormView({
               <h3 className="text-sm font-semibold text-accent-text">
                 {canCreateRoom ? "Belum ada Adegan" : "Buat karakter untuk mulai Adegan"}
               </h3>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+              <p className="mx-auto mt-1 max-w-sm text-sm text-copy-soft">
                 {canCreateRoom
                   ? "Mainkan adegan dengan satu sampai tiga karakter; pilih Latihan atau bagian cerita utama saat membuatnya."
                   : "Adegan memerlukan minimal satu karakter."}
@@ -289,7 +289,7 @@ function RoomCards({
                   </span>
                 )}
               </div>
-              <p className="truncate text-xs text-ink-soft">
+              <p className="truncate text-xs text-copy-soft">
                 {room.members.map((member) => member.name).join(" · ")} · {room.messageCount} pesan
               </p>
               <p className="truncate text-xs text-muted">{room.preview}</p>
@@ -377,7 +377,7 @@ function CreateSharedRoomModal({
             <h2 className="font-display text-[15px] font-bold text-accent-text">
               {mode === "scene" ? "Buat Adegan" : "Buat Meja Brainstorm"}
             </h2>
-            <p className="mt-0.5 text-xs text-ink-soft">
+            <p className="mt-0.5 text-xs text-copy-soft">
               {mode === "scene" ? "Pilih 1–3 karakter untuk bermain adegan." : "Pilih 2–3 karakter untuk berdiskusi."}
             </p>
           </div>
@@ -456,7 +456,7 @@ function CreateSharedRoomModal({
                   <Avatar name={character.name} src={character.avatarUrl} size={40} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-accent-text">{character.name}</p>
-                    <p className="truncate text-xs text-ink-soft">{character.shortBio || "Tanpa bio"}</p>
+                    <p className="truncate text-xs text-copy-soft">{character.shortBio || "Tanpa bio"}</p>
                     <p className="mt-0.5 text-[10px] text-muted">
                       Ingatan jangka panjang: {character.memoryEnabled ? "aktif" : "nonaktif"}
                     </p>

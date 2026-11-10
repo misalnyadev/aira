@@ -79,7 +79,7 @@ function SettingsAccordionCard({
               </span>
             )}
           </div>
-          <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
+          <p className="mt-0.5 truncate text-xs text-copy-soft">{subtitle}</p>
         </div>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text">
           <ChevronDownIcon
@@ -731,7 +731,7 @@ export function SettingsView({
                               </span>
                             )}
                           </div>
-                          <p className="truncate text-xs text-ink-soft">
+                          <p className="truncate text-xs text-copy-soft">
                             {p.model} · {p.maskedKey}
                           </p>
                         </div>
@@ -1151,7 +1151,7 @@ export function SettingsView({
                 )}
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-ink-soft">
+              <label className="flex items-center gap-2 text-xs text-copy-soft">
                 <input
                   type="checkbox"
                   checked={isDefault}
@@ -1210,13 +1210,13 @@ export function SettingsView({
               <div className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface p-3.5">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-accent-text">Ganti kata sandi</h3>
-                  <p className="mt-0.5 text-xs text-ink-soft">
+                  <p className="mt-0.5 text-xs text-copy-soft">
                     Sesi akunmu di perangkat lain akan dikeluarkan setelah kata sandi berubah.
                   </p>
                 </div>
                 <form onSubmit={handleChangePassword} className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                    <label className="mb-1 block text-xs font-medium text-copy-soft">
                       Kata sandi saat ini
                     </label>
                     <input
@@ -1234,7 +1234,7 @@ export function SettingsView({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                    <label className="mb-1 block text-xs font-medium text-copy-soft">
                       Kata sandi baru
                     </label>
                     <input
@@ -1253,7 +1253,7 @@ export function SettingsView({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-ink-soft">
+                    <label className="mb-1 block text-xs font-medium text-copy-soft">
                       Ulangi kata sandi baru
                     </label>
                     <input

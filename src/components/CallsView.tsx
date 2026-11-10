@@ -119,7 +119,7 @@ export function CallsView({
             {ownerThreads.length === 0 ? (
               <>
                 <h2 className="text-sm font-semibold text-accent-text">Belum ada chat 2 arah</h2>
-                <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-soft">
+                <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-copy-soft">
                   Daftar ini hanya menampilkan pengguna yang mengundang karakter milikmu dan
                   sudah terhubung. Undangan masuk bisa ditinjau di Kontak Karakter.
                 </p>
@@ -161,7 +161,7 @@ export function CallsView({
                       {formatListTime(thread.updatedAt)}
                     </time>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-ink-soft">{formatPreview(thread)}</p>
+                  <p className="mt-0.5 truncate text-xs text-copy-soft">{formatPreview(thread)}</p>
                 </div>
               </button>
             );

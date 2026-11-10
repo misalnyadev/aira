@@ -131,7 +131,7 @@ function VoiceAccordionCard({
               </span>
             )}
           </div>
-          <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
+          <p className="mt-0.5 truncate text-xs text-copy-soft">{subtitle}</p>
         </div>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text">
           <ChevronDownIcon
@@ -2482,7 +2482,7 @@ export function VoiceView({
           {!embedded && (
             <div>
               <h1 className="font-display text-xl font-bold tracking-tight text-accent-text">Suara</h1>
-              <p className="text-xs text-ink-soft">
+              <p className="text-xs text-copy-soft">
                 Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
               </p>
             </div>
@@ -2609,7 +2609,7 @@ export function VoiceView({
           >
             <div className="space-y-3.5">
               {!supported && (
-                <p className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
+                <p className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2.5 text-xs leading-relaxed text-copy-soft">
                   Browser ini belum mendukung suara lokal (Web Speech API). Kamu tetap bisa memakai
                   Suara HD di atas.
                 </p>
@@ -2617,7 +2617,7 @@ export function VoiceView({
 
               {supported && bestVoice && (
                 <div className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3.5 py-2.5">
-                  <p className="text-xs text-ink-soft">
+                  <p className="text-xs text-copy-soft">
                     Paling natural di perangkat ini:{" "}
                     <span className="font-semibold text-accent-text">{bestVoice.name}</span>
                     {isNaturalVoice(bestVoice) ? " (enhanced)" : ""}

@@ -230,7 +230,7 @@ export function VoiceBankCard({
               {r2Enabled ? "Sinkron PC & HP" : "Lokal saja"}
             </span>
           </div>
-          <p className="mt-0.5 truncate text-xs text-ink-soft">{summarySubtitle}</p>
+          <p className="mt-0.5 truncate text-xs text-copy-soft">{summarySubtitle}</p>
         </div>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text">
           <ChevronDownIcon
