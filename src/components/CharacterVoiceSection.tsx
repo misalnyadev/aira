@@ -287,7 +287,7 @@ export function CharacterVoiceSection({
   const presetsToShow = choice === "eleven_custom" ? ALL_ELEVEN_PRESETS : ALL_GEMINI_PRESETS;
 
   return (
-    <div className="space-y-2.5 rounded-2xl border border-line bg-surface-2/60 p-3.5">
+    <div className="space-y-2.5 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
       <div className="flex flex-wrap gap-1.5">
         {OPTIONS.map((opt) => {
           const active = choice === opt.id;
@@ -298,8 +298,8 @@ export function CharacterVoiceSection({
               onClick={() => selectChoice(opt.id)}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 active
-                  ? "border-ink bg-ink text-surface"
-                  : "border-line bg-surface text-ink-soft hover:text-ink"
+                  ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
+                  : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink-soft hover:text-ink"
               }`}
             >
               {opt.label}
@@ -311,7 +311,7 @@ export function CharacterVoiceSection({
       <p className="text-[11px] leading-relaxed text-muted">{activeHint}</p>
 
       {missingKeyNote && (
-        <p className="rounded-xl border border-line bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
+        <p className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-[11px] leading-relaxed text-ink-soft">
           {missingKeyNote}
         </p>
       )}
@@ -321,7 +321,7 @@ export function CharacterVoiceSection({
           <button
             type="button"
             onClick={handleTestSlotCurrent}
-            className="inline-flex items-center gap-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-surface-2"
+            className="inline-flex items-center gap-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
           >
             {isSpeaking ? "Stop" : "▶ Tes suara ini"}
           </button>
@@ -345,8 +345,8 @@ export function CharacterVoiceSection({
                   onClick={() => handlePickPreset(p.id)}
                   className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                     selected
-                      ? "border-ink bg-ink text-surface"
-                      : "border-line bg-surface text-ink-soft hover:text-ink"
+                      ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
+                      : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink-soft hover:text-ink"
                   }`}
                 >
                   {p.label} · {p.hint}
@@ -365,7 +365,7 @@ export function CharacterVoiceSection({
                   ? "Nama suara Gemini (mis. Kore, Aoede, Puck)..."
                   : "Tempel Voice ID ElevenLabs..."
               }
-              className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+              className="min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
             />
             <button
               type="button"
@@ -377,7 +377,7 @@ export function CharacterVoiceSection({
             <button
               type="button"
               onClick={handleTestCustom}
-              className="shrink-0 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-surface-2"
+              className="shrink-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-semibold text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
             >
               {isSpeaking ? "Stop" : "Tes"}
             </button>
@@ -390,7 +390,7 @@ export function CharacterVoiceSection({
               onChange={(e) => handleStyleChange(e.target.value)}
               placeholder={choice === "gemini_custom" ? "mis. ceria & muda, senyum di suara, tempo ringan" : "mis. hangat & tenang, artikulasi jelas, gaya bercerita"}
               maxLength={180}
-              className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-ink focus:outline-none"
+              className="w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
             />
             <p className="text-[10.5px] leading-relaxed text-muted">Dipakai sebagai instruksi gaya saat karakter ini bicara via Gemini/ElevenLabs. Kosongkan = ikut gaya slot global di Suara.</p>
           </div>
@@ -398,7 +398,7 @@ export function CharacterVoiceSection({
       )}
 
       {/* Gaya Balasan Gelembung Voice Note (VN) */}
-      <div className="space-y-1.5 border-t border-line pt-3">
+      <div className="space-y-1.5 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3">
         <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
           🎙️ Gelembung Voice Note (VN) di Chat
         </span>
@@ -412,8 +412,8 @@ export function CharacterVoiceSection({
                 onClick={() => selectVnMode(opt.id)}
                 className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                   active
-                    ? "border-ink bg-ink text-surface"
-                    : "border-line bg-surface text-ink-soft hover:text-ink"
+                    ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
+                    : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink-soft hover:text-ink"
                 }`}
               >
                 {opt.label}
