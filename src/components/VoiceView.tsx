@@ -2515,7 +2515,7 @@ export function VoiceView({
           {/* Kartu Kontrol Cepat Utama */}
           <section className="space-y-3.5 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-4 shadow-2xs">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75] ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
                 <SpeakerIcon className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">

@@ -376,7 +376,7 @@ export function AdminPanelSection({
             disabled={loading || refreshing}
             title="Muat ulang data Admin"
             aria-label="Muat ulang data panel Admin"
-            className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
+            className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/20 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/20 disabled:opacity-50"
           >
             <RefreshIcon
               className={`h-4 w-4 ${loading || refreshing ? "animate-spin" : ""}`}
@@ -467,7 +467,7 @@ export function AdminPanelSection({
                   Lihat, salin, atau ganti kode invite pendaftaran akun baru tanpa redeploy
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -640,7 +640,7 @@ export function AdminPanelSection({
                   Setujui atau sesuaikan jumlah slot karakter yang diminta member
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -814,7 +814,7 @@ export function AdminPanelSection({
                   Atur kuota slot karakter &amp; peran Admin/Member per akun
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
                   strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -1008,7 +1008,7 @@ export function AdminPanelSection({
                     {resolved.length} keputusan persetujuan/penolakan terbaru
                   </p>
                 </div>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                   <ChevronDownIcon
                   strokeWidth={1.6}
                     className={`h-4 w-4 transition-transform duration-200 ${

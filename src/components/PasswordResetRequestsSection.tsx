@@ -176,7 +176,7 @@ export function PasswordResetRequestsSection() {
               </span>
             </div>
           </div>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
             <ChevronDownIcon strokeWidth={1.6} className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
           </span>
         </button>
@@ -186,7 +186,7 @@ export function PasswordResetRequestsSection() {
           disabled={loading || refreshing}
           title="Muat ulang pengajuan reset"
           aria-label="Muat ulang pengajuan reset kata sandi"
-          className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
+          className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/20 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/20 disabled:opacity-50"
         >
           <RefreshIcon className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </button>

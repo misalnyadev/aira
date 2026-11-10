@@ -47,7 +47,7 @@ export function MenuHeaderIconButton({
     <button
       {...props}
       type={props.type ?? "button"}
-      className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/50 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/60 dark:hover:bg-[#d5b767]/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#4687fe]/10 text-[#205ac4] ring-1 ring-[#4687fe]/50 transition hover:bg-[#4687fe]/20 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/60 dark:hover:bg-[#d5b767]/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
     </button>
