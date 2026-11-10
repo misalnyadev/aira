@@ -92,7 +92,7 @@ export async function GET(req: Request) {
   const followedCharacterIds = new Set<string>();
   const followedUserIds = new Set<string>();
   const characterIds = [...new Set(rows.map((row) => row.characterId).filter((id): id is string => id !== null))];
-  const userIds = [...new Set(rows.filter((row) => row.characterId === null).map((row) => row.userId))];
+  const userIds = [...new Set(rows.map((row) => row.userId))];
   if (characterIds.length > 0) {
     const follows = await db
       .select({ targetCharacterId: statusFollows.targetCharacterId })
@@ -139,6 +139,21 @@ export async function GET(req: Request) {
         .where(and(eq(statusViews.statusId, r.id), eq(statusViews.userId, user.id)))
         .limit(1);
 
+      // A character's audience is the union of its direct followers and its owner's followers.
+      const [audience] = await db.select({
+        count: sql<number>`count(distinct ${statusFollows.followerUserId})::int`,
+      }).from(statusFollows).where(
+        r.characterId
+          ? or(eq(statusFollows.targetUserId, r.userId), eq(statusFollows.targetCharacterId, r.characterId))
+          : eq(statusFollows.targetUserId, r.userId)
+      );
+      const [accountAudience] = r.characterId ? await db.select({
+        count: sql<number>`count(*)::int`,
+      }).from(statusFollows).where(eq(statusFollows.targetUserId, r.userId)) : [audience];
+      const [followsMe] = await db.select({ id: statusFollows.id }).from(statusFollows).where(and(
+        eq(statusFollows.followerUserId, r.userId), eq(statusFollows.targetUserId, user.id)
+      )).limit(1);
+
       let videoUrl: string | null = null;
       if (r.videoKey && isR2Configured() && isOwnedStatusKey(r.videoKey, r.userId)) {
         try {
@@ -163,6 +178,10 @@ export async function GET(req: Request) {
         followingByMe: r.characterId
           ? followedCharacterIds.has(r.characterId)
           : followedUserIds.has(r.userId),
+        followerCount: Number(audience?.count ?? 0),
+        accountFollowerCount: Number(accountAudience?.count ?? 0),
+        followingAccountByMe: followedUserIds.has(r.userId),
+        accountFollowsMe: Boolean(followsMe),
         canFollow: r.userId !== user.id,
         viewedByMe: Boolean(viewed),
       };

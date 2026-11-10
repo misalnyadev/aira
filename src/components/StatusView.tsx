@@ -49,21 +49,16 @@ type StatusItem = {
   likedByMe: boolean;
   bookmarkedByMe: boolean;
   followingByMe: boolean;
+  followerCount: number;
+  accountFollowerCount: number;
+  followingAccountByMe: boolean;
+  accountFollowsMe: boolean;
   canFollow: boolean;
   viewedByMe: boolean;
 };
 
 function statusProfileKey(item: Pick<StatusItem, "userId" | "characterId">) {
   return item.characterId ? `character:${item.characterId}` : `user:${item.userId}`;
-}
-
-function matchesStatusProfile(
-  item: Pick<StatusItem, "userId" | "characterId">,
-  profile: Pick<StatusItem, "userId" | "characterId">
-) {
-  return profile.characterId
-    ? item.characterId === profile.characterId
-    : item.characterId === null && item.userId === profile.userId;
 }
 
 type CommentRow = {
@@ -284,6 +279,7 @@ export function StatusView({
   const { user } = useAuth();
   const [items, setItems] = useState<StatusItem[]>([]);
   const [bookmarkBusyIds, setBookmarkBusyIds] = useState<Record<string, boolean>>({});
+  const [followError, setFollowError] = useState<string | null>(null);
   const [followBusyKeys, setFollowBusyKeys] = useState<Record<string, boolean>>({});
   const [commentLikeBusyIds, setCommentLikeBusyIds] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -600,37 +596,20 @@ export function StatusView({
     }
   }
 
-  async function toggleFollow(item: StatusItem) {
+  async function toggleFollow(item: StatusItem, account = false) {
     if (!item.canFollow) return;
-    const key = statusProfileKey(item);
+    const key = account ? `account:${item.userId}` : statusProfileKey(item);
     if (followBusyKeysRef.current.has(key)) return;
 
-    const nextFollowing = !item.followingByMe;
+    setFollowError(null);
     followBusyKeysRef.current.add(key);
     setFollowBusyKeys((prev) => ({ ...prev, [key]: true }));
-    setItems((prev) =>
-      prev.map((status) =>
-        matchesStatusProfile(status, item) ? { ...status, followingByMe: nextFollowing } : status
-      )
-    );
-
     try {
-      const res = await fetch(`/api/statuses/${item.id}/follow`, { method: "POST" });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || typeof data?.following !== "boolean") {
-        throw new Error(data?.error || "Gagal memperbarui ikuti.");
-      }
-      setItems((prev) =>
-        prev.map((status) =>
-          matchesStatusProfile(status, item) ? { ...status, followingByMe: data.following } : status
-        )
-      );
+      const res = await fetch(`/api/statuses/${item.id}/follow${account ? "?target=account" : ""}`, { method: "POST" });
+      if (!res.ok) throw new Error("Gagal memperbarui ikuti.");
+      await load();
     } catch {
-      setItems((prev) =>
-        prev.map((status) =>
-          matchesStatusProfile(status, item) ? { ...status, followingByMe: item.followingByMe } : status
-        )
-      );
+      setFollowError("Gagal memperbarui ikuti. Coba lagi.");
     } finally {
       followBusyKeysRef.current.delete(key);
       setFollowBusyKeys((prev) => {
@@ -1045,6 +1024,7 @@ export function StatusView({
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-app">
       <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(var(--tabbar-space)+0.75rem)]">
+        {followError && <div role="alert" className="px-4 py-2 text-sm text-red-600">{followError}</div>}
         <MenuHeader
           title="StoryTalent"
           description="Cerita dan reels terbaru"
@@ -1416,7 +1396,7 @@ export function StatusView({
                             <span className="truncate text-[13px] font-semibold text-white drop-shadow">{displayName}</span>
                             <span className="shrink-0 text-[11px] font-normal text-white/80">• {timeAgo(it.createdAt)}</span>
                           </div>
-                          <div className="truncate text-[11px] text-white/80 drop-shadow">{it.kind === "reel" ? "Reels" : "Status"} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}</div>
+                          <div className="truncate text-[11px] text-white/80 drop-shadow">{it.followerCount} pengikut · {it.kind === "reel" ? "Reels" : "Status"} {it.expiresAt ? `• ${remainingHours(it.expiresAt)}` : ""}</div>
                         </div>
                       </div>
                       {canManageStatus(it) ? (
@@ -1707,13 +1687,18 @@ export function StatusView({
                   <Avatar name={displayName} src={avatar} size={32} />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{displayName}</div>
-                    <div className="text-xs text-white/75">{timeAgo(currentStory.createdAt)}</div>
+                    <div className="text-xs text-white/75">{timeAgo(currentStory.createdAt)} · {currentStory.followerCount} pengikut</div>
                   </div>
                 </div>
                 <button onClick={closeViewer} className="rounded-full bg-black/30 p-2 backdrop-blur-md" aria-label="Tutup status">
                   <XIcon className="h-5 w-5" />
                 </button>
               </div>
+              {currentStory.canFollow && <div className="mt-2 flex flex-wrap gap-2 px-1 text-xs">
+                <button type="button" disabled={!!followBusyKeys[statusProfileKey(currentStory)]} onClick={() => void toggleFollow(currentStory)} className="rounded-full bg-black/50 px-3 py-1.5 disabled:opacity-50">{currentStory.followingByMe ? "Mengikuti" : currentStory.characterId ? "Ikuti karakter" : currentStory.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>
+                {currentStory.characterId && <button type="button" disabled={!!followBusyKeys[`account:${currentStory.userId}`]} onClick={() => void toggleFollow(currentStory, true)} className="rounded-full bg-black/50 px-3 py-1.5 disabled:opacity-50">{currentStory.followingAccountByMe ? "Mengikuti akun" : currentStory.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {currentStory.accountFollowerCount} pengikut</button>}
+                {followError && <span role="alert">{followError}</span>}
+              </div>}
             </div>
 
             <button
@@ -1863,7 +1848,7 @@ export function StatusView({
                         <span className="rounded-full bg-white p-[2px] shadow">
                           <Avatar name={dName} src={av} size={28} />
                         </span>
-                        <span className="text-[13px] font-semibold drop-shadow">{dName}</span>
+                        <span className="text-[13px] font-semibold drop-shadow">{dName} · {item.followerCount} pengikut</span>
                         <span className="text-[11px] text-white/70 drop-shadow">• {item.kind === "reel" ? "Reels" : "Status"} • {timeAgo(item.createdAt)}</span>
                         {item.canFollow ? (
                           <button
@@ -1878,10 +1863,12 @@ export function StatusView({
                                 : "border-white/30 bg-white/15 text-white"
                             }`}
                           >
-                            {item.followingByMe ? "Mengikuti" : "Ikuti"}
+                            {item.followingByMe ? "Mengikuti" : !item.characterId && item.accountFollowsMe ? "Ikuti balik" : item.characterId ? "Ikuti karakter" : "Ikuti"}
                           </button>
                         ) : null}
                       </div>
+                      {item.characterId && item.canFollow && <button type="button" disabled={!!followBusyKeys[`account:${item.userId}`]} onClick={() => void toggleFollow(item, true)} className="mt-1 rounded-full bg-black/40 px-2 py-1 text-xs disabled:opacity-50">{item.followingAccountByMe ? "Mengikuti akun" : item.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {item.accountFollowerCount} pengikut</button>}
+                      {followError && <div role="alert" className="text-xs">{followError}</div>}
                       {(cap?.trim() || (item.content || "").trim()) ? (
                         <button
                           type="button"
