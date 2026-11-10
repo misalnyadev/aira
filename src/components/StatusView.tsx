@@ -271,12 +271,18 @@ export function StatusView({
   profile,
   characters,
   sharedStatusId,
+  sharedStatusFromChat = false,
   onSharedStatusHandled,
+  chatCharacterIds = [],
+  onOpenCharacterChat,
 }: {
   profile: UserProfile;
   characters: CharacterSummary[];
   sharedStatusId?: string | null;
+  sharedStatusFromChat?: boolean;
   onSharedStatusHandled?: () => void;
+  chatCharacterIds?: string[];
+  onOpenCharacterChat?: (characterId: string) => void;
 }) {
   const { user } = useAuth();
   const [items, setItems] = useState<StatusItem[]>([]);
@@ -336,6 +342,7 @@ export function StatusView({
   const fsScrollRef = useRef<HTMLDivElement>(null);
   const handledSharedStatusRef = useRef<string | null>(null);
   const requestedSharedStatusRef = useRef<string | null>(null);
+  const requestedChatStoryRef = useRef<string | null>(null);
   const viewedStoryIdsRef = useRef(new Set<string>());
   const bookmarkBusyIdsRef = useRef(new Set<string>());
   const followBusyKeysRef = useRef(new Set<string>());
@@ -439,6 +446,30 @@ export function StatusView({
   useEffect(() => {
     if (!sharedStatusId || loading || handledSharedStatusRef.current === sharedStatusId) return;
     const openSharedItem = (sharedItem: StatusItem) => {
+      if (sharedStatusFromChat && sharedItem.kind === "status" && sharedItem.characterId) {
+        if (requestedChatStoryRef.current === sharedStatusId) return;
+        requestedChatStoryRef.current = sharedStatusId;
+        const selectedId = sharedStatusId;
+        fetch(`/api/statuses?characterId=${encodeURIComponent(sharedItem.characterId)}`, { cache: "no-store" })
+          .then((res) => res.ok ? res.json() : null)
+          .catch(() => null)
+          .then((data) => {
+            const posts: StatusItem[] = Array.isArray(data?.statuses) ? data.statuses : [];
+            const combined = [...items, ...posts.filter((post) => !items.some((item) => item.id === post.id))];
+            const profileStories = combined.filter((post) => post.kind === "status" && post.characterId === sharedItem.characterId);
+            const index = profileStories.findIndex((post) => post.id === sharedItem.id);
+            if (index < 0) return;
+            setItems(combined.map((post) => post.id === sharedItem.id ? { ...post, viewedByMe: true } : post));
+            setViewerProfileKey(statusProfileKey(sharedItem));
+            setViewerIdx(index);
+            setStoryProgress(0);
+            viewedStoryIdsRef.current.add(sharedItem.id);
+            void fetch(`/api/statuses/${sharedItem.id}`, { method: "POST" }).catch(() => undefined);
+            handledSharedStatusRef.current = selectedId;
+            onSharedStatusHandled?.();
+          });
+        return;
+      }
       handledSharedStatusRef.current = sharedStatusId;
       setFullMuted(mutedMap[sharedItem.id] ?? true);
       setFullScreenId(sharedItem.id);
@@ -466,7 +497,7 @@ export function StatusView({
         handledSharedStatusRef.current = sharedStatusId;
         onSharedStatusHandled?.();
       });
-  }, [sharedStatusId, loading, items, mutedMap, onSharedStatusHandled]);
+  }, [sharedStatusId, sharedStatusFromChat, loading, items, mutedMap, onSharedStatusHandled]);
 
   const stories = useMemo(() => items.filter((x) => x.kind === "status"), [items]);
   const storyProfiles = useMemo(() => {
@@ -1013,6 +1044,12 @@ export function StatusView({
     else setActiveFsId(null);
   }, [fullScreenId]);
 
+  useEffect(() => {
+    if (!fullScreenId) return;
+    const opened = items.find((item) => item.id === fullScreenId);
+    if (opened) markStoryViewed(opened);
+  }, [fullScreenId, items, markStoryViewed]);
+
   // scroll ke item yang di-tap pas buka fullscreen
   useEffect(() => {
     if (!fullScreenId || !fsScrollRef.current) return;
@@ -1033,6 +1070,7 @@ export function StatusView({
     const idx = Math.round(el.scrollTop / h);
     const it = fsItems[idx];
     if (it && it.id !== activeFsId) {
+      markStoryViewed(it);
       setActiveFsId(it.id);
       setReplyingTo(null);
       setCommentImage(null);
@@ -1041,7 +1079,7 @@ export function StatusView({
       if (m !== undefined) setFullMuted(m);
       else setFullMuted(true);
     }
-  }, [fsItems, activeFsId, mutedMap]);
+  }, [fsItems, activeFsId, mutedMap, markStoryViewed]);
 
   // hanya 1 video on-top yang play di fullscreen, yang lain pause biar gak double suara
   useEffect(() => {
@@ -1640,7 +1678,8 @@ export function StatusView({
               <div className="mt-4 flex flex-wrap gap-2">
                 {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
                 {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-blue-500 bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
-                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
+                {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold">Buka Chat</button>}
+                {profileItem.canFollow && profileItem.characterId && !chatCharacterIds.includes(profileItem.characterId) && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
               </div>
               {inviteMessage && <p role="status" className="mt-2 text-sm text-ink-soft">{inviteMessage}</p>}
               {followError && <p role="alert" className="mt-2 text-sm text-red-600">{followError}</p>}

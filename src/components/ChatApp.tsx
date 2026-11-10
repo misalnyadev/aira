@@ -107,6 +107,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
 
   const [view, setView] = useState<AppView>(initialSharedStatusId ? "status" : "chats");
   const [sharedStatusId, setSharedStatusId] = useState<string | null>(initialSharedStatusId);
+  const [statusFromChat, setStatusFromChat] = useState(false);
+  const [contactUpdates, setContactUpdates] = useState<Record<string, { storyId?: string; reelId?: string }>>({});
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [contactThreads, setContactThreads] = useState<CharacterSummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
@@ -133,7 +135,24 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
   const [typingFor, setTypingFor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const handleSharedStatusHandled = useCallback(() => setSharedStatusId(null), []);
+  const handleSharedStatusHandled = useCallback(() => { setSharedStatusId(null); setStatusFromChat(false); }, []);
+
+  useEffect(() => {
+    if (view !== "chats") return;
+    let cancelled = false;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch("/api/statuses/contact-updates", { cache: "no-store" });
+        const data = await res.json();
+        if (!cancelled && res.ok && data?.updates) setContactUpdates(data.updates);
+      } catch { /* Keep the last known state until the next refresh. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
+  }, [view]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
@@ -1656,6 +1675,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                     onOpenSettings={() => handleViewChange("settings")}
                     hasProviders={hasProviders}
                     pendingContactsCount={pendingOwnerContactsCount}
+                    contactUpdates={contactUpdates}
+                    onOpenUpdate={(id) => { stopSpeaking(); setStatusFromChat(true); setSharedStatusId(id); setView("status"); }}
                   />
                 </div>
               )}
@@ -1848,7 +1869,13 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
               profile={profile}
               characters={characters}
               sharedStatusId={sharedStatusId}
+              sharedStatusFromChat={statusFromChat}
               onSharedStatusHandled={handleSharedStatusHandled}
+              chatCharacterIds={chatThreads.map((thread) => thread.sourceCharacterId || thread.id)}
+              onOpenCharacterChat={(characterId) => {
+                const thread = chatThreads.find((item) => (item.sourceCharacterId || item.id) === characterId);
+                if (thread) handleSelect(thread.id);
+              }}
             />
           )}
         </div>
