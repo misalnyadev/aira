@@ -89,7 +89,7 @@ export function Sidebar({
 
       {/* Pencarian */}
       <div className="px-3 pb-2.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
+        <div className="flex items-center gap-2 rounded-xl bg-[#4687fe]/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             value={query}
@@ -141,7 +141,7 @@ export function Sidebar({
               <div
                 key={c.id}
                 className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
-                  active ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2"
+                  active ? "bg-[#4687fe]/10 dark:bg-white/[0.08]" : "hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
                 }`}
               >
                 {label && update ? <button type="button" onClick={() => onOpenUpdate(update.storyId || update.reelId!)} aria-label={`${label} dari ${c.name}`} title={label} className={`shrink-0 rounded-full p-[3px] ${ring}`}><span className="block rounded-full bg-surface p-[2px]"><Avatar name={c.name} src={c.avatarUrl} size={42} /></span></button> : <button type="button" onClick={() => onSelect(c.id)} aria-label={`Buka chat ${c.name}`} className="shrink-0 p-[5px]"><Avatar name={c.name} src={c.avatarUrl} size={42} /></button>}
@@ -151,7 +151,7 @@ export function Sidebar({
                     <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                       {c.name}
                       {c.threadKind === "guest_contact" && (
-                        <span className="ml-1.5 inline-block rounded-full bg-surface-2 px-1.5 py-0.2 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                        <span className="ml-1.5 inline-block rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-1.5 py-0.2 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
                           Kontak
                         </span>
                       )}

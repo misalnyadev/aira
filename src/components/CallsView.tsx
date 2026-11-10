@@ -91,7 +91,7 @@ export function CallsView({
       />
 
       <div className="px-3 pb-2.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
+        <div className="flex items-center gap-2 rounded-xl bg-[#4687fe]/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             value={query}
@@ -144,7 +144,7 @@ export function CallsView({
                 type="button"
                 onClick={() => onSelect(thread.id)}
                 className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
-                  selected ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-surface-2"
+                  selected ? "bg-[#4687fe]/10 dark:bg-white/[0.08]" : "hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
                 }`}
               >
                 <Avatar

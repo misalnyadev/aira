@@ -74,7 +74,7 @@ export function BrainstormView({
       />
 
       <div className="px-3 pb-2.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25">
+        <div className="flex items-center gap-2 rounded-xl bg-[#4687fe]/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             value={meetupQuery}
@@ -122,7 +122,7 @@ export function BrainstormView({
                   key={character.id}
                   type="button"
                   onClick={() => onOpenMeetup(character.id)}
-                  className="group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-surface-2 active:scale-[0.99]"
+                  className="group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2 active:scale-[0.99]"
                   aria-label={`Temui ${character.name} tatap muka`}
                 >
                   <Avatar name={character.name} src={character.avatarUrl} size={48} />
@@ -133,7 +133,7 @@ export function BrainstormView({
                           {character.name}
                         </p>
                         {character.threadKind === "guest_contact" && (
-                          <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                          <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
                             Kontak
                           </span>
                         )}
@@ -266,7 +266,7 @@ function RoomCards({
       {rooms.map((room) => (
         <div
           key={room.id}
-          className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-surface-2"
+          className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-3 transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
         >
           <button
             type="button"
@@ -284,7 +284,7 @@ function RoomCards({
               <div className="flex min-w-0 items-center gap-1.5">
                 <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{room.title}</p>
                 {room.mode === "scene" && (
-                  <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+                  <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
                     {room.sceneCanonical ? "Canon" : "Latihan"}
                   </span>
                 )}
@@ -449,7 +449,7 @@ function CreateSharedRoomModal({
                   type="button"
                   onClick={() => toggle(character.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
-                    active ? "border-ink bg-ink/[0.06] dark:bg-white/[0.08]" : "border-line bg-surface hover:bg-surface-2"
+                    active ? "border-[#4687fe]/40 bg-[#4687fe]/10 dark:border-ink dark:bg-white/[0.08]" : "border-line bg-surface hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
                   }`}
                   aria-pressed={active}
                 >
