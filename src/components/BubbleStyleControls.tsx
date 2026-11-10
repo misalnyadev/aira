@@ -1,21 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { getIsDarkSnapshot, subscribeTheme } from "@/lib/theme";
+import { chatBackgroundProps, type ChatBackground } from "@/lib/chatBackground";
 import {
   DEFAULT_BUBBLE_STYLE,
   bubbleInk,
   bubblePaint,
   isDefaultBubbleStyle,
-  readableBg,
-  readableInk,
+  colorLuminance,
   type BubbleRole,
   type BubbleStyle,
 } from "@/lib/bubbleStyle";
 import { Switch } from "./Switch";
 
 /**
- * Pilihan warna siap pakai. Chip warna (bukan pemilih warna bebas) supaya bisa
- * ditekan cepat di iPhone dan tidak membuka dialog sistem di tengah chat.
+ * Pilihan warna siap pakai selain pemilih warna bebas.
  * `null` = ikut tema terang/gelap yang sedang aktif.
  */
 const COLORS: { value: string | null; label: string; hex: string | null }[] = [
@@ -32,10 +32,12 @@ function ColorRow({
   label,
   value,
   onChange,
+  fallback,
 }: {
   label: string;
   value: string | null;
   onChange: (next: string | null) => void;
+  fallback: string;
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -65,6 +67,8 @@ function ColorRow({
             />
           );
         })}
+        <input type="color" value={value ?? fallback} onChange={(event) => onChange(event.target.value)}
+          aria-label={`${label}: pilih warna bebas`} className="h-8 w-10 cursor-pointer rounded border border-line bg-surface p-1" />
       </div>
     </div>
   );
@@ -76,38 +80,29 @@ function SideColors({
   style,
   role,
   onPick,
+  isDark,
 }: {
   title: string;
   style: BubbleStyle;
   role: BubbleRole;
   onPick: (patch: Partial<BubbleStyle>) => void;
+  isDark: boolean;
 }) {
   const text = role === "in" ? style.textColorIn : style.textColorOut;
   const bg = role === "in" ? style.bgColorIn : style.bgColorOut;
   const textKey = role === "in" ? "textColorIn" : "textColorOut";
   const bgKey = role === "in" ? "bgColorIn" : "bgColorOut";
 
-  /**
-   * Memilih satu warna saja bisa membuat teks hilang di atas latarnya, jadi
-   * pasangannya diisi otomatis dengan warna yang kontras. Tetap bisa diubah.
-   */
-  function pickText(next: string | null) {
-    const patch: Partial<BubbleStyle> = { [textKey]: next };
-    if (next && !bg) patch[bgKey] = readableBg(next);
-    onPick(patch);
-  }
-
-  function pickBg(next: string | null) {
-    const patch: Partial<BubbleStyle> = { [bgKey]: next };
-    if (next && !text) patch[textKey] = readableInk(next);
-    onPick(patch);
-  }
+  const contrast = text && bg
+    ? (Math.max(colorLuminance(text), colorLuminance(bg)) + 0.05) / (Math.min(colorLuminance(text), colorLuminance(bg)) + 0.05)
+    : null;
 
   return (
     <div className="space-y-2">
       <span className="block text-[12px] font-semibold text-ink">{title}</span>
-      <ColorRow label="Teks" value={text ?? null} onChange={pickText} />
-      <ColorRow label="Latar" value={bg ?? null} onChange={pickBg} />
+      <ColorRow label="Teks" value={text ?? null} fallback={isDark ? "#fafafa" : "#0a0a0a"} onChange={(next) => onPick({ [textKey]: next })} />
+      <ColorRow label="Latar" value={bg ?? null} fallback={role === "in" ? (isDark ? "#171717" : "#ffffff") : (isDark ? "#262626" : "#e4e4e7")} onChange={(next) => onPick({ [bgKey]: next })} />
+      {contrast !== null && contrast < 4.5 && <p role="status" className="text-xs text-amber-900 dark:text-amber-200">Kontras teks dan gelembung rendah; coba warna yang lebih berbeda.</p>}
     </div>
   );
 }
@@ -117,17 +112,23 @@ type BubbleStyleControlsProps = {
   value: BubbleStyle;
   onChange: (next: BubbleStyle) => void;
   disabled?: boolean;
+  background?: ChatBackground;
 };
 
 /** Pengaturan gaya gelembung untuk Chat atau Tatap Muka milik satu karakter. */
 export function BubbleStyleControls(props: BubbleStyleControlsProps) {
   const { disabled = false, mode = "chat" } = props;
   const style = props.value;
+  const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
+  const [colorDraft, setColorDraft] = useState<Partial<BubbleStyle>>({});
+  const hasColorDraft = Object.keys(colorDraft).length > 0;
 
   /** Kepekatan sementara saat jari masih di slider; disimpan ketika dilepas. */
   const [opacityDraft, setOpacityDraft] = useState<number | null>(null);
   const opacity = opacityDraft ?? style.opacity;
-  const previewStyle: BubbleStyle = { ...style, opacity };
+  const previewStyle: BubbleStyle = { ...style, ...colorDraft, opacity };
+  const previewBackground = props.background?.kind === "color" || props.background?.kind === "preset"
+    ? chatBackgroundProps(props.background, isDark).style : undefined;
 
   function emit(next: BubbleStyle) {
     props.onChange(next);
@@ -219,12 +220,12 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
       </div>
 
       <div className="space-y-3 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
-        <SideColors title="Gelembung karakter" style={style} role="in" onPick={update} />
+        <SideColors title="Gelembung karakter" style={previewStyle} role="in" isDark={isDark} onPick={(patch) => setColorDraft((draft) => ({ ...draft, ...patch }))} />
         <div className="border-t border-accent/30 dark:border-accent/35" />
-        <SideColors title="Gelembung kamu" style={style} role="out" onPick={update} />
+        <SideColors title="Gelembung kamu" style={previewStyle} role="out" isDark={isDark} onPick={(patch) => setColorDraft((draft) => ({ ...draft, ...patch }))} />
       </div>
 
-      <div className="flex flex-col gap-1.5 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
+      <div className="flex flex-col gap-1.5 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5" style={previewBackground}>
         {mode === "meetup" && style.hideMessages ? (
           <p className="py-2 text-center text-xs text-muted">
             Di Tatap Muka, tulisan disembunyikan agar video/ekspresi terlihat.
@@ -247,10 +248,13 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
         )}
       </div>
 
+      <p className="text-xs text-muted">Pratinjau langsung di atas. Pada gelembung transparan, keterbacaan juga bergantung pada latar percakapan.</p>
+      {hasColorDraft && <button type="button" onClick={() => { update(colorDraft); setColorDraft({}); }} className="text-xs font-semibold text-accent-text underline">Terapkan warna gelembung</button>}
+
       {canReset && (
         <button
           type="button"
-          onClick={() => props.onChange(DEFAULT_BUBBLE_STYLE)}
+          onClick={() => { setColorDraft({}); props.onChange(DEFAULT_BUBBLE_STYLE); }}
           className="w-full rounded-lg border border-accent/30 dark:border-accent/35 py-2 text-xs font-semibold text-ink-soft transition hover:bg-accent/10 hover:text-ink"
         >
           Kembalikan ke bawaan

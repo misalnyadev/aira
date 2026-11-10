@@ -11,6 +11,7 @@ import type { CSSProperties } from "react";
 export type ChatBackground =
   | { kind: "default" }
   | { kind: "preset"; id: string }
+  | { kind: "color"; color: string }
   | { kind: "animated"; id: string }
   | { kind: "image"; imageUrl: string; dim: number };
 
@@ -113,6 +114,10 @@ export function chatBackgroundProps(
     };
   }
 
+  if (background.kind === "color") {
+    return { className: "", style: { backgroundColor: background.color, backgroundImage: "none" } };
+  }
+
   if (background.kind === "animated") {
     const preset = getAnimatedPreset(background.id);
     return {
@@ -154,6 +159,11 @@ export function normalizeChatBackground(input: unknown): ChatBackground {
 
   const raw = input as Record<string, unknown>;
   const kind = typeof raw.kind === "string" ? raw.kind : "";
+
+  if (kind === "color") {
+    const color = typeof raw.color === "string" ? raw.color : "";
+    return /^#[0-9a-f]{6}$/i.test(color) ? { kind: "color", color: color.toLowerCase() } : DEFAULT_CHAT_BACKGROUND;
+  }
 
   if (kind === "preset") {
     const id = typeof raw.id === "string" ? raw.id : "";

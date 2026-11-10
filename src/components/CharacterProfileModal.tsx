@@ -194,6 +194,7 @@ export function CharacterProfileModal({
                 </h4>
                 <BubbleStyleControls
                   mode="chat"
+                  background={character.chatBackground ?? DEFAULT_CHAT_BACKGROUND}
                   value={character.bubbleStyle ?? DEFAULT_BUBBLE_STYLE}
                   onChange={onBubbleChange}
                 />
@@ -217,6 +218,7 @@ export function CharacterProfileModal({
                 </h4>
                 <BubbleStyleControls
                   mode="meetup"
+                  background={character.meetupBackground ?? DEFAULT_CHAT_BACKGROUND}
                   value={character.meetupBubbleStyle ?? DEFAULT_BUBBLE_STYLE}
                   onChange={onMeetupBubbleChange}
                 />
