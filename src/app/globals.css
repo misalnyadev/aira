@@ -21,6 +21,10 @@
   --brand-strong: #78a8ff;
   --brand-ink: #07152f;
 
+  /* Aksen UI default; dipisahkan dari warna tombol agar dapat dikustomisasi bertahap. */
+  --accent: #4687fe;
+  --accent-text: #205ac4;
+
   --bubble-out: #e4e4e7;
   --bubble-out-ink: #0a0a0a;
   --bubble-in: #ffffff;
@@ -48,6 +52,9 @@
   --brand: #d5b767;
   --brand-strong: #e8cf75;
   --brand-ink: #211804;
+
+  --accent: #d5b767;
+  --accent-text: #e8cf75;
 
   --bubble-out: #262626;
   --bubble-out-ink: #fafafa;
@@ -89,6 +96,8 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-brand-ink: var(--brand-ink);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
   --color-bubble-out: var(--bubble-out);
   --color-bubble-out-ink: var(--bubble-out-ink);
   --color-bubble-in: var(--bubble-in);
