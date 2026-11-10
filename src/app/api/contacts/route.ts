@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
-import { characterContacts, characters, users } from "@/db/schema";
+import { characterContacts, characterStatuses, characters, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import {
   effectiveContactState,
@@ -138,13 +138,25 @@ export async function POST(req: Request) {
       ? ((body as Record<string, unknown>).note as string).trim().slice(0, 240)
       : "";
 
-  if (!isValidPinFormat(pin)) {
+  const statusId = typeof (body as Record<string, unknown>).statusId === "string"
+    ? (body as Record<string, unknown>).statusId as string : null;
+  if (statusId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(statusId)) {
+    return NextResponse.json({ error: "Postingan tidak valid." }, { status: 400 });
+  }
+  if (!statusId && !isValidPinFormat(pin)) {
     return NextResponse.json(
       { error: "Masukkan kode PIN karakter yang valid (6 karakter)." },
       { status: 400 }
     );
   }
 
+  // A profile invitation is only available from a currently visible public post.
+  const [post] = statusId ? await db.select({ characterId: characterStatuses.characterId, userId: characterStatuses.userId })
+    .from(characterStatuses).where(and(eq(characterStatuses.id, statusId),
+      or(isNull(characterStatuses.expiresAt), gt(characterStatuses.expiresAt, new Date())))).limit(1) : [];
+  if (statusId && !post?.characterId) {
+    return NextResponse.json({ error: "Profil karakter tidak tersedia." }, { status: 404 });
+  }
   const [targetChar] = await db
     .select({
       id: characters.id,
@@ -152,7 +164,9 @@ export async function POST(req: Request) {
       name: characters.name,
     })
     .from(characters)
-    .where(eq(characters.invitePin, pin))
+    .where(statusId && post?.characterId
+      ? and(eq(characters.id, post.characterId), eq(characters.userId, post.userId))
+      : eq(characters.invitePin, pin))
     .limit(1);
 
   if (!targetChar || !targetChar.userId) {
