@@ -23,7 +23,7 @@ import { AvatarCropModal } from "./AvatarCropModal";
 import { MenuHeader, MenuHeaderIconButton } from "./MenuHeader";
 import {
   CameraIcon,
-  ChatsIcon,
+  ChatSquareIcon,
   CheckIcon,
   ChevronDownIcon,
   PencilIcon,
@@ -704,7 +704,7 @@ export function ProfileView({
                                   title="Chat"
                                   aria-label={`Chat dengan ${ch.name}`}
                                 >
-                                  <ChatsIcon className="h-3.5 w-3.5" />
+                                  <ChatSquareIcon className="h-3.5 w-3.5" />
                                 </button>
                               )}
                               {onOpenCharacterProfile && (
