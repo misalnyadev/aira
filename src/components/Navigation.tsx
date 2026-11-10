@@ -120,7 +120,7 @@ export function MobileTabBar({
                 {isProfile ? (
                   <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe] dark:ring-[#d5b767]" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={26} /></span>
                 ) : (
-                  <Icon className="h-[26px] w-[26px] shrink-0" />
+                  <Icon className="h-[26px] w-[26px] shrink-0 text-[#205ac4] dark:text-[#e8cf75]" />
                 )}
                 {showBadge && (
                   <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9.5px] font-extrabold text-white">
