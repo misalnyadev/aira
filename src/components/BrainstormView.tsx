@@ -81,7 +81,7 @@ export function BrainstormView({
             onChange={(event) => setMeetupQuery(event.target.value)}
             placeholder="Cari karakter untuk Tatap Muka..."
             aria-label="Cari karakter untuk Tatap Muka"
-            className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+            className="w-full bg-transparent text-base text-copy outline-none placeholder:text-muted sm:text-sm"
           />
           {meetupQuery && (
             <button
@@ -401,7 +401,7 @@ function CreateSharedRoomModal({
                   setError(null);
                 }}
                 className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  mode === value ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"
+                  mode === value ? "bg-surface text-copy shadow-sm" : "text-ink-soft hover:text-ink"
                 }`}
                 aria-pressed={mode === value}
               >
@@ -415,7 +415,7 @@ function CreateSharedRoomModal({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder={mode === "scene" ? "mis. Adegan di tepi pantai" : "mis. Brainstorm Naskah"}
-            className="mt-1.5 w-full rounded-2xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-ink/20"
+            className="mt-1.5 w-full rounded-2xl border border-line bg-surface-2 px-3.5 py-2.5 text-sm text-copy outline-none placeholder:text-muted focus:border-ink/20"
             maxLength={80}
           />
 

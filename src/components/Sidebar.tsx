@@ -95,7 +95,7 @@ export function Sidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari chat atau karakter..."
-            className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+            className="w-full bg-transparent text-base text-copy outline-none placeholder:text-muted sm:text-sm"
           />
           {query && (
             <button

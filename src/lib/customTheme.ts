@@ -1,4 +1,4 @@
-export type CustomTheme = { base: "light" | "dark"; accent: string };
+export type CustomTheme = { base: "light" | "dark"; accent: string; textColor?: string };
 
 export const DEFAULT_CUSTOM_THEME: CustomTheme = { base: "light", accent: "#ad3ebf" };
 
@@ -8,7 +8,11 @@ export function parseCustomTheme(value: string | null): CustomTheme {
     if (data && typeof data === "object" && "base" in data && "accent" in data &&
       (data.base === "light" || data.base === "dark") &&
       typeof data.accent === "string" && /^#[0-9a-f]{6}$/i.test(data.accent)) {
-      return { base: data.base, accent: data.accent.toLowerCase() };
+      const result: CustomTheme = { base: data.base, accent: data.accent.toLowerCase() };
+      if ("textColor" in data && typeof data.textColor === "string" && /^#[0-9a-f]{6}$/i.test(data.textColor)) {
+        result.textColor = data.textColor.toLowerCase();
+      }
+      return result;
     }
   } catch {
     // Invalid saved preferences use the safe default.
@@ -57,4 +61,19 @@ export function customAccentText(accent: string, base: CustomTheme["base"]): str
     })) return `#${rgb.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
   }
   return base === "light" ? "#000000" : "#ffffff";
+}
+
+/** Contrast of a chosen text color on a representative standard surface. */
+export function customTextContrast(color: string, base: CustomTheme["base"]): number {
+  const luminance = (hex: string) => {
+    const values = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+  };
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return 0;
+  const text = luminance(color);
+  return Math.min(...(base === "light" ? ["#ffffff", "#fafafa", "#f4f4f5"] : ["#000000", "#0a0a0a", "#171717"]).map((surface) => {
+    const background = luminance(surface);
+    return (Math.max(text, background) + 0.05) / (Math.min(text, background) + 0.05);
+  }));
 }

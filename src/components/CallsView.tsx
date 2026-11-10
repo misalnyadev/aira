@@ -98,7 +98,7 @@ export function CallsView({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Cari chat, orang, atau karakter..."
             aria-label="Cari chat Panggilan"
-            className="w-full bg-transparent text-base text-ink outline-none placeholder:text-muted sm:text-sm"
+            className="w-full bg-transparent text-base text-copy outline-none placeholder:text-muted sm:text-sm"
           />
           {query && (
             <button
