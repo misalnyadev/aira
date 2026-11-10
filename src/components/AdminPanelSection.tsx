@@ -452,7 +452,7 @@ export function AdminPanelSection({
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                       signupInvite?.enabled
-                        ? "bg-[#4687fe]/15 text-[#205ac4] dark:text-[#79aaff]"
+                        ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                         : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                     }`}
                   >
