@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { customAccentPalette, DEFAULT_CUSTOM_THEME, parseCustomTheme, type CustomTheme } from "./customTheme";
+import { customAccentPalette, customAccentText, DEFAULT_CUSTOM_THEME, parseCustomTheme, type CustomTheme } from "./customTheme";
 
 export type ThemeChoice = "light" | "dark" | "system" | "custom";
 export type ResolvedTheme = "light" | "dark";
@@ -64,10 +64,14 @@ function applyToDom(choice: ThemeChoice) {
   root.style.colorScheme = resolved;
   if (choice === "custom") {
     const palette = customAccentPalette(parseCustomTheme(customSnapshot).accent);
+    root.style.setProperty("--accent", palette.brand);
+    root.style.setProperty("--accent-text", customAccentText(palette.brand, resolved));
     root.style.setProperty("--brand", palette.brand);
     root.style.setProperty("--brand-strong", palette.hover);
     root.style.setProperty("--brand-ink", palette.ink);
   } else {
+    root.style.removeProperty("--accent");
+    root.style.removeProperty("--accent-text");
     root.style.removeProperty("--brand");
     root.style.removeProperty("--brand-strong");
     root.style.removeProperty("--brand-ink");
@@ -190,4 +194,4 @@ export function useTheme() {
  * sekaligus menandai mode aplikasi layar penuh iPhone (`ios-standalone`) sejak
  * frame pertama agar tinggi `.app-shell` langsung penuh 100vh.
  */
-export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var custom;try{custom=JSON.parse(localStorage.getItem('${CUSTOM_STORAGE_KEY}')||'null')}catch(e){}if(!custom||!['light','dark'].includes(custom.base)||typeof custom.accent!=='string'||!/^#[0-9a-f]{6}$/i.test(custom.accent))custom={base:'light',accent:'#ad3ebf'};var d=t==='dark'||(t==='custom'&&custom.base==='dark')||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';if(t==='custom'){var a=custom.accent;var ch=[1,3,5].map(function(i){return parseInt(a.slice(i,i+2),16)});var l=ch.map(function(c){var v=c/255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4)});var lum=.2126*l[0]+.7152*l[1]+.0722*l[2];var ink=(lum+.05)/.05>=1.05/(lum+.05);var target=ink?255:0;var hover='#'+ch.map(function(c){return Math.round(c*.85+target*.15).toString(16).padStart(2,'0')}).join('');r.style.setProperty('--brand',a);r.style.setProperty('--brand-strong',hover);r.style.setProperty('--brand-ink',ink?'#000000':'#ffffff')}if(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches)r.classList.add('ios-standalone');var c=d?'#000000':'#fafafa';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(()=>{try{var t=localStorage.getItem('${STORAGE_KEY}');var custom;try{custom=JSON.parse(localStorage.getItem('${CUSTOM_STORAGE_KEY}')||'null')}catch(e){}if(!custom||!['light','dark'].includes(custom.base)||typeof custom.accent!=='string'||!/^#[0-9a-f]{6}$/i.test(custom.accent))custom={base:'light',accent:'#ad3ebf'};var d=t==='dark'||(t==='custom'&&custom.base==='dark')||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;if(d)r.classList.add('dark');r.style.colorScheme=d?'dark':'light';if(t==='custom'){var a=custom.accent;var ch=[1,3,5].map(function(i){return parseInt(a.slice(i,i+2),16)});var l=ch.map(function(c){var v=c/255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4)});var lum=.2126*l[0]+.7152*l[1]+.0722*l[2];var ink=(lum+.05)/.05>=1.05/(lum+.05);var target=ink?255:0;var hover='#'+ch.map(function(c){return Math.round(c*.85+target*.15).toString(16).padStart(2,'0')}).join('');var lumOf=function(rgb){var v=rgb.map(function(n){var x=n/255;return x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4)});return .2126*v[0]+.7152*v[1]+.0722*v[2]};var surfaces=d?[0,23]:[255,250];var backs=[];surfaces.forEach(function(v){backs.push([v,v,v]);backs.push(ch.map(function(n){return Math.round(n*.2+v*.8)}))});var dest=d?255:0;var accentText=d?'#ffffff':'#000000';for(var step=0;step<=100;step++){var rgb=ch.map(function(n){return Math.round(n+(dest-n)*step/100)});var tl=lumOf(rgb);if(backs.every(function(bg){var bl=lumOf(bg);return (Math.max(tl,bl)+.05)/(Math.min(tl,bl)+.05)>=4.5})){accentText='#'+rgb.map(function(n){return n.toString(16).padStart(2,'0')}).join('');break}}r.style.setProperty('--accent',a);r.style.setProperty('--accent-text',accentText);r.style.setProperty('--brand',a);r.style.setProperty('--brand-strong',hover);r.style.setProperty('--brand-ink',ink?'#000000':'#ffffff')}if(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches)r.classList.add('ios-standalone');var c=d?'#000000':'#fafafa';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){}})();`;
