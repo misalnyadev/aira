@@ -633,7 +633,7 @@ export function ProfileView({
                     </span>
                   )}
                   <span
-                    className={`grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-surface-2 text-[#205ac4] transition dark:border-[#d5b767]/45 dark:text-[#e8cf75] ${charsOpen ? "rotate-180 bg-surface" : ""}`}
+                    className={`grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] ${charsOpen ? "rotate-180" : ""}`}
                   >
                     <ChevronDownIcon strokeWidth={1.6} className="h-3.5 w-3.5" />
                   </span>
@@ -704,7 +704,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onChatCharacter(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
                                   title="Chat"
                                   aria-label={`Chat dengan ${ch.name}`}
                                 >
@@ -715,7 +715,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onOpenCharacterProfile(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
                                   title="Profil"
                                   aria-label={`Profil ${ch.name}`}
                                 >
@@ -728,7 +728,7 @@ export function ProfileView({
                                 <button
                                   type="button"
                                   onClick={() => onEditCharacter(ch.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface text-ink-soft transition hover:border-ink hover:text-ink"
+                                  className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/40 bg-[#4687fe]/10 text-[#205ac4] transition hover:bg-[#4687fe]/20 dark:border-[#d5b767]/45 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/20"
                                   title="Edit"
                                   aria-label={`Edit ${ch.name}`}
                                 >
@@ -800,7 +800,7 @@ export function ProfileView({
                     onClick={() => void onQuotaChanged?.()}
                     title="Muat ulang status kuota"
                     aria-label="Muat ulang status kuota"
-                    className="rounded-full bg-surface-2 p-2 text-ink-soft transition hover:bg-line hover:text-ink"
+                    className="rounded-full bg-[#4687fe]/10 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/20 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/20"
                   >
                     <RefreshIcon className="h-4 w-4" />
                   </button>
