@@ -299,8 +299,8 @@ export function ProfileView({
             onClick={() => selectTab("identity")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "identity"
-                ? "bg-surface text-ink shadow-xs ring-1 ring-line"
-                : "text-ink-soft hover:text-ink"
+                ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:text-[#79aaff]"
+                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#79aaff]"
             }`}
           >
             Profil Diri
@@ -311,8 +311,8 @@ export function ProfileView({
             onClick={() => selectTab("account")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "account"
-                ? "bg-surface text-ink shadow-xs ring-1 ring-line"
-                : "text-ink-soft hover:text-ink"
+                ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:text-[#79aaff]"
+                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#79aaff]"
             }`}
           >
             {effectiveIsAdmin ? "Akun Saya" : "Akun & Kuota"}
@@ -324,8 +324,8 @@ export function ProfileView({
               onClick={() => selectTab("admin")}
               className={`inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                 tab === "admin"
-                  ? "bg-surface text-ink shadow-xs ring-1 ring-line"
-                  : "text-ink-soft hover:text-ink"
+                  ? "bg-surface text-[#205ac4] shadow-xs ring-1 ring-[#4687fe]/35 dark:text-[#79aaff]"
+                  : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#79aaff]"
               }`}
             >
               <span className="truncate">Panel Admin</span>
