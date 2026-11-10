@@ -49,7 +49,7 @@ export function ThemeSegmented() {
     <div
       role="radiogroup"
       aria-label="Tema tampilan"
-      className="grid grid-cols-2 gap-1.5 rounded-xl sm:grid-cols-4 bg-[#4687fe]/10 p-1 dark:bg-[#d5b767]/10"
+      className="grid grid-cols-2 gap-1.5 rounded-xl sm:grid-cols-4 bg-accent/10 p-1 dark:bg-accent/10"
     >
       {options.map(({ value, label, Icon }) => {
         const active = choice === value;
@@ -62,8 +62,8 @@ export function ThemeSegmented() {
             onClick={() => setTheme(value)}
             className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
               active
-                ? "bg-surface text-[#205ac4] shadow-sm ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
-                : "text-[#205ac4] hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
+                ? "bg-surface text-accent-text shadow-sm ring-1 ring-accent/40 dark:text-accent-text dark:ring-accent/45"
+                : "text-accent-text hover:bg-accent/10 dark:text-accent-text dark:hover:bg-accent/10"
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ export function ThemeSegmented() {
       })}
     </div>
     {choice === "custom" && (
-      <div className="space-y-3 rounded-xl border border-[#4687fe]/30 p-3 dark:border-[#d5b767]/35">
+      <div className="space-y-3 rounded-xl border border-accent/30 p-3 dark:border-accent/35">
         <fieldset>
           <legend className="text-xs font-semibold text-ink">Dasar tampilan</legend>
           <div className="mt-2 flex gap-2">

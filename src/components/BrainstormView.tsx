@@ -74,7 +74,7 @@ export function BrainstormView({
       />
 
       <div className="px-3 pb-2.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-xl bg-[#4687fe]/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
+        <div className="flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             value={meetupQuery}
@@ -100,7 +100,7 @@ export function BrainstormView({
         <section className="w-full">
           {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
-              <p className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada karakter untuk diajak bertemu</p>
+              <p className="text-sm font-semibold text-accent-text">Belum ada karakter untuk diajak bertemu</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
                 Buat karakter dulu, lalu pilih satu untuk memulai pertemuan berdua.
               </p>
@@ -116,24 +116,24 @@ export function BrainstormView({
               Tidak ada karakter yang cocok dengan pencarianmu.
             </div>
           ) : (
-            <div className="divide-y divide-[#4687fe]/25 dark:divide-[#d5b767]/30">
+            <div className="divide-y divide-accent/25 dark:divide-accent/30">
               {filteredMeetupCharacters.map((character) => (
                 <button
                   key={character.id}
                   type="button"
                   onClick={() => onOpenMeetup(character.id)}
-                  className="group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-surface-2 active:scale-[0.99]"
+                  className="group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition hover:bg-accent/10 dark:hover:bg-surface-2 active:scale-[0.99]"
                   aria-label={`Temui ${character.name} tatap muka`}
                 >
                   <Avatar name={character.name} src={character.avatarUrl} size={48} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-1.5">
-                        <p className="min-w-0 truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                        <p className="min-w-0 truncate text-sm font-semibold text-accent-text">
                           {character.name}
                         </p>
                         {character.threadKind === "guest_contact" && (
-                          <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
+                          <span className="shrink-0 rounded-full bg-accent/10 dark:bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft ring-1 ring-line">
                             Kontak
                           </span>
                         )}
@@ -154,18 +154,18 @@ export function BrainstormView({
 
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
-            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Brainstorm</h2>
+            <h2 className="text-sm font-bold text-accent-text">Brainstorm</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               Diskusi ide 2–3 karakter. Usulan dan rencana bisa diingat sebagai rencana, bukan kejadian cerita.
             </p>
           </div>
 
           {brainstormRooms.length === 0 ? (
-            <div className="rounded-2xl border border-[#4687fe]/25 bg-surface px-5 py-7 text-center dark:border-[#d5b767]/30">
+            <div className="rounded-2xl border border-accent/25 bg-surface px-5 py-7 text-center dark:border-accent/30">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-2">
                 <MeetupIcon className="h-6 w-6 text-ink-soft" />
               </div>
-              <h3 className="mt-3 text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+              <h3 className="mt-3 text-sm font-semibold text-accent-text">
                 {canBrainstorm ? "Belum ada meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
               </h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
@@ -198,15 +198,15 @@ export function BrainstormView({
 
         <section className="mx-auto w-full max-w-[900px]">
           <div className="mb-3">
-            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Adegan</h2>
+            <h2 className="text-sm font-bold text-accent-text">Adegan</h2>
             <p className="mt-0.5 text-xs text-ink-soft">
               Adegan bersama 1–3 karakter. Default-nya latihan; tandai canon bila masuk cerita utama.
             </p>
           </div>
 
           {sceneRooms.length === 0 ? (
-            <div className="rounded-2xl border border-[#4687fe]/25 bg-surface px-5 py-7 text-center dark:border-[#d5b767]/30">
-              <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+            <div className="rounded-2xl border border-accent/25 bg-surface px-5 py-7 text-center dark:border-accent/30">
+              <h3 className="text-sm font-semibold text-accent-text">
                 {canCreateRoom ? "Belum ada Adegan" : "Buat karakter untuk mulai Adegan"}
               </h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
@@ -266,7 +266,7 @@ function RoomCards({
       {rooms.map((room) => (
         <div
           key={room.id}
-          className="flex items-center gap-2 rounded-2xl border border-[#4687fe]/25 bg-surface px-3.5 py-3 transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/30 dark:hover:bg-surface-2"
+          className="flex items-center gap-2 rounded-2xl border border-accent/25 bg-surface px-3.5 py-3 transition hover:bg-accent/10 dark:border-accent/30 dark:hover:bg-surface-2"
         >
           <button
             type="button"
@@ -282,9 +282,9 @@ function RoomCards({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1.5">
-                <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{room.title}</p>
+                <p className="truncate text-sm font-semibold text-accent-text">{room.title}</p>
                 {room.mode === "scene" && (
-                  <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+                  <span className="shrink-0 rounded-full bg-accent/10 dark:bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
                     {room.sceneCanonical ? "Canon" : "Latihan"}
                   </span>
                 )}
@@ -302,7 +302,7 @@ function RoomCards({
                 onDeleteRoom(room.id);
               }
             }}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#205ac4] hover:bg-rose-500/10 hover:text-rose-600 dark:text-[#e8cf75] dark:hover:text-rose-400"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text hover:bg-rose-500/10 hover:text-rose-600 dark:text-accent-text dark:hover:text-rose-400"
             aria-label={`Hapus ${room.mode === "scene" ? "adegan" : "meja"} ${room.title}`}
             title={room.mode === "scene" ? "Hapus adegan" : "Hapus meja"}
           >
@@ -374,7 +374,7 @@ function CreateSharedRoomModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-[15px] font-bold text-[#205ac4] dark:text-[#e8cf75]">
+            <h2 className="font-display text-[15px] font-bold text-accent-text">
               {mode === "scene" ? "Buat Adegan" : "Buat Meja Brainstorm"}
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -428,7 +428,7 @@ function CreateSharedRoomModal({
                 className="mt-0.5 h-4 w-4 accent-current"
               />
               <span>
-                <span className="block text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Bagian dari cerita utama (canon)</span>
+                <span className="block text-sm font-semibold text-accent-text">Bagian dari cerita utama (canon)</span>
                 <span className="mt-0.5 block text-xs text-ink-soft">
                   Tidak dicentang berarti latihan; ini adalah pilihan default.
                 </span>
@@ -449,13 +449,13 @@ function CreateSharedRoomModal({
                   type="button"
                   onClick={() => toggle(character.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
-                    active ? "border-[#4687fe]/40 bg-[#4687fe]/10 dark:border-ink dark:bg-white/[0.08]" : "border-line bg-surface hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                    active ? "border-accent/40 bg-accent/10 dark:border-ink dark:bg-white/[0.08]" : "border-line bg-surface hover:bg-accent/10 dark:hover:bg-surface-2"
                   }`}
                   aria-pressed={active}
                 >
                   <Avatar name={character.name} src={character.avatarUrl} size={40} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{character.name}</p>
+                    <p className="truncate text-sm font-semibold text-accent-text">{character.name}</p>
                     <p className="truncate text-xs text-ink-soft">{character.shortBio || "Tanpa bio"}</p>
                     <p className="mt-0.5 text-[10px] text-muted">
                       Ingatan jangka panjang: {character.memoryEnabled ? "aktif" : "nonaktif"}

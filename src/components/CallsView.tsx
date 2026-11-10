@@ -91,7 +91,7 @@ export function CallsView({
       />
 
       <div className="px-3 pb-2.5 pt-2.5">
-        <div className="flex items-center gap-2 rounded-xl bg-[#4687fe]/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
+        <div className="flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2 ring-1 ring-transparent transition focus-within:bg-surface focus-within:ring-ink/25 dark:bg-surface-2 dark:focus-within:bg-surface">
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input
             value={query}
@@ -113,12 +113,12 @@ export function CallsView({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 divide-y divide-[#4687fe]/25 dark:divide-[#d5b767]/30 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
+      <div className="min-h-0 flex-1 divide-y divide-accent/25 dark:divide-accent/30 overflow-y-auto px-2 pb-[calc(var(--tabbar-space)+0.5rem)] md:pb-2">
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
             {ownerThreads.length === 0 ? (
               <>
-                <h2 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada chat 2 arah</h2>
+                <h2 className="text-sm font-semibold text-accent-text">Belum ada chat 2 arah</h2>
                 <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-ink-soft">
                   Daftar ini hanya menampilkan pengguna yang mengundang karakter milikmu dan
                   sudah terhubung. Undangan masuk bisa ditinjau di Kontak Karakter.
@@ -144,7 +144,7 @@ export function CallsView({
                 type="button"
                 onClick={() => onSelect(thread.id)}
                 className={`group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
-                  selected ? "bg-[#4687fe]/10 dark:bg-white/[0.08]" : "hover:bg-[#4687fe]/10 dark:hover:bg-surface-2"
+                  selected ? "bg-accent/10 dark:bg-white/[0.08]" : "hover:bg-accent/10 dark:hover:bg-surface-2"
                 }`}
               >
                 <Avatar
@@ -154,7 +154,7 @@ export function CallsView({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                    <p className="truncate text-sm font-semibold text-accent-text">
                       {thread.name}
                     </p>
                     <time className="shrink-0 text-[11px] text-muted">
