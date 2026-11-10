@@ -60,8 +60,8 @@ export function ThemeSegmented() {
             onClick={() => setTheme(value)}
             className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
               active
-                ? "bg-surface text-ink shadow-sm"
-                : "text-ink-soft hover:text-ink"
+                ? "bg-surface text-[#205ac4] shadow-sm ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
+                : "text-[#205ac4] hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
             }`}
           >
             <Icon className="h-3.5 w-3.5" />

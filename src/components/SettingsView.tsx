@@ -71,7 +71,7 @@ function SettingsAccordionCard({
                   badgeTone === "active"
                     ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                     : badgeTone === "dark"
-                      ? "bg-ink font-bold text-surface"
+                      ? "bg-[#4687fe]/15 font-bold text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]"
                       : "bg-surface-2 text-ink-soft"
                 }`}
               >
@@ -645,7 +645,7 @@ export function SettingsView({
             onToggle={() => toggleSection("appearance")}
           >
             <div>
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                 Mode Tema
               </span>
               <ThemeSegmented />
@@ -685,7 +685,7 @@ export function SettingsView({
           >
             <div>
               <div className="mb-2.5 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Daftar Provider Tersimpan
                 </span>
                 {!formOpen && (
@@ -821,7 +821,7 @@ export function SettingsView({
           {formOpen && (
             <form onSubmit={handleSubmit} className="mt-4 space-y-3 border-t border-line pt-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   {editing ? `Edit provider (${editing.label})` : "Provider baru"}
                 </h3>
                 {providers.length > 0 && (
@@ -857,8 +857,8 @@ export function SettingsView({
                     onClick={() => chooseType(t)}
                     className={`rounded-xl border px-2.5 py-2 text-xs font-medium transition ${
                       type === t
-                        ? "border-ink bg-surface-2 text-ink"
-                        : "border-line text-ink-soft hover:bg-surface-2"
+                        ? "border-[#4687fe] bg-[#4687fe]/10 text-[#205ac4] dark:border-[#d5b767] dark:bg-[#d5b767]/10 dark:text-[#e8cf75]"
+                        : "border-[#4687fe]/30 text-[#205ac4] hover:bg-[#4687fe]/10 dark:border-[#d5b767]/35 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                     }`}
                   >
                     {PROVIDER_META[t].name}
@@ -896,7 +896,7 @@ export function SettingsView({
                     <button
                       type="button"
                       onClick={() => void pastePrimaryKey()}
-                      className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                      className="rounded-lg border border-[#4687fe]/40 bg-surface-2 px-2 py-0.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                     >
                       Tempel
                     </button>
@@ -968,7 +968,7 @@ export function SettingsView({
                     <button
                       type="button"
                       onClick={() => void pasteBackupKey(index)}
-                      className="shrink-0 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                      className="shrink-0 rounded-lg border border-[#4687fe]/40 bg-surface-2 px-2 py-1.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                     >
                       Tempel
                     </button>
@@ -1295,7 +1295,7 @@ export function SettingsView({
                 <button
                   type="button"
                   onClick={onOpenAccountManagement}
-                  className="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-xs font-semibold text-ink transition hover:bg-line/60"
+                  className="w-full rounded-xl border border-[#4687fe]/40 bg-surface-2 px-3.5 py-2.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                 >
                   {effectiveIsAdmin
                     ? "Buka Halaman Panel Admin & Kelola Member →"
