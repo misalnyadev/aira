@@ -419,7 +419,7 @@ export function CharactersView({
                     <Avatar name={c.name} src={c.avatarUrl} size={52} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h3 className="truncate font-semibold text-ink">
+                        <h3 className="truncate font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                           {c.name}
                         </h3>
                         {c.hasBible && (

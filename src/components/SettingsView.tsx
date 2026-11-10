@@ -64,7 +64,7 @@ function SettingsAccordionCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-ink">{title}</h2>
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">{title}</h2>
             {badge && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${

@@ -1140,7 +1140,7 @@ export function StatusView({
               <span
                 role="img"
                 aria-label="Notifikasi"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/50 dark:text-[#e8cf75] dark:ring-[#d5b767]/60"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]">
                   <path d="m12 2.8 2.84 5.75 6.35.92-4.59 4.48 1.08 6.32L12 17.29l-5.68 2.98 1.08-6.32-4.59-4.48 6.35-.92L12 2.8Z" />
@@ -1679,12 +1679,12 @@ export function StatusView({
           <div className="mx-auto min-h-full max-w-[560px] pb-8">
             <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
               <button type="button" onClick={closeTalentProfile} className="rounded-full px-2 py-1 text-2xl" aria-label="Kembali">‹</button>
-              <h2 className="truncate text-lg font-bold">{name}</h2>
+              <h2 className="truncate text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">{name}</h2>
             </header>
             <div className="px-4 py-5">
               <div className="flex items-center gap-5">
                 <span className="rounded-full bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] dark:from-[#d5b767] dark:via-white dark:to-[#d5b767] p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
-                <div><div className="font-bold">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
+                <div><div className="font-bold text-[#205ac4] dark:text-[#e8cf75]">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
               </div>
               {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && <p className="mt-4 whitespace-pre-wrap text-sm">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>}
               <div className="mt-4 flex flex-wrap gap-2">

@@ -532,7 +532,7 @@ export function ChatWindow({
             >
               <Avatar name={character.name} src={character.avatarUrl} size={34} />
               <div className="min-w-0">
-                <p className="truncate text-[13.5px] font-semibold leading-tight text-ink">
+                <p className="truncate text-[13.5px] font-semibold leading-tight text-[#205ac4] dark:text-[#e8cf75]">
                   {character.name}
                 </p>
                 <p
