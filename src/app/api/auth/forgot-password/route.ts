@@ -1,27 +1,16 @@
-import { createHash, randomBytes } from "node:crypto";
-import { after, NextResponse } from "next/server";
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { passwordResetTokens, users } from "@/db/schema";
+import { passwordResetRequests, users } from "@/db/schema";
 import { ensureDb } from "@/lib/dbReady";
 import { checkEmail, normalizeEmail } from "@/lib/password";
-import {
-  createPasswordResetUrl,
-  isPasswordResetEmailConfigured,
-  sendPasswordResetEmail,
-} from "@/lib/passwordResetEmail";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const RESET_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
-const RESET_REQUEST_COOLDOWN_MS = 60 * 1000;
+const REQUEST_COOLDOWN_MS = 15 * 60 * 1000;
 const GENERIC_MESSAGE =
-  "Jika email ini terdaftar, tautan untuk mengatur ulang kata sandi akan dikirim.";
-
-function hashResetToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+  "Jika email akun terdaftar, pengajuan sudah diteruskan ke Admin. Admin akan memverifikasi identitasmu sebelum memberi tautan reset.";
 
 export async function POST(req: Request) {
   await ensureDb();
@@ -31,84 +20,73 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
   }
 
-  const rawEmail = (body as { email?: unknown }).email;
-  const email = normalizeEmail(typeof rawEmail === "string" ? rawEmail : "");
+  const requestBody = body as { email?: unknown; contactInfo?: unknown };
+  const email = normalizeEmail(typeof requestBody.email === "string" ? requestBody.email : "");
   const emailError = checkEmail(email);
   if (emailError) return NextResponse.json({ error: emailError }, { status: 400 });
 
-  if (!isPasswordResetEmailConfigured()) {
+  const contactInfo =
+    typeof requestBody.contactInfo === "string"
+      ? requestBody.contactInfo.trim().replace(/[\r\n\t]+/g, " ")
+      : "";
+  if (contactInfo.length > 120) {
     return NextResponse.json(
-      { error: "Fitur pemulihan kata sandi belum dikonfigurasi oleh pengelola aplikasi." },
-      { status: 503 }
+      { error: "Kontak tambahan maksimal 120 karakter." },
+      { status: 400 }
     );
   }
 
   const [user] = await db
-    .select({ id: users.id, email: users.email })
+    .select({ id: users.id })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  // Jawaban sama untuk email yang tidak terdaftar agar akun tidak bisa ditebak.
+  // Respons tetap sama untuk email yang tidak terdaftar agar akun tidak bisa ditebak.
   if (!user) return NextResponse.json({ message: GENERIC_MESSAGE });
 
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = hashResetToken(token);
-  const now = new Date();
-  const resetUrl = createPasswordResetUrl(token);
-  if (!resetUrl) {
-    return NextResponse.json(
-      { error: "Fitur pemulihan kata sandi belum dikonfigurasi oleh pengelola aplikasi." },
-      { status: 503 }
-    );
-  }
+  try {
+    await db.transaction(async (tx) => {
+      // Serialisasi per akun menegakkan cooldown sekaligus mencegah pengajuan ganda.
+      const [lockedUser] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .for("update")
+        .limit(1);
+      if (!lockedUser) return;
 
-  // Satu token aktif per akun dan jeda 60 detik mencegah email berulang.
-  const [resetRequest] = await db
-    .insert(passwordResetTokens)
-    .values({
-      userId: user.id,
-      tokenHash,
-      expiresAt: new Date(now.getTime() + RESET_TOKEN_LIFETIME_MS),
-      createdAt: now,
-    })
-    .onConflictDoUpdate({
-      target: passwordResetTokens.userId,
-      set: {
-        tokenHash,
-        expiresAt: new Date(now.getTime() + RESET_TOKEN_LIFETIME_MS),
-        createdAt: now,
-        consumedAt: null,
-      },
-      setWhere: lt(
-        passwordResetTokens.createdAt,
-        new Date(now.getTime() - RESET_REQUEST_COOLDOWN_MS)
-      ),
-    })
-    .returning({ userId: passwordResetTokens.userId });
-
-  if (resetRequest) {
-    after(async () => {
-      try {
-        await sendPasswordResetEmail(user.email, resetUrl);
-      } catch (error) {
-        console.error(
-          "[auth] Failed to send password reset email:",
-          error instanceof Error ? error.message : "Unknown email provider error"
-        );
-        await db
-          .update(passwordResetTokens)
-          .set({ consumedAt: new Date() })
-          .where(
-            and(
-              eq(passwordResetTokens.userId, user.id),
-              eq(passwordResetTokens.tokenHash, tokenHash),
-              isNull(passwordResetTokens.consumedAt)
-            )
+      const [pendingRequest] = await tx
+        .select({ id: passwordResetRequests.id })
+        .from(passwordResetRequests)
+        .where(
+          and(
+            eq(passwordResetRequests.userId, user.id),
+            eq(passwordResetRequests.status, "pending")
           )
-          .catch(() => undefined);
-      }
+        )
+        .limit(1);
+      if (pendingRequest) return;
+
+      const [latestRequest] = await tx
+        .select({ createdAt: passwordResetRequests.createdAt })
+        .from(passwordResetRequests)
+        .where(eq(passwordResetRequests.userId, user.id))
+        .orderBy(desc(passwordResetRequests.createdAt))
+        .limit(1);
+      const cooldownCutoff = Date.now() - REQUEST_COOLDOWN_MS;
+      if (latestRequest && latestRequest.createdAt.getTime() > cooldownCutoff) return;
+
+      await tx.insert(passwordResetRequests).values({
+        userId: user.id,
+        contactInfo,
+        status: "pending",
+      });
     });
+  } catch (error) {
+    // Tetap berikan respons umum untuk kegagalan indeks unik akibat pengajuan serentak.
+    const message = error instanceof Error ? error.message : "";
+    if (!/duplicate key|unique/i.test(message)) throw error;
   }
 
   return NextResponse.json({ message: GENERIC_MESSAGE });

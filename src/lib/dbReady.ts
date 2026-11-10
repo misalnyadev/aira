@@ -31,6 +31,21 @@ const DDL = [
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
     "consumed_at" timestamp with time zone
   )`,
+  sql`CREATE TABLE IF NOT EXISTS "password_reset_requests" (
+    "id" uuid PRIMARY KEY NOT NULL,
+    "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "contact_info" text DEFAULT '' NOT NULL,
+    "status" text DEFAULT 'pending' NOT NULL CHECK ("status" IN ('pending', 'completed', 'rejected')),
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "last_issued_at" timestamp with time zone,
+    "last_issued_by" uuid REFERENCES "users"("id") ON DELETE set null,
+    "resolved_at" timestamp with time zone,
+    "resolved_by" uuid REFERENCES "users"("id") ON DELETE set null
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_requests_pending_user_idx"
+    ON "password_reset_requests" ("user_id") WHERE "status" = 'pending'`,
+  sql`CREATE INDEX IF NOT EXISTS "password_reset_requests_user_created_idx"
+    ON "password_reset_requests" ("user_id", "created_at")`,
   sql`CREATE TABLE IF NOT EXISTS "api_providers" (
     "id" uuid PRIMARY KEY NOT NULL,
     "type" text NOT NULL,

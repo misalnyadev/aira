@@ -48,6 +48,7 @@ export function AuthGate({
   const [user, setUser] = useState<AuthUser | null>(initialUser);
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
+  const [recoveryContact, setRecoveryContact] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -95,7 +96,7 @@ export function AuthGate({
     setBusy(true);
 
     if (mode === "forgot") {
-      const result = await requestPasswordReset(email);
+      const result = await requestPasswordReset(email, recoveryContact);
       setBusy(false);
       if (!result.ok) {
         setError(result.error);
@@ -150,7 +151,7 @@ export function AuthGate({
               {isRegister
                 ? "Buat akun dengan kode undangan dan isi profil singkat."
                 : isForgot
-                  ? "Masukkan email akunmu untuk menerima tautan reset kata sandi."
+                  ? "Ajukan bantuan reset kata sandi kepada Admin."
                   : "Masuk untuk melanjutkan percakapanmu."}
             </p>
           </div>
@@ -175,6 +176,29 @@ export function AuthGate({
                 className={FIELD}
               />
             </div>
+
+            {isForgot && (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-ink-soft">
+                    Kontak tambahan (opsional)
+                  </label>
+                  <input
+                    value={recoveryContact}
+                    onChange={(event) => {
+                      setRecoveryContact(event.target.value);
+                      setNotice(null);
+                    }}
+                    maxLength={120}
+                    placeholder="WhatsApp atau cara Admin mengenalimu"
+                    className={FIELD}
+                  />
+                </div>
+                <p className="text-xs leading-relaxed text-ink-soft">
+                  Admin akan memverifikasi identitasmu melalui jalur yang sudah dikenal sebelum membuat tautan reset. Jangan cantumkan kata sandi.
+                </p>
+              </>
+            )}
 
             {!isForgot && (
               <div>
@@ -302,12 +326,12 @@ export function AuthGate({
             >
               {busy
                 ? isForgot
-                  ? "Mengirim..."
+                  ? "Mengajukan..."
                   : "Memproses..."
                 : isRegister
                   ? "Daftar"
                   : isForgot
-                    ? "Kirim tautan reset"
+                    ? "Ajukan ke Admin"
                     : "Masuk"}
             </button>
 
@@ -315,6 +339,7 @@ export function AuthGate({
               type="button"
               onClick={() => {
                 setMode(isForgot || isRegister ? "login" : "register");
+                setRecoveryContact("");
                 setPassword("");
                 setError(null);
                 setNotice(null);
@@ -332,6 +357,7 @@ export function AuthGate({
                 type="button"
                 onClick={() => {
                   setMode("forgot");
+                  setRecoveryContact("");
                   setPassword("");
                   setError(null);
                   setNotice(null);

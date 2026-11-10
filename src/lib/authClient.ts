@@ -65,8 +65,11 @@ async function postAuthAction(url: string, payload: unknown): Promise<AuthAction
   }
 }
 
-export function requestPasswordReset(email: string): Promise<AuthActionResult> {
-  return postAuthAction("/api/auth/forgot-password", { email });
+export function requestPasswordReset(
+  email: string,
+  contactInfo = ""
+): Promise<AuthActionResult> {
+  return postAuthAction("/api/auth/forgot-password", { email, contactInfo });
 }
 
 export function resetPassword(

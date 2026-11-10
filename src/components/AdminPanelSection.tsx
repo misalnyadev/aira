@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { QuotaDiscussionMessage } from "@/types/chat";
 import { Avatar } from "./Avatar";
 import { QuotaDiscussionBox } from "./QuotaDiscussionBox";
+import { PasswordResetRequestsSection } from "./PasswordResetRequestsSection";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -433,6 +434,8 @@ export function AdminPanelSection({
         </div>
       ) : (
         <>
+          <PasswordResetRequestsSection />
+
           {/* 0. Kode Undangan Pendaftaran Member (Dropdown v) */}
           <section className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
             <button

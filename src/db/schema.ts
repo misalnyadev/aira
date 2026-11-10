@@ -87,6 +87,36 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 });
 
+/** Pengajuan pemulihan akun yang harus diverifikasi manual oleh Admin. */
+export const passwordResetRequests = pgTable(
+  "password_reset_requests",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    contactInfo: text("contact_info").notNull().default(""),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastIssuedAt: timestamp("last_issued_at", { withTimezone: true }),
+    lastIssuedBy: uuid("last_issued_by").references(() => users.id, { onDelete: "set null" }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: uuid("resolved_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (table) => [
+    check(
+      "password_reset_requests_status_check",
+      sql`${table.status} IN ('pending', 'completed', 'rejected')`
+    ),
+    uniqueIndex("password_reset_requests_pending_user_idx")
+      .on(table.userId)
+      .where(sql`${table.status} = 'pending'`),
+    index("password_reset_requests_user_created_idx").on(table.userId, table.createdAt),
+  ]
+);
+
 export const apiProviders = pgTable("api_providers", {
   id: uuid("id")
     .primaryKey()
