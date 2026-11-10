@@ -171,12 +171,12 @@ export function PasswordResetRequestsSection() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">Pemulihan Kata Sandi</h3>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${requests.length > 0 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-surface-2 text-muted"}`}>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${requests.length > 0 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-[#4687fe]/10 dark:bg-surface-2 text-muted"}`}>
                 {loading ? "…" : `${requests.length} menunggu`}
               </span>
             </div>
           </div>
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
             <ChevronDownIcon strokeWidth={1.6} className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
           </span>
         </button>
@@ -186,7 +186,7 @@ export function PasswordResetRequestsSection() {
           disabled={loading || refreshing}
           title="Muat ulang pengajuan reset"
           aria-label="Muat ulang pengajuan reset kata sandi"
-          className="shrink-0 rounded-full bg-surface-2 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
+          className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-surface-2 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
         >
           <RefreshIcon className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </button>
@@ -200,17 +200,17 @@ export function PasswordResetRequestsSection() {
             </p>
           )}
           {feedback && (
-            <p className="break-words rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-700 dark:text-emerald-300">
+            <p className="break-words rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2.5 text-xs text-[#205ac4] dark:text-[#e8cf75]">
               {feedback}
             </p>
           )}
 
           {loading ? (
-            <div className="rounded-xl border border-line bg-surface-2/50 px-3 py-4 text-center text-xs text-muted">
+            <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-surface-2/50 px-3 py-4 text-center text-xs text-muted">
               Memuat pengajuan reset...
             </div>
           ) : requests.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-center text-xs text-muted">
+            <p className="rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-3 text-center text-xs text-muted">
               Tidak ada pengajuan pemulihan kata sandi yang menunggu.
             </p>
           ) : (
@@ -220,13 +220,13 @@ export function PasswordResetRequestsSection() {
                 const issuedLink = issuedLinks[request.id];
                 const busy = busyId === request.id;
                 return (
-                  <article key={request.id} className="min-w-0 space-y-3 rounded-xl border border-[#4687fe]/25 bg-surface-2/40 p-3.5 dark:border-[#d5b767]/30">
+                  <article key={request.id} className="min-w-0 space-y-3 rounded-xl border border-[#4687fe]/25 bg-[#4687fe]/10 dark:bg-surface-2/40 p-3.5 dark:border-[#d5b767]/30">
                     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{memberName}</p>
                         <p className="break-all text-xs text-muted">{request.email}</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted ring-1 ring-line">
+                      <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-[10px] font-medium text-muted ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
                         Diajukan {formatDate(request.createdAt)}
                       </span>
                     </div>
@@ -292,7 +292,7 @@ export function PasswordResetRequestsSection() {
                         type="button"
                         disabled={busy}
                         onClick={() => void handleAction(request, "reject")}
-                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/10 dark:text-rose-400 disabled:opacity-50"
                       >
                         <XIcon className="h-3.5 w-3.5" />
                         Tolak
