@@ -127,7 +127,7 @@ export function CharacterProfileModal({
             <div className="mt-5">
               <div className="mb-1 flex items-center justify-between gap-2">
                 <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink">
-                  <BibleOutlineIcon className="h-4 w-4 text-[#205ac4] dark:text-[#e8cf75]" /> Bible peran
+                  <BibleOutlineIcon className="h-4 w-4 text-ink" /> Bible peran
                 </h4>
                 <button
                   onClick={() => setShowBible((v) => !v)}
