@@ -486,3 +486,31 @@ export function MeetupIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** Penanda fitur karakter HeyTalent: outline biru, tanpa emoji. */
+export function BibleOutlineIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <path d="M12 6.5C9.7 4.5 6.8 4.1 3 5.2v13c3.8-1.1 6.7-.7 9 1.3 2.3-2 5.2-2.4 9-1.3v-13c-3.8-1.1-6.7-.7-9 1.3ZM12 6.5v13" />
+      <path d="M6 8.5c1.3-.2 2.4 0 3.5.5M6 11.5c1.3-.2 2.4 0 3.5.5M18 8.5c-1.3-.2-2.4 0-3.5.5M18 11.5c-1.3-.2-2.4 0-3.5.5" />
+    </svg>
+  );
+}
+
+export function MemoryOutlineIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <path d="M12 5.2a3.2 3.2 0 0 0-5.9 1.7A3.6 3.6 0 0 0 4.6 13a3.5 3.5 0 0 0 2 5.8A3.2 3.2 0 0 0 12 20m0-14.8a3.2 3.2 0 0 1 5.9 1.7 3.6 3.6 0 0 1 1.5 6.1 3.5 3.5 0 0 1-2 5.8A3.2 3.2 0 0 1 12 20V5.2Z" />
+      <path d="M6.1 6.9c.9 0 1.7.3 2.2 1M4.6 13c.8-.5 1.7-.6 2.6-.4M6.6 18.8c0-1 .4-1.8 1.1-2.4M17.9 6.9c-.9 0-1.7.3-2.2 1M19.4 13c-.8-.5-1.7-.6-2.6-.4M17.4 18.8c0-1-.4-1.8-1.1-2.4" />
+    </svg>
+  );
+}
+
+export function WebOutlineIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3.5 9h17M3.5 15h17M12 3c2.4 2.5 3.5 5.5 3.5 9s-1.1 6.5-3.5 9c-2.4-2.5-3.5-5.5-3.5-9S9.6 5.5 12 3Z" />
+    </svg>
+  );
+}

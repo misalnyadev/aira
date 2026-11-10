@@ -16,7 +16,7 @@ import { CharacterMemorySection, type MemoryPatch } from "./CharacterMemorySecti
 import { CharacterStoryAutoSection } from "./CharacterStoryAutoSection";
 import { CharacterVoiceSection } from "./CharacterVoiceSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
-import { PencilIcon, TrashIcon, XIcon } from "./icons";
+import { BibleOutlineIcon, PencilIcon, TrashIcon, XIcon } from "./icons";
 
 export function CharacterProfileModal({
   character,
@@ -126,8 +126,8 @@ export function CharacterProfileModal({
           {hasBible && (
             <div className="mt-5">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-ink">
-                  📖 Bible peran
+                <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink">
+                  <BibleOutlineIcon className="h-4 w-4 text-[#205ac4] dark:text-[#79aaff]" /> Bible peran
                 </h4>
                 <button
                   onClick={() => setShowBible((v) => !v)}
