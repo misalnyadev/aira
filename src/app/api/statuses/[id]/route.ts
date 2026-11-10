@@ -62,10 +62,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const [exists] = await db.select({ id: characterStatuses.id }).from(characterStatuses).where(eq(characterStatuses.id, id)).limit(1);
   if (!exists) return NextResponse.json({ error: "Status tidak ditemukan." }, { status: 404 });
-  try {
-    await db.insert(statusViews).values({ statusId: id, userId: user.id });
-  } catch {
-    // sudah pernah lihat — abaikan
-  }
+  await db.insert(statusViews).values({ statusId: id, userId: user.id }).onConflictDoNothing();
   return NextResponse.json({ ok: true });
 }
