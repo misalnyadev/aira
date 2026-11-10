@@ -88,7 +88,7 @@ export function PasswordResetRequestsSection() {
     const memberName = request.displayName || request.nickname || request.email;
     if (
       action === "issue" &&
-      !confirm(`Pastikan identitas ${memberName} sudah diverifikasi melalui kanal tepercaya sebelum membuat tautan reset.`)
+      !confirm(`Pastikan identitas ${memberName} sudah diverifikasi melalui kanal tepercaya. Kontak pada formulir bukan bukti kepemilikan. Buat tautan reset?`)
     ) {
       return;
     }
@@ -160,7 +160,7 @@ export function PasswordResetRequestsSection() {
   }
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-amber-500/35 bg-surface shadow-2xs">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
       <div className="flex min-w-0 items-center gap-2 px-4 py-3.5">
         <button
           type="button"
@@ -175,9 +175,6 @@ export function PasswordResetRequestsSection() {
                 {loading ? "…" : `${requests.length} menunggu`}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-ink-soft">
-              Verifikasi member sebelum membuat tautan reset satu kali.
-            </p>
           </div>
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
             <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180 text-ink" : ""}`} />
@@ -196,11 +193,7 @@ export function PasswordResetRequestsSection() {
       </div>
 
       {open && (
-        <div className="min-w-0 space-y-3 border-t border-line p-4">
-          <p className="rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
-            Verifikasi identitas melalui kanal yang sudah dikenal. Email atau nomor yang dicantumkan sendiri pada formulir bukan bukti kepemilikan. Tautan mentah hanya ditampilkan sekali setelah dibuat—salin dan kirim secara pribadi.
-          </p>
-
+        <div className="min-w-0 space-y-3 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
           {error && (
             <p className="break-words rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-600 dark:text-rose-300">
               {error}
@@ -227,7 +220,7 @@ export function PasswordResetRequestsSection() {
                 const issuedLink = issuedLinks[request.id];
                 const busy = busyId === request.id;
                 return (
-                  <article key={request.id} className="min-w-0 space-y-3 rounded-xl border border-line bg-surface-2/40 p-3.5">
+                  <article key={request.id} className="min-w-0 space-y-3 rounded-xl border border-[#4687fe]/25 bg-surface-2/40 p-3.5 dark:border-[#d5b767]/30">
                     <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{memberName}</p>
@@ -259,15 +252,16 @@ export function PasswordResetRequestsSection() {
                     )}
 
                     {issuedLink && (
-                      <div className="space-y-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+                      <div className="space-y-2 rounded-xl border border-[#4687fe]/25 bg-[#4687fe]/[0.06] p-3 dark:border-[#d5b767]/30 dark:bg-[#d5b767]/[0.06]">
                         <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Tautan reset — kedaluwarsa {formatDate(issuedLink.expiresAt)}</p>
+                        <p className="text-xs text-ink-soft">Tautan hanya tampil sekali. Salin dan kirim secara pribadi.</p>
                         <p className="break-all rounded-lg bg-surface px-2.5 py-2 font-mono text-[11px] leading-relaxed text-ink select-all">
                           {issuedLink.url}
                         </p>
                         <button
                           type="button"
                           onClick={() => void handleCopy(request.id, issuedLink.url)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#4687fe]/40 bg-surface px-3 py-1.5 text-xs font-semibold text-[#205ac4] transition hover:bg-[#4687fe]/10 dark:border-[#d5b767]/45 dark:text-[#e8cf75] dark:hover:bg-[#d5b767]/10"
                         >
                           {copiedId === request.id ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
                           {copiedId === request.id ? "Tersalin" : "Salin tautan"}
