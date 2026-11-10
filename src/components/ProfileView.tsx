@@ -294,7 +294,7 @@ export function ProfileView({
       <div className="shrink-0 px-4 pb-3 pt-2 sm:px-5">
         {/* Tab Menu: Profil Diri · Akun · Panel Admin (khusus Admin) */}
         <div
-          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-[#4687fe]/10 p-1 dark:bg-surface-2 dark:ring-1 dark:ring-[#d5b767]/30 ${
+          className={`mx-auto grid w-full min-w-0 max-w-2xl gap-1 rounded-xl bg-[#4687fe]/10 p-1 dark:bg-surface-2 ${
             effectiveIsAdmin ? "grid-cols-3" : "grid-cols-2"
           }`}
         >
@@ -303,8 +303,8 @@ export function ProfileView({
             onClick={() => selectTab("identity")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "identity"
-                ? "bg-surface text-[#205ac4] shadow-xs dark:ring-1 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:ring-1 dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
+                ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
+                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
             }`}
           >
             Profil Diri
@@ -315,8 +315,8 @@ export function ProfileView({
             onClick={() => selectTab("account")}
             className={`min-w-0 truncate rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:px-2.5 sm:text-xs ${
               tab === "account"
-                ? "bg-surface text-[#205ac4] shadow-xs dark:ring-1 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                : "text-ink-soft hover:text-[#205ac4] dark:ring-1 dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
+                ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
+                : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
             }`}
           >
             {effectiveIsAdmin ? "Akun Saya" : "Akun & Kuota"}
@@ -328,8 +328,8 @@ export function ProfileView({
               onClick={() => selectTab("admin")}
               className={`inline-flex min-w-0 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11.5px] font-semibold transition sm:gap-1.5 sm:px-2.5 sm:text-xs ${
                 tab === "admin"
-                  ? "bg-surface text-[#205ac4] shadow-xs dark:ring-1 dark:ring-[#d5b767]/40 dark:text-[#e8cf75]"
-                  : "text-ink-soft hover:text-[#205ac4] dark:ring-1 dark:ring-[#d5b767]/25 dark:hover:text-[#e8cf75]"
+                  ? "bg-surface text-[#205ac4] shadow-xs dark:text-[#e8cf75]"
+                  : "text-ink-soft hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
               }`}
             >
               <span className="truncate">Panel Admin</span>
