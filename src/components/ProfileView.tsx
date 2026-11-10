@@ -554,7 +554,7 @@ export function ProfileView({
                       className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
                         effectiveIsAdmin
                           ? "bg-[#4687fe]/15 text-[#205ac4] dark:bg-[#d5b767]/15 dark:text-[#e8cf75]"
-                          : "bg-surface-2 text-ink-soft ring-1 ring-line"
+                          : "bg-[#4687fe]/10 text-ink-soft ring-1 ring-[#4687fe]/20 dark:bg-surface-2 dark:ring-line"
                       }`}
                     >
                       {effectiveIsAdmin ? "Admin" : "Member"}
@@ -565,7 +565,7 @@ export function ProfileView({
               </div>
 
               {/* Pemakaian Slot Karakter */}
-              <div className="mt-4 rounded-xl bg-surface-2/70 p-3.5">
+              <div className="mt-4 rounded-xl bg-[#4687fe]/10 p-3.5 dark:bg-surface-2/70">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                     Kuota Karakter Milik Sendiri
@@ -574,9 +574,9 @@ export function ProfileView({
                     {characterCount} / {characterLimit} slot
                   </span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-line">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#4687fe]/20 dark:bg-line">
                   <div
-                    className="h-full rounded-full bg-ink transition-all"
+                    className="h-full rounded-full bg-[#4687fe] transition-all dark:bg-[#d5b767]"
                     style={{ width: `${usageRatio}%` }}
                   />
                 </div>
@@ -596,7 +596,7 @@ export function ProfileView({
                     setSigningOut(true);
                     await signOut();
                   }}
-                  className="rounded-xl border border-line px-4 py-2 text-xs font-semibold text-ink-soft transition hover:border-rose-300 hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-60"
+                  className="rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-strong disabled:opacity-60"
                 >
                   {signingOut ? "Keluar..." : "Keluar Akun"}
                 </button>
@@ -641,7 +641,7 @@ export function ProfileView({
               </button>
 
               {charsOpen && (
-                <div className="border-t border-[#4687fe]/25 bg-surface-2/40 px-3 py-3 dark:border-[#d5b767]/30 sm:px-4">
+                <div className="border-t border-[#4687fe]/25 bg-[#4687fe]/10 px-3 py-3 dark:border-[#d5b767]/30 dark:bg-surface-2/40 sm:px-4">
                   {pendingOwnerContactsCount > 0 && onOpenContactsModal && (
                     <button
                       type="button"
@@ -688,7 +688,7 @@ export function ProfileView({
                               {ch.shortBio || ch.invitePin || "Tanpa deskripsi"}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              <span className="rounded-full bg-line px-1.5 py-0.5 text-[10px] font-bold text-ink-soft">
+                              <span className="rounded-full bg-[#4687fe]/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-soft dark:bg-line">
                                 PIN {ch.invitePin}
                               </span>
                               {ch.hasBible && (
