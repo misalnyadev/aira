@@ -34,6 +34,7 @@ export function ChatBackgroundPicker({
   const [error, setError] = useState<string | null>(null);
   /** Nilai sementara penggeser peredupan — baru disimpan saat jari dilepas. */
   const [dimDraft, setDimDraft] = useState<number | null>(null);
+  const [colorDraft, setColorDraft] = useState<string | null>(null);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
 
   const current = value;
@@ -42,6 +43,7 @@ export function ChatBackgroundPicker({
     dimDraft ?? Math.round((current.kind === "image" ? current.dim : 0.25) * 100);
 
   function selectBackground(next: ChatBackground) {
+    setColorDraft(null);
     onChange(next);
   }
 
@@ -139,6 +141,19 @@ export function ChatBackgroundPicker({
             <span className="sr-only">Pilih gambar latar</span>
           </button>
         </div>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-accent/30 px-3 py-2.5 dark:border-accent/35">
+        <label className="flex items-center justify-between gap-3 text-xs font-medium text-ink">
+          Warna latar bebas
+          <input type="color" aria-label="Pilih warna latar" disabled={disabled}
+            value={colorDraft ?? (current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa")}
+            onChange={(event) => setColorDraft(event.target.value)}
+            className="h-9 w-12 cursor-pointer rounded border border-line bg-surface p-1" />
+        </label>
+        <div aria-label="Pratinjau warna latar" className="h-12 rounded-lg border border-line" style={{ backgroundColor: colorDraft ?? (current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa") }} />
+        {colorDraft !== null && <button type="button" onClick={() => selectBackground({ kind: "color", color: colorDraft })} className="text-xs font-semibold text-accent-text underline">Terapkan warna latar</button>}
+        <p className="text-xs text-muted">Pratinjau langsung di sini; terapkan untuk memakai warna di percakapan.</p>
       </div>
 
       <div>
