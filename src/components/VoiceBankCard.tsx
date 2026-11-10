@@ -215,7 +215,7 @@ export function VoiceBankCard({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-surface-2/50"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -224,7 +224,7 @@ export function VoiceBankCard({
               className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                 r2Enabled
                   ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
-                  : "bg-surface-2 text-ink-soft"
+                  : "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft"
               }`}
             >
               {r2Enabled ? "Sinkron PC & HP" : "Lokal saja"}
@@ -232,26 +232,26 @@ export function VoiceBankCard({
           </div>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{summarySubtitle}</p>
         </div>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75]">
           <ChevronDownIcon
             className={`h-4 w-4 transition-transform duration-200 ${
-              open ? "rotate-180 text-ink" : ""
+              open ? "rotate-180" : ""
             }`}
           />
         </span>
       </button>
 
       {open && (
-        <div className="space-y-3 border-t border-line px-4 py-4">
+        <div className="space-y-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 px-4 py-4">
           {/* Ringkasan Kapasitas */}
           <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
+        <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2">
           <span className="block text-[11px] text-muted">Cloudflare R2 (PC &amp; HP)</span>
           <span className="mt-0.5 block text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
             {cloudCount} klip · {formatBytes(cloudBytes)}
           </span>
         </div>
-        <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-2">
+        <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2">
           <span className="block text-[11px] text-muted">Lokal perangkat ini</span>
           <span className="mt-0.5 block text-xs font-bold text-[#205ac4] dark:text-[#e8cf75]">
             {localStats.count} klip · {formatBytes(localStats.bytes)}
@@ -261,7 +261,7 @@ export function VoiceBankCard({
 
       {/* Siapkan 12 Frasa Umum */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <div className="inline-flex rounded-xl border border-line bg-surface-2 p-0.5 text-[11px]">
+        <div className="inline-flex rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-0.5 text-[11px]">
           <button
             type="button"
             onClick={() => setPrewarmSlot("female")}
@@ -286,7 +286,7 @@ export function VoiceBankCard({
           type="button"
           disabled={busy !== null}
           onClick={() => void handlePrewarm()}
-          className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-line/50 disabled:opacity-50"
+          className="flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20 disabled:opacity-50"
         >
           {busy === "prewarm"
             ? "Menyiapkan..."
@@ -296,7 +296,7 @@ export function VoiceBankCard({
         <button
           type="button"
           onClick={() => void refresh()}
-          className="rounded-xl border border-line px-2.5 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+          className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
         >
           Segarkan
         </button>
@@ -304,7 +304,7 @@ export function VoiceBankCard({
 
       {/* Daftar Rekaman */}
       {clips.length > 0 && (
-        <div className="rounded-xl border border-line">
+        <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35">
           <button
             type="button"
             onClick={() => setOpenList((v) => !v)}
@@ -317,7 +317,7 @@ export function VoiceBankCard({
           </button>
 
           {openList && (
-            <div className="max-h-60 divide-y divide-line overflow-y-auto border-t border-line">
+            <div className="max-h-60 divide-y divide-[#4687fe]/30 dark:divide-[#d5b767]/35 overflow-y-auto border-t border-[#4687fe]/30 dark:border-[#d5b767]/35">
               {clips.map((clip) => {
                 const active = isSpeaking && playingId === clip.id;
                 return (
@@ -328,7 +328,7 @@ export function VoiceBankCard({
                     <button
                       type="button"
                       onClick={() => void handlePlayClip(clip)}
-                      className="shrink-0 rounded-lg border border-line bg-surface-2 px-2 py-1 text-[11px] font-bold text-ink transition hover:bg-line/50"
+                      className="shrink-0 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2 py-1 text-[11px] font-bold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
                     >
                       {active ? "Stop" : "▶"}
                     </button>
@@ -362,7 +362,7 @@ export function VoiceBankCard({
               type="button"
               disabled={busy !== null}
               onClick={() => void handleClearLocal()}
-              className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:bg-surface-2 hover:text-ink disabled:opacity-50"
+              className="rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
             >
               Bersihkan cache lokal perangkat
             </button>
@@ -372,7 +372,7 @@ export function VoiceBankCard({
               type="button"
               disabled={busy !== null}
               onClick={() => void handleClearR2()}
-              className="rounded-lg border border-line px-2.5 py-1 text-[11px] font-medium text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10 disabled:opacity-50"
+              className="rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1 text-[11px] font-medium text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10 disabled:opacity-50"
             >
               Kosongkan Bank R2
             </button>
@@ -384,7 +384,7 @@ export function VoiceBankCard({
         <p
           className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${
             note.kind === "ok"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              ? "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75]"
               : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"
           }`}
         >
