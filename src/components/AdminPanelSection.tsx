@@ -360,7 +360,7 @@ export function AdminPanelSection({
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-3.5">
       {/* Header Ringkasan Panel Admin */}
-      <div className="min-w-0 rounded-2xl border border-line bg-surface p-4 shadow-2xs">
+      <div className="min-w-0 rounded-2xl border border-[#4687fe]/25 bg-surface p-4 shadow-2xs dark:border-[#d5b767]/30">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
@@ -376,7 +376,7 @@ export function AdminPanelSection({
             disabled={loading || refreshing}
             title="Muat ulang data Admin"
             aria-label="Muat ulang data panel Admin"
-            className="shrink-0 rounded-full bg-surface-2 p-2 text-ink-soft transition hover:bg-line hover:text-ink disabled:opacity-50"
+            className="shrink-0 rounded-full bg-surface-2 p-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 transition hover:bg-[#4687fe]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
           >
             <RefreshIcon
               className={`h-4 w-4 ${loading || refreshing ? "animate-spin" : ""}`}
@@ -467,17 +467,18 @@ export function AdminPanelSection({
                   Lihat, salin, atau ganti kode invite pendaftaran akun baru tanpa redeploy
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
+                  strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
-                    inviteOpen ? "rotate-180 text-ink" : ""
+                    inviteOpen ? "rotate-180" : ""
                   }`}
                 />
               </span>
             </button>
 
             {inviteOpen && (
-              <div className="min-w-0 space-y-3 border-t border-line p-4">
+              <div className="min-w-0 space-y-3 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/50 px-3.5 py-2.5">
                   <div className="min-w-0 flex-1">
                     <span className="block text-[11px] text-muted">
@@ -639,17 +640,18 @@ export function AdminPanelSection({
                   Setujui atau sesuaikan jumlah slot karakter yang diminta member
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
+                  strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
-                    requestsOpen ? "rotate-180 text-ink" : ""
+                    requestsOpen ? "rotate-180" : ""
                   }`}
                 />
               </span>
             </button>
 
             {requestsOpen && (
-              <div className="min-w-0 space-y-2.5 border-t border-line p-4">
+              <div className="min-w-0 space-y-2.5 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
                 {pending.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-line px-3.5 py-3 text-center text-xs text-muted">
                     Tidak ada pengajuan tambah slot yang menunggu saat ini.
@@ -812,17 +814,18 @@ export function AdminPanelSection({
                   Atur kuota slot karakter &amp; peran Admin/Member per akun
                 </p>
               </div>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                 <ChevronDownIcon
+                  strokeWidth={1.6}
                   className={`h-4 w-4 transition-transform duration-200 ${
-                    membersOpen ? "rotate-180 text-ink" : ""
+                    membersOpen ? "rotate-180" : ""
                   }`}
                 />
               </span>
             </button>
 
             {membersOpen && (
-              <div className="min-w-0 space-y-3 border-t border-line p-4">
+              <div className="min-w-0 space-y-3 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                   <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
                     <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
@@ -1005,17 +1008,18 @@ export function AdminPanelSection({
                     {resolved.length} keputusan persetujuan/penolakan terbaru
                   </p>
                 </div>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-soft">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45">
                   <ChevronDownIcon
+                  strokeWidth={1.6}
                     className={`h-4 w-4 transition-transform duration-200 ${
-                      historyOpen ? "rotate-180 text-ink" : ""
+                      historyOpen ? "rotate-180" : ""
                     }`}
                   />
                 </span>
               </button>
 
               {historyOpen && (
-                <div className="min-w-0 space-y-2 border-t border-line p-4">
+                <div className="min-w-0 space-y-2 border-t border-[#4687fe]/25 p-4 dark:border-[#d5b767]/30">
                   {resolved.map((h) => (
                     <div
                       key={h.id}
