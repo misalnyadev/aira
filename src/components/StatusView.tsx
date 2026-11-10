@@ -1132,7 +1132,9 @@ export function StatusView({
                 aria-label="Notifikasi"
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line"
               >
-                <IgHeartIcon className="h-5 w-5" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5 text-blue-700 dark:text-amber-300">
+                  <path d="m12 2.8 2.84 5.75 6.35.92-4.59 4.48 1.08 6.32L12 17.29l-5.68 2.98 1.08-6.32-4.59-4.48 6.35-.92L12 2.8Z" />
+                </svg>
               </span>
               <MenuHeaderIconButton
                 onClick={() => setShowComposer((value) => !value)}
