@@ -53,13 +53,13 @@ export function NavRail({
               aria-current={active ? "page" : undefined}
               className={`group relative flex w-14 flex-col items-center gap-1 rounded-2xl py-2 text-[12px] font-medium transition active:scale-95 ${
                 active
-                  ? "bg-ink/10 font-semibold text-ink"
-                  : "text-ink-soft hover:bg-surface-2 hover:text-ink"
+                  ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] dark:text-[#79aaff]"
+                  : "text-ink-soft hover:bg-[#4687fe]/10 hover:text-[#205ac4] dark:hover:text-[#79aaff]"
               }`}
             >
               <span className="relative">
                 {isProfile ? (
-                  <Avatar name={userName} src={profile.avatarUrl} size={28} />
+                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe] ring-offset-2 ring-offset-surface" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={28} /></span>
                 ) : (
                   <Icon className="h-6 w-6" />
                 )}
@@ -111,13 +111,13 @@ export function MobileTabBar({
               aria-current={active ? "page" : undefined}
               className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
                 active
-                  ? "bg-ink/[0.09] font-semibold text-ink shadow-xs dark:bg-white/[0.13]"
-                  : "text-ink-soft hover:text-ink"
+                  ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] shadow-xs dark:bg-[#4687fe]/20 dark:text-[#79aaff]"
+                  : "text-ink-soft hover:bg-[#4687fe]/10 hover:text-[#205ac4] dark:hover:text-[#79aaff]"
               }`}
             >
               <span className="relative">
                 {isProfile ? (
-                  <Avatar name={userName} src={profile.avatarUrl} size={26} />
+                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe]" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={26} /></span>
                 ) : (
                   <Icon className="h-[26px] w-[26px] shrink-0" />
                 )}

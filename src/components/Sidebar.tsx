@@ -136,7 +136,7 @@ export function Sidebar({
             const active = activeId === c.id;
             const update = c.threadKind === "guest_contact" && c.sourceCharacterId ? contactUpdates[c.sourceCharacterId] : undefined;
             const label = update?.storyId && update?.reelId ? "Story dan Reel baru" : update?.storyId ? "Story baru" : update?.reelId ? "Reel baru" : null;
-            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-blue-700 via-white to-blue-400" : update?.storyId ? "bg-blue-600" : "bg-white ring-1 ring-blue-500";
+            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] ring-1 ring-[#4687fe]/60" : update?.storyId ? "bg-[#4687fe]" : "bg-white ring-1 ring-[#4687fe]";
             return (
               <div
                 key={c.id}

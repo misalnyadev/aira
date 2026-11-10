@@ -1132,7 +1132,7 @@ export function StatusView({
                 aria-label="Notifikasi"
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-soft ring-1 ring-line"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5 text-blue-700 dark:text-amber-300">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]">
                   <path d="m12 2.8 2.84 5.75 6.35.92-4.59 4.48 1.08 6.32L12 17.29l-5.68 2.98 1.08-6.32-4.59-4.48 6.35-.92L12 2.8Z" />
                 </svg>
               </span>
@@ -1404,7 +1404,7 @@ export function StatusView({
                     aria-label="Buka galeri reels Anda"
                     className="block rounded-full"
                   >
-                    <span className={`block rounded-full p-[2px] ${ownStoryProfile?.hasUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
+                    <span className={`block rounded-full p-[2px] ${ownStoryProfile?.hasUnseen ? "bg-[#4687fe]" : "bg-line"}`}>
                       <span className="block rounded-full bg-surface p-[2px]">
                         <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={56} />
                       </span>
@@ -1430,7 +1430,7 @@ export function StatusView({
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
                   return (
                     <button key={profileStory.key} onClick={() => openStoryProfile(profileStory.key)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
-                      <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500" : "bg-line"}`}>
+                      <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-[#4687fe]" : "bg-line"}`}>
                         <span className="block rounded-full bg-surface p-[2px]">
                           <Avatar name={name} src={avatar} size={56} />
                         </span>
@@ -1673,13 +1673,13 @@ export function StatusView({
             </header>
             <div className="px-4 py-5">
               <div className="flex items-center gap-5">
-                <span className="rounded-full bg-gradient-to-tr from-blue-700 via-blue-400 to-white p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
+                <span className="rounded-full bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
                 <div><div className="font-bold">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
               </div>
               {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && <p className="mt-4 whitespace-pre-wrap text-sm">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>}
               <div className="mt-4 flex flex-wrap gap-2">
-                {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
-                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-blue-500 bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
+                {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-[#4687fe] px-4 py-2 text-sm font-semibold text-[#07152f] disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
+                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-[#4687fe] bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
                 {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold">Buka Chat</button>}
                 {profileItem.canFollow && profileItem.characterId && !chatCharacterIds.includes(profileItem.characterId) && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
               </div>
@@ -1688,7 +1688,7 @@ export function StatusView({
             </div>
             {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Story aktif · {storiesInProfile.length}</div>
-              <div className="flex gap-2 overflow-x-auto px-4 pb-4">{storiesInProfile.length ? storiesInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} className="shrink-0 rounded-full border-2 border-blue-500 p-1" aria-label={`Lihat story ${name}`}><Avatar name={name} src={avatar} size={48} /></button>) : <span className="text-sm text-muted">Belum ada Story aktif.</span>}</div>
+              <div className="flex gap-2 overflow-x-auto px-4 pb-4">{storiesInProfile.length ? storiesInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} className="shrink-0 rounded-full border-2 border-[#4687fe] p-1" aria-label={`Lihat story ${name}`}><Avatar name={name} src={avatar} size={48} /></button>) : <span className="text-sm text-muted">Belum ada Story aktif.</span>}</div>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Reels · {reelsInProfile.length}{profilePosts.length === 120 ? "+" : ""}</div>
               {reelsInProfile.length ? <div className="grid grid-cols-3 gap-0.5">{reelsInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} aria-label={`Buka Reel ${name}`} className="relative aspect-[3/4] overflow-hidden bg-surface-2 text-sm">{post.imageUrl ? <img src={post.imageUrl} alt="" className="h-full w-full object-cover" /> : post.videoUrl ? <video src={post.videoUrl} muted preload="metadata" className="h-full w-full object-cover" /> : <span className="line-clamp-4 p-2">{post.content || post.caption || "Reel"}</span>}</button>)}</div> : <p className="px-4 text-sm text-muted">Belum ada Reel.</p>}
               {profilePosts.length === 120 && <p className="p-4 text-xs text-muted">Menampilkan hingga 120 postingan terbaru.</p>}
