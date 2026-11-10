@@ -32,22 +32,24 @@ export function ThemeQuickToggle({ className = "" }: { className?: string }) {
 }
 
 /**
- * Pemilih 3-opsi (Terang / Gelap / Sistem) untuk halaman Setelan.
+ * Pemilih tema aplikasi untuk halaman Setelan.
  */
 export function ThemeSegmented() {
-  const { choice, setTheme } = useTheme();
+  const { choice, setTheme, customTheme, setCustomTheme } = useTheme();
 
   const options: { value: ThemeChoice; label: string; Icon: typeof SunIcon }[] = [
     { value: "light", label: "Terang", Icon: SunIcon },
     { value: "dark", label: "Gelap", Icon: MoonIcon },
     { value: "system", label: "Sistem", Icon: MonitorIcon },
+    { value: "custom", label: "Kustom", Icon: SunIcon },
   ];
 
   return (
+    <div className="space-y-3">
     <div
       role="radiogroup"
       aria-label="Tema tampilan"
-      className="grid grid-cols-3 gap-1.5 rounded-xl bg-[#4687fe]/10 p-1 dark:bg-[#d5b767]/10"
+      className="grid grid-cols-2 gap-1.5 rounded-xl sm:grid-cols-4 bg-[#4687fe]/10 p-1 dark:bg-[#d5b767]/10"
     >
       {options.map(({ value, label, Icon }) => {
         const active = choice === value;
@@ -69,6 +71,28 @@ export function ThemeSegmented() {
           </button>
         );
       })}
+    </div>
+    {choice === "custom" && (
+      <div className="space-y-3 rounded-xl border border-[#4687fe]/30 p-3 dark:border-[#d5b767]/35">
+        <fieldset>
+          <legend className="text-xs font-semibold text-ink">Dasar tampilan</legend>
+          <div className="mt-2 flex gap-2">
+            {(["light", "dark"] as const).map((base) => (
+              <button key={base} type="button" aria-pressed={customTheme.base === base}
+                onClick={() => setCustomTheme({ ...customTheme, base })}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${customTheme.base === base ? "border-brand bg-brand text-brand-ink" : "border-line text-ink"}`}>
+                {base === "light" ? "Terang" : "Gelap"}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <label className="flex items-center justify-between gap-3 text-xs font-semibold text-ink">
+          Warna aksen
+          <input type="color" value={customTheme.accent} onChange={(event) => setCustomTheme({ ...customTheme, accent: event.target.value })} aria-label="Pilih warna aksen" className="h-9 w-12 cursor-pointer rounded border border-line bg-surface p-1" />
+        </label>
+        <p className="text-xs text-ink-soft">Tahap awal: warna aksen berlaku pada tombol utama dan beberapa kontrol. Bagian lainnya masih memakai warna tema bawaan. Pilihan tersimpan di perangkat ini.</p>
+      </div>
+    )}
     </div>
   );
 }
