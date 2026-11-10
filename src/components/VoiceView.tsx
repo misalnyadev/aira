@@ -85,7 +85,7 @@ function Slider({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-full accent-[#4687fe] dark:accent-[#d5b767]"
+        className="w-full accent-accent"
       />
     </div>
   );
@@ -109,22 +109,22 @@ function VoiceAccordionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
+    <section className="overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-2xs dark:border-accent/30">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-accent/10"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">{title}</h2>
+            <h2 className="text-sm font-bold text-accent-text">{title}</h2>
             {badge && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                   badgeTone === "active"
-                    ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
-                    : "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft"
+                    ? "bg-accent/15 text-accent-text"
+                    : "bg-accent/10 text-ink-soft"
                 }`}
               >
                 {badge}
@@ -133,7 +133,7 @@ function VoiceAccordionCard({
           </div>
           <p className="mt-0.5 truncate text-xs text-ink-soft">{subtitle}</p>
         </div>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75]">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text">
           <ChevronDownIcon
             className={`h-4 w-4 transition-transform duration-200 ${
               open ? "rotate-180" : ""
@@ -143,7 +143,7 @@ function VoiceAccordionCard({
       </button>
 
       {open && (
-        <div className="border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 px-4 py-4">{children}</div>
+        <div className="border-t border-accent/30 dark:border-accent/35 px-4 py-4">{children}</div>
       )}
     </section>
   );
@@ -216,7 +216,7 @@ function TtsModelSelector({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+        <span className="text-xs font-semibold text-accent-text">
           {title}
           {detectedModels ? (
             <span className="ml-1 font-normal text-muted">
@@ -257,8 +257,8 @@ function TtsModelSelector({
               onClick={() => onChange(m.id)}
               className={`rounded-xl border p-2.5 text-left transition ${
                 active
-                  ? "border-[#4687fe] dark:border-[#d5b767] bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink"
-                  : "border-[#4687fe]/30 dark:border-[#d5b767]/35 text-ink-soft hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                  ? "border-accent dark:border-accent bg-accent/10 text-ink"
+                  : "border-accent/30 dark:border-accent/35 text-ink-soft hover:bg-accent/10"
               }`}
             >
               <span className="block text-xs font-bold">{m.label}</span>
@@ -284,7 +284,7 @@ function TtsModelSelector({
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+          className="w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 font-mono text-xs text-ink placeholder:font-sans placeholder:text-muted focus:border-accent-text focus:outline-none"
         />
         <p className="mt-1 text-[11px] text-muted">
           Bisa pilih cepat di atas, klik <b>Deteksi model</b> dari API key, atau ketik ID model manual bila kelak rilis generasi baru.
@@ -304,8 +304,8 @@ function TtsModelSelector({
       )}
 
       {showList && (
-        <div className="overflow-hidden rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface">
-          <div className="flex items-center gap-1 border-b border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1">
+        <div className="overflow-hidden rounded-xl border border-accent/30 dark:border-accent/35 bg-surface">
+          <div className="flex items-center gap-1 border-b border-accent/30 dark:border-accent/35 px-2.5 py-1">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -318,7 +318,7 @@ function TtsModelSelector({
               disabled={modelsBusy}
               aria-label="Muat ulang daftar model suara"
               title="Muat ulang daftar model"
-              className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 disabled:opacity-50"
+              className="rounded-full p-1.5 text-ink-soft transition hover:bg-accent/10 disabled:opacity-50"
             >
               <RefreshIcon className={`h-4 w-4 ${modelsBusy ? "animate-spin" : ""}`} />
             </button>
@@ -351,7 +351,7 @@ function TtsModelSelector({
                       onToggleList();
                     }}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left transition ${
-                      active ? "bg-[#4687fe]/10 dark:bg-[#d5b767]/10" : "hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                      active ? "bg-accent/10" : "hover:bg-accent/10"
                     }`}
                   >
                     <span className="min-w-0 flex-1">
@@ -365,7 +365,7 @@ function TtsModelSelector({
                       )}
                     </span>
                     {isRecommended && (
-                      <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10.5px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="shrink-0 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10.5px] font-semibold text-accent-text">
                         tersedia &amp; disarankan
                       </span>
                     )}
@@ -825,7 +825,7 @@ function TtsProviderKeySection({
 
     if (t.status === "ok") {
       return (
-        <p className="mt-2 text-xs text-[#205ac4] dark:text-[#e8cf75]">
+        <p className="mt-2 text-xs text-accent-text">
           ✓ {t.message}
         </p>
       );
@@ -862,7 +862,7 @@ function TtsProviderKeySection({
             <button
               type="button"
               onClick={onOpenModelEditor}
-              className="rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+              className="rounded-lg border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-1 text-[11px] font-semibold text-accent-text transition hover:bg-accent/10"
             >
               Pilih / Edit Model
             </button>
@@ -901,7 +901,7 @@ function TtsProviderKeySection({
           <button
             type="button"
             onClick={openCreateForm}
-            className="inline-flex items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+            className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
           >
             <PlusIcon className="h-3.5 w-3.5" /> Tambah
           </button>
@@ -909,7 +909,7 @@ function TtsProviderKeySection({
       </div>
 
       {!hasAnyRegistered && !formMode && (
-        <p className="rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 p-3.5 text-center text-xs text-muted">
+        <p className="rounded-xl border border-dashed border-accent/30 dark:border-accent/35 p-3.5 text-center text-xs text-muted">
           Belum ada API key terdaftar. Klik <b>+ Tambah</b> untuk menempel key dan mengujinya sebelum disimpan.
         </p>
       )}
@@ -918,11 +918,11 @@ function TtsProviderKeySection({
       {hasAnyRegistered && (
         <div className="space-y-2">
           {hasPrimary && (
-            <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3">
+            <div className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface p-3">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                    <span className="truncate text-sm font-semibold text-accent-text">
                       Key Suara Utama
                     </span>
                     <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-brand-ink">
@@ -944,7 +944,7 @@ function TtsProviderKeySection({
                   }
                   title="Tes key utama ini (1/1)"
                   aria-label="Tes key utama ini"
-                  className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                 >
                   <BoltIcon className="h-4 w-4" />
                 </button>
@@ -954,7 +954,7 @@ function TtsProviderKeySection({
                   onClick={openEditPrimary}
                   title="Edit key utama"
                   aria-label="Edit key utama"
-                  className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
@@ -964,7 +964,7 @@ function TtsProviderKeySection({
                   onClick={() => void handleDeletePrimary()}
                   title="Hapus key utama"
                   aria-label="Hapus key utama"
-                  className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-rose-600 disabled:opacity-50"
+                  className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-rose-600 disabled:opacity-50"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
@@ -978,15 +978,15 @@ function TtsProviderKeySection({
             return (
               <div
                 key={rowKey}
-                className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3"
+                className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface p-3"
               >
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="truncate text-sm font-semibold text-accent-text">
                         Key Cadangan #{idx + 1}
                       </span>
-                      <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent-text">
                         cadangan
                       </span>
                     </div>
@@ -1006,7 +1006,7 @@ function TtsProviderKeySection({
                     }
                     title={`Tes key cadangan #${idx + 1} (1/1)`}
                     aria-label={`Tes key cadangan #${idx + 1}`}
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                   >
                     <BoltIcon className="h-4 w-4" />
                   </button>
@@ -1016,7 +1016,7 @@ function TtsProviderKeySection({
                     onClick={() => openEditBackup(idx)}
                     title={`Edit key cadangan #${idx + 1}`}
                     aria-label={`Edit key cadangan #${idx + 1}`}
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </button>
@@ -1026,7 +1026,7 @@ function TtsProviderKeySection({
                     onClick={() => void handlePromoteBackup(idx)}
                     title="Jadikan key utama"
                     aria-label="Jadikan key utama"
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                   >
                     <CheckIcon className="h-4 w-4" />
                   </button>
@@ -1036,7 +1036,7 @@ function TtsProviderKeySection({
                     onClick={() => void handleDeleteBackup(idx)}
                     title={`Hapus key cadangan #${idx + 1}`}
                     aria-label={`Hapus key cadangan #${idx + 1}`}
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-rose-600 disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-rose-600 disabled:opacity-50"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -1052,24 +1052,24 @@ function TtsProviderKeySection({
             return (
               <div
                 key={rowKey}
-                className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3"
+                className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface p-3"
               >
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="truncate text-sm font-semibold text-accent-text">
                         {sp.label}
                       </span>
-                      <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                      <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent-text">
                         dari Setelan
                       </span>
                       {isPrimaryActive && (
-                        <span className="rounded-full bg-[#4687fe]/15 dark:bg-[#d5b767]/15 px-2 py-0.5 text-[10px] font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent-text">
                           dipakai aktif
                         </span>
                       )}
                       {sp.backupCount > 0 && (
-                        <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                        <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent-text">
                           +{sp.backupCount} key
                         </span>
                       )}
@@ -1090,7 +1090,7 @@ function TtsProviderKeySection({
                     }
                     title="Tes key Setelan ini untuk Suara (1/1)"
                     aria-label="Tes key Setelan ini untuk Suara"
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                   >
                     <BoltIcon className="h-4 w-4" />
                   </button>
@@ -1100,7 +1100,7 @@ function TtsProviderKeySection({
                     onClick={onOpenModelEditor}
                     title="Pilih atau edit model suara"
                     aria-label="Pilih atau edit model suara"
-                    className="rounded-full p-2 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink disabled:opacity-50"
+                    className="rounded-full p-2 text-ink-soft transition hover:bg-accent/10 hover:text-ink disabled:opacity-50"
                   >
                     <PencilIcon className="h-4 w-4" />
                   </button>
@@ -1114,7 +1114,7 @@ function TtsProviderKeySection({
 
       {/* Form Tambah / Edit API Key + Tes Dulu Sebelum Disimpan */}
       {formMode && (
-        <div className="space-y-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
+        <div className="space-y-3 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft">
               {formMode.kind === "edit_primary"
@@ -1190,7 +1190,7 @@ function TtsProviderKeySection({
                   href={keyPortalHref}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75] underline underline-offset-2"
+                  className="text-[11px] font-semibold text-accent-text underline underline-offset-2"
                 >
                   Ambil key ↗
                 </a>
@@ -1217,7 +1217,7 @@ function TtsProviderKeySection({
                 spellCheck={false}
                 data-1p-ignore="true"
                 data-lpignore="true"
-                className={`min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none ${
+                className={`min-w-0 flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none ${
                   showRawKey ? "" : "masked-key"
                 }`}
               />
@@ -1229,7 +1229,7 @@ function TtsProviderKeySection({
                     syncDraft(formMode, createTarget, val, extraBackups);
                   })
                 }
-                className="shrink-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-2 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                className="shrink-0 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-2 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
               >
                 Tempel
               </button>
@@ -1241,18 +1241,18 @@ function TtsProviderKeySection({
             <div
               className={`space-y-2 rounded-xl border p-2.5 ${
                 draftTest.status === "ok"
-                  ? "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10"
+                  ? "border-accent/30 dark:border-accent/35 bg-accent/10"
                   : draftTest.status === "model_unavailable"
                     ? "border-amber-500/30 bg-amber-500/10"
                     : draftTest.status === "fail"
                       ? "border-rose-500/30 bg-rose-500/10"
-                      : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface"
+                      : "border-accent/30 dark:border-accent/35 bg-surface"
               }`}
             >
               <p
                 className={`text-xs ${
                   draftTest.status === "ok"
-                    ? "text-[#205ac4] dark:text-[#e8cf75]"
+                    ? "text-accent-text"
                     : draftTest.status === "model_unavailable"
                       ? "text-amber-800 dark:text-amber-300"
                       : draftTest.status === "fail"
@@ -1294,8 +1294,8 @@ function TtsProviderKeySection({
                           }}
                           className={`rounded-full border px-2.5 py-1 font-mono text-[11px] font-semibold transition ${
                             selected
-                              ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                              : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                              ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                              : "border-accent/30 dark:border-accent/35 bg-surface text-ink hover:bg-accent/10"
                           }`}
                         >
                           {m.id}
@@ -1310,7 +1310,7 @@ function TtsProviderKeySection({
 
           {/* Slot cadangan tambahan saat mode tambah */}
           {formMode.kind === "create" && extraBackups.length > 0 && (
-            <div className="space-y-2 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-2.5">
+            <div className="space-y-2 border-t border-accent/30 dark:border-accent/35 pt-2.5">
               <span className="block text-[11px] font-medium text-ink-soft">
                 Key cadangan tambahan (bisa dites 1/1 sebelum disimpan)
               </span>
@@ -1336,7 +1336,7 @@ function TtsProviderKeySection({
                         spellCheck={false}
                         data-1p-ignore="true"
                         data-lpignore="true"
-                        className={`min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none ${
+                        className={`min-w-0 flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none ${
                           showRawKey ? "" : "masked-key"
                         }`}
                       />
@@ -1351,7 +1351,7 @@ function TtsProviderKeySection({
                             syncDraft(formMode, createTarget, draftKey, nextList);
                           })
                         }
-                        className="shrink-0 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2 py-1.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75] hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                        className="shrink-0 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface px-2 py-1.5 text-[11px] font-semibold text-accent-text hover:bg-accent/20"
                       >
                         Tempel
                       </button>
@@ -1365,7 +1365,7 @@ function TtsProviderKeySection({
                         }
                         title="Tes key cadangan ini sebelum disimpan"
                         aria-label="Tes key cadangan ini sebelum disimpan"
-                        className="shrink-0 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-1.5 text-ink-soft hover:text-ink"
+                        className="shrink-0 rounded-lg border border-accent/30 dark:border-accent/35 bg-surface p-1.5 text-ink-soft hover:text-ink"
                       >
                         <BoltIcon className="h-3.5 w-3.5" />
                       </button>
@@ -1414,7 +1414,7 @@ function TtsProviderKeySection({
                   apiKey: draftKey,
                 })
               }
-              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20 disabled:opacity-50"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs font-semibold text-accent-text transition hover:bg-accent/20 disabled:opacity-50"
             >
               <BoltIcon className="h-3.5 w-3.5" />
               Tes &amp; Cek Model
@@ -1893,13 +1893,13 @@ function HdVoiceCard({
     >
       <div className="space-y-3.5">
         {/* Pilihan Penyedia Suara HD */}
-        <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-1">
+        <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-accent/10 p-1">
           <button
             type="button"
             onClick={() => void handleSwitchProvider("gemini")}
             className={`rounded-lg px-3 py-2 text-left transition ${
               provider === "gemini"
-                ? "bg-surface text-ink shadow-sm ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35"
+                ? "bg-surface text-ink shadow-sm ring-1 ring-accent/30 dark:ring-accent/35"
                 : "text-ink-soft hover:text-ink"
             }`}
           >
@@ -1911,7 +1911,7 @@ function HdVoiceCard({
             onClick={() => void handleSwitchProvider("elevenlabs")}
             className={`rounded-lg px-3 py-2 text-left transition ${
               provider === "elevenlabs"
-                ? "bg-surface text-ink shadow-sm ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35"
+                ? "bg-surface text-ink shadow-sm ring-1 ring-accent/30 dark:ring-accent/35"
                 : "text-ink-soft hover:text-ink"
             }`}
           >
@@ -1923,13 +1923,13 @@ function HdVoiceCard({
         {provider === "gemini" ? (
           <>
             {/* Slot 1 Gemini: Perempuan */}
-            <div className="space-y-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 p-3">
+            <div className="space-y-2 rounded-xl border border-accent/30 dark:border-accent/35 p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 1 · Suara HD Perempuan</span>
+                <span className="text-xs font-semibold text-accent-text">Slot 1 · Suara HD Perempuan</span>
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("female")}
-                  className="shrink-0 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2.5 py-1 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                  className="shrink-0 rounded-lg border border-accent/30 dark:border-accent/35 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
                 >
                   {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
                 </button>
@@ -1944,8 +1944,8 @@ function HdVoiceCard({
                       onClick={() => setGeminiFemaleVoice(p.id)}
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
+                          ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                          : "border-accent/30 dark:border-accent/35 bg-accent/10 text-ink-soft hover:text-ink"
                       }`}
                     >
                       {p.label} · {p.hint}
@@ -1956,13 +1956,13 @@ function HdVoiceCard({
             </div>
 
             {/* Slot 2 Gemini: Laki-laki */}
-            <div className="space-y-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 p-3">
+            <div className="space-y-2 rounded-xl border border-accent/30 dark:border-accent/35 p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 2 · Suara HD Laki-laki</span>
+                <span className="text-xs font-semibold text-accent-text">Slot 2 · Suara HD Laki-laki</span>
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("male")}
-                  className="shrink-0 rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2.5 py-1 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                  className="shrink-0 rounded-lg border border-accent/30 dark:border-accent/35 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
                 >
                   {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
                 </button>
@@ -1977,8 +1977,8 @@ function HdVoiceCard({
                       onClick={() => setGeminiMaleVoice(p.id)}
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
+                          ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                          : "border-accent/30 dark:border-accent/35 bg-accent/10 text-ink-soft hover:text-ink"
                       }`}
                     >
                       {p.label} · {p.hint}
@@ -1990,7 +1990,7 @@ function HdVoiceCard({
 
             {/* Gaya Bicara per slot — agar tiap karakter punya suara khas */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+              <label className="block text-xs font-semibold text-accent-text">
                 Gaya bicara per suara (opsional)
               </label>
               <div className="space-y-2">
@@ -2001,7 +2001,7 @@ function HdVoiceCard({
                     value={geminiFemaleStyle}
                     onChange={(e) => setGeminiFemaleStyle(e.target.value)}
                     placeholder="mis. hangat & ramah, senyum di suara, tempo sedang"
-                    className="w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                    className="w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none"
                   />
                 </div>
                 <div>
@@ -2011,7 +2011,7 @@ function HdVoiceCard({
                     value={geminiMaleStyle}
                     onChange={(e) => setGeminiMaleStyle(e.target.value)}
                     placeholder="mis. tenang & dalam, mantap, bicara jelas"
-                    className="w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                    className="w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none"
                   />
                 </div>
               </div>
@@ -2021,17 +2021,17 @@ function HdVoiceCard({
             </div>
 
             {/* Sub-lipatan API Key & Model Gemini TTS */}
-            <div className="overflow-hidden rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10">
+            <div className="overflow-hidden rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10">
               <button
                 type="button"
                 onClick={() =>
                   setKeyConfigOpen((prev) => ({ ...prev, gemini: !prev.gemini }))
                 }
                 aria-expanded={keyConfigOpen.gemini}
-                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-accent/10"
               >
                 <div className="min-w-0">
-                  <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                  <span className="block text-xs font-semibold text-accent-text">
                     API Key &amp; Model Gemini TTS
                   </span>
                   <span className="block truncate text-[11px] text-muted">
@@ -2046,7 +2046,7 @@ function HdVoiceCard({
               </button>
 
               {keyConfigOpen.gemini && (
-                <div className="space-y-3.5 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3.5">
+                <div className="space-y-3.5 border-t border-accent/30 dark:border-accent/35 bg-surface p-3.5">
                   <TtsProviderKeySection
                     key="gemini"
                     provider="gemini"
@@ -2133,9 +2133,9 @@ function HdVoiceCard({
         ) : (
           <>
             {/* Slot 1 ElevenLabs: Perempuan */}
-            <div className="space-y-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 p-3">
+            <div className="space-y-2 rounded-xl border border-accent/30 dark:border-accent/35 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 1 · Suara HD Perempuan</span>
+                <span className="text-xs font-semibold text-accent-text">Slot 1 · Suara HD Perempuan</span>
                 <span className="text-[11px] text-muted">Gratis di Free Tier</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -2148,8 +2148,8 @@ function HdVoiceCard({
                       onClick={() => setFemaleVoiceId(p.id)}
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
+                          ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                          : "border-accent/30 dark:border-accent/35 bg-accent/10 text-ink-soft hover:text-ink"
                       }`}
                     >
                       {p.label} · {p.hint}
@@ -2163,12 +2163,12 @@ function HdVoiceCard({
                   value={femaleVoiceId}
                   onChange={(e) => setFemaleVoiceId(e.target.value)}
                   placeholder="Voice ID Perempuan..."
-                  className="min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                  className="min-w-0 flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("female")}
-                  className="shrink-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                  className="shrink-0 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
                 >
                   {isSpeaking && testingSlot === "female" ? "Stop" : "▶ Tes"}
                 </button>
@@ -2176,9 +2176,9 @@ function HdVoiceCard({
             </div>
 
             {/* Slot 2 ElevenLabs: Laki-laki */}
-            <div className="space-y-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 p-3">
+            <div className="space-y-2 rounded-xl border border-accent/30 dark:border-accent/35 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 2 · Suara HD Laki-laki</span>
+                <span className="text-xs font-semibold text-accent-text">Slot 2 · Suara HD Laki-laki</span>
                 <span className="text-[11px] text-muted">Gratis di Free Tier</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -2191,8 +2191,8 @@ function HdVoiceCard({
                       onClick={() => setMaleVoiceId(p.id)}
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
+                          ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                          : "border-accent/30 dark:border-accent/35 bg-accent/10 text-ink-soft hover:text-ink"
                       }`}
                     >
                       {p.label} · {p.hint}
@@ -2206,12 +2206,12 @@ function HdVoiceCard({
                   value={maleVoiceId}
                   onChange={(e) => setMaleVoiceId(e.target.value)}
                   placeholder="Voice ID Laki-laki..."
-                  className="min-w-0 flex-1 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] focus:outline-none"
+                  className="min-w-0 flex-1 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 font-mono text-xs text-ink placeholder:text-muted focus:border-accent-text focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("male")}
-                  className="shrink-0 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75] transition hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                  className="shrink-0 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent-text transition hover:bg-accent/20"
                 >
                   {isSpeaking && testingSlot === "male" ? "Stop" : "▶ Tes"}
                 </button>
@@ -2219,7 +2219,7 @@ function HdVoiceCard({
             </div>
 
             {/* Sub-lipatan API Key, Model & Ekspresi ElevenLabs */}
-            <div className="overflow-hidden rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10">
+            <div className="overflow-hidden rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10">
               <button
                 type="button"
                 onClick={() =>
@@ -2229,10 +2229,10 @@ function HdVoiceCard({
                   }))
                 }
                 aria-expanded={keyConfigOpen.elevenlabs}
-                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-accent/10"
               >
                 <div className="min-w-0">
-                  <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                  <span className="block text-xs font-semibold text-accent-text">
                     API Key, Model &amp; Ekspresi ElevenLabs
                   </span>
                   <span className="block truncate text-[11px] text-muted">
@@ -2247,7 +2247,7 @@ function HdVoiceCard({
               </button>
 
               {keyConfigOpen.elevenlabs && (
-                <div className="space-y-3.5 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3.5">
+                <div className="space-y-3.5 border-t border-accent/30 dark:border-accent/35 bg-surface p-3.5">
                   <TtsProviderKeySection
                     key="elevenlabs"
                     provider="elevenlabs"
@@ -2323,7 +2323,7 @@ function HdVoiceCard({
                     }}
                   />
 
-                  <div className="space-y-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3">
+                  <div className="space-y-3 border-t border-accent/30 dark:border-accent/35 pt-3">
                     <Slider
                       label="Stabilitas (makin rendah makin ekspresif)"
                       value={stability}
@@ -2358,7 +2358,7 @@ function HdVoiceCard({
           <p
             className={`rounded-xl border px-3 py-2 text-xs leading-relaxed ${
               feedback.kind === "ok"
-                ? "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75]"
+                ? "border-accent/30 dark:border-accent/35 bg-accent/10 text-accent-text"
                 : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"
             }`}
           >
@@ -2481,7 +2481,7 @@ export function VoiceView({
         >
           {!embedded && (
             <div>
-              <h1 className="font-display text-xl font-bold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">Suara</h1>
+              <h1 className="font-display text-xl font-bold tracking-tight text-accent-text">Suara</h1>
               <p className="text-xs text-ink-soft">
                 Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
               </p>
@@ -2493,7 +2493,7 @@ export function VoiceView({
               onClick={isSpeaking ? stopSpeaking : handleTestDefault}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                 isSpeaking
-                  ? "border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink hover:bg-[#4687fe]/20 dark:hover:bg-[#d5b767]/20"
+                  ? "border border-accent/30 dark:border-accent/35 bg-accent/10 text-ink hover:bg-accent/20"
                   : "bg-brand text-brand-ink hover:bg-brand-strong"
               }`}
             >
@@ -2513,13 +2513,13 @@ export function VoiceView({
       >
         <div className={embedded ? "space-y-3" : "mx-auto w-full max-w-2xl space-y-3"}>
           {/* Kartu Kontrol Cepat Utama */}
-          <section className="space-y-3.5 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-4 shadow-2xs">
+          <section className="space-y-3.5 rounded-2xl border border-accent/30 dark:border-accent/35 bg-surface p-4 shadow-2xs">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-[#205ac4] dark:text-[#e8cf75] ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/30 dark:ring-accent/35">
                 <SpeakerIcon className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Bacakan balasan</span>
+                <span className="block text-sm font-semibold text-accent-text">Bacakan balasan</span>
                 <span className="block text-xs text-ink-soft">
                   Balasan karakter dibacakan otomatis saat tiba di chat
                 </span>
@@ -2531,9 +2531,9 @@ export function VoiceView({
               />
             </div>
 
-            <div className="space-y-2 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3">
+            <div className="space-y-2 border-t border-accent/30 dark:border-accent/35 pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                <span className="text-xs font-semibold text-accent-text">
                   Mesin suara bawaan
                 </span>
                 <span className="text-[11px] text-muted">Bisa diatur per karakter</span>
@@ -2548,8 +2548,8 @@ export function VoiceView({
                       onClick={() => update({ engine: opt.id })}
                       className={`rounded-xl border px-2.5 py-2 text-left transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 text-ink-soft hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                          ? "border-accent dark:border-accent bg-accent/10 text-ink"
+                          : "border-accent/30 dark:border-accent/35 text-ink-soft hover:bg-accent/10"
                       }`}
                     >
                       <span className="block truncate text-xs font-bold">{opt.label}</span>
@@ -2560,7 +2560,7 @@ export function VoiceView({
               </div>
 
               {settings.engine !== "device" && !ttsSummary.hasActiveKey && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2 text-xs text-ink-soft">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2 text-xs text-ink-soft">
                   <span>
                     Rekaman di Bank R2 tetap berbunyi tanpa API key; kalimat baru memakai suara perangkat.
                   </span>
@@ -2570,7 +2570,7 @@ export function VoiceView({
                       onClick={() =>
                         setOpenSections((prev) => ({ ...prev, hd: true }))
                       }
-                      className="font-semibold text-[#205ac4] dark:text-[#e8cf75] underline decoration-dotted hover:opacity-80"
+                      className="font-semibold text-accent-text underline decoration-dotted hover:opacity-80"
                     >
                       Atur Suara HD →
                     </button>
@@ -2609,17 +2609,17 @@ export function VoiceView({
           >
             <div className="space-y-3.5">
               {!supported && (
-                <p className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
+                <p className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
                   Browser ini belum mendukung suara lokal (Web Speech API). Kamu tetap bisa memakai
                   Suara HD di atas.
                 </p>
               )}
 
               {supported && bestVoice && (
-                <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3.5 py-2.5">
+                <div className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 px-3.5 py-2.5">
                   <p className="text-xs text-ink-soft">
                     Paling natural di perangkat ini:{" "}
-                    <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">{bestVoice.name}</span>
+                    <span className="font-semibold text-accent-text">{bestVoice.name}</span>
                     {isNaturalVoice(bestVoice) ? " (enhanced)" : ""}
                   </p>
                   {(settings.voiceURI !== bestVoice.voiceURI || settings.voiceURI === "") && (
@@ -2636,7 +2636,7 @@ export function VoiceView({
                 </div>
               )}
 
-              <details className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3.5 py-2.5">
+              <details className="rounded-xl border border-accent/30 dark:border-accent/35 px-3.5 py-2.5">
                 <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
                   Cara bikin suara lokal iPhone lebih natural
                 </summary>
@@ -2654,12 +2654,12 @@ export function VoiceView({
               </details>
 
               {supported && (
-                <div className="overflow-hidden rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35">
+                <div className="overflow-hidden rounded-xl border border-accent/30 dark:border-accent/35">
                   <button
                     type="button"
                     onClick={() => update({ voiceURI: "" })}
                     className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left transition ${
-                      settings.voiceURI === "" ? "bg-[#4687fe]/10 dark:bg-[#d5b767]/10" : "hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                      settings.voiceURI === "" ? "bg-accent/10" : "hover:bg-accent/10"
                     }`}
                   >
                     <span className="min-w-0 flex-1">
@@ -2672,7 +2672,7 @@ export function VoiceView({
                   </button>
 
                   {sorted.length > 0 && (
-                    <div className="max-h-60 divide-y divide-[#4687fe]/30 dark:divide-[#d5b767]/35 overflow-y-auto border-t border-[#4687fe]/30 dark:border-[#d5b767]/35">
+                    <div className="max-h-60 divide-y divide-accent/30 dark:divide-accent/35 overflow-y-auto border-t border-accent/30 dark:border-accent/35">
                       {sorted.map((v) => {
                         const active = settings.voiceURI === v.voiceURI;
                         const natural = isNaturalVoice(v);
@@ -2682,7 +2682,7 @@ export function VoiceView({
                             key={v.voiceURI}
                             onClick={() => update({ voiceURI: v.voiceURI })}
                             className={`flex w-full items-center gap-2 px-3.5 py-2 text-left transition ${
-                              active ? "bg-[#4687fe]/10 dark:bg-[#d5b767]/10" : "hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                              active ? "bg-accent/10" : "hover:bg-accent/10"
                             }`}
                           >
                             <span className="min-w-0 flex-1">
@@ -2690,12 +2690,12 @@ export function VoiceView({
                               <span className="block truncate text-[11px] text-muted">{v.lang}</span>
                             </span>
                             {natural && (
-                              <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                              <span className="shrink-0 rounded-full bg-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-accent-text">
                                 natural
                               </span>
                             )}
                             {v.localService && !natural && (
-                              <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] text-muted">
+                              <span className="shrink-0 rounded-full bg-accent/10 px-1.5 py-0.5 text-[11px] text-muted">
                                 lokal
                               </span>
                             )}
@@ -2729,8 +2729,8 @@ export function VoiceView({
                       onClick={() => update({ rate: preset.rate, pitch: preset.pitch })}
                       className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${
                         active
-                          ? "border-[#4687fe] dark:border-[#d5b767] bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink"
-                          : "border-[#4687fe]/30 dark:border-[#d5b767]/35 text-ink-soft hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                          ? "border-accent dark:border-accent bg-accent/10 text-ink"
+                          : "border-accent/30 dark:border-accent/35 text-ink-soft hover:bg-accent/10"
                       }`}
                     >
                       {preset.label}
@@ -2739,7 +2739,7 @@ export function VoiceView({
                 })}
               </div>
 
-              <div className="space-y-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
+              <div className="space-y-3 rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
                 <Slider
                   label="Volume (HD & lokal)"
                   value={settings.volume}
