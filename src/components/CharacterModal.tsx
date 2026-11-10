@@ -38,7 +38,7 @@ import { AvatarCropModal } from "./AvatarCropModal";
 import { BibleOutlineIcon, CameraIcon, XIcon } from "./icons";
 
 const FIELD =
-  "w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] sm:py-2 sm:text-sm";
+  "w-full rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted focus:border-accent-text sm:py-2 sm:text-sm";
 
 const PERSONALITY_PLACEHOLDER = `Contoh:
 Nama: Kirana, 24 tahun, beauty talent di AK Talent.
@@ -478,15 +478,15 @@ export function CharacterModal({
       onClick={onClose}
     >
       <div
-        className="pop-in flex max-h-[min(90dvh,100%)] min-h-0 w-full max-w-lg flex-col rounded-3xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface shadow-2xl"
+        className="pop-in flex max-h-[min(90dvh,100%)] min-h-0 w-full max-w-lg flex-col rounded-3xl border border-accent/30 dark:border-accent/35 bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={initial ? "Edit Karakter" : "Buat Karakter Baru"}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-[#4687fe]/30 dark:border-[#d5b767]/35 px-5 py-3.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-accent/30 dark:border-accent/35 px-5 py-3.5">
           <div>
-            <h2 className="font-display text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">
+            <h2 className="font-display text-lg font-bold text-accent-text">
               {onboardingMode ? "Buat Karakter Pertamamu" : initial ? "Edit Karakter" : "Buat Karakter Baru"}
             </h2>
             {onboardingMode && <p className="mt-0.5 text-[11px] text-muted">Isi sendiri atau minta AI membuat draf yang bisa kamu ubah.</p>}
@@ -494,7 +494,7 @@ export function CharacterModal({
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
+            className="rounded-full p-1.5 text-ink-soft transition hover:bg-accent/10 hover:text-ink"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -676,10 +676,10 @@ export function CharacterModal({
             <p className="mt-1 text-[11px]">{charCount(shortBio, MAX_SHORT_BIO_CHARS)}</p>
           </div>
 
-          <div className={`${onboardingMode ? "hidden " : ""}space-y-2.5 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5`}>
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-2.5 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Impor dossier karakter</p>
+                <p className="text-xs font-semibold text-accent-text">Impor dossier karakter</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                   Satu berkas JSON per karakter; boleh memuat Bible, kepribadian, portofolio,
                   hubungan dengan pemilik, dan konteks tim. Field yang tidak ada tetap. Izin berbagi
@@ -689,7 +689,7 @@ export function CharacterModal({
               <button
                 type="button"
                 onClick={() => dossierFileRef.current?.click()}
-                className="shrink-0 rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                className="shrink-0 rounded-full border border-accent/30 dark:border-accent/35 bg-surface px-3 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-accent/10"
               >
                 Pilih JSON
               </button>
@@ -738,15 +738,15 @@ export function CharacterModal({
             )}
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
+          <div className="space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
             <div>
-              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Keahlian & layanan</p>
+              <p className="text-xs font-semibold text-accent-text">Keahlian & layanan</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Atur hal yang bisa dibantu karakter ini. Contoh: Musthzen—IT & produksi, Arissa—menulis & analisis, Kirana—komunikasi & bisnis. Portofolio tampil di pratinjau undangan dan menjadi konteks saat ia berbicara; ini bukan klaim sertifikasi atau izin otomatis memakai alat.
               </p>
             </div>
             {skillPortfolio.map((skill, index) => (
-              <div key={index} className="space-y-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3">
+              <div key={index} className="space-y-2 rounded-xl border border-accent/30 dark:border-accent/35 bg-surface p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold text-ink-soft">
                     Keahlian {index + 1}
@@ -755,7 +755,7 @@ export function CharacterModal({
                     type="button"
                     onClick={() => setSkillPortfolio((prev) => prev.filter((_, i) => i !== index))}
                     aria-label={`Hapus keahlian ${index + 1}`}
-                    className="rounded-full p-1 text-muted transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
+                    className="rounded-full p-1 text-muted transition hover:bg-accent/10 hover:text-ink"
                   >
                     <XIcon className="h-4 w-4" />
                   </button>
@@ -795,7 +795,7 @@ export function CharacterModal({
               type="button"
               disabled={skillPortfolio.length >= MAX_CHARACTER_SKILLS}
               onClick={() => setSkillPortfolio((prev) => [...prev, { title: "", description: "" }])}
-              className="w-full rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl border border-dashed border-accent/30 dark:border-accent/35 px-3 py-2 text-xs font-semibold text-ink-soft transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
             >
               + Tambah keahlian ({skillPortfolio.length}/{MAX_CHARACTER_SKILLS})
             </button>
@@ -804,7 +804,7 @@ export function CharacterModal({
           {!initial && (
             <section className="space-y-3 rounded-2xl border border-brand/20 bg-brand/5 p-3.5">
               <div>
-                <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Buat draf dengan AI</h3>
+                <h3 className="text-sm font-semibold text-accent-text">Buat draf dengan AI</h3>
                 <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                   Pilih arah karakter. AI mengisi field teks yang masih kosong, termasuk Bible, kepribadian, keahlian, dan sapaan; isianmu yang sudah ada tidak ditimpa.
                 </p>
@@ -851,9 +851,9 @@ export function CharacterModal({
             </section>
           )}
 
-          <div className={`${onboardingMode ? "hidden " : ""}space-y-2 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5`}>
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-2 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div>
-              <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+              <label className="block text-xs font-semibold text-accent-text">
                 Hubungan dengan pemilik
               </label>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
@@ -872,9 +872,9 @@ export function CharacterModal({
             <p className="text-[11px]">{charCount(ownerRelationship, MAX_OWNER_RELATIONSHIP_CHARS)}</p>
           </div>
 
-          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5`}>
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div>
-              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Memori Tim 1</p>
+              <p className="text-xs font-semibold text-accent-text">Memori Tim 1</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Semua karakter di akunmu masuk Tim 1 secara default. Catatan relasi yang dibagikan membantu mereka saling mengenal.
               </p>
@@ -922,9 +922,9 @@ export function CharacterModal({
             </p>
           </div>
 
-          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5`}>
+          <div className={`${onboardingMode ? "hidden " : ""}space-y-3 rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5`}>
             <div>
-              <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Info profil pemilik saat diundang</p>
+              <p className="text-xs font-semibold text-accent-text">Info profil pemilik saat diundang</p>
               <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                 Karakter tetap tahu bahwa ia milikmu dan hadir sebagai tamu. Centang hanya fakta profilmu yang boleh masuk ke brief dan dibagikan saat ia diundang.
               </p>
@@ -967,15 +967,15 @@ export function CharacterModal({
             <p className="mt-1 text-[11px]">{charCount(personality, MAX_PERSONALITY_CHARS)}</p>
           </div>
 
-          <div className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
+          <div className="rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+              <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-text">
                 <BibleOutlineIcon className="h-4 w-4 text-ink" /> Bible peran (acuan utama)
               </label>
               <button
                 type="button"
                 onClick={() => bibleFileRef.current?.click()}
-                className="rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-1 text-[11px] font-semibold text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10"
+                className="rounded-full border border-accent/30 dark:border-accent/35 bg-surface px-3 py-1 text-[11px] font-semibold text-ink transition hover:bg-accent/10"
               >
                 Impor berkas
               </button>
@@ -1083,7 +1083,7 @@ export function CharacterModal({
                   <button
                     type="button"
                     onClick={() => setModel("")}
-                    className="rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1 text-xs text-ink-soft transition hover:text-ink"
+                    className="rounded-full border border-accent/30 dark:border-accent/35 px-2.5 py-1 text-xs text-ink-soft transition hover:text-ink"
                   >
                     Ikut provider
                   </button>
@@ -1098,7 +1098,7 @@ export function CharacterModal({
                       className={`rounded-full px-2.5 py-1 text-xs transition ${
                         active
                           ? "bg-brand font-semibold text-brand-ink"
-                          : "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft hover:text-ink"
+                          : "bg-accent/10 text-ink-soft hover:text-ink"
                       }`}
                     >
                       {m}

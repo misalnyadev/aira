@@ -56,12 +56,12 @@ export function CharacterStoryAutoSection({
   }
 
   return (
-    <section className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
+    <section className="rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <FilmIcon className="h-4 w-4 shrink-0 text-ink-soft" />
-            <h4 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">StoryTalent Otomatis</h4>
+            <h4 className="text-sm font-semibold text-accent-text">StoryTalent Otomatis</h4>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-soft">
             Story teks dipublikasikan sekitar pukul 18.00 WIB, mengikuti kepribadian dan Bible {characterName}.
@@ -92,7 +92,7 @@ export function CharacterStoryAutoSection({
       </div>
 
       {enabled ? (
-        <label className="mt-3 flex items-center justify-between gap-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3 text-xs text-ink-soft">
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-accent/30 dark:border-accent/35 pt-3 text-xs text-ink-soft">
           <span>Frekuensi</span>
           <select
             value={frequency}
@@ -103,7 +103,7 @@ export function CharacterStoryAutoSection({
                 frequency: event.target.value as CharacterStoryFrequency,
               })
             }
-            className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-medium text-ink outline-none focus:border-brand disabled:opacity-60"
+            className="rounded-xl border border-accent/30 dark:border-accent/35 bg-surface px-3 py-2 text-xs font-medium text-ink outline-none focus:border-brand disabled:opacity-60"
           >
             <option value="every_other_day">Setiap 2 hari (disarankan)</option>
             <option value="daily">Setiap hari</option>

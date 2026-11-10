@@ -143,12 +143,12 @@ function MediaRow({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 ${
+      className={`flex items-center gap-3 rounded-xl border border-accent/30 dark:border-accent/35 ${
         compact ? "px-2.5 py-1.5" : "px-3 py-2"
       }`}
     >
       <div
-        className={`grid shrink-0 place-items-center overflow-hidden rounded-lg bg-[#4687fe]/10 dark:bg-[#d5b767]/10 text-ink-soft ${
+        className={`grid shrink-0 place-items-center overflow-hidden rounded-lg bg-accent/10 text-ink-soft ${
           compact ? "h-9 w-12" : "h-10 w-14"
         }`}
       >
@@ -163,7 +163,7 @@ function MediaRow({
           type="button"
           onClick={onPick}
           disabled={busy || disabled}
-          className="rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1 text-[12px] font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
+          className="rounded-full border border-accent/30 dark:border-accent/35 px-2.5 py-1 text-[12px] font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
         >
           {active ? "Ganti" : "Pilih"}
         </button>
@@ -566,7 +566,7 @@ export function CharacterMediaSection({
         onRemove={() => dropVideo("chatVideo")}
       />
 
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-ink">
             Gunakan aset video call saat Tatap Muka
@@ -599,9 +599,9 @@ export function CharacterMediaSection({
       </div>
 
       {showMeetupLayoutSelector && media && (
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2">
           <span className="text-xs font-medium text-ink-soft">Tampilan video Tatap Muka</span>
-          <div className="flex gap-0.5 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-0.5">
+          <div className="flex gap-0.5 rounded-full bg-accent/10 p-0.5">
             {[
               { id: "tile" as const, label: "Panel atas" },
               { id: "full" as const, label: "Latar penuh" },
@@ -642,7 +642,7 @@ export function CharacterMediaSection({
       />
 
       {/* Paket 12 klip video pembuka & ekspresi (OmniFlash Flow) */}
-      <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35">
+      <div className="rounded-xl border border-accent/30 dark:border-accent/35">
         <button
           type="button"
           onClick={() => setShowExpressions((v) => !v)}
@@ -657,7 +657,7 @@ export function CharacterMediaSection({
                 : "Pembuka 1x, dengar, mikir, jawab biasa, senyum, malu, marah, sedih, kaget…"}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
+          <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
             {showExpressions
               ? "Tutup"
               : filledClipCount > 0
@@ -667,7 +667,7 @@ export function CharacterMediaSection({
         </button>
 
         {showExpressions && (
-          <div className="space-y-1.5 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-2.5">
+          <div className="space-y-1.5 border-t border-accent/30 dark:border-accent/35 px-2.5 py-2.5">
             <p className="px-0.5 text-[11.5px] leading-snug text-muted">
               Unggah klip dari OmniFlash Flow dengan *frame* awal & akhir seragam agar
               perpindahan mulus. Klip <strong>Pembuka</strong> diputar 1x di awal lalu
@@ -699,12 +699,12 @@ export function CharacterMediaSection({
       </div>
 
       {hasAnyCallVideo && (
-        <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2">
+        <div className="rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-ink-soft">
               {useCallInMeetup ? "Zoom video call & Tatap Muka" : "Zoom video call"}
             </span>
-            <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">{zoom}%</span>
+            <span className="text-xs font-semibold text-accent-text">{zoom}%</span>
           </div>
           <input
             type="range"
@@ -727,7 +727,7 @@ export function CharacterMediaSection({
       )}
 
       {/* Paket 10 asset audio panggilan — Generate per-asset langsung dari Gemini HD */}
-      <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35">
+      <div className="rounded-xl border border-accent/30 dark:border-accent/35">
         <button
           type="button"
           onClick={() => setShowAudioPack((v) => !v)}
@@ -744,7 +744,7 @@ export function CharacterMediaSection({
                 : "Buat suara pembuka, mikir, & tiap ekspresi langsung dari Gemini"}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
+          <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
             {showAudioPack
               ? "Tutup"
               : filledAudioCount > 0
@@ -754,7 +754,7 @@ export function CharacterMediaSection({
         </button>
 
         {showAudioPack && (
-          <div className="space-y-2 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-2.5">
+          <div className="space-y-2 border-t border-accent/30 dark:border-accent/35 px-2.5 py-2.5">
             <p className="px-0.5 text-[11.5px] leading-snug text-muted">
               Memakai pengaturan Suara HD Gemini dari halaman <strong>Suara</strong>.
               Ubah kata bila perlu, ketuk <strong>Buat</strong> per ekspresi, dan ketuk{" "}
@@ -773,7 +773,7 @@ export function CharacterMediaSection({
               return (
                 <div
                   key={slot}
-                  className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-2"
+                  className="rounded-xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -797,8 +797,8 @@ export function CharacterMediaSection({
                           title="Dengarkan hasil suara"
                           className={`grid h-7 w-7 place-items-center rounded-full border transition disabled:opacity-45 ${
                             isPreviewing
-                              ? "border-[#4687fe] dark:border-[#d5b767] bg-brand text-brand-ink"
-                              : "border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink-soft hover:text-ink"
+                              ? "border-accent dark:border-accent bg-brand text-brand-ink"
+                              : "border-accent/30 dark:border-accent/35 bg-surface text-ink-soft hover:text-ink"
                           }`}
                         >
                           <PlayIcon className="h-3.5 w-3.5" />
@@ -809,7 +809,7 @@ export function CharacterMediaSection({
                         type="button"
                         onClick={() => void handleGenerateSlotAudio(slot)}
                         disabled={busy !== null}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 active:scale-95 disabled:opacity-45"
+                        className="inline-flex items-center gap-1 rounded-full border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-1 text-[11.5px] font-medium text-ink transition hover:bg-accent/10 active:scale-95 disabled:opacity-45"
                       >
                         <RefreshIcon
                           className={`h-3 w-3 ${isGenBusy ? "animate-spin" : ""}`}
@@ -826,7 +826,7 @@ export function CharacterMediaSection({
                         disabled={busy !== null}
                         title="Unggah file audio manual"
                         aria-label={`Unggah file manual untuk ${preset.label}`}
-                        className="grid h-7 w-7 place-items-center rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface text-ink-soft transition hover:text-ink disabled:opacity-45"
+                        className="grid h-7 w-7 place-items-center rounded-full border border-accent/30 dark:border-accent/35 bg-surface text-ink-soft transition hover:text-ink disabled:opacity-45"
                       >
                         <SpeakerIcon className="h-3.5 w-3.5" />
                       </button>
@@ -858,7 +858,7 @@ export function CharacterMediaSection({
                     maxLength={140}
                     placeholder={preset.defaultText}
                     aria-label={`Naskah kata ${preset.label}`}
-                    className="mt-1.5 w-full rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1 text-[12px] text-ink placeholder:text-muted"
+                    className="mt-1.5 w-full rounded-lg border border-accent/30 dark:border-accent/35 bg-surface px-2.5 py-1 text-[12px] text-ink placeholder:text-muted"
                   />
                 </div>
               );

@@ -52,7 +52,7 @@ function ColorRow({
               aria-pressed={active}
               title={c.label}
               className={`grid h-8 w-8 place-items-center rounded-full transition ${
-                active ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "ring-1 ring-[#4687fe]/30 dark:ring-[#d5b767]/35"
+                active ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "ring-1 ring-accent/30 dark:ring-accent/35"
               }`}
               style={
                 c.hex
@@ -146,7 +146,7 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
 
   return (
     <div className={`space-y-3 ${disabled ? "pointer-events-none opacity-50" : ""}`}>
-      <div className="space-y-2.5 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2.5">
+      <div className="space-y-2.5 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <span className="block text-xs font-medium text-ink">
@@ -166,7 +166,7 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
 
         {mode === "meetup" && (
           <>
-            <div className="border-t border-[#4687fe]/30 dark:border-[#d5b767]/35" />
+            <div className="border-t border-accent/30 dark:border-accent/35" />
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <span className="block text-xs font-medium text-ink">
@@ -187,7 +187,7 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
         )}
       </div>
 
-      <div className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2.5">
+      <div className="rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-medium text-ink">Tembus pandang</span>
           <div className="flex items-center gap-2">
@@ -218,13 +218,13 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
         )}
       </div>
 
-      <div className="space-y-3 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2.5">
+      <div className="space-y-3 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
         <SideColors title="Gelembung karakter" style={style} role="in" onPick={update} />
-        <div className="border-t border-[#4687fe]/30 dark:border-[#d5b767]/35" />
+        <div className="border-t border-accent/30 dark:border-accent/35" />
         <SideColors title="Gelembung kamu" style={style} role="out" onPick={update} />
       </div>
 
-      <div className="flex flex-col gap-1.5 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-3 py-2.5">
+      <div className="flex flex-col gap-1.5 rounded-xl border border-accent/30 dark:border-accent/35 px-3 py-2.5">
         {mode === "meetup" && style.hideMessages ? (
           <p className="py-2 text-center text-xs text-muted">
             Di Tatap Muka, tulisan disembunyikan agar video/ekspresi terlihat.
@@ -251,7 +251,7 @@ export function BubbleStyleControls(props: BubbleStyleControlsProps) {
         <button
           type="button"
           onClick={() => props.onChange(DEFAULT_BUBBLE_STYLE)}
-          className="w-full rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 py-2 text-xs font-semibold text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
+          className="w-full rounded-lg border border-accent/30 dark:border-accent/35 py-2 text-xs font-semibold text-ink-soft transition hover:bg-accent/10 hover:text-ink"
         >
           Kembalikan ke bawaan
         </button>
