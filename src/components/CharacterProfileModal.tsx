@@ -77,23 +77,23 @@ export function CharacterProfileModal({
       onClick={onClose}
     >
       <div
-        className="pop-in flex max-h-[min(85dvh,100%)] min-h-0 w-full max-w-md flex-col rounded-3xl border border-line bg-surface shadow-2xl"
+        className="pop-in flex max-h-[min(85dvh,100%)] min-h-0 w-full max-w-md flex-col rounded-3xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={`Profil ${character.name} · ${mode === "meetup" ? "Tatap Muka" : "Chat"}`}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#4687fe]/30 dark:border-[#d5b767]/35 px-5 py-3.5">
           <div className="flex min-w-0 items-center gap-2">
             <h2 className="truncate font-display text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">Profil Karakter</h2>
-            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+            <span className="shrink-0 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
               {mode === "meetup" ? "Tatap Muka" : "Chat"}
             </span>
           </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="rounded-full p-1.5 text-ink-soft transition hover:bg-surface-2 hover:text-ink"
+            className="rounded-full p-1.5 text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -101,24 +101,24 @@ export function CharacterProfileModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <Avatar name={character.name} src={character.avatarUrl} size={104} ring />
+            <span className="rounded-full ring-2 ring-[#4687fe]/35 ring-offset-2 ring-offset-surface dark:ring-[#d5b767]/40"><Avatar name={character.name} src={character.avatarUrl} size={104} /></span>
             <h3 className="mt-2 font-display text-xl font-bold text-[#205ac4] dark:text-[#e8cf75]">{character.name}</h3>
             {character.shortBio && <p className="text-sm text-ink-soft">{character.shortBio}</p>}
             {characterGenderLabel && (
               <p className="text-xs text-muted">Jenis kelamin / gender: {characterGenderLabel}</p>
             )}
             {providerLabel && (
-              <span className="rounded-full bg-surface-2 px-3 py-1 text-[12px] font-medium text-ink-soft">
+              <span className="rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-3 py-1 text-[12px] font-medium text-ink-soft">
                 {providerLabel}
               </span>
             )}
           </div>
 
           <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
               Tentang karakter
             </h4>
-            <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl bg-surface-2 p-3.5 text-sm leading-relaxed text-ink">
+            <p className="max-h-52 overflow-y-auto whitespace-pre-wrap break-words rounded-2xl bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5 text-sm leading-relaxed text-ink">
               {character.personality}
             </p>
           </div>
@@ -141,7 +141,7 @@ export function CharacterProfileModal({
                 acuan utama setiap balasan.
               </p>
               {showBible && (
-                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-line bg-surface-2 p-3 text-xs leading-relaxed text-ink">
+                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3 text-xs leading-relaxed text-ink">
                   {character.bible}
                 </pre>
               )}
@@ -149,7 +149,7 @@ export function CharacterProfileModal({
           )}
 
           <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
               Ingatan, sapaan &amp; internet
             </h4>
             <CharacterMemorySection
@@ -179,7 +179,7 @@ export function CharacterProfileModal({
           {mode === "chat" ? (
             <>
               <div className="mt-5">
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Latar Chat
                 </h4>
                 <ChatBackgroundPicker
@@ -189,7 +189,7 @@ export function CharacterProfileModal({
               </div>
 
               <div className="mt-5">
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Tampilan Chat
                 </h4>
                 <BubbleStyleControls
@@ -202,7 +202,7 @@ export function CharacterProfileModal({
           ) : (
             <>
               <div className="mt-5">
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Latar Tatap Muka
                 </h4>
                 <ChatBackgroundPicker
@@ -212,7 +212,7 @@ export function CharacterProfileModal({
               </div>
 
               <div className="mt-5">
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Tampilan Tatap Muka
                 </h4>
                 <BubbleStyleControls
@@ -223,7 +223,7 @@ export function CharacterProfileModal({
               </div>
 
               <div className="mt-5">
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
                   Media karakter
                 </h4>
                 <CharacterMediaSection
@@ -237,7 +237,7 @@ export function CharacterProfileModal({
           )}
 
           <div className="mt-5">
-            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#205ac4] dark:text-[#e8cf75]">
               Suara karakter
             </h4>
             <CharacterVoiceSection
@@ -260,7 +260,7 @@ export function CharacterProfileModal({
             </button>
             <button
               onClick={onClearChat}
-              className="rounded-xl border border-line py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-surface-2 hover:text-ink active:scale-[0.98]"
+              className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-ink active:scale-[0.98]"
             >
               Hapus Riwayat Chat
             </button>
@@ -268,7 +268,7 @@ export function CharacterProfileModal({
 
           <button
             onClick={onDelete}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-line py-2.5 text-sm font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 py-2.5 text-sm font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-500/10"
           >
             <TrashIcon className="h-4 w-4" /> Hapus Karakter
           </button>

@@ -274,7 +274,7 @@ export function CharacterMemorySection({
   return (
     <div className="space-y-2.5">
       {/* Kartu 1: Ingatan Panjang & Sadar Waktu */}
-      <div className="rounded-2xl border border-line bg-surface-2/65 p-3.5">
+      <div className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -297,19 +297,19 @@ export function CharacterMemorySection({
             disabled={busy}
             onClick={handleToggle}
             className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
-              memoryEnabled ? "bg-emerald-500" : "bg-line"
+              memoryEnabled ? "bg-brand" : "bg-line"
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                memoryEnabled ? "translate-x-5" : "translate-x-0.5"
+              className={`inline-block h-5 w-5 transform rounded-full shadow transition ${
+                memoryEnabled ? "translate-x-5 bg-brand-ink" : "translate-x-0.5 bg-white"
               }`}
             />
           </button>
         </div>
 
         {(memoryEnabled || hasSummary) && (
-          <div className="mt-3 border-t border-line pt-3">
+          <div className="mt-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[11px] text-muted">{formatUpdatedLabel(memoryUpdatedAt)}</span>
               <div className="flex items-center gap-1.5">
@@ -317,7 +317,7 @@ export function CharacterMemorySection({
                   type="button"
                   disabled={busy}
                   onClick={handleSummarizeNow}
-                  className="rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-surface-2 active:scale-95 disabled:opacity-50"
+                  className="rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 active:scale-95 disabled:opacity-50"
                 >
                   {summarizing ? "Merangkum..." : "✨ Rangkum dari chat"}
                 </button>
@@ -329,7 +329,7 @@ export function CharacterMemorySection({
                     setConfirmClear(false);
                     setEditing((v) => !v);
                   }}
-                  className="rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
+                  className="rounded-full border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
                 >
                   {editing ? "Tutup" : hasSummary ? "Lihat / Edit" : "Tulis manual"}
                 </button>
@@ -337,13 +337,13 @@ export function CharacterMemorySection({
             </div>
 
             {!editing && hasSummary && (
-              <pre className="mt-2.5 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-line bg-surface p-3 font-sans text-xs leading-relaxed text-ink">
+              <pre className="mt-2.5 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3 font-sans text-xs leading-relaxed text-ink">
                 {memorySummary}
               </pre>
             )}
 
             {!editing && !hasSummary && memoryEnabled && (
-              <p className="mt-2 rounded-xl border border-dashed border-line bg-surface/60 px-3 py-2 text-[11px] leading-relaxed text-muted">
+              <p className="mt-2 rounded-xl border border-dashed border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface/60 px-3 py-2 text-[11px] leading-relaxed text-muted">
                 Buku Ingatan akan terisi otomatis seiring obrolan berjalan, atau ketuk{" "}
                 <strong className="font-semibold text-ink-soft">✨ Rangkum dari chat</strong> untuk
                 langsung merangkum percakapan yang sudah ada.
@@ -357,7 +357,7 @@ export function CharacterMemorySection({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={MEMORY_PLACEHOLDER}
-                  className="w-full rounded-xl border border-line bg-surface p-3 text-base leading-relaxed text-ink outline-none transition placeholder:text-muted focus:border-ink sm:text-xs"
+                  className="w-full rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface p-3 text-base leading-relaxed text-ink outline-none transition placeholder:text-muted focus:border-[#205ac4] dark:focus:border-[#e8cf75] sm:text-xs"
                 />
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span
@@ -375,7 +375,7 @@ export function CharacterMemorySection({
                         type="button"
                         disabled={busy}
                         onClick={() => setConfirmClear(true)}
-                        className="rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10 disabled:opacity-50"
+                        className="rounded-lg border border-[#4687fe]/30 dark:border-[#d5b767]/35 px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-500/10 disabled:opacity-50"
                       >
                         Kosongkan
                       </button>
@@ -407,7 +407,7 @@ export function CharacterMemorySection({
       </div>
 
       {/* Kartu 2: Browsing Internet & Baca Link */}
-      <div className="rounded-2xl border border-line bg-surface-2/65 p-3.5">
+      <div className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -430,12 +430,12 @@ export function CharacterMemorySection({
             disabled={busy}
             onClick={handleToggleBrowsing}
             className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
-              browsingEnabled ? "bg-emerald-500" : "bg-line"
+              browsingEnabled ? "bg-brand" : "bg-line"
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                browsingEnabled ? "translate-x-5" : "translate-x-0.5"
+              className={`inline-block h-5 w-5 transform rounded-full shadow transition ${
+                browsingEnabled ? "translate-x-5 bg-brand-ink" : "translate-x-0.5 bg-white"
               }`}
             />
           </button>
@@ -443,7 +443,7 @@ export function CharacterMemorySection({
       </div>
 
       {/* Kartu 3: Nyapa Duluan Secara Alami (Proactive Check-In) */}
-      <div className="rounded-2xl border border-line bg-surface-2/65 p-3.5">
+      <div className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -465,12 +465,12 @@ export function CharacterMemorySection({
             disabled={busy}
             onClick={handleToggleProactive}
             className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
-              proactiveEnabled ? "bg-emerald-500" : "bg-line"
+              proactiveEnabled ? "bg-brand" : "bg-line"
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-                proactiveEnabled ? "translate-x-5" : "translate-x-0.5"
+              className={`inline-block h-5 w-5 transform rounded-full shadow transition ${
+                proactiveEnabled ? "translate-x-5 bg-brand-ink" : "translate-x-0.5 bg-white"
               }`}
             />
           </button>

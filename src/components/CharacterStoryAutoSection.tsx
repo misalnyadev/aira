@@ -56,7 +56,7 @@ export function CharacterStoryAutoSection({
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-surface-2/65 p-3.5">
+    <section className="rounded-2xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-[#4687fe]/10 dark:bg-[#d5b767]/10 p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -80,19 +80,19 @@ export function CharacterStoryAutoSection({
           disabled={busy}
           onClick={() => void save({ enabled: !enabled, frequency })}
           className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
-            enabled ? "bg-emerald-500" : "bg-line"
+            enabled ? "bg-brand" : "bg-line"
           }`}
         >
           <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
-              enabled ? "translate-x-5" : "translate-x-0.5"
+            className={`inline-block h-5 w-5 transform rounded-full shadow transition ${
+              enabled ? "translate-x-5 bg-brand-ink" : "translate-x-0.5 bg-white"
             }`}
           />
         </button>
       </div>
 
       {enabled ? (
-        <label className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3 text-xs text-ink-soft">
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-[#4687fe]/30 dark:border-[#d5b767]/35 pt-3 text-xs text-ink-soft">
           <span>Frekuensi</span>
           <select
             value={frequency}
@@ -103,7 +103,7 @@ export function CharacterStoryAutoSection({
                 frequency: event.target.value as CharacterStoryFrequency,
               })
             }
-            className="rounded-xl border border-line bg-surface px-3 py-2 text-xs font-medium text-ink outline-none focus:border-brand disabled:opacity-60"
+            className="rounded-xl border border-[#4687fe]/30 dark:border-[#d5b767]/35 bg-surface px-3 py-2 text-xs font-medium text-ink outline-none focus:border-brand disabled:opacity-60"
           >
             <option value="every_other_day">Setiap 2 hari (disarankan)</option>
             <option value="daily">Setiap hari</option>
