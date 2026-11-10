@@ -1140,9 +1140,9 @@ export function StatusView({
               <span
                 role="img"
                 aria-label="Notifikasi"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#4687fe]/10 text-[#205ac4] ring-1 ring-[#4687fe]/50 dark:bg-[#d5b767]/10 dark:text-[#e8cf75] dark:ring-[#d5b767]/60"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent-text ring-1 ring-accent/50 dark:ring-accent/60"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5">
                   <path d="m12 2.8 2.84 5.75 6.35.92-4.59 4.48 1.08 6.32L12 17.29l-5.68 2.98 1.08-6.32-4.59-4.48 6.35-.92L12 2.8Z" />
                 </svg>
               </span>
