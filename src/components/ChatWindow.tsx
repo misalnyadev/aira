@@ -512,11 +512,11 @@ export function ChatWindow({
           <button
             onClick={onBack}
             className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
-              visualMode === "meetup" ? "bg-surface/45 ring-1 ring-white/40 backdrop-blur-sm" : "bg-surface/45 backdrop-blur-md ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
+              visualMode === "meetup" ? "bg-surface/45 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45 backdrop-blur-sm" : "bg-surface/45 backdrop-blur-md ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
             } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
           >
-            <BackIcon className={`h-6 w-6 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+            <BackIcon className="h-6 w-6 text-[#205ac4] dark:text-[#e8cf75]" />
           </button>
 
           <div className="min-w-0 flex-1">
@@ -524,7 +524,7 @@ export function ChatWindow({
               onClick={onOpenProfile}
               className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
                 visualMode === "meetup"
-                  ? "bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm"
+                  ? "bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
                   : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
               }`}
               aria-label={`Pengaturan ${character.name}`}
@@ -560,13 +560,13 @@ export function ChatWindow({
               onClick={onStopSpeaking}
               className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition active:scale-95 active:opacity-70 ${
                 visualMode === "meetup"
-                  ? "bg-surface/35 hover:bg-surface/45"
+                  ? "bg-surface/35 hover:bg-surface/45 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
                   : "bg-surface/45 backdrop-blur-md hover:bg-surface/65 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
               }`}
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
-              <SpeakerOffIcon className={`h-4.5 w-4.5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+              <SpeakerOffIcon className="h-4.5 w-4.5 text-[#205ac4] dark:text-[#e8cf75]" />
             </button>
           )}
 
@@ -574,20 +574,20 @@ export function ChatWindow({
             onClick={onOpenVoice}
             className={`relative hidden h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition sm:grid ${
               visualMode === "meetup"
-                ? "bg-surface/35 hover:bg-surface/45"
+                ? "bg-surface/35 hover:bg-surface/45 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
                 : "bg-surface/45 backdrop-blur-md hover:bg-surface/65 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
             }`}
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
-            <SpeakerIcon className={`h-5 w-5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+            <SpeakerIcon className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]" />
             {voiceEnabled && (
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-ink" />
             )}
           </button>
 
           {(onVideoCall || onAudioCall) && (
-            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 backdrop-blur-md ${visualMode === "meetup" ? "ring-white/40" : "ring-[#4687fe]/40 dark:ring-[#d5b767]/45"} ${
+            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 backdrop-blur-md ring-[#4687fe]/40 dark:ring-[#d5b767]/45 ${
               minimalBars ? "h-[42px]" : "h-10"
             }`}>
               {onVideoCall && (
@@ -598,7 +598,7 @@ export function ChatWindow({
                   aria-label={`Video call dengan ${character.name}`}
                   title="Video call"
                 >
-                  <VideoCallIcon className={`h-7 w-7 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+                  <VideoCallIcon className="h-7 w-7 text-[#205ac4] dark:text-[#e8cf75]" />
                 </button>
               )}
 
@@ -610,7 +610,7 @@ export function ChatWindow({
                   aria-label={`Panggilan suara dengan ${character.name}`}
                   title="Panggilan suara"
                 >
-                  <PhoneCallIcon className={`h-5 w-5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+                  <PhoneCallIcon className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]" />
                 </button>
               )}
             </div>
@@ -628,7 +628,7 @@ export function ChatWindow({
             onClick={onBack}
             className={`shrink-0 p-[5px] transition active:opacity-50 ${
               visualMode === "meetup"
-                ? "rounded-full bg-surface/45 text-ink ring-1 ring-white/40 backdrop-blur-sm"
+                ? "rounded-full bg-surface/45 text-[#205ac4] dark:text-[#e8cf75] ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45 backdrop-blur-sm"
                 : "rounded-full text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
             } ${showBackOnDesktop ? "" : "md:hidden"}`}
             aria-label={backLabel}
@@ -644,13 +644,13 @@ export function ChatWindow({
             <div
               className={`inline-flex min-w-0 max-w-full items-center gap-3 ${
                 visualMode === "meetup"
-                  ? "rounded-full bg-surface/80 py-1 pl-1 pr-3.5 dark:bg-surface/70 backdrop-blur-sm"
+                  ? "rounded-full bg-surface/80 py-1 pl-1 pr-3.5 dark:bg-surface/70 backdrop-blur-sm ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
                   : "rounded-full py-1 pl-1 pr-3.5 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
               }`}
             >
               <Avatar name={character.name} src={character.avatarUrl} size={40} />
               <div className="min-w-0">
-                <p className={`truncate text-sm font-semibold ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : "text-ink"}`}>{character.name}</p>
+                <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">{character.name}</p>
                 <p
                   className={`truncate text-xs ${isTyping || isSpeaking ? "text-ink" : "text-ink-soft"}`}
                   title={
@@ -674,13 +674,13 @@ export function ChatWindow({
               onClick={onStopSpeaking}
               className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink transition ${
                 visualMode === "meetup"
-                  ? "bg-surface/35 hover:bg-surface/45"
+                  ? "bg-surface/35 hover:bg-surface/45 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
                   : "bg-surface/55 backdrop-blur-md hover:bg-surface/70 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
               }`}
               title="Hentikan suara"
               aria-label="Hentikan suara"
             >
-              <SpeakerOffIcon className={`h-3.5 w-3.5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+              <SpeakerOffIcon className="h-3.5 w-3.5 text-[#205ac4] dark:text-[#e8cf75]" />
               <span className="hidden sm:inline">Hentikan</span>
             </button>
           )}
@@ -688,19 +688,19 @@ export function ChatWindow({
           <button
             onClick={onOpenVoice}
             className={`relative hidden shrink-0 rounded-full p-2 text-ink-soft transition hover:bg-surface-2 hover:text-ink sm:inline-flex ${
-              visualMode === "meetup" ? "bg-surface/35" : "ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
+              visualMode === "meetup" ? "bg-surface/35 ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45" : "ring-1 ring-[#4687fe]/40 dark:ring-[#d5b767]/45"
             }`}
             title="Pengaturan Suara"
             aria-label="Pengaturan Suara"
           >
-            <SpeakerIcon className={`h-5 w-5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+            <SpeakerIcon className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]" />
             {voiceEnabled && (
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ink" />
             )}
           </button>
 
           {(onVideoCall || onAudioCall) && (
-            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 backdrop-blur-md ${visualMode === "meetup" ? "ring-white/40" : "ring-[#4687fe]/40 dark:ring-[#d5b767]/45"} ${
+            <div className={`flex shrink-0 items-center gap-1 rounded-full bg-surface/45 p-1 ring-1 backdrop-blur-md ring-[#4687fe]/40 dark:ring-[#d5b767]/45 ${
               minimalBars ? "h-[42px]" : "h-10"
             }`}>
               {onVideoCall && (
@@ -711,7 +711,7 @@ export function ChatWindow({
                   aria-label={`Video call dengan ${character.name}`}
                   title="Video call"
                 >
-                  <VideoCallIcon className={`h-7 w-7 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+                  <VideoCallIcon className="h-7 w-7 text-[#205ac4] dark:text-[#e8cf75]" />
                 </button>
               )}
 
@@ -723,7 +723,7 @@ export function ChatWindow({
                   aria-label={`Panggilan suara dengan ${character.name}`}
                   title="Panggilan suara"
                 >
-                  <PhoneCallIcon className={`h-5 w-5 ${visualMode === "chat" ? "text-[#205ac4] dark:text-[#e8cf75]" : ""}`} />
+                  <PhoneCallIcon className="h-5 w-5 text-[#205ac4] dark:text-[#e8cf75]" />
                 </button>
               )}
             </div>
@@ -977,7 +977,7 @@ export function ChatWindow({
                 onClick={onOpenNotes}
                 aria-label={`Catatan Kita bersama ${character.name}`}
                 title="Catatan & Janji Kita"
-                className="pointer-events-auto relative grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95"
+                className="pointer-events-auto relative grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95"
               >
                 <NotesBoardIcon className="h-4 w-4" />
                 {activeNotesCount > 0 && (
@@ -1009,7 +1009,7 @@ export function ChatWindow({
                 }}
                 aria-label="Kembali ke pesan terbaru"
                 title="Pesan terbaru"
-                className={`pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 ${visualMode === "meetup" ? "text-ink" : "text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"}`}
+                className={`pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45`}
               >
                 <ChevronDownIcon className="h-4 w-4" strokeWidth={1.5} />
               </button>
@@ -1034,7 +1034,7 @@ export function ChatWindow({
                 aria-label={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
                 aria-pressed={hideMessages}
                 title={hideMessages ? "Tampilkan pesan" : "Sembunyikan pesan"}
-                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-ink shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 disabled:pointer-events-none"
+                className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-surface/45 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 shadow-md backdrop-blur-md transition hover:bg-surface/60 active:scale-95 disabled:pointer-events-none"
               >
                 {hideMessages ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>

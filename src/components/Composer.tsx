@@ -231,7 +231,7 @@ export function Composer({
             disabled={disabled}
             className={`mb-0.5 shrink-0 transition active:opacity-50 disabled:opacity-50 ${
               clearSurface
-                ? "rounded-full bg-surface/45 p-1.5 text-ink ring-1 ring-white/40 backdrop-blur-sm"
+                ? "rounded-full bg-surface/45 p-1.5 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 backdrop-blur-sm"
                 : transparent
                   ? "rounded-full bg-surface/55 p-1.5 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:bg-surface/45 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
                   : "rounded-full p-[5px] text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45"
@@ -268,7 +268,7 @@ export function Composer({
               autoComplete="off"
               enterKeyHint="send"
               aria-label="Tulis pesan"
-              className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ${clearSurface ? "ring-line/70 dark:ring-line/40" : "ring-[#4687fe]/40 dark:ring-[#d5b767]/45"} ${
+              className={`relative top-1 max-h-[120px] w-full resize-none border-none px-4 py-2.5 pr-11 text-base text-ink outline-none ring-1 transition-[border-radius] duration-150 placeholder:text-muted disabled:opacity-60 sm:text-sm ring-[#4687fe]/40 dark:ring-[#d5b767]/45 ${
                 clearSurface ? "bg-surface/80 dark:bg-surface/70 backdrop-blur-md" : "bg-surface/55 backdrop-blur-md dark:bg-surface/35"
               } ${
                 multiline ? "rounded-2xl" : "rounded-full"
@@ -283,7 +283,7 @@ export function Composer({
                 aria-pressed={dictation.listening}
                 title={dictation.listening ? "Hentikan dikte" : "Bicara untuk menulis"}
                 className={`absolute bottom-1.5 right-1.5 rounded-full p-1 transition active:opacity-50 disabled:opacity-40 ${
-                  dictation.listening ? "text-rose-600 dark:text-rose-400" : clearSurface ? "text-ink-soft" : "text-[#205ac4] dark:text-[#e8cf75]"
+                  dictation.listening ? "text-rose-600 dark:text-rose-400" : "text-[#205ac4] dark:text-[#e8cf75]"
                 }`}
               >
                 <MicIcon className="h-6 w-6" />
@@ -296,7 +296,7 @@ export function Composer({
             disabled={disabled || (!text.trim() && !imageFile)}
             className={`mb-0.5 shrink-0 rounded-full p-2.5 transition active:scale-95 disabled:opacity-40 ${
               clearSurface
-                ? "bg-surface/45 text-ink ring-1 ring-white/40 backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
+                ? "bg-surface/45 text-[#205ac4] ring-1 ring-[#4687fe]/40 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 backdrop-blur-sm hover:bg-surface/60 dark:bg-surface/45"
                 : transparent
                   ? "bg-surface/55 text-[#205ac4] ring-1 ring-[#4687fe]/40 hover:bg-surface/65 dark:bg-surface/45 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-surface/55"
                   : "bg-surface/55 text-[#205ac4] ring-1 ring-[#4687fe]/40 backdrop-blur-md hover:bg-surface/65 dark:bg-surface/35 dark:text-[#e8cf75] dark:ring-[#d5b767]/45 dark:hover:bg-surface/50"
