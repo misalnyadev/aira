@@ -109,7 +109,7 @@ function VoiceAccordionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-2xs">
+    <section className="overflow-hidden rounded-2xl border border-[#4687fe]/25 bg-surface shadow-2xs dark:border-[#d5b767]/30">
       <button
         type="button"
         onClick={onToggle}
@@ -118,7 +118,7 @@ function VoiceAccordionCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-bold text-ink">{title}</h2>
+            <h2 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">{title}</h2>
             {badge && (
               <span
                 className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
@@ -216,7 +216,7 @@ function TtsModelSelector({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-ink">
+        <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
           {title}
           {detectedModels ? (
             <span className="ml-1 font-normal text-muted">
@@ -922,7 +922,7 @@ function TtsProviderKeySection({
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate text-sm font-semibold text-ink">
+                    <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                       Key Suara Utama
                     </span>
                     <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-surface">
@@ -983,7 +983,7 @@ function TtsProviderKeySection({
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold text-ink">
+                      <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                         Key Cadangan #{idx + 1}
                       </span>
                       <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
@@ -1057,7 +1057,7 @@ function TtsProviderKeySection({
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold text-ink">
+                      <span className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                         {sp.label}
                       </span>
                       <span className="rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink">
@@ -1925,7 +1925,7 @@ function HdVoiceCard({
             {/* Slot 1 Gemini: Perempuan */}
             <div className="space-y-2 rounded-xl border border-line p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
+                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 1 · Suara HD Perempuan</span>
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("female")}
@@ -1958,7 +1958,7 @@ function HdVoiceCard({
             {/* Slot 2 Gemini: Laki-laki */}
             <div className="space-y-2 rounded-xl border border-line p-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
+                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 2 · Suara HD Laki-laki</span>
                 <button
                   type="button"
                   onClick={() => void handleTestSlot("male")}
@@ -1990,7 +1990,7 @@ function HdVoiceCard({
 
             {/* Gaya Bicara per slot — agar tiap karakter punya suara khas */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-ink">
+              <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 Gaya bicara per suara (opsional)
               </label>
               <div className="space-y-2">
@@ -2031,7 +2031,7 @@ function HdVoiceCard({
                 className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-surface-2"
               >
                 <div className="min-w-0">
-                  <span className="block text-xs font-semibold text-ink">
+                  <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                     API Key &amp; Model Gemini TTS
                   </span>
                   <span className="block truncate text-[11px] text-muted">
@@ -2135,7 +2135,7 @@ function HdVoiceCard({
             {/* Slot 1 ElevenLabs: Perempuan */}
             <div className="space-y-2 rounded-xl border border-line p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink">Slot 1 · Suara HD Perempuan</span>
+                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 1 · Suara HD Perempuan</span>
                 <span className="text-[11px] text-muted">Gratis di Free Tier</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -2178,7 +2178,7 @@ function HdVoiceCard({
             {/* Slot 2 ElevenLabs: Laki-laki */}
             <div className="space-y-2 rounded-xl border border-line p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink">Slot 2 · Suara HD Laki-laki</span>
+                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Slot 2 · Suara HD Laki-laki</span>
                 <span className="text-[11px] text-muted">Gratis di Free Tier</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -2232,7 +2232,7 @@ function HdVoiceCard({
                 className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left transition hover:bg-surface-2"
               >
                 <div className="min-w-0">
-                  <span className="block text-xs font-semibold text-ink">
+                  <span className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                     API Key, Model &amp; Ekspresi ElevenLabs
                   </span>
                   <span className="block truncate text-[11px] text-muted">
@@ -2481,7 +2481,7 @@ export function VoiceView({
         >
           {!embedded && (
             <div>
-              <h1 className="font-display text-xl font-bold tracking-tight text-ink">Suara</h1>
+              <h1 className="font-display text-xl font-bold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">Suara</h1>
               <p className="text-xs text-ink-soft">
                 Ketuk bagian yang ingin diatur untuk membuka pengaturannya.
               </p>
@@ -2519,7 +2519,7 @@ export function VoiceView({
                 <SpeakerIcon className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-ink">Bacakan balasan</span>
+                <span className="block text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Bacakan balasan</span>
                 <span className="block text-xs text-ink-soft">
                   Balasan karakter dibacakan otomatis saat tiba di chat
                 </span>
@@ -2533,7 +2533,7 @@ export function VoiceView({
 
             <div className="space-y-2 border-t border-line pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink">
+                <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                   Mesin suara bawaan
                 </span>
                 <span className="text-[11px] text-muted">Bisa diatur per karakter</span>
@@ -2619,7 +2619,7 @@ export function VoiceView({
                 <div className="rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
                   <p className="text-xs text-ink-soft">
                     Paling natural di perangkat ini:{" "}
-                    <span className="font-semibold text-ink">{bestVoice.name}</span>
+                    <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">{bestVoice.name}</span>
                     {isNaturalVoice(bestVoice) ? " (enhanced)" : ""}
                   </p>
                   {(settings.voiceURI !== bestVoice.voiceURI || settings.voiceURI === "") && (

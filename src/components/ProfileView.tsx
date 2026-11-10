@@ -544,7 +544,7 @@ export function ProfileView({
                 <Avatar name={previewName} src={avatarUrl} size={52} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate text-base font-bold text-ink">
+                    <span className="truncate text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
                       {previewName}
                     </span>
                     <span
@@ -564,10 +564,10 @@ export function ProfileView({
               {/* Pemakaian Slot Karakter */}
               <div className="mt-4 rounded-xl bg-surface-2/70 p-3.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-ink">
+                  <span className="font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                     Kuota Karakter Milik Sendiri
                   </span>
-                  <span className="font-bold text-ink">
+                  <span className="font-bold text-[#205ac4] dark:text-[#e8cf75]">
                     {characterCount} / {characterLimit} slot
                   </span>
                 </div>
@@ -785,7 +785,7 @@ export function ProfileView({
               <section className="space-y-3 rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="text-sm font-bold text-ink">
+                    <h3 className="text-sm font-bold text-[#205ac4] dark:text-[#e8cf75]">
                       Permintaan Tambah Slot Karakter
                     </h3>
                     <p className="mt-0.5 text-xs text-ink-soft">

@@ -279,7 +279,7 @@ export function CharacterMemorySection({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <MemoryOutlineIcon className="h-4 w-4 shrink-0 text-[#956b17] dark:text-[#e8cf75]" />
-              <span className="text-sm font-semibold text-ink">
+              <span className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 Teman Perencanaan & Sadar Waktu
               </span>
             </div>
@@ -412,7 +412,7 @@ export function CharacterMemorySection({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <WebOutlineIcon className="h-4 w-4 shrink-0 text-[#205ac4] dark:text-[#79aaff]" />
-              <span className="text-sm font-semibold text-ink">
+              <span className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 Browsing Internet & Baca Link
               </span>
             </div>
@@ -447,7 +447,7 @@ export function CharacterMemorySection({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-ink">
+              <span className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 👋 Nyapa Duluan Secara Alami
               </span>
             </div>

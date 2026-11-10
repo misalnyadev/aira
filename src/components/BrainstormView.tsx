@@ -100,7 +100,7 @@ export function BrainstormView({
         <section className="w-full">
           {meetupCharacters.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface p-5 text-center">
-              <p className="text-sm font-semibold text-ink">Belum ada karakter untuk diajak bertemu</p>
+              <p className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada karakter untuk diajak bertemu</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
                 Buat karakter dulu, lalu pilih satu untuk memulai pertemuan berdua.
               </p>
@@ -165,7 +165,7 @@ export function BrainstormView({
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-surface-2">
                 <MeetupIcon className="h-6 w-6 text-ink-soft" />
               </div>
-              <h3 className="mt-3 text-sm font-semibold text-ink">
+              <h3 className="mt-3 text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 {canBrainstorm ? "Belum ada meja Brainstorm" : "Brainstorm perlu minimal 2 karakter"}
               </h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
@@ -206,7 +206,7 @@ export function BrainstormView({
 
           {sceneRooms.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface px-5 py-7 text-center">
-              <h3 className="text-sm font-semibold text-ink">
+              <h3 className="text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                 {canCreateRoom ? "Belum ada Adegan" : "Buat karakter untuk mulai Adegan"}
               </h3>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
@@ -374,7 +374,7 @@ function CreateSharedRoomModal({
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-[15px] font-bold text-ink">
+            <h2 className="font-display text-[15px] font-bold text-[#205ac4] dark:text-[#e8cf75]">
               {mode === "scene" ? "Buat Adegan" : "Buat Meja Brainstorm"}
             </h2>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -428,7 +428,7 @@ function CreateSharedRoomModal({
                 className="mt-0.5 h-4 w-4 accent-current"
               />
               <span>
-                <span className="block text-sm font-semibold text-ink">Bagian dari cerita utama (canon)</span>
+                <span className="block text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Bagian dari cerita utama (canon)</span>
                 <span className="mt-0.5 block text-xs text-ink-soft">
                   Tidak dicentang berarti latihan; ini adalah pilihan default.
                 </span>

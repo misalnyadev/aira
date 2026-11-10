@@ -50,7 +50,7 @@ export function PasswordResetView({ token }: { token: string }) {
 
         <div className="m-auto w-full max-w-sm py-6">
           <div className="mb-6 text-center">
-            <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink">
+            <h1 className="font-display text-3xl font-extrabold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">
               HeyTalent
             </h1>
             <p className="mt-1.5 text-sm text-ink-soft">Atur ulang kata sandi akunmu.</p>

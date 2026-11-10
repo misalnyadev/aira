@@ -150,7 +150,7 @@ export function CharactersView({
       <div className="top-bar flex items-center justify-between px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-xl font-bold tracking-tight text-ink">
+            <h1 className="font-display text-xl font-bold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">
               Karakter
             </h1>
             {isAdmin && (
@@ -395,7 +395,7 @@ export function CharactersView({
 
           {characters.length === 0 ? (
             <div className="mx-auto mt-12 max-w-sm rounded-3xl border border-dashed border-line bg-surface p-8 text-center">
-              <p className="font-display text-base font-bold text-ink">
+              <p className="font-display text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
                 Belum ada karakter
               </p>
               <p className="mt-1 text-xs text-ink-soft">
@@ -465,7 +465,7 @@ export function CharactersView({
                         <span className="block text-[10.5px] text-muted">
                           PIN Undangan Kontak
                         </span>
-                        <span className="font-mono text-xs font-bold tracking-widest text-ink">
+                        <span className="font-mono text-xs font-bold tracking-widest text-[#205ac4] dark:text-[#e8cf75]">
                           {c.invitePin}
                         </span>
                       </div>

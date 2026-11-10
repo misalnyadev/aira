@@ -235,7 +235,7 @@ export function AddContactModal({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-base font-bold text-ink">
+            <h2 className="font-display text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
               Kontak Karakter
             </h2>
             <p className="text-xs text-ink-soft">
@@ -269,7 +269,7 @@ export function AddContactModal({
             onSubmit={handleSubmitPin}
             className="space-y-2.5 rounded-2xl border border-line bg-surface-2/40 p-3.5"
           >
-            <label className="block text-xs font-semibold text-ink">
+            <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
               Tambah Kontak Karakter dengan PIN
             </label>
             <div className="flex gap-2">
@@ -318,7 +318,7 @@ export function AddContactModal({
                     size={44}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-ink">
+                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                       {visiblePreview.characterName}
                     </p>
                     <p className="text-xs leading-relaxed text-ink-soft">
@@ -327,7 +327,7 @@ export function AddContactModal({
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1.5 text-xs font-semibold text-ink">Keahlian & layanan</p>
+                  <p className="mb-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Keahlian & layanan</p>
                   {visiblePreview.skillPortfolio.length ? (
                     <ul className="space-y-1.5">
                       {visiblePreview.skillPortfolio.map((skill, index) => (
@@ -335,7 +335,7 @@ export function AddContactModal({
                           key={`${skill.title}-${index}`}
                           className="rounded-lg bg-surface-2/70 px-2.5 py-2"
                         >
-                          <p className="text-xs font-semibold text-ink">{skill.title}</p>
+                          <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">{skill.title}</p>
                           {skill.description && (
                             <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">
                               {skill.description}
@@ -447,7 +447,7 @@ export function AddContactModal({
                               size={38}
                             />
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-ink">
+                              <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                                 {item.guestName}
                               </p>
                               <p className="truncate text-xs text-muted">
@@ -590,7 +590,7 @@ export function AddContactModal({
                           size={40}
                         />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-ink">
+                          <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                             {item.characterName}
                           </p>
                           <p className="truncate text-xs text-muted">

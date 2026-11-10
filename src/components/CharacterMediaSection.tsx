@@ -704,7 +704,7 @@ export function CharacterMediaSection({
             <span className="text-xs font-medium text-ink-soft">
               {useCallInMeetup ? "Zoom video call & Tatap Muka" : "Zoom video call"}
             </span>
-            <span className="text-xs font-semibold text-ink">{zoom}%</span>
+            <span className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">{zoom}%</span>
           </div>
           <input
             type="range"
