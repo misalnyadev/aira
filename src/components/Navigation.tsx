@@ -53,13 +53,13 @@ export function NavRail({
               aria-current={active ? "page" : undefined}
               className={`group relative flex w-14 flex-col items-center gap-1 rounded-2xl py-2 text-[12px] font-medium transition active:scale-95 ${
                 active
-                  ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] dark:text-[#79aaff]"
-                  : "text-ink-soft hover:bg-[#4687fe]/10 hover:text-[#205ac4] dark:hover:text-[#79aaff]"
+                  ? "bg-[#4687fe]/10 dark:bg-[#d5b767]/10 font-semibold text-[#205ac4] dark:text-[#e8cf75]"
+                  : "text-ink-soft hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
               }`}
             >
               <span className="relative">
                 {isProfile ? (
-                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe] ring-offset-2 ring-offset-surface" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={28} /></span>
+                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe] dark:ring-[#d5b767] ring-offset-2 ring-offset-surface" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={28} /></span>
                 ) : (
                   <Icon className="h-6 w-6" />
                 )}
@@ -70,7 +70,7 @@ export function NavRail({
                 )}
               </span>
               <span>{label}</span>
-              {active && <span aria-hidden="true" className="h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#d5b767]" />}
+              {active && <span aria-hidden="true" className="h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#4687fe]/40 dark:from-[#d5b767] dark:to-[#d5b767]/40" />}
             </button>
           );
         })}
@@ -112,13 +112,13 @@ export function MobileTabBar({
               aria-current={active ? "page" : undefined}
               className={`relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] font-medium transition duration-200 active:scale-95 ${
                 active
-                  ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] shadow-xs dark:bg-[#4687fe]/20 dark:text-[#79aaff]"
-                  : "text-ink-soft hover:bg-[#4687fe]/10 hover:text-[#205ac4] dark:hover:text-[#79aaff]"
+                  ? "bg-[#4687fe]/10 font-semibold text-[#205ac4] shadow-xs dark:bg-[#d5b767]/20 dark:text-[#e8cf75]"
+                  : "text-ink-soft hover:bg-[#4687fe]/10 dark:hover:bg-[#d5b767]/10 hover:text-[#205ac4] dark:hover:text-[#e8cf75]"
               }`}
             >
               <span className="relative">
                 {isProfile ? (
-                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe]" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={26} /></span>
+                  <span className={`block rounded-full ${active ? "ring-2 ring-[#4687fe] dark:ring-[#d5b767]" : ""}`}><Avatar name={userName} src={profile.avatarUrl} size={26} /></span>
                 ) : (
                   <Icon className="h-[26px] w-[26px] shrink-0" />
                 )}
@@ -129,7 +129,7 @@ export function MobileTabBar({
                 )}
               </span>
               <span className="max-w-full truncate px-1">{label}</span>
-              {active && <span aria-hidden="true" className="absolute bottom-0.5 h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#d5b767]" />}
+              {active && <span aria-hidden="true" className="absolute bottom-0.5 h-0.5 w-4 rounded-full bg-gradient-to-r from-[#4687fe] to-[#4687fe]/40 dark:from-[#d5b767] dark:to-[#d5b767]/40" />}
             </button>
           );
         })}

@@ -970,7 +970,7 @@ export function CharacterModal({
           <div className="rounded-2xl border border-line bg-surface-2/70 p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink">
-                <BibleOutlineIcon className="h-4 w-4 text-[#205ac4] dark:text-[#79aaff]" /> Bible peran (acuan utama)
+                <BibleOutlineIcon className="h-4 w-4 text-[#205ac4] dark:text-[#e8cf75]" /> Bible peran (acuan utama)
               </label>
               <button
                 type="button"

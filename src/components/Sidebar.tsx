@@ -136,7 +136,7 @@ export function Sidebar({
             const active = activeId === c.id;
             const update = c.threadKind === "guest_contact" && c.sourceCharacterId ? contactUpdates[c.sourceCharacterId] : undefined;
             const label = update?.storyId && update?.reelId ? "Story dan Reel baru" : update?.storyId ? "Story baru" : update?.reelId ? "Reel baru" : null;
-            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] ring-1 ring-[#4687fe]/60" : update?.storyId ? "bg-[#4687fe]" : "bg-white ring-1 ring-[#4687fe]";
+            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] dark:from-[#d5b767] dark:via-white dark:to-[#d5b767] ring-1 ring-[#4687fe]/60 dark:ring-[#d5b767]/60" : update?.storyId ? "bg-[#4687fe] dark:bg-[#d5b767]" : "bg-white ring-1 ring-[#4687fe] dark:ring-[#d5b767]";
             return (
               <div
                 key={c.id}
@@ -156,12 +156,12 @@ export function Sidebar({
                         </span>
                       )}
                       {c.threadKind === "owner_contact" && (
-                        <span className="ml-1.5 inline-block rounded-full bg-[#4687fe]/15 px-1.5 py-0.2 text-[10px] font-semibold text-[#205ac4] dark:text-[#79aaff]">
+                        <span className="ml-1.5 inline-block rounded-full bg-[#4687fe]/15 dark:bg-[#d5b767]/15 px-1.5 py-0.2 text-[10px] font-semibold text-[#205ac4] dark:text-[#e8cf75]">
                           2 Arah
                         </span>
                       )}
                       {c.hasBible && (
-                        <span role="img" aria-label="Memakai bible peran" className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]" title="Memakai bible peran">
+                        <span role="img" aria-label="Memakai bible peran" className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]" title="Memakai bible peran">
                           <BibleOutlineIcon className="h-4 w-4" />
                         </span>
                       )}
@@ -169,7 +169,7 @@ export function Sidebar({
                         <span
                           role="img"
                           aria-label="Ingatan jangka panjang dan sadar waktu aktif"
-                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
+                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]"
                           title="Ingatan jangka panjang & sadar waktu aktif"
                         >
                           <MemoryOutlineIcon className="h-4 w-4" />
@@ -179,7 +179,7 @@ export function Sidebar({
                         <span
                           role="img"
                           aria-label="Browsing internet dan baca link aktif"
-                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
+                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]"
                           title="Browsing internet & baca link aktif"
                         >
                           <WebOutlineIcon className="h-4 w-4" />

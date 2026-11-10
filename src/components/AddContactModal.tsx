@@ -458,7 +458,7 @@ export function AddContactModal({
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                               state === "active"
-                                ? "bg-[#4687fe]/15 text-[#205ac4] dark:text-[#79aaff]"
+                                ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                                 : state === "blocked" || state === "rejected"
                                   ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                                   : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
@@ -599,7 +599,7 @@ export function AddContactModal({
                           <span
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                               state === "active"
-                                ? "bg-[#4687fe]/15 text-[#205ac4] dark:text-[#79aaff]"
+                                ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                                 : state === "blocked" || state === "rejected"
                                   ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                                   : "bg-amber-500/15 text-amber-700 dark:text-amber-300"

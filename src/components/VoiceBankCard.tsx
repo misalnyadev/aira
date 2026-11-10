@@ -223,7 +223,7 @@ export function VoiceBankCard({
             <span
               className={`rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                 r2Enabled
-                  ? "bg-[#4687fe]/15 text-[#205ac4] dark:text-[#79aaff]"
+                  ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
                   : "bg-surface-2 text-ink-soft"
               }`}
             >
