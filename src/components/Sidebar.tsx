@@ -161,7 +161,7 @@ export function Sidebar({
                         </span>
                       )}
                       {c.hasBible && (
-                        <span role="img" aria-label="Memakai bible peran" className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]" title="Memakai bible peran">
+                        <span role="img" aria-label="Memakai bible peran" className="ml-1 inline-flex align-middle text-ink" title="Memakai bible peran">
                           <BibleOutlineIcon className="h-4 w-4" />
                         </span>
                       )}
@@ -169,7 +169,7 @@ export function Sidebar({
                         <span
                           role="img"
                           aria-label="Ingatan jangka panjang dan sadar waktu aktif"
-                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]"
+                          className="ml-1 inline-flex align-middle text-[#956b17] dark:text-[#e8cf75]"
                           title="Ingatan jangka panjang & sadar waktu aktif"
                         >
                           <MemoryOutlineIcon className="h-4 w-4" />
@@ -179,7 +179,7 @@ export function Sidebar({
                         <span
                           role="img"
                           aria-label="Browsing internet dan baca link aktif"
-                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#e8cf75]"
+                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
                           title="Browsing internet & baca link aktif"
                         >
                           <WebOutlineIcon className="h-4 w-4" />

@@ -487,7 +487,7 @@ export function MeetupIcon({ className }: { className?: string }) {
   );
 }
 
-/** Penanda fitur karakter HeyTalent: outline biru, tanpa emoji. */
+/** Penanda fitur karakter HeyTalent: ikon outline tanpa emoji. */
 export function BibleOutlineIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>

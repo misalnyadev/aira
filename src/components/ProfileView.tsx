@@ -690,7 +690,7 @@ export function ProfileView({
                               </span>
                               {ch.hasBible && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#205ac4] dark:text-[#e8cf75]">
-                                  <BibleOutlineIcon className="h-3 w-3" /> Bible
+                                  <BibleOutlineIcon className="h-3 w-3 text-ink" /> Bible
                                 </span>
                               )}
                             </div>

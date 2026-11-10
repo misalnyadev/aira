@@ -427,7 +427,7 @@ export function CharactersView({
                             title="Memakai bible peran"
                             className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
                           >
-                            <BibleOutlineIcon className="h-3.5 w-3.5" /> Bible
+                            <BibleOutlineIcon className="h-3.5 w-3.5 text-ink" /> Bible
                           </span>
                         )}
                         {c.memoryEnabled && (
@@ -435,7 +435,7 @@ export function CharactersView({
                             title="Ingatan jangka panjang & sadar waktu aktif"
                             className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
                           >
-                            <MemoryOutlineIcon className="h-3.5 w-3.5" /> Ingatan
+                            <MemoryOutlineIcon className="h-3.5 w-3.5 text-[#956b17] dark:text-[#e8cf75]" /> Ingatan
                           </span>
                         )}
                         {c.browsingEnabled && (
@@ -443,7 +443,7 @@ export function CharactersView({
                             title="Browsing internet & baca link aktif"
                             className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
                           >
-                            <WebOutlineIcon className="h-3.5 w-3.5" /> Web
+                            <WebOutlineIcon className="h-3.5 w-3.5 text-[#205ac4] dark:text-[#79aaff]" /> Web
                           </span>
                         )}
                       </div>
