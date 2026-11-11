@@ -1344,7 +1344,7 @@ export function StatusView({
                   {ownReels.map((reel) => {
                     const reelCaption = reel.caption || reel.content || "Reel";
                     return (
-                      <article key={reel.id} className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface-2">
+                      <article key={reel.id} className="min-w-0 overflow-hidden rounded-xl border border-brand bg-surface-2">
                         <div className="relative aspect-[3/4] overflow-hidden bg-black">
                           {reel.mediaType === "image" && reel.imageUrl ? (
                             <Image src={reel.imageUrl} alt="" fill sizes="(max-width: 560px) 33vw, 180px" unoptimized className="object-cover" />
