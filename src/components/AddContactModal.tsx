@@ -235,7 +235,7 @@ export function AddContactModal({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="font-display text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
+            <h2 className="font-display text-base font-bold text-accent-text dark:text-accent-text">
               Kontak Karakter
             </h2>
             <p className="text-xs text-ink-soft">
@@ -269,7 +269,7 @@ export function AddContactModal({
             onSubmit={handleSubmitPin}
             className="space-y-2.5 rounded-2xl border border-line bg-surface-2/40 p-3.5"
           >
-            <label className="block text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+            <label className="block text-xs font-semibold text-accent-text dark:text-accent-text">
               Tambah Kontak Karakter dengan PIN
             </label>
             <div className="flex gap-2">
@@ -318,7 +318,7 @@ export function AddContactModal({
                     size={44}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                    <p className="truncate text-sm font-semibold text-accent-text dark:text-accent-text">
                       {visiblePreview.characterName}
                     </p>
                     <p className="text-xs leading-relaxed text-ink-soft">
@@ -327,7 +327,7 @@ export function AddContactModal({
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1.5 text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Keahlian & layanan</p>
+                  <p className="mb-1.5 text-xs font-semibold text-accent-text dark:text-accent-text">Keahlian & layanan</p>
                   {visiblePreview.skillPortfolio.length ? (
                     <ul className="space-y-1.5">
                       {visiblePreview.skillPortfolio.map((skill, index) => (
@@ -335,7 +335,7 @@ export function AddContactModal({
                           key={`${skill.title}-${index}`}
                           className="rounded-lg bg-surface-2/70 px-2.5 py-2"
                         >
-                          <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">{skill.title}</p>
+                          <p className="text-xs font-semibold text-accent-text dark:text-accent-text">{skill.title}</p>
                           {skill.description && (
                             <p className="mt-0.5 text-[11px] leading-relaxed text-ink-soft">
                               {skill.description}
@@ -447,7 +447,7 @@ export function AddContactModal({
                               size={38}
                             />
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                              <p className="truncate text-sm font-semibold text-accent-text dark:text-accent-text">
                                 {item.guestName}
                               </p>
                               <p className="truncate text-xs text-muted">
@@ -458,7 +458,7 @@ export function AddContactModal({
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                               state === "active"
-                                ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
+                                ? "bg-brand/15 dark:bg-brand/15 text-accent-text dark:text-accent-text"
                                 : state === "blocked" || state === "rejected"
                                   ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                                   : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
@@ -590,7 +590,7 @@ export function AddContactModal({
                           size={40}
                         />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                          <p className="truncate text-sm font-semibold text-accent-text dark:text-accent-text">
                             {item.characterName}
                           </p>
                           <p className="truncate text-xs text-muted">
@@ -599,7 +599,7 @@ export function AddContactModal({
                           <span
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
                               state === "active"
-                                ? "bg-[#4687fe]/15 dark:bg-[#d5b767]/15 text-[#205ac4] dark:text-[#e8cf75]"
+                                ? "bg-brand/15 dark:bg-brand/15 text-accent-text dark:text-accent-text"
                                 : state === "blocked" || state === "rejected"
                                   ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                                   : "bg-amber-500/15 text-amber-700 dark:text-amber-300"

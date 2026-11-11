@@ -124,8 +124,8 @@ export function FirstRunOnboarding({
       <header className="shrink-0 border-b border-line bg-surface/80 px-4 py-4 sm:px-6">
         <div className="mx-auto flex w-full max-w-3xl items-start justify-between gap-3">
           <div>
-            <p className="font-display text-lg font-extrabold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">HeyTalent</p>
-            <h1 className="mt-1 text-xl font-bold text-[#205ac4] dark:text-[#e8cf75]">Selamat datang, {welcomeName}!</h1>
+            <p className="font-display text-lg font-extrabold tracking-tight text-accent-text dark:text-accent-text">HeyTalent</p>
+            <h1 className="mt-1 text-xl font-bold text-accent-text dark:text-accent-text">Selamat datang, {welcomeName}!</h1>
             <p className="mt-1 text-sm text-ink-soft">Siapkan akses AI dan buat karakter pertamamu.</p>
           </div>
           <button
@@ -151,7 +151,7 @@ export function FirstRunOnboarding({
             <section className="space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-xs sm:p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">Langkah 1 dari 2</p>
-                <h2 className="mt-1 text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">Tambahkan API key AI</h2>
+                <h2 className="mt-1 text-lg font-bold text-accent-text dark:text-accent-text">Tambahkan API key AI</h2>
                 <p className="mt-1 text-sm leading-relaxed text-ink-soft">
                   Key ini dipakai untuk balasan karakter dan fitur buat draf otomatis. Key tetap milik akunmu dan tidak dibagikan ke pemilik karakter lain.
                 </p>
@@ -159,7 +159,7 @@ export function FirstRunOnboarding({
 
               {providers.length > 0 && (
                 <div className="space-y-2 rounded-2xl border border-line bg-surface-2/50 p-3">
-                  <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Provider yang sudah tersimpan</p>
+                  <p className="text-xs font-semibold text-accent-text dark:text-accent-text">Provider yang sudah tersimpan</p>
                   {providers.map((provider) => (
                     <p key={provider.id} className="text-xs text-ink-soft">
                       {provider.label} · {provider.model}{provider.isDefault ? " · default" : ""}
@@ -241,7 +241,7 @@ export function FirstRunOnboarding({
             <section className="space-y-4 rounded-3xl border border-line bg-surface p-5 shadow-xs sm:p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">Langkah 2 dari 2</p>
-                <h2 className="mt-1 text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">Bentuk teman ngobrol pertamamu</h2>
+                <h2 className="mt-1 text-lg font-bold text-accent-text dark:text-accent-text">Bentuk teman ngobrol pertamamu</h2>
                 <p className="mt-1 text-sm leading-relaxed text-ink-soft">
                   Tambahkan foto jika mau, lalu isi nama, usia, gender, asal, profesi, dan keahlian. Kamu bisa menulis Bible sendiri atau minta AI menyiapkan draf yang bebas kamu edit.
                 </p>
@@ -264,13 +264,13 @@ export function FirstRunOnboarding({
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/15 text-lg text-emerald-700 dark:text-emerald-300">✓</span>
                 <div>
-                  <h2 className="text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">Siap mulai ngobrol</h2>
+                  <h2 className="text-lg font-bold text-accent-text dark:text-accent-text">Siap mulai ngobrol</h2>
                   <p className="text-sm text-ink-soft">API key dan karakter pertamamu sudah tersedia.</p>
                 </div>
               </div>
               {characters.length > 0 && (
                 <div className="rounded-2xl border border-line bg-surface-2/50 px-3.5 py-3">
-                  <p className="text-xs font-semibold text-[#205ac4] dark:text-[#e8cf75]">Karakter di akunmu</p>
+                  <p className="text-xs font-semibold text-accent-text dark:text-accent-text">Karakter di akunmu</p>
                   {characters.map((character) => <p key={character.id} className="mt-1 text-sm text-ink-soft">{character.name}</p>)}
                 </div>
               )}

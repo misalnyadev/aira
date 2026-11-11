@@ -411,7 +411,7 @@ export function CharacterMemorySection({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <WebOutlineIcon className="h-4 w-4 shrink-0 text-[#205ac4] dark:text-[#79aaff]" />
+              <WebOutlineIcon className="h-4 w-4 shrink-0 text-accent-text dark:text-accent-text" />
               <span className="text-sm font-semibold text-accent-text">
                 Browsing Internet & Baca Link
               </span>

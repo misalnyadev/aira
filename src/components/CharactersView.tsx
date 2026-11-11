@@ -150,7 +150,7 @@ export function CharactersView({
       <div className="top-bar flex items-center justify-between px-5 pb-3.5 pt-[max(1rem,var(--safe-top))]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-xl font-bold tracking-tight text-[#205ac4] dark:text-[#e8cf75]">
+            <h1 className="font-display text-xl font-bold tracking-tight text-accent-text dark:text-accent-text">
               Karakter
             </h1>
             {isAdmin && (
@@ -395,7 +395,7 @@ export function CharactersView({
 
           {characters.length === 0 ? (
             <div className="mx-auto mt-12 max-w-sm rounded-3xl border border-dashed border-line bg-surface p-8 text-center">
-              <p className="font-display text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
+              <p className="font-display text-base font-bold text-accent-text dark:text-accent-text">
                 Belum ada karakter
               </p>
               <p className="mt-1 text-xs text-copy-soft">
@@ -419,13 +419,13 @@ export function CharactersView({
                     <Avatar name={c.name} src={c.avatarUrl} size={52} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h3 className="truncate font-semibold text-[#205ac4] dark:text-[#e8cf75]">
+                        <h3 className="truncate font-semibold text-accent-text dark:text-accent-text">
                           {c.name}
                         </h3>
                         {c.hasBible && (
                           <span
                             title="Memakai bible peran"
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 dark:bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-accent-text ring-1 ring-brand/25 dark:ring-brand/30 dark:text-accent-text"
                           >
                             <BibleOutlineIcon className="h-3.5 w-3.5 text-ink" /> Bible
                           </span>
@@ -433,7 +433,7 @@ export function CharactersView({
                         {c.memoryEnabled && (
                           <span
                             title="Ingatan jangka panjang & sadar waktu aktif"
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 dark:bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-accent-text ring-1 ring-brand/25 dark:ring-brand/30 dark:text-accent-text"
                           >
                             <MemoryOutlineIcon className="h-3.5 w-3.5 text-[#956b17] dark:text-[#e8cf75]" /> Ingatan
                           </span>
@@ -441,9 +441,9 @@ export function CharactersView({
                         {c.browsingEnabled && (
                           <span
                             title="Browsing internet & baca link aktif"
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4687fe]/10 dark:bg-[#d5b767]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#205ac4] ring-1 ring-[#4687fe]/25 dark:ring-[#d5b767]/30 dark:text-[#e8cf75]"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 dark:bg-brand/10 px-1.5 py-0.5 text-[11px] font-medium text-accent-text ring-1 ring-brand/25 dark:ring-brand/30 dark:text-accent-text"
                           >
-                            <WebOutlineIcon className="h-3.5 w-3.5 text-[#205ac4] dark:text-[#79aaff]" /> Web
+                            <WebOutlineIcon className="h-3.5 w-3.5 text-accent-text dark:text-accent-text" /> Web
                           </span>
                         )}
                       </div>
@@ -465,7 +465,7 @@ export function CharactersView({
                         <span className="block text-[10.5px] text-muted">
                           PIN Undangan Kontak
                         </span>
-                        <span className="font-mono text-xs font-bold tracking-widest text-[#205ac4] dark:text-[#e8cf75]">
+                        <span className="font-mono text-xs font-bold tracking-widest text-accent-text dark:text-accent-text">
                           {c.invitePin}
                         </span>
                       </div>
