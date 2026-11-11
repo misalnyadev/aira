@@ -1683,7 +1683,7 @@ export function StatusView({
             </header>
             <div className="px-4 py-5">
               <div className="flex items-center gap-5">
-                <span className="rounded-full bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] dark:from-[#d5b767] dark:via-white dark:to-[#d5b767] p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
+                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
                 <div><div className="font-bold text-accent-text">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
               </div>
               {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && <p className="mt-4 whitespace-pre-wrap text-sm">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>}

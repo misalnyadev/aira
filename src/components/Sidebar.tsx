@@ -136,7 +136,7 @@ export function Sidebar({
             const active = activeId === c.id;
             const update = c.threadKind === "guest_contact" && c.sourceCharacterId ? contactUpdates[c.sourceCharacterId] : undefined;
             const label = update?.storyId && update?.reelId ? "Story dan Reel baru" : update?.storyId ? "Story baru" : update?.reelId ? "Reel baru" : null;
-            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] dark:from-[#d5b767] dark:via-white dark:to-[#d5b767] ring-1 ring-[#4687fe]/60 dark:ring-[#d5b767]/60" : update?.storyId ? "bg-[#4687fe] dark:bg-[#d5b767]" : "bg-white ring-1 ring-[#4687fe] dark:ring-[#d5b767]";
+            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand ring-1 ring-brand/60 dark:ring-brand/60" : update?.storyId ? "bg-brand dark:bg-brand" : "bg-white ring-1 ring-brand dark:ring-brand";
             return (
               <div
                 key={c.id}
@@ -179,7 +179,7 @@ export function Sidebar({
                         <span
                           role="img"
                           aria-label="Browsing internet dan baca link aktif"
-                          className="ml-1 inline-flex align-middle text-[#205ac4] dark:text-[#79aaff]"
+                          className="ml-1 inline-flex align-middle text-accent-text dark:text-accent-text"
                           title="Browsing internet & baca link aktif"
                         >
                           <WebOutlineIcon className="h-4 w-4" />
