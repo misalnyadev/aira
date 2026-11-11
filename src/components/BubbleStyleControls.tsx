@@ -21,7 +21,6 @@ import { Switch } from "./Switch";
 const COLORS: { value: string | null; label: string; hex: string | null }[] = [
   { value: null, label: "Ikut tema", hex: null },
   { value: "#ffffff", label: "Putih", hex: "#ffffff" },
-  { value: "#101114", label: "Hitam", hex: "#101114" },
   { value: "#f6e7c1", label: "Krem", hex: "#f6e7c1" },
   { value: "#0f172a", label: "Malam", hex: "#0f172a" },
   { value: "#1f3d2f", label: "Hijau", hex: "#1f3d2f" },
