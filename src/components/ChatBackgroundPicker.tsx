@@ -117,6 +117,18 @@ export function ChatBackgroundPicker({
             );
           })}
 
+          <input
+            type="color"
+            value={current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa"}
+            onChange={(event) => selectBackground({ kind: "color", color: event.target.value })}
+            aria-label="Pilih warna latar bebas"
+            disabled={disabled}
+            className={`h-10 w-10 shrink-0 cursor-pointer rounded-full border border-line disabled:opacity-50 transition ${
+              current.kind === "color" ? ring : idle
+            }`}
+            style={{ backgroundColor: current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa" }}
+          />
+
           <button
             type="button"
             onClick={() => imageRef.current?.click()}
@@ -138,18 +150,6 @@ export function ChatBackgroundPicker({
             {!isImage && <CameraIcon className="h-4 w-4" />}
             <span className="sr-only">Pilih gambar latar</span>
           </button>
-
-          <input
-            type="color"
-            value={current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa"}
-            onChange={(event) => selectBackground({ kind: "color", color: event.target.value })}
-            aria-label="Pilih warna latar bebas"
-            disabled={disabled}
-            className={`h-10 w-10 shrink-0 cursor-pointer rounded-full border border-line disabled:opacity-50 transition ${
-              current.kind === "color" ? ring : idle
-            }`}
-            style={{ backgroundColor: current.kind === "color" ? current.color : isDark ? "#0b0b0d" : "#f7f8fa" }}
-          />
         </div>
       </div>
 
