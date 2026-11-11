@@ -6,6 +6,24 @@ Aplikasi chat privat untuk **latihan pendalaman karakter/peran**. Karakter teras
 
 ---
 
+## Quick Start
+
+Dua pilihan, pilih salah satu:
+
+**A. Deploy ke cloud (paling cepat, ±15 menit)** — [Langkah 1–4 di bawah](#langkah-1-buat-database-gratis-neon): buat database di Neon → upload repo ke GitHub → deploy di Vercel → isi API key di dalam aplikasi. Selesai, bisa langsung chat.
+
+**B. Jalankan di laptop (gratis, tanpa Docker)** — butuh `DATABASE_URL` dari Neon (database tetap cloud):
+
+```bash
+npm install                     # sekali saja
+cp .env.example .env            # isi DATABASE_URL + SIGNUP_CODE + CRON_SECRET
+npm run dev                     # buka http://localhost:3000
+```
+
+Langsung pakai browser — tidak perlu install PostgreSQL di laptop karena database-nya di cloud.
+
+---
+
 ## Ringkasan cara deploy (±15 menit, semua lewat browser)
 
 | Langkah | Yang dilakukan | Waktu |
@@ -178,6 +196,40 @@ Atur `CRON_SECRET` di Vercel → **Settings → Environment Variables → Produc
 
 ---
 
+## Dukungan runtime (Runtime Support Scope)
+
+Aplikasi ini berjalan di dua lingkungan dengan kemampuan yang sama, tapi dengan satu perbedaan penting di penyimpanan file:
+
+| Lingkungan | Cara menjalankan | Catatan |
+|---|---|---|
+| **Vercel** | Deploy otomatis dari GitHub | Fungsi serverless (serverless functions). Route `/api/chat` sudah diset `maxDuration = 60` supaya balasan panjang tidak terpotong di paket Hobby. |
+| **Lokal / self-hosted** | `npm run dev` / `npm run build && npm start` | Server Node biasa, timeout tidak dibatasi. Cocok untuk pengembangan atau pakai di VPS sendiri. |
+
+**Database** — sama di kedua lingkungan: PostgreSQL (Neon di cloud, atau PostgreSQL lokal di laptop). Tabel dibuat otomatis saat aplikasi pertama kali dibuka; tidak perlu migrasi manual. SSL otomatis terdeteksi dari `DATABASE_URL`.
+
+**Penyimpanan gambar** — tergantung lingkungan:
+
+| Lingkungan | Tempat gambar disimpan |
+|---|---|
+| Vercel | Cloudflare R2 (bila terkonfigurasi) atau tabel `attachments` di database (tanpa R2) |
+| Lokal / self-hosted | Folder `public/uploads/` di disk (fallback ke database bila filesystem tidak bisa ditulis) |
+
+**Fitur yang berjalan di kedua lingkungan**:
+
+- ✅ Chat teks, pesan suara (VN), panggilan video/audio, Tatap Muka — semua mode balasan di atas.
+- ✅ Vision (kirim foto) — tergantung model AI yang dipilih, bukan lingkungan. Model vision seperti `gemini-3.5-flash` / `grok-4` bisa melihat gambar di mana pun kamu menjalankan.
+- ✅ TTS lokal (Web Speech API) — berjalan di browser, tidak memakai server.
+- ✅ Dikte suara (Web Speech API) — berjalan di browser.
+- ✅ Cron otomatis (pembersihan Story + StoryTalent) — memakai Vercel Cron di Vercel; di lingkungan lokal butuh prosesor cron eksternal (cron job OS) yang memukul endpoint cron dengan `CRON_SECRET`.
+
+**Yang perlu diperhatikan di Vercel**:
+
+- Timeout maksimum 60 detik per request di paket Hobby — sudah cukup untuk balasan AI 10–40 detik.
+- Payload maksimum ±4.5 MB per request — aman karena gambar sudah dikompresi di browser.
+- Filesystem read-only — itulah sebabnya gambar menggunakan R2 atau database, bukan folder `public/uploads/`.
+
+---
+
 ## Troubleshooting
 
 | Masalah | Solusi |
@@ -288,6 +340,22 @@ Karakter bisa membacakan balasannya memakai **Web Speech API** bawaan browser pe
 - Tersedia **5 preset** (*Natural*, *Hangat*, *Santai*, *Ceria*, *Jelas*) serta pengatur **kecepatan**, **nada**, **volume**, dan **jeda antar kalimat**.
 - Teks dibersihkan dari markdown/emoji lalu dipecah per kalimat supaya intonasi wajar dan tidak terpotong di iOS Safari.
 - Setelan suara disimpan di perangkat per akun (karena daftar suara mengikuti masing-masing HP/laptop).
+
+## Mode pemicu balasan (Reply Trigger Modes)
+
+Karakter merespons lewat beberapa mode — dipilih otomatis berdasarkan bagaimana giliran itu berjalan. Kamu tidak perlu menyalakan apa pun; mode ini terikat pada konteks obrolan.
+
+| Mode | Kapan aktif | Cara balasannya |
+|---|---|---|
+| **Chat teks** | Pesan biasa di ruang chat | Beberapa gelembung pendek seperti orang beneran ngetik, dipisah token internal `[[NEXT]]`. Gaya natural, boleh emoji & markdown ringan. |
+| **Pesan suara (Voice Note)** | Karakter punya mode VN aktif, atau kamu mengirim voice note | Balasan berupa gelembung suara yang langsung bisa diputar. Bila model merespons multi-bubble, gelembung suaranya digabung jadi satu (asal muat ≤ 450 karakter). |
+| **Panggilan langsung (video / audio)** | Saat sedang menelepon karakter | Balasan lisan 1–3 kalimat, diawali tepat satu penanda ekspresi (mis. `[SMILE]`). Tanpa emoji, tanpa markdown, tanpa `[[NEXT]]` — karena langsung dibacakan dengan suara karakter. |
+| **Tatap Muka (Meetup)** | Mode Tatap Muka di ruang chat | Mirip chat teks, tapi setiap gelembung diawali penanda ekspresi. Bila karakter punya klip ekspresi, klip itu dipakai untuk mewakili ekspresinya. |
+| **Ruang bersama (Brainstorm / Reka Adegan)** | Diskusi di ruangan bersama karakter lain | Karakter ikut mengembangkan ide atau adegan, tapi tidak menulis dialog untuk karakter lain — yang hadir saja yang boleh berbicara. |
+
+**Pesan suara (VN)** bisa diatur per karakter di Pengaturan Karakter: *Off* (tidak pernah), *Auto* (hanya bila kamu mengirim VN), *Occasional* (acak 32%, kecuali pesan panjang/link/kode), atau *Always* (selalu). Bila kamu mengirim voice note, karakter membalas dengan voice note — kecuali saat sedang dalam panggilan.
+
+Di **mode panggilan**, dikte suara kamu memakai Web Speech API bawaan browser (gratis; di iOS suara dikirim ke server Apple, butuh internet). Karakter menjawab dengan suara yang disintesis di perangkatmu — tidak ada WebRTC, tidak ada biaya server tambahan.
 
 ## Kode undangan
 
