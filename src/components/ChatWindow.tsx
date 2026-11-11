@@ -207,12 +207,12 @@ export function ChatWindow({
   const hasReel = Boolean(characterUpdate?.reelId);
   const ringStyle = (viewed: boolean) =>
     viewed
-      ? "bg-line"
+      ? "ring-1 ring-line"
       : hasStory && hasReel
-        ? "bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand ring-1 ring-brand/60 dark:ring-brand/60"
+        ? "ring-2 ring-brand dark:ring-brand/70"
         : hasStory
-          ? "bg-brand dark:bg-brand"
-          : "bg-white ring-1 ring-brand dark:ring-brand";
+          ? "ring-2 ring-brand dark:ring-brand"
+          : "ring-2 ring-brand dark:ring-brand";
 
   useEffect(() => {
     const root = rootRef.current;
@@ -560,11 +560,9 @@ export function ChatWindow({
                   onClick={() => void onOpenProfileFromChat?.(characterUpdateKey)}
                   aria-label={`Buka update ${character.name}`}
                   title={characterUpdateLabel}
-                  className="shrink-0 rounded-full p-[2px] ${ringStyle(characterUpdateViewed)}"
+                  className={`shrink-0 rounded-full ring-2 ${ringStyle(characterUpdateViewed)}`}
                 >
-                  <span className="block rounded-full bg-surface p-[2px]">
-                    <Avatar name={character.name} src={character.avatarUrl} size={30} />
-                  </span>
+                  <Avatar name={character.name} src={character.avatarUrl} size={34} />
                 </button>
               ) : (
                 <Avatar name={character.name} src={character.avatarUrl} size={34} />
