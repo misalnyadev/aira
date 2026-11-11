@@ -1695,16 +1695,19 @@ export function StatusView({
             </header>
             <div className="px-4 py-5">
               <div className="flex items-start gap-4">
-                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[2px]"><span className="block rounded-full bg-surface p-[2px]"><Avatar name={name} src={avatar} size={88} /></span></span>
+                <span className="shrink-0 rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[2px]"><span className="block rounded-full bg-surface p-[2px]"><Avatar name={name} src={avatar} size={88} /></span></span>
                 <div className="flex flex-col gap-2 min-w-0">
                   <div className="font-bold text-accent-text text-lg truncate">{name}</div>
-                  <div className="flex gap-5 text-sm">
+                  <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="text-ink"><strong>{profilePosts.length}</strong><br /><span className="text-ink-soft text-xs">postingan</span></div>
                     <div className="text-ink"><strong>{profileItem.followerCount}</strong><br /><span className="text-ink-soft text-xs">pengikut</span></div>
-                    <div className="text-ink-soft text-xs">{profileItem.accountFollowerCount} mengikuti</div>
+                    <div className="text-ink"><strong>{profileItem.accountFollowerCount}</strong><br /><span className="text-ink-soft text-xs">mengikuti</span></div>
                   </div>
+                </div>
+              </div>
+              <div className="mt-3 min-w-0">
                   {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && (
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
+                    <p className="mb-3 whitespace-pre-wrap break-words text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
                   )}
                   {/* Aksi utama: Ikuti / Mengikuti (seperti IG) */}
                   {profileItem.canFollow && (
@@ -1730,7 +1733,6 @@ export function StatusView({
                   </div>
                   {inviteMessage && <p role="status" className="mt-3 text-sm text-ink-soft">{inviteMessage}</p>}
                   {followError && <p role="alert" className="mt-3 text-sm text-red-600">{followError}</p>}
-                </div>
               </div>
             </div>
             {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
