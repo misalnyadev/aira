@@ -98,7 +98,7 @@ export function ChatBackgroundPicker({
             <span className="sr-only">Latar bawaan</span>
           </button>
 
-          {CHAT_COLOR_PRESETS.map((preset) => {
+          {CHAT_COLOR_PRESETS.slice(0, -1).map((preset) => {
             const active = current.kind === "preset" && current.id === preset.id;
             return (
               <button
