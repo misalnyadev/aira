@@ -132,6 +132,8 @@ export function ChatWindow({
   onCopyMessage,
   onSpeakMessage,
   onStopSpeaking,
+  contactUpdates,
+  onOpenProfileFromChat,
   onDeleteMessage,
   onRegenerate,
 }: {
@@ -176,6 +178,8 @@ export function ChatWindow({
     role?: "user" | "assistant"
   ) => void;
   onStopSpeaking: () => void;
+  contactUpdates?: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
+  onOpenProfileFromChat?: (characterId: string) => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
 }) {
@@ -189,6 +193,25 @@ export function ChatWindow({
   const [atBottom, setAtBottom] = useState(true);
   const isDark = useSyncExternalStore(subscribeTheme, getIsDarkSnapshot, () => false);
   const backdrop = chatBackgroundProps(background, isDark);
+
+  /** Indikator update story/reel untuk karakter yang sedang dalam percakapan. */
+  const characterUpdate = contactUpdates?.[character.id];
+  const hasCharacterUpdate = Boolean(characterUpdate?.storyId || characterUpdate?.reelId);
+  const characterUpdateViewed = Boolean(characterUpdate?.viewed);
+  const characterUpdateLabel = hasCharacterUpdate
+    ? (characterUpdate?.storyId && characterUpdate?.reelId ? "Story dan Reel baru" : characterUpdate?.storyId ? "Story baru" : "Reel baru")
+    : undefined;
+
+  const hasStory = Boolean(characterUpdate?.storyId);
+  const hasReel = Boolean(characterUpdate?.reelId);
+  const ringStyle = (viewed: boolean) =>
+    viewed
+      ? "bg-line"
+      : hasStory && hasReel
+        ? "bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand ring-1 ring-brand/60 dark:ring-brand/60"
+        : hasStory
+          ? "bg-brand dark:bg-brand"
+          : "bg-white ring-1 ring-brand dark:ring-brand";
 
   useEffect(() => {
     const root = rootRef.current;
@@ -530,7 +553,21 @@ export function ChatWindow({
               aria-label={`Pengaturan ${character.name}`}
               title={`Pengaturan ${character.name}`}
             >
-              <Avatar name={character.name} src={character.avatarUrl} size={34} />
+              {hasCharacterUpdate ? (
+                <button
+                  type="button"
+                  onClick={() => void onOpenProfileFromChat?.(character.id)}
+                  aria-label={`Buka update ${character.name}`}
+                  title={characterUpdateLabel}
+                  className="shrink-0 rounded-full p-[2px] ${ringStyle(characterUpdateViewed)}"
+                >
+                  <span className="block rounded-full bg-surface p-[2px]">
+                    <Avatar name={character.name} src={character.avatarUrl} size={30} />
+                  </span>
+                </button>
+              ) : (
+                <Avatar name={character.name} src={character.avatarUrl} size={34} />
+              )}
               <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-semibold leading-tight text-accent-text">
                   {character.name}
