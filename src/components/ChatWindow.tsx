@@ -544,7 +544,11 @@ export function ChatWindow({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-0 rounded-full border ring-1 transition active:scale-[0.98] active:opacity-80 ${
+              visualMode === "meetup"
+                ? "ring-accent/40 dark:ring-accent/45 bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm"
+                : "ring-accent/40 dark:ring-accent/45 bg-surface/55 backdrop-blur-md hover:bg-surface/65 dark:ring-accent/40 dark:ring-accent/45"
+            }`}>
               {hasCharacterUpdate ? (
                 <button
                   type="button"
@@ -554,7 +558,7 @@ export function ChatWindow({
                   }}
                   aria-label={`Buka update ${character.name}`}
                   title={characterUpdateLabel}
-                  className={`shrink-0 rounded-full ring-2 ${ringStyle(characterUpdateViewed)}`}
+                  className="shrink-0 rounded-l-full p-2.5 ring-2 ${ringStyle(characterUpdateViewed)}"
                 >
                   <Avatar name={character.name} src={character.avatarUrl} size={34} />
                 </button>
@@ -566,13 +570,7 @@ export function ChatWindow({
                   e.stopPropagation();
                   onOpenProfile();
                 }}
-                className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
-                  visualMode === "meetup"
-                    ? "bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm ring-1 ring-accent/40 dark:ring-accent/45"
-                    : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 ring-1 ring-accent/40 dark:ring-accent/45"
-                }`}
-                aria-label={`Pengaturan ${character.name}`}
-                title={`Pengaturan ${character.name}`}
+                className="flex-1 min-w-0 rounded-r-full pl-3 pr-3.5 py-2 text-left text-accent-text transition hover:bg-surface-2 dark:hover:bg-surface-2/50"
               >
                 <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-semibold leading-tight text-accent-text">
