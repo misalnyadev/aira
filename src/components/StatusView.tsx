@@ -1710,18 +1710,17 @@ export function StatusView({
                   {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && (
                     <p className="mb-3 whitespace-pre-wrap break-words text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
                   )}
-                  {/* Aksi utama: Ikuti / Mengikuti (seperti IG) */}
-                  {profileItem.canFollow && (
-                    <button
-                      type="button"
-                      disabled={!!followBusyKeys[statusProfileKey(profileItem)]}
-                      onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }}
-                      className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
-                    >
-                      {profileItem.followingByMe ? "Mengikuti" : "Ikuti"}
-                    </button>
-                  )}
-                  <div className="mt-3 flex gap-2">
+                  <div className="flex gap-2">
+                    {profileItem.canFollow && (
+                      <button
+                        type="button"
+                        disabled={!!followBusyKeys[statusProfileKey(profileItem)]}
+                        onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }}
+                        className="min-w-0 flex-1 rounded-xl bg-brand px-2 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
+                      >
+                        {profileItem.followingByMe ? "Mengikuti" : "Ikuti"}
+                      </button>
+                    )}
                     {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && (
                       <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink">Buka Chat</button>
                     )}
