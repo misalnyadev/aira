@@ -133,7 +133,7 @@ export function ChatWindow({
   onSpeakMessage,
   onStopSpeaking,
   contactUpdates,
-  onOpenProfileFromChat,
+  onOpenStoryFromChat,
   onDeleteMessage,
   onRegenerate,
 }: {
@@ -179,7 +179,7 @@ export function ChatWindow({
   ) => void;
   onStopSpeaking: () => void;
   contactUpdates?: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
-  onOpenProfileFromChat?: (characterId: string) => void;
+  onOpenStoryFromChat?: (storyId: string) => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
 }) {
@@ -544,20 +544,14 @@ export function ChatWindow({
           </button>
 
           <div className="min-w-0 flex-1">
-            <button
-              onClick={onOpenProfile}
-              className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
-                visualMode === "meetup"
-                  ? "bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm ring-1 ring-accent/40 dark:ring-accent/45"
-                  : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 ring-1 ring-accent/40 dark:ring-accent/45"
-              }`}
-              aria-label={`Pengaturan ${character.name}`}
-              title={`Pengaturan ${character.name}`}
-            >
+            <div className="flex items-center gap-2">
               {hasCharacterUpdate ? (
                 <button
                   type="button"
-                  onClick={() => void onOpenProfileFromChat?.(characterUpdateKey)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onOpenStoryFromChat?.(characterUpdate?.storyId!);
+                  }}
                   aria-label={`Buka update ${character.name}`}
                   title={characterUpdateLabel}
                   className={`shrink-0 rounded-full ring-2 ${ringStyle(characterUpdateViewed)}`}
@@ -567,7 +561,20 @@ export function ChatWindow({
               ) : (
                 <Avatar name={character.name} src={character.avatarUrl} size={34} />
               )}
-              <div className="min-w-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenProfile();
+                }}
+                className={`inline-flex h-[42px] max-w-full items-center gap-2.5 rounded-full py-1 pl-1 pr-3.5 text-left transition active:scale-[0.98] active:opacity-80 ${
+                  visualMode === "meetup"
+                    ? "bg-surface/80 hover:bg-surface/85 dark:bg-surface/70 dark:hover:bg-surface/75 backdrop-blur-sm ring-1 ring-accent/40 dark:ring-accent/45"
+                    : "bg-surface/55 backdrop-blur-md hover:bg-surface/65 ring-1 ring-accent/40 dark:ring-accent/45"
+                }`}
+                aria-label={`Pengaturan ${character.name}`}
+                title={`Pengaturan ${character.name}`}
+              >
+                <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-semibold leading-tight text-accent-text">
                   {character.name}
                 </p>
@@ -589,6 +596,7 @@ export function ChatWindow({
                 </p>
               </div>
             </button>
+          </div>
           </div>
 
           {isSpeaking && (
