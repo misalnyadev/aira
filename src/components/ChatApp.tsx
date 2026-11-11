@@ -1554,7 +1554,6 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       onBack: () => void;
       backLabel: string;
       contactUpdates?: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
-      onOpenStoryFromChat?: (storyId: string) => void;
     }
   ) {
     const isMeetup = options.mode === "meetup";
@@ -1585,11 +1584,8 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         onBack={options.onBack}
         backLabel={options.backLabel}
         onOpenProfile={() => openProfile(character.id, options.mode)}
-        onOpenStoryFromChat={(storyId) => {
-          stopSpeaking();
-          setStatusFromChat(true);
-          setSharedStatusId(storyId);
-          setView("status");
+        onOpenProfileFromChat={(characterId) => {
+          void openProfile(characterId, options.mode);
         }}
         onOpenVoice={() => {
           setFocusVoiceSettings(true);
