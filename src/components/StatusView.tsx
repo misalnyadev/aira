@@ -1687,40 +1687,48 @@ export function StatusView({
         return <div className="fixed inset-0 z-[90] overflow-y-auto bg-app text-ink" role="dialog" aria-modal="true" aria-label={`Profil ${name}`}>
           <div className="mx-auto min-h-full max-w-[560px] pb-8">
             <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
-              <button type="button" onClick={closeTalentProfile} className="rounded-full px-2 py-1 text-2xl" aria-label="Tutup profil">‹</button>
-              <h2 className="truncate text-lg font-bold text-accent-text">{name}</h2>
-              <button type="button" onClick={closeTalentProfile} className="rounded-full p-1 text-ink-soft" aria-label="Tutup profil">
-                <XIcon className="h-5 w-5" />
+              <button type="button" onClick={closeTalentProfile} className="rounded-full px-2 py-1 text-2xl" aria-label="Kembali">‹</button>
+              <h1 className="truncate text-lg font-bold text-accent-text">{name}</h1>
+              <button type="button" onClick={() => {}} className="rounded-full p-1 text-ink-soft" aria-label="Opsi">
+                <IgMoreIcon className="h-5 w-5" />
               </button>
             </header>
             <div className="px-4 py-5">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={86} /></span></span>
-                <div className="font-bold text-accent-text text-lg">{name}</div>
-                <div className="text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div>
-                {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
-                )}
-                {/* Aksi utama: Ikuti / Mengikuti (seperti IG) */}
-                {profileItem.canFollow && (
-                  <button
-                    type="button"
-                    disabled={!!followBusyKeys[statusProfileKey(profileItem)]}
-                    onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }}
-                    className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
-                  >
-                    {profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}
-                  </button>
-                )}
-                {inviteMessage && <p role="status" className="mt-2 text-sm text-ink-soft">{inviteMessage}</p>}
-                {followError && <p role="alert" className="mt-2 text-sm text-red-600">{followError}</p>}
+              <div className="flex items-start gap-3">
+                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[2px]"><span className="block rounded-full bg-surface p-[2px]"><Avatar name={name} src={avatar} size={80} /></span></span>
+                <div className="flex flex-col gap-1">
+                  <div className="font-bold text-accent-text text-lg">{name}</div>
+                  <div className="flex gap-4 text-sm">
+                    <div className="text-ink"><strong>{profilePosts.length}</strong><br /><span className="text-ink-soft text-xs">postingan</span></div>
+                    <div className="text-ink"><strong>{profileItem.followerCount}</strong><br /><span className="text-ink-soft text-xs">pengikut</span></div>
+                    <div className="text-ink-soft text-xs">{profileItem.accountFollowerCount} mengikuti</div>
+                  </div>
+                  <p className="mt-2 text-xs text-ink-soft">{profileItem.characterId ? "Karakter · Profil buatan AI" : "Pengguna · Profil buatan AI"}</p>
+                  {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
+                  )}
+                  {/* Aksi utama: Ikuti / Mengikuti (seperti IG) */}
+                  {profileItem.canFollow && (
+                    <button
+                      type="button"
+                      disabled={!!followBusyKeys[statusProfileKey(profileItem)]}
+                      onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }}
+                      className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
+                    >
+                      {profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}
+                    </button>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button type="button" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink">Kirim Pesan</button>
+                    <button type="button" className="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink">WhatsApp</button>
+                    <button type="button" className="rounded-full border border-line bg-surface p-2" aria-label="Tambah kontak">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-ink"><path d="M16 4v12c0 2.21-1.79 4-4 4H4c-2.21 0-4-1.79-4-4V4c0-2.21 1.79-4 4-4h8c2.21 0 4 1.79 4 4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </button>
+                  </div>
+                </div>
               </div>
-              {/* Aksi sekunder (kecil, seperti IG) */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="flex-1 min-w-[120px] rounded-xl border border-brand bg-surface px-3 py-2 text-xs font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"}</button>}
-                {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="flex-1 min-w-[120px] rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold">Buka Chat</button>}
-                {profileItem.canFollow && profileItem.characterId && !chatCharacterIds.includes(profileItem.characterId) && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="flex-1 min-w-[120px] rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
-              </div>
+              {inviteMessage && <p role="status" className="mt-3 text-sm text-ink-soft">{inviteMessage}</p>}
+              {followError && <p role="alert" className="mt-3 text-sm text-red-600">{followError}</p>}
             </div>
             {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Story aktif · {storiesInProfile.length}</div>
@@ -1865,22 +1873,13 @@ export function StatusView({
                 ))}
               </div>
               <div className="mt-3 flex items-center justify-between px-1">
-                <button type="button" onClick={() => void openTalentProfile(currentStory)} aria-label={`Buka profil ${displayName}`} className="flex min-w-0 items-center gap-2 text-left">
-                  <Avatar name={displayName} src={avatar} size={32} />
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">{displayName}</div>
-                    <div className="text-xs text-white/75">{timeAgo(currentStory.createdAt)} · {currentStory.followerCount} pengikut</div>
-                  </div>
-                </button>
                 <button onClick={closeViewer} className="rounded-full bg-black/30 p-2 backdrop-blur-md" aria-label="Tutup status">
                   <XIcon className="h-5 w-5" />
                 </button>
+                <button type="button" onClick={() => {}} className="rounded-full p-1 text-white" aria-label="Opsi">
+                  <IgMoreIcon className="h-5 w-5" />
+                </button>
               </div>
-              {currentStory.canFollow && <div className="mt-2 flex flex-wrap gap-2 px-1 text-xs">
-                <button type="button" disabled={!!followBusyKeys[statusProfileKey(currentStory)]} onClick={() => void toggleFollow(currentStory)} className="rounded-full bg-black/50 px-3 py-1.5 disabled:opacity-50">{currentStory.followingByMe ? "Mengikuti" : currentStory.characterId ? "Ikuti karakter" : currentStory.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>
-                {currentStory.characterId && <button type="button" disabled={!!followBusyKeys[`account:${currentStory.userId}`]} onClick={() => void toggleFollow(currentStory, true)} className="rounded-full bg-black/50 px-3 py-1.5 disabled:opacity-50">{currentStory.followingAccountByMe ? "Mengikuti akun" : currentStory.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {currentStory.accountFollowerCount} pengikut</button>}
-                {followError && <span role="alert">{followError}</span>}
-              </div>}
             </div>
 
             {/* Bar aksi kanan: suka, komentar, bagikan, simpan */}
@@ -1925,11 +1924,19 @@ export function StatusView({
               ›
             </button>
 
-            {currentStory.caption && currentStory.caption !== currentStory.content ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 truncate px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-20 text-center text-sm text-white/90 drop-shadow">
-                {currentStory.caption}
+            {/* Informasi penulis di kiri bawah (seperti IG): avatar, nama, badge, caption */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-10">
+              <div className="flex items-end gap-2">
+                <span className="rounded-full bg-white/20 p-[1px]"><span className="block rounded-full bg-black p-[1px]"><Avatar name={displayName} src={avatar} size={26} /></span></span>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="truncate text-sm font-semibold text-white drop-shadow">{displayName}</div>
+                  <span className="text-[10px] font-medium text-white/80 drop-shadow uppercase tracking-tight">Konten AI</span>
+                  {currentStory.caption && currentStory.caption !== currentStory.content && (
+                    <p className="mt-0.5 truncate text-sm text-white/90 drop-shadow leading-snug">{currentStory.caption}</p>
+                  )}
+                </div>
               </div>
-            ) : null}
+            </div>
           </div>
         );
       })()}
