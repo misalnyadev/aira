@@ -1271,7 +1271,7 @@ export function StatusView({
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3.5">
               <div className="min-w-0">
-                <h2 id="own-reel-gallery-title" className="truncate text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">
+                <h2 id="own-reel-gallery-title" className="truncate text-base font-bold text-accent-text">
                   Galeri Reels Anda
                 </h2>
                 <p className="mt-0.5 text-xs text-muted">
@@ -1324,7 +1324,7 @@ export function StatusView({
               ) : ownReelsError ? null : ownReels.length === 0 ? (
                 <div className="flex flex-col items-center px-5 py-12 text-center">
                   <FilmIcon className="h-8 w-8 text-muted" />
-                  <p className="mt-3 text-sm font-semibold text-[#205ac4] dark:text-[#e8cf75]">Belum ada reels pribadi</p>
+                  <p className="mt-3 text-sm font-semibold text-accent-text">Belum ada reels pribadi</p>
                   <p className="mt-1 text-xs text-muted">Reels yang kamu posting atas nama akunmu akan muncul di sini.</p>
                   <button
                     type="button"
@@ -1414,7 +1414,7 @@ export function StatusView({
                     aria-label="Buka galeri reels Anda"
                     className="block rounded-full"
                   >
-                    <span className={`block rounded-full p-[2px] ${ownStoryProfile?.hasUnseen ? "bg-[#4687fe] dark:bg-[#d5b767]" : "bg-line"}`}>
+                    <span className={`block rounded-full p-[2px] ${ownStoryProfile?.hasUnseen ? "bg-brand" : "bg-line"}`}>
                       <span className="block rounded-full bg-surface p-[2px]">
                         <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={56} />
                       </span>
@@ -1440,7 +1440,7 @@ export function StatusView({
                   const avatar = s.characterAvatar || s.userAvatar || undefined;
                   return (
                     <button key={profileStory.key} onClick={() => openStoryProfile(profileStory.key)} className="flex w-1/4 shrink-0 snap-start flex-col items-center gap-1">
-                      <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-[#4687fe] dark:bg-[#d5b767]" : "bg-line"}`}>
+                      <span className={`rounded-full p-[2px] ${profileStory.hasUnseen ? "bg-brand" : "bg-line"}`}>
                         <span className="block rounded-full bg-surface p-[2px]">
                           <Avatar name={name} src={avatar} size={56} />
                         </span>
@@ -1611,18 +1611,18 @@ export function StatusView({
                             <div key={c.id} className="space-y-1.5">
                               <div className="flex gap-2">
                                 <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={24} />
-                                <div className="min-w-0 rounded-2xl bg-white px-3 py-1.5 shadow-sm">
-                                  <div className="text-xs font-semibold">{c.displayName || c.nickname || "User"}</div>
-                                  {c.content ? <div className="text-sm leading-snug">{c.content}</div> : null}
+                                <div className="min-w-0 rounded-2xl bg-surface-2 px-3 py-1.5 shadow-sm">
+                                  <div className="text-xs font-semibold text-ink">{c.displayName || c.nickname || "User"}</div>
+                                  {c.content ? <div className="text-sm leading-snug text-ink">{c.content}</div> : null}
                                   {c.imageUrl ? <img src={c.imageUrl} alt="Foto komentar" className="mt-1 max-h-48 max-w-full rounded-xl object-contain" /> : null}
                                 </div>
                               </div>
                               {replies.map((reply) => (
                                 <div key={reply.id} className="ml-7 flex gap-2">
                                   <Avatar name={reply.displayName || reply.nickname || "User"} src={reply.avatarUrl || undefined} size={22} />
-                                  <div className="min-w-0 rounded-2xl bg-white/80 px-3 py-1.5 shadow-sm">
-                                    <div className="text-xs font-semibold">{reply.displayName || reply.nickname || "User"}</div>
-                                    {reply.content ? <div className="text-sm leading-snug">{reply.content}</div> : null}
+                                  <div className="min-w-0 rounded-2xl bg-surface-2 px-3 py-1.5 shadow-sm">
+                                    <div className="text-xs font-semibold text-ink-soft">{reply.displayName || reply.nickname || "User"}</div>
+                                    {reply.content ? <div className="text-sm leading-snug text-ink-soft">{reply.content}</div> : null}
                                     {reply.imageUrl ? <img src={reply.imageUrl} alt="Foto balasan" className="mt-1 max-h-48 max-w-full rounded-xl object-contain" /> : null}
                                   </div>
                                 </div>
@@ -1632,13 +1632,13 @@ export function StatusView({
                         )}
                       </div>
                       <div className="flex gap-2 pt-2">
-                        <input
-                          value={commentDraft}
-                          onChange={(e) => setCommentDraft(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && sendComment(it.id)}
-                          placeholder="Tulis komentar..."
-                          className="flex-1 rounded-full border border-line bg-white px-4 py-2 text-sm outline-none"
-                        />
+                          <input
+                            value={commentDraft}
+                            onChange={(e) => setCommentDraft(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && sendComment(it.id)}
+                            placeholder="Tulis komentar..."
+                            className="flex-1 rounded-full border border-line bg-surface-2 px-4 py-2 text-sm text-ink outline-none"
+                          />
                         <button onClick={() => sendComment(it.id)} className="rounded-full bg-brand p-2.5 text-brand-ink">
                           <SendIcon className="h-4 w-4" />
                         </button>
@@ -1679,17 +1679,17 @@ export function StatusView({
           <div className="mx-auto min-h-full max-w-[560px] pb-8">
             <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,var(--safe-top))]">
               <button type="button" onClick={closeTalentProfile} className="rounded-full px-2 py-1 text-2xl" aria-label="Kembali">‹</button>
-              <h2 className="truncate text-lg font-bold text-[#205ac4] dark:text-[#e8cf75]">{name}</h2>
+              <h2 className="truncate text-lg font-bold text-accent-text">{name}</h2>
             </header>
             <div className="px-4 py-5">
               <div className="flex items-center gap-5">
                 <span className="rounded-full bg-gradient-to-tr from-[#4687fe] via-white to-[#4687fe] dark:from-[#d5b767] dark:via-white dark:to-[#d5b767] p-[3px]"><span className="block rounded-full bg-surface p-[3px]"><Avatar name={name} src={avatar} size={78} /></span></span>
-                <div><div className="font-bold text-[#205ac4] dark:text-[#e8cf75]">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
+                <div><div className="font-bold text-accent-text">{name}</div><div className="mt-2 text-sm"><strong>{profileItem.followerCount}</strong> pengikut</div></div>
               </div>
               {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && <p className="mt-4 whitespace-pre-wrap text-sm">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>}
               <div className="mt-4 flex flex-wrap gap-2">
-                {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-[#4687fe] px-4 py-2 text-sm font-semibold text-[#07152f] dark:bg-[#d5b767] dark:text-[#211804] disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
-                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-[#4687fe] dark:border-[#d5b767] bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
+                {profileItem.canFollow && <button type="button" disabled={!!followBusyKeys[statusProfileKey(profileItem)]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-ink disabled:opacity-50">{profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}</button>}
+                {profileItem.canFollow && profileItem.characterId && <button type="button" disabled={!!followBusyKeys[`account:${profileItem.userId}`]} onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem, true); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }} className="rounded-xl border border-brand bg-surface px-4 py-2 text-sm font-semibold disabled:opacity-50">{profileItem.followingAccountByMe ? "Mengikuti akun" : profileItem.accountFollowsMe ? "Ikuti balik akun" : "Ikuti akun"} · {profileItem.accountFollowerCount} pengikut</button>}
                 {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold">Buka Chat</button>}
                 {profileItem.canFollow && profileItem.characterId && !chatCharacterIds.includes(profileItem.characterId) && <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="rounded-xl border border-line bg-surface-2 px-4 py-2 text-sm font-semibold disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>}
               </div>
@@ -1698,7 +1698,7 @@ export function StatusView({
             </div>
             {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Story aktif · {storiesInProfile.length}</div>
-              <div className="flex gap-2 overflow-x-auto px-4 pb-4">{storiesInProfile.length ? storiesInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} className="shrink-0 rounded-full border-2 border-[#4687fe] dark:border-[#d5b767] p-1" aria-label={`Lihat story ${name}`}><Avatar name={name} src={avatar} size={48} /></button>) : <span className="text-sm text-muted">Belum ada Story aktif.</span>}</div>
+              <div className="flex gap-2 overflow-x-auto px-4 pb-4">{storiesInProfile.length ? storiesInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} className="shrink-0 rounded-full border-2 border-brand p-1" aria-label={`Lihat story ${name}`}><Avatar name={name} src={avatar} size={48} /></button>) : <span className="text-sm text-muted">Belum ada Story aktif.</span>}</div>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Reels · {reelsInProfile.length}{profilePosts.length === 120 ? "+" : ""}</div>
               {reelsInProfile.length ? <div className="grid grid-cols-3 gap-0.5">{reelsInProfile.map((post) => <button key={post.id} onClick={() => openPost(post)} aria-label={`Buka Reel ${name}`} className="relative aspect-[3/4] overflow-hidden bg-surface-2 text-sm">{post.imageUrl ? <img src={post.imageUrl} alt="" className="h-full w-full object-cover" /> : post.videoUrl ? <video src={post.videoUrl} muted preload="metadata" className="h-full w-full object-cover" /> : <span className="line-clamp-4 p-2">{post.content || post.caption || "Reel"}</span>}</button>)}</div> : <p className="px-4 text-sm text-muted">Belum ada Reel.</p>}
               {profilePosts.length === 120 && <p className="p-4 text-xs text-muted">Menampilkan hingga 120 postingan terbaru.</p>}
@@ -1722,7 +1722,7 @@ export function StatusView({
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
             <div className="flex items-center justify-between gap-3">
-              <h2 id="status-edit-title" className="text-base font-bold text-[#205ac4] dark:text-[#e8cf75]">Edit postingan</h2>
+              <h2 id="status-edit-title" className="text-base font-bold text-accent-text">Edit postingan</h2>
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
@@ -2050,7 +2050,7 @@ export function StatusView({
 
             {/* global comment bar — cuma shortcut ke modal, tanpa Kirim/X karena back < sudah ada di atas */}
             <div className="absolute inset-x-0 bottom-0 flex items-center bg-black px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] border-t border-white/10 z-30" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
-              <button onClick={() => openFullscreenComments(activeIt.id)} className="flex flex-1 items-center rounded-full bg-white/10 border border-white/10 px-4 py-2.5 text-left text-sm text-white/50">
+              <button onClick={() => openFullscreenComments(activeIt.id)} className="flex flex-1 items-center rounded-full bg-ink/10 border border-line px-4 py-2.5 text-left text-sm text-ink-soft/70">
                 Tambahkan komentar...
               </button>
             </div>
@@ -2058,21 +2058,21 @@ export function StatusView({
             {/* sheet komen untuk item aktif */}
             {showFullscreenComments && activeIt && (
               <>
-                <button aria-label="Tutup komentar" onClick={() => { setReplyingTo(null); setShowFullscreenComments(false); }} className="absolute inset-0 bg-black/55 backdrop-blur-[1px] z-30" />
-                <div className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-[#121212] shadow-2xl z-40 transition-transform duration-200" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
+                <button aria-label="Tutup komentar" onClick={() => { setReplyingTo(null); setShowFullscreenComments(false); }} className="absolute inset-0 bg-black/45 backdrop-blur-[1px] z-30" />
+                <div className="absolute inset-x-0 bottom-0 flex max-h-[78dvh] flex-col rounded-t-[20px] bg-surface shadow-2xl z-40 transition-transform duration-200" style={{ transform: kbOffset ? `translateY(-${kbOffset}px)` : undefined }}>
                   <div className="flex shrink-0 justify-center pt-2.5 pb-1">
-                    <span className="h-1 w-10 rounded-full bg-white/25" />
+                    <span className="h-1 w-10 rounded-full bg-ink-soft/30" />
                   </div>
                   <div className="flex-1 overflow-y-auto px-3">
                     {activeCaption ? (
-                      <div className="mb-2 flex gap-2.5 border-b border-white/10 pb-3 pt-2">
+                      <div className="mb-2 flex gap-2.5 border-b border-line pb-3 pt-2">
                         <Avatar name={activeAuthor} src={activeAvatar} size={30} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm font-medium text-white">{activeAuthor}</span>
-                            <span className="text-[11px] text-white/40">• {timeAgo(activeIt.createdAt)}</span>
+                            <span className="text-sm font-medium text-ink">{activeAuthor}</span>
+                            <span className="text-[11px] text-ink-soft/60">• {timeAgo(activeIt.createdAt)}</span>
                           </div>
-                          <p className="mt-1 whitespace-pre-wrap break-words text-sm font-normal leading-relaxed text-white/90">
+                          <p className="mt-1 whitespace-pre-wrap break-words text-sm font-normal leading-relaxed text-ink-soft">
                             {activeCaption}
                           </p>
                         </div>
@@ -2080,7 +2080,7 @@ export function StatusView({
                     ) : null}
                     <div className="max-h-[42dvh] space-y-3.5 overflow-y-auto py-2">
                       {(comments[activeIt.id] || []).length === 0 ? (
-                        <div className="py-8 text-center text-sm text-white/50">Belum ada komentar — jadi yang pertama ✨</div>
+                        <div className="py-8 text-center text-sm text-ink-soft/60">Belum ada komentar — jadi yang pertama ✨</div>
                       ) : (
                         groupCommentThreads(comments[activeIt.id] || []).map(({ comment: c, replies }) => (
                           <div key={c.id} className="space-y-2.5">
@@ -2088,14 +2088,14 @@ export function StatusView({
                               <Avatar name={c.displayName || c.nickname || "User"} src={c.avatarUrl || undefined} size={32} />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-baseline gap-1.5">
-                                  <span className="text-[13px] font-semibold text-white">{c.displayName || c.nickname || "Anonim"}</span>
-                                  <span className="text-[11px] text-white/40">{timeAgo(c.createdAt)}</span>
+                                  <span className="text-[13px] font-semibold text-ink">{c.displayName || c.nickname || "Anonim"}</span>
+                                  <span className="text-[11px] text-ink-soft/60">{timeAgo(c.createdAt)}</span>
                                 </div>
-                                {c.content ? <div className="text-[13px] leading-snug text-white/90">{c.content}</div> : null}
+                                {c.content ? <div className="text-[13px] leading-snug text-ink-soft">{c.content}</div> : null}
                                 {c.imageUrl ? <img src={c.imageUrl} alt="Foto komentar" className="mt-1 max-h-[220px] max-w-full rounded-xl object-contain" /> : null}
                                 <button
                                   onClick={() => beginCommentReply(activeIt.id, c)}
-                                  className="mt-1 text-xs font-semibold text-white/55 active:text-white"
+                                  className="mt-1 text-xs font-semibold text-ink-soft/70 active:text-ink"
                                 >
                                   Balas
                                 </button>
@@ -2105,7 +2105,7 @@ export function StatusView({
                                 aria-label={c.likedByMe ? "Batal suka komentar" : "Sukai komentar"}
                                 aria-pressed={c.likedByMe}
                                 disabled={!!commentLikeBusyIds[c.id]}
-                                className={`shrink-0 self-start inline-flex items-center gap-1 p-1.5 active:scale-90 disabled:opacity-50 ${c.likedByMe ? "text-rose-500" : "text-white/40"}`}
+                                className={`shrink-0 self-start inline-flex items-center gap-1 p-1.5 active:scale-90 disabled:opacity-50 ${c.likedByMe ? "text-rose-500" : "text-ink-soft/60"}`}
                               >
                                 <IgHeartIcon filled={c.likedByMe} className="h-4 w-4" />
                                 {c.likeCount > 0 ? <span className="text-[10px] leading-none">{c.likeCount}</span> : null}
@@ -2116,10 +2116,10 @@ export function StatusView({
                                 <Avatar name={reply.displayName || reply.nickname || "User"} src={reply.avatarUrl || undefined} size={26} />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-baseline gap-1.5">
-                                    <span className="text-[12px] font-semibold text-white">{reply.displayName || reply.nickname || "Anonim"}</span>
-                                    <span className="text-[10px] text-white/40">{timeAgo(reply.createdAt)}</span>
+                                    <span className="text-[12px] font-semibold text-ink">{reply.displayName || reply.nickname || "Anonim"}</span>
+                                    <span className="text-[10px] text-ink-soft/60">{timeAgo(reply.createdAt)}</span>
                                   </div>
-                                  {reply.content ? <div className="text-[13px] leading-snug text-white/85">{reply.content}</div> : null}
+                                  {reply.content ? <div className="text-[13px] leading-snug text-ink-soft">{reply.content}</div> : null}
                                   {reply.imageUrl ? <img src={reply.imageUrl} alt="Foto balasan" className="mt-1 max-h-[220px] max-w-full rounded-xl object-contain" /> : null}
                                 </div>
                               </div>
@@ -2130,13 +2130,13 @@ export function StatusView({
                     </div>
                     <div className="flex gap-1.5 overflow-x-auto py-3 scrollbar-none" style={{ scrollbarWidth: "none" }}>
                       {["❤️","🙌","🔥","👏","😢","😍","😲","😂"].map((e) => (
-                        <button key={e} onClick={() => setCommentDraft((p) => p + e)} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[18px] active:scale-90 border border-white/10">
+                        <button key={e} onClick={() => setCommentDraft((p) => p + e)} className="shrink-0 rounded-full bg-ink/10 px-3 py-2 text-[18px] active:scale-90 border border-line text-ink">
                           {e}
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col border-t border-white/10 bg-[#121212] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                  <div className="flex shrink-0 flex-col border-t border-line bg-surface px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <input
                       ref={commentPhotoRef}
                       type="file"
@@ -2149,32 +2149,32 @@ export function StatusView({
                       }}
                     />
                     {commentImage?.statusId === activeIt.id ? (
-                      <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/[0.06] px-2 py-1.5">
+                      <div className="mb-2 flex items-center gap-2 rounded-xl bg-ink/10 px-2 py-1.5">
                         <img src={commentImage.url} alt="Pratinjau foto komentar" className="h-12 w-12 rounded-lg object-cover" />
-                        <span className="min-w-0 flex-1 truncate text-xs text-white/65">Foto siap dikirim</span>
+                        <span className="min-w-0 flex-1 truncate text-xs text-ink-soft/60">Foto siap dikirim</span>
                         <button
                           type="button"
                           onClick={() => { setCommentImage(null); setCommentErr(null); }}
                           aria-label="Hapus foto komentar"
-                          className="shrink-0 rounded-full p-1 text-white/55 hover:bg-white/10"
+                          className="shrink-0 rounded-full p-1 text-ink-soft/60 hover:bg-ink/10"
                         >
                           <XIcon className="h-4 w-4" />
                         </button>
                       </div>
                     ) : null}
-                    {commentUploadBusy ? <div className="mb-2 px-1 text-xs text-white/55">Mengunggah foto...</div> : null}
+                    {commentUploadBusy ? <div className="mb-2 px-1 text-xs text-ink-soft/60">Mengunggah foto...</div> : null}
                     {commentErr ? <div role="alert" className="mb-2 px-1 text-xs text-rose-300">{commentErr}</div> : null}
                     {replyingTo?.statusId === activeIt.id ? (
-                      <div className="flex items-center justify-between gap-2 px-1 pb-2 text-xs text-white/60">
-                        <span className="min-w-0 truncate">Membalas kepada <span className="font-semibold text-white/85">{replyingTo.displayName}</span></span>
-                        <button onClick={() => setReplyingTo(null)} aria-label="Batal membalas" className="shrink-0 rounded-full p-1 text-white/55 hover:bg-white/10">
+                      <div className="flex items-center justify-between gap-2 px-1 pb-2 text-xs text-ink-soft/60">
+                        <span className="min-w-0 truncate">Membalas kepada <span className="font-semibold text-ink">{replyingTo.displayName}</span></span>
+                        <button onClick={() => setReplyingTo(null)} aria-label="Batal membalas" className="shrink-0 rounded-full p-1 text-ink-soft/60 hover:bg-ink/10">
                           <XIcon className="h-4 w-4" />
                         </button>
                       </div>
                     ) : null}
                     <div className="flex items-center gap-2">
                       <Avatar name={profile.displayName || profile.nickname || "Kamu"} src={profile.avatarUrl || undefined} size={30} />
-                      <div className="flex flex-1 items-center gap-1 rounded-full bg-white/10 border border-white/10 pl-3 pr-1 py-1">
+                      <div className="flex flex-1 items-center gap-1 rounded-full bg-ink/10 border border-line pl-3 pr-1 py-1">
                         <input
                           ref={fsCommentInputRef}
                           autoFocus
@@ -2182,14 +2182,14 @@ export function StatusView({
                           onChange={(e) => setCommentDraft(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") sendComment(activeIt.id); }}
                           placeholder={replyingTo?.statusId === activeIt.id ? `Balas ke ${replyingTo.displayName}...` : "Apa pendapat Anda tenta..."}
-                          className="flex-1 bg-transparent py-1.5 text-sm text-white placeholder:text-white/40 outline-none"
+                          className="flex-1 bg-surface-2 py-1.5 text-sm text-ink placeholder:text-ink-soft/60 outline-none"
                         />
                         {commentImage?.statusId === activeIt.id ? null : (
                           <button
                             type="button"
                             onClick={() => commentPhotoRef.current?.click()}
                             disabled={commentUploadBusy}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 active:bg-white/10 disabled:opacity-40"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-soft/70 active:bg-ink/10 disabled:opacity-40"
                             aria-label="Lampirkan foto"
                           >
                             <CameraIcon className="h-5 w-5" />
@@ -2200,7 +2200,7 @@ export function StatusView({
                             type="button"
                             onClick={() => sendComment(activeIt.id)}
                             disabled={commentUploadBusy}
-                            className="shrink-0 rounded-full bg-white p-1.5 text-black active:scale-90 disabled:opacity-50"
+                            className="shrink-0 rounded-full bg-brand p-1.5 text-brand-ink active:scale-90 disabled:opacity-50"
                             aria-label="Kirim komentar"
                           >
                             <SendIcon className="h-5 w-5" />
