@@ -68,7 +68,8 @@ function ColorRow({
           );
         })}
         <input type="color" value={value ?? fallback} onChange={(event) => onChange(event.target.value)}
-          aria-label={`${label}: pilih warna bebas`} className="h-8 w-10 cursor-pointer rounded border border-line bg-surface p-1" />
+          aria-label={`${label}: pilih warna bebas`} className="h-8 w-8 cursor-pointer rounded-full border border-line"
+          style={{ backgroundColor: value ?? fallback }} />
       </div>
     </div>
   );
