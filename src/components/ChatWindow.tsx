@@ -133,7 +133,7 @@ export function ChatWindow({
   onSpeakMessage,
   onStopSpeaking,
   contactUpdates,
-  onOpenProfileFromChat,
+  onOpenStoryFromChat,
   onDeleteMessage,
   onRegenerate,
 }: {
@@ -179,7 +179,7 @@ export function ChatWindow({
   ) => void;
   onStopSpeaking: () => void;
   contactUpdates?: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
-  onOpenProfileFromChat?: (characterId: string) => void;
+  onOpenStoryFromChat?: (storyId: string) => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
 }) {
@@ -557,7 +557,10 @@ export function ChatWindow({
               {hasCharacterUpdate ? (
                 <button
                   type="button"
-                  onClick={() => void onOpenProfileFromChat?.(characterUpdateKey)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onOpenStoryFromChat?.(characterUpdate?.storyId!);
+                  }}
                   aria-label={`Buka update ${character.name}`}
                   title={characterUpdateLabel}
                   className={`shrink-0 rounded-full ring-2 ${ringStyle(characterUpdateViewed)}`}
