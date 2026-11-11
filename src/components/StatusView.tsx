@@ -545,6 +545,15 @@ export function StatusView({
   const currentStoryId = currentViewerStory?.id;
   const currentStoryUsesVideoDuration = currentViewerStory?.mediaType === "video" && Boolean(currentViewerStory.videoUrl);
   const reels = useMemo(() => items.filter((x) => x.kind === "reel"), [items]);
+  /** Gabungkan cerita (status 24j) dan reels permanen dalam satu feed, terbaru dulu. */
+  const feed = useMemo(
+    () =>
+      [...items].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    [items]
+  );
   const canManageStatus = (item: Pick<StatusItem, "userId">) =>
     item.userId === user.id || Boolean(user.isAdmin);
 
@@ -1459,7 +1468,7 @@ export function StatusView({
               <div className="px-6 py-12 text-center text-sm text-muted">Belum ada status. Tap + Buat untuk posting Story 24j atau Reel permanen ✨</div>
             ) : null}
 
-            {(reels.length ? reels : items.filter((x) => x.kind === "status")).map((it) => {
+            {feed.map((it) => {
               const displayName = it.characterName || it.userDisplayName || it.userNickname || "Anonim";
               const avatar = it.characterAvatar || it.userAvatar || undefined;
               return (
