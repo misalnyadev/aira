@@ -1553,6 +1553,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
       mode: "chat" | "meetup";
       onBack: () => void;
       backLabel: string;
+      contactUpdates?: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
     }
   ) {
     const isMeetup = options.mode === "meetup";
@@ -1583,6 +1584,9 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         onBack={options.onBack}
         backLabel={options.backLabel}
         onOpenProfile={() => openProfile(character.id, options.mode)}
+        onOpenProfileFromChat={(characterId) => {
+          void openProfile(characterId, options.mode);
+        }}
         onOpenVoice={() => {
           setFocusVoiceSettings(true);
           handleViewChange("settings");
@@ -1607,6 +1611,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
         onCopyMessage={handleCopyMessage}
         onSpeakMessage={handleSpeakMessage}
         onStopSpeaking={stopSpeaking}
+        contactUpdates={options.contactUpdates}
         onDeleteMessage={handleDeleteMessage}
         onRegenerate={handleRegenerate}
         composer={
@@ -1689,6 +1694,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                     backLabel: chatOpenedFromCalls
                       ? "Kembali ke Panggilan"
                       : "Kembali ke daftar chat",
+                    contactUpdates,
                   })
                 ) : (
                   <div className="dot-grid relative flex h-full flex-1 flex-col items-center justify-center overflow-y-auto bg-app px-5 py-10 text-center">
@@ -1861,6 +1867,7 @@ export function ChatApp({ initialSharedStatusId = null }: { initialSharedStatusI
                 setActiveMeetupCharacterId(null);
               },
               backLabel: "Kembali ke daftar karakter",
+              contactUpdates,
             })
           )}
 
