@@ -154,7 +154,7 @@ export function Sidebar({
                   active ? "bg-accent/10 dark:bg-white/[0.08]" : "hover:bg-accent/10 dark:hover:bg-surface-2"
                 }`}
               >
-                {label && update ? <button type="button" onClick={() => onOpenUpdate(update.storyId || update.reelId!)} aria-label={`${label} dari ${c.name}`} title={label} className={`shrink-0 rounded-full p-[5px] ${ring}`}><Avatar name={c.name} src={c.avatarUrl} size={48} /></button> : <button type="button" onClick={() => onSelect(c.id)} aria-label={`Buka chat ${c.name}`} className="shrink-0 p-[5px]"><Avatar name={c.name} src={c.avatarUrl} size={48} /></button>}
+                {label && update ? <button type="button" onClick={() => onOpenUpdate(update.storyId || update.reelId!)} aria-label={`${label} dari ${c.name}`} title={label} className={`shrink-0 rounded-full p-[2px] ${ring}`}><Avatar name={c.name} src={c.avatarUrl} size={44} /></button> : <button type="button" onClick={() => onSelect(c.id)} aria-label={`Buka chat ${c.name}`} className="shrink-0"><Avatar name={c.name} src={c.avatarUrl} size={48} /></button>}
                 <button type="button" onClick={() => onSelect(c.id)} className="min-w-0 flex-1 text-left" aria-label={`Buka chat ${c.name}`}>
                 <div className="min-w-0">
                   <div className="flex items-center justify-between gap-2">
