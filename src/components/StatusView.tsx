@@ -1694,18 +1694,17 @@ export function StatusView({
               </button>
             </header>
             <div className="px-4 py-5">
-              <div className="flex items-start gap-3">
-                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[2px]"><span className="block rounded-full bg-surface p-[2px]"><Avatar name={name} src={avatar} size={80} /></span></span>
-                <div className="flex flex-col gap-1">
-                  <div className="font-bold text-accent-text text-lg">{name}</div>
-                  <div className="flex gap-4 text-sm">
+              <div className="flex items-start gap-4">
+                <span className="rounded-full bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand p-[2px]"><span className="block rounded-full bg-surface p-[2px]"><Avatar name={name} src={avatar} size={88} /></span></span>
+                <div className="flex flex-col gap-2 min-w-0">
+                  <div className="font-bold text-accent-text text-lg truncate">{name}</div>
+                  <div className="flex gap-5 text-sm">
                     <div className="text-ink"><strong>{profilePosts.length}</strong><br /><span className="text-ink-soft text-xs">postingan</span></div>
                     <div className="text-ink"><strong>{profileItem.followerCount}</strong><br /><span className="text-ink-soft text-xs">pengikut</span></div>
                     <div className="text-ink-soft text-xs">{profileItem.accountFollowerCount} mengikuti</div>
                   </div>
-                  <p className="mt-2 text-xs text-ink-soft">{profileItem.characterId ? "Karakter · Profil buatan AI" : "Pengguna · Profil buatan AI"}</p>
                   {(profileItem.characterId ? profileItem.characterBio : profileItem.userBio) && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{profileItem.characterId ? profileItem.characterBio : profileItem.userBio}</p>
                   )}
                   {/* Aksi utama: Ikuti / Mengikuti (seperti IG) */}
                   {profileItem.canFollow && (
@@ -1715,20 +1714,24 @@ export function StatusView({
                       onClick={async () => { const request = profileRequestRef.current; await toggleFollow(profileItem); if (profileRequestRef.current === request) await openTalentProfile(profileItem); }}
                       className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink disabled:opacity-50"
                     >
-                      {profileItem.followingByMe ? "Mengikuti" : !profileItem.characterId && profileItem.accountFollowsMe ? "Ikuti balik" : "Ikuti"}
+                      {profileItem.followingByMe ? "Mengikuti" : "Ikuti"}
                     </button>
                   )}
                   <div className="mt-3 flex gap-2">
-                    <button type="button" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink">Kirim Pesan</button>
-                    <button type="button" className="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink">WhatsApp</button>
-                    <button type="button" className="rounded-full border border-line bg-surface p-2" aria-label="Tambah kontak">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-ink"><path d="M16 4v12c0 2.21-1.79 4-4 4H4c-2.21 0-4-1.79-4-4V4c0-2.21 1.79-4 4-4h8c2.21 0 4 1.79 4 4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </button>
+                    {profileItem.characterId && chatCharacterIds.includes(profileItem.characterId) && onOpenCharacterChat && (
+                      <button type="button" onClick={() => onOpenCharacterChat(profileItem.characterId!)} className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink">Buka Chat</button>
+                    )}
+                    {profileItem.characterId && !chatCharacterIds.includes(profileItem.characterId) && (
+                      <button type="button" disabled={inviteBusy} onClick={() => void inviteFromProfile(profileItem)} className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink disabled:opacity-50">{inviteBusy ? "Mengirim…" : "Undang ke kontak"}</button>
+                    )}
+                    {!profileItem.characterId && (
+                      <button type="button" className="flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink">Kirim Pesan</button>
+                    )}
                   </div>
+                  {inviteMessage && <p role="status" className="mt-3 text-sm text-ink-soft">{inviteMessage}</p>}
+                  {followError && <p role="alert" className="mt-3 text-sm text-red-600">{followError}</p>}
                 </div>
               </div>
-              {inviteMessage && <p role="status" className="mt-3 text-sm text-ink-soft">{inviteMessage}</p>}
-              {followError && <p role="alert" className="mt-3 text-sm text-red-600">{followError}</p>}
             </div>
             {profileLoading ? <p className="p-4 text-sm text-muted">Memuat profil…</p> : profileError ? <p role="alert" className="p-4 text-sm text-red-600">{profileError}</p> : <>
               <div className="border-t border-line px-4 py-3 text-sm font-semibold">Story aktif · {storiesInProfile.length}</div>
