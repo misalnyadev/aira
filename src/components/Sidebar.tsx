@@ -42,7 +42,7 @@ export function Sidebar({
   onOpenSettings: () => void;
   hasProviders: boolean;
   pendingContactsCount?: number;
-  contactUpdates: Record<string, { storyId?: string; reelId?: string }>;
+  contactUpdates: Record<string, { storyId?: string; reelId?: string; viewed?: boolean }>;
   onOpenUpdate: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -135,8 +135,18 @@ export function Sidebar({
           filtered.map((c) => {
             const active = activeId === c.id;
             const update = c.threadKind === "guest_contact" && c.sourceCharacterId ? contactUpdates[c.sourceCharacterId] : undefined;
-            const label = update?.storyId && update?.reelId ? "Story dan Reel baru" : update?.storyId ? "Story baru" : update?.reelId ? "Reel baru" : null;
-            const ring = update?.storyId && update?.reelId ? "bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand ring-1 ring-brand/60 dark:ring-brand/60" : update?.storyId ? "bg-brand dark:bg-brand" : "bg-white ring-1 ring-brand dark:ring-brand";
+            const hasUpdate = Boolean(update?.storyId || update?.reelId);
+            const isViewed = Boolean(update?.viewed);
+            const label = hasUpdate
+              ? (update?.storyId && update?.reelId ? "Story dan Reel" : update?.storyId ? "Story" : "Reel")
+              : null;
+            const ring = isViewed
+              ? "bg-line"
+              : update?.storyId && update?.reelId
+                ? "bg-gradient-to-tr from-brand via-white to-brand dark:from-brand dark:via-white dark:to-brand ring-1 ring-brand/60 dark:ring-brand/60"
+                : update?.storyId
+                  ? "bg-brand dark:bg-brand"
+                  : "bg-white ring-1 ring-brand dark:ring-brand";
             return (
               <div
                 key={c.id}
