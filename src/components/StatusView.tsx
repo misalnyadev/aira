@@ -1857,6 +1857,32 @@ export function StatusView({
               </div>}
             </div>
 
+            {/* Bar aksi kanan: suka, komentar, bagikan, simpan */}
+            <div className="absolute bottom-[140px] right-2.5 flex flex-col items-center gap-3.5 text-white z-20">
+              <button onClick={() => toggleLike(currentStory.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgHeartIcon filled={currentStory.likedByMe} className={`h-6 w-6 ${currentStory.likedByMe ? "text-red-500 fill-red-500" : "text-white"}`} />
+                </span>
+                <span className="text-[11px] font-semibold leading-none drop-shadow">{currentStory.likeCount > 0 ? currentStory.likeCount : 0}</span>
+              </button>
+              <button onClick={() => openComments(currentStory.id)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" aria-label="Komentar">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <ChatSquareIcon className="h-6 w-6 text-white" />
+                </span>
+                <span className="text-[11px] font-semibold leading-none drop-shadow">{currentStory.commentCount > 0 ? currentStory.commentCount : 0}</span>
+              </button>
+              <button onClick={() => handleShare(currentStory)} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow" aria-label="Bagikan">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgShareIcon className="h-6 w-6 text-white" />
+                </span>
+              </button>
+              <button onClick={() => toggleBookmark(currentStory.id)} aria-label={currentStory.bookmarkedByMe ? "Hapus dari tersimpan" : "Simpan"} aria-pressed={currentStory.bookmarkedByMe} disabled={!!bookmarkBusyIds[currentStory.id]} className="flex flex-col items-center gap-1 active:scale-90 drop-shadow disabled:opacity-60">
+                <span className="rounded-full bg-white/10 p-2.5 backdrop-blur border border-white/10">
+                  <IgBookmarkIcon filled={currentStory.bookmarkedByMe} className="h-6 w-6 text-white drop-shadow" />
+                </span>
+              </button>
+            </div>
+
             <button
               onClick={() => viewerIdx > 0 && moveStoryTo(viewerIdx - 1)}
               disabled={viewerIdx === 0}
