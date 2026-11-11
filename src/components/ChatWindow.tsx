@@ -195,7 +195,8 @@ export function ChatWindow({
   const backdrop = chatBackgroundProps(background, isDark);
 
   /** Indikator update story/reel untuk karakter yang sedang dalam percakapan. */
-  const characterUpdate = contactUpdates?.[character.id];
+  const characterUpdateKey = character.sourceCharacterId ?? character.id;
+  const characterUpdate = contactUpdates?.[characterUpdateKey];
   const hasCharacterUpdate = Boolean(characterUpdate?.storyId || characterUpdate?.reelId);
   const characterUpdateViewed = Boolean(characterUpdate?.viewed);
   const characterUpdateLabel = hasCharacterUpdate
@@ -556,7 +557,7 @@ export function ChatWindow({
               {hasCharacterUpdate ? (
                 <button
                   type="button"
-                  onClick={() => void onOpenProfileFromChat?.(character.id)}
+                  onClick={() => void onOpenProfileFromChat?.(characterUpdateKey)}
                   aria-label={`Buka update ${character.name}`}
                   title={characterUpdateLabel}
                   className="shrink-0 rounded-full p-[2px] ${ringStyle(characterUpdateViewed)}"
