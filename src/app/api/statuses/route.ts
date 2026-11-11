@@ -129,6 +129,19 @@ export async function GET(req: Request) {
     });
   }
 
+  // Follows are made by user accounts, including follows of character profiles.
+  // Fetch outgoing counts once per owner rather than once per status.
+  const followingCounts = new Map<string, number>();
+  if (userIds.length > 0) {
+    const counts = await db.select({
+      userId: statusFollows.followerUserId,
+      count: sql<number>`count(*)::int`,
+    }).from(statusFollows)
+      .where(inArray(statusFollows.followerUserId, userIds))
+      .groupBy(statusFollows.followerUserId);
+    counts.forEach((row) => followingCounts.set(row.userId, Number(row.count)));
+  }
+
   // enrich dengan like/comment counts + likedByMe
   const enriched = await Promise.all(
     rows.map(async (r) => {
@@ -192,6 +205,7 @@ export async function GET(req: Request) {
           : followedUserIds.has(r.userId),
         followerCount: Number(audience?.count ?? 0),
         accountFollowerCount: Number(accountAudience?.count ?? 0),
+        followingCount: followingCounts.get(r.userId) ?? 0,
         followingAccountByMe: followedUserIds.has(r.userId),
         accountFollowsMe: Boolean(followsMe),
         canFollow: r.userId !== user.id,

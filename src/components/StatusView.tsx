@@ -53,6 +53,7 @@ type StatusItem = {
   followingByMe: boolean;
   followerCount: number;
   accountFollowerCount: number;
+  followingCount: number;
   followingAccountByMe: boolean;
   accountFollowsMe: boolean;
   canFollow: boolean;
@@ -1701,7 +1702,7 @@ export function StatusView({
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="text-ink"><strong>{profilePosts.length}</strong><br /><span className="text-ink-soft text-xs">postingan</span></div>
                     <div className="text-ink"><strong>{profileItem.followerCount}</strong><br /><span className="text-ink-soft text-xs">pengikut</span></div>
-                    <div className="text-ink"><strong>{profileItem.accountFollowerCount}</strong><br /><span className="text-ink-soft text-xs">mengikuti</span></div>
+                    <div className="text-ink"><strong>{profileItem.followingCount}</strong><br /><span className="text-ink-soft text-xs">mengikuti</span></div>
                   </div>
                 </div>
               </div>
