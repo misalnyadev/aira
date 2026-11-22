@@ -273,6 +273,32 @@ const DDL = [
     EXCEPTION WHEN duplicate_object THEN null; END $$`,
   sql`ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "invite_pin" text`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "characters_invite_pin_idx" ON "characters" ("invite_pin") WHERE "invite_pin" IS NOT NULL`,
+  // ---- Tautan karakter ke AK Talent (kode sekali pakai, tautan bertanda tangan) ----
+  sql`CREATE TABLE IF NOT EXISTS "character_links" (
+    "id" text PRIMARY KEY NOT NULL,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "owner_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "ak_pub_id" text NOT NULL,
+    "secret" text NOT NULL,
+    "applied_version" integer DEFAULT 0 NOT NULL,
+    "shared" text DEFAULT 'voice' NOT NULL,
+    "status" text DEFAULT 'active' NOT NULL,
+    "last_sync_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS "character_links_active_char_idx" ON "character_links" ("character_id") WHERE "status" = 'active'`,
+  sql`CREATE TABLE IF NOT EXISTS "character_link_codes" (
+    "code" text PRIMARY KEY NOT NULL,
+    "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,
+    "owner_user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+    "expires_at" timestamp with time zone NOT NULL,
+    "tries" integer DEFAULT 0 NOT NULL,
+    "used" boolean DEFAULT false NOT NULL
+  )`,
+  sql`CREATE TABLE IF NOT EXISTS "character_link_nonces" (
+    "nonce" text PRIMARY KEY NOT NULL,
+    "seen_at" timestamp with time zone DEFAULT now() NOT NULL
+  )`,
   sql`CREATE TABLE IF NOT EXISTS "character_contacts" (
     "id" uuid PRIMARY KEY NOT NULL,
     "character_id" uuid NOT NULL REFERENCES "characters"("id") ON DELETE cascade,

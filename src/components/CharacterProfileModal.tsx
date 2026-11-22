@@ -13,6 +13,7 @@ import { Avatar } from "./Avatar";
 import { BubbleStyleControls } from "./BubbleStyleControls";
 import { CharacterMediaSection } from "./CharacterMediaSection";
 import { CharacterMemorySection, type MemoryPatch } from "./CharacterMemorySection";
+import { CharacterAkTalentSection } from "./CharacterAkTalentSection";
 import { CharacterStoryAutoSection } from "./CharacterStoryAutoSection";
 import { CharacterVoiceSection } from "./CharacterVoiceSection";
 import { ChatBackgroundPicker } from "./ChatBackgroundPicker";
@@ -173,6 +174,9 @@ export function CharacterProfileModal({
                 hasProvider={hasProvider}
                 onChange={onStoryAutoChange}
               />
+            </div>
+            <div className="mt-3">
+              <CharacterAkTalentSection characterId={character.id} characterName={character.name} />
             </div>
           </div>
 
