@@ -871,3 +871,87 @@ export async function refreshCharacterMemory({
     summarizedCount: pendingRows.length,
   };
 }
+
+export type AkTalentDraft = {
+  title: string;
+  summary: string;
+  requirements: string[];
+  budget: string;
+  deadline: string;
+};
+
+const draftText = (v: unknown, max: number) =>
+  String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
+
+/** Rapikan JSON draf dari model: batasi panjang, buang tenggat yang bukan tanggal jelas. */
+export function normalizeAkTalentDraft(raw: unknown): AkTalentDraft {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const reqs = Array.isArray(o.requirements) ? o.requirements : [];
+  const deadline = draftText(o.deadline, 10);
+  return {
+    title: draftText(o.title, 80),
+    summary: draftText(o.summary, 900),
+    requirements: reqs.slice(0, 10).map((x) => draftText(x, 160)).filter(Boolean),
+    budget: draftText(o.budget, 60),
+    deadline: /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? deadline : "",
+  };
+}
+
+export function parseAkTalentDraftJson(text: string): AkTalentDraft | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    const d = normalizeAkTalentDraft(JSON.parse(text.slice(start, end + 1)));
+    return d.title || d.summary ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Susun draf proyek untuk AK Talent dari obrolan terbaru karakter dengan pemiliknya.
+ * Hasilnya hanya usulan; pemilik memeriksa dan mengirimnya sendiri.
+ */
+export async function generateAkTalentDraft({
+  userId,
+  character,
+  candidates,
+  guide,
+}: {
+  userId: string;
+  character: Character;
+  candidates: Provider[];
+  guide: string;
+}): Promise<AkTalentDraft> {
+  const rows = await db
+    .select({ role: messages.role, content: messages.content })
+    .from(messages)
+    .where(eq(messages.characterId, character.id))
+    .orderBy(desc(messages.createdAt))
+    .limit(60);
+  const transcript = rows
+    .reverse()
+    .filter((m) => m.content.trim())
+    .map((m) => `${m.role === "user" ? "Pemilik" : character.name}: ${m.content.trim().slice(0, 700)}`)
+    .join("\n");
+  if (transcript.length < 40) throw new AiProviderError("Belum ada obrolan yang cukup untuk dijadikan draf.");
+
+  const systemPrompt = `Kamu merangkum obrolan menjadi DRAF proyek untuk AK Talent. Kamu bukan karakter dalam tugas ini; jangan berperan.
+${guide.trim() ? `Aturan AK Talent:\n${guide.trim()}\n` : ""}
+Aturan keluaran:
+- Gunakan hanya hal yang benar-benar dibicarakan. Jangan mengarang anggaran, tenggat, harga, atau janji.
+- Keluarkan HANYA satu objek JSON tanpa teks lain, dengan kunci: "title" (maks 80 karakter), "summary" (3-6 kalimat tujuan proyek), "requirements" (daftar singkat jenis hasil, platform, durasi atau jumlah), "budget" (teks apa adanya, kosong bila tidak disebut), "deadline" (YYYY-MM-DD hanya bila tanggal jelas, selain itu kosong).`;
+  const raw = await runTextWithCandidates({
+    userId,
+    candidates,
+    character,
+    systemPrompt,
+    userText: `Obrolan terbaru:\n${transcript}\n\nSusun draf proyeknya sekarang sebagai JSON.`,
+    budgetMs: 40_000,
+    fallbackMessage: "Gagal menyusun draf. Coba lagi.",
+  });
+  const draft = parseAkTalentDraftJson(raw);
+  if (!draft) throw new AiProviderError("Model tidak menghasilkan draf yang bisa dipakai. Coba lagi.");
+  return draft;
+}

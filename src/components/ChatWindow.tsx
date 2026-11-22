@@ -1,5 +1,6 @@
 "use client";
 
+import { AkTalentDraftButton } from "@/components/AkTalentDraftButton";
 import {
   useEffect,
   useMemo,
@@ -1000,6 +1001,7 @@ export function ChatWindow({
           </div>
         )}
 
+        {!hideMessages && <AkTalentDraftButton characterId={character.id} characterName={character.name} />}
         {!hideMessages && !atBottom && onOpenNotes && (
           <div
             className="pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4"
