@@ -32,10 +32,6 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
     return () => clearInterval(t);
   }, [code, status?.linked, load]);
 
-  useEffect(() => {
-    if (status?.linked) setCode(null);
-  }, [status?.linked]);
-
   async function makeCode() {
     if (busy) return;
     setBusy(true);
