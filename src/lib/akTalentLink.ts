@@ -74,7 +74,7 @@ export const DEFAULT_AK_BASE = "https://aktalent.vercel.app";
 /** Paket peran (ht-role-package/1): hasil pelatihan komunikasi di HeyTalent. Tidak memuat hubungan pemilik, memori, atau catatan tim. */
 export type RoleSource = {
   name: string; shortBio: string | null; personality: string | null; greeting: string | null;
-  teamRole: string | null; skillPortfolio: string | null; bible: string | null;
+  teamRole: string | null; skillPortfolio: string | null; bible: string | null; pin?: string | null;
 };
 
 export function buildRolePackage(akPubId: string, version: number, c: RoleSource) {
@@ -86,6 +86,7 @@ export function buildRolePackage(akPubId: string, version: number, c: RoleSource
   return {
     schema: "ht-role-package/1",
     akPubId,
+    pin: clean(c.pin, 12),   // PIN undangan karakter; sumber tunggal PIN adalah HeyTalent
     version,
     updatedAt: new Date().toISOString(),
     character: {

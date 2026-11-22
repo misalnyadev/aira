@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const version = link.role_sent_version + 1;
   const pkg = buildRolePackage(link.ak_pub_id, version, {
     name: c.name, shortBio: c.shortBio, personality: c.personality, greeting: c.greeting,
-    teamRole: c.teamRole, skillPortfolio: c.skillPortfolio, bible: c.bible,
+    teamRole: c.teamRole, skillPortfolio: c.skillPortfolio, bible: c.bible, pin: c.invitePin,
   });
   if (!pkg.character.bible && !pkg.character.personality)
     return NextResponse.json({ error: "Bible dan kepribadian karakter masih kosong." }, { status: 422 });

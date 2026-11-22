@@ -46,9 +46,9 @@ test('panduan AK Talent: skema, akPubId, versi, dan panjang diperiksa', async ()
 
 test('paket peran: hanya bagian komunikasi, tanpa hubungan pemilik dan catatan tim', async () => {
   const { buildRolePackage } = await import('../src/lib/akTalentLink.ts');
-  const row = { name: 'Musthzen', shortBio: 'x'.repeat(300), personality: 'Karismatik', greeting: 'Yo kawan', teamRole: 'Lead', skillPortfolio: JSON.stringify([{ title: 'IT', description: 'bantu' }, { title: '', description: 'tanpa judul' }]), bible: 'BIBLE', ownerRelationship: 'RAHASIA', sharedTeamMemory: 'TIM' };
+  const row = { name: 'Musthzen', shortBio: 'x'.repeat(300), personality: 'Karismatik', greeting: 'Yo kawan', teamRole: 'Lead', skillPortfolio: JSON.stringify([{ title: 'IT', description: 'bantu' }, { title: '', description: 'tanpa judul' }]), bible: 'BIBLE', ownerRelationship: 'RAHASIA', sharedTeamMemory: 'TIM', pin: 'K7M2QZ' };
   const p = buildRolePackage('pub1', 4, row);
-  assert.equal(p.schema, 'ht-role-package/1'); assert.equal(p.akPubId, 'pub1'); assert.equal(p.version, 4);
+  assert.equal(p.schema, 'ht-role-package/1'); assert.equal(p.akPubId, 'pub1'); assert.equal(p.pin, 'K7M2QZ'); assert.equal(p.version, 4);
   assert.equal(p.character.shortBio.length, 120); assert.equal(p.character.skillPortfolio.length, 1); assert.equal(p.character.bible, 'BIBLE');
   assert.ok(!JSON.stringify(p).includes('RAHASIA') && !JSON.stringify(p).includes('TIM'));
   assert.equal(buildRolePackage('p', 1, { ...row, skillPortfolio: 'rusak' }).character.skillPortfolio.length, 0);
