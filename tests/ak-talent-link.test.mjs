@@ -32,3 +32,16 @@ test('kontrak: tanda tangan HeyTalent identik dengan sisi AK Talent', async () =
   const h = ak.signRequest('s'.repeat(40), 'DELETE', '/api/integrations/aktalent/link', '{"a":1}', 1_700_000_000, 'n1n1n1n1n1n1');
   assert.equal(h['X-Signature'], signRequest('s'.repeat(40), 'DELETE', '/api/integrations/aktalent/link', '{"a":1}', 1_700_000_000, 'n1n1n1n1n1n1'));
 });
+
+test('paket komunikasi: hanya skema dan akPubId yang cocok, dibersihkan dan dibatasi', async () => {
+  const { parseCommPackage } = await import('../src/lib/akTalentLink.ts');
+  const base = { schema: 'ak-comm-package/1', akPubId: 'p1', version: 3, updatedAt: '2026-11-22T00:00:00Z', shared: ['voice'], character: { personality: ' ramah\u0000 ', shortBio: 'x'.repeat(500), teamRole: 'Dev', bibleComm: 'B'.repeat(30000), bibleFull: null } };
+  const p = parseCommPackage(base, 'p1');
+  assert.equal(p.version, 3); assert.equal(p.character.personality, 'ramah'); assert.equal(p.character.shortBio.length, 120); assert.equal(p.character.bible.length, 24000);
+  assert.equal(parseCommPackage(base, 'lain'), null);
+  assert.equal(parseCommPackage({ ...base, schema: 'x' }, 'p1'), null);
+  assert.equal(parseCommPackage({ ...base, version: 0 }, 'p1'), null);
+  assert.equal(parseCommPackage({ ...base, character: { personality: '', bibleComm: '' } }, 'p1'), null);
+  assert.equal(parseCommPackage({ ...base, character: { personality: 'a', bibleComm: 'kecil', bibleFull: 'penuh' } }, 'p1').character.bible, 'penuh');
+  assert.equal(parseCommPackage(null, 'p1'), null);
+});

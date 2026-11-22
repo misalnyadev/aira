@@ -286,6 +286,8 @@ const DDL = [
     "last_sync_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL
   )`,
+  sql`ALTER TABLE "character_links" ADD COLUMN IF NOT EXISTS "package" text`,
+  sql`ALTER TABLE "character_links" ADD COLUMN IF NOT EXISTS "package_applied_version" integer DEFAULT 0 NOT NULL`,
   sql`CREATE UNIQUE INDEX IF NOT EXISTS "character_links_active_char_idx" ON "character_links" ("character_id") WHERE "status" = 'active'`,
   sql`CREATE TABLE IF NOT EXISTS "character_link_codes" (
     "code" text PRIMARY KEY NOT NULL,

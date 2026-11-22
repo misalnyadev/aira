@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type LinkStatus = { linked: boolean; version?: number; lastSyncAt?: string | null };
+type LinkStatus = { linked: boolean; version?: number; appliedVersion?: number; lastSyncAt?: string | null };
 
 /** Tautan karakter ke AK Talent: buat kode sekali pakai, lalu tempel di AK Talent (Pengaturan → HeyTalent). */
 export function CharacterAkTalentSection({ characterId, characterName }: { characterId: string; characterName: string }) {
@@ -10,6 +10,7 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
   const [code, setCode] = useState<{ value: string; expiresAt: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +69,28 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
     }
   }
 
+  async function applyPackage() {
+    if (busy) return;
+    if (!window.confirm(`Terapkan paket AK Talent ke ${characterName}? Bible, kepribadian, bio, dan peran akan diganti dengan isi paket.`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/integrations/aktalent/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characterId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Gagal menerapkan paket.");
+      setNotice("Paket diterapkan. Muat ulang halaman agar tampilan karakter diperbarui.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menerapkan paket.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const minutes = code ? Math.max(0, Math.ceil((code.expiresAt - Date.now()) / 60000)) : 0;
 
   return (
@@ -79,10 +102,22 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
       </p>
       {status?.linked ? (
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-soft">
-          <span>Tertaut ke AK Talent{status.version ? ` · paket versi ${status.version}` : " · menunggu paket pertama"}</span>
-          <button type="button" onClick={unlink} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
-            Putuskan
-          </button>
+          <span>
+            Tertaut ke AK Talent
+            {status.version
+              ? ` · paket versi ${status.version}${(status.appliedVersion ?? 0) >= status.version ? " (sudah diterapkan)" : " (belum diterapkan)"}`
+              : " · menunggu paket pertama"}
+          </span>
+          <span className="flex shrink-0 gap-2">
+            {status.version && (status.appliedVersion ?? 0) < status.version && (
+              <button type="button" onClick={applyPackage} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
+                Terapkan
+              </button>
+            )}
+            <button type="button" onClick={unlink} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
+              Putuskan
+            </button>
+          </span>
         </div>
       ) : code ? (
         <div className="mt-2 text-xs text-ink-soft">
@@ -97,6 +132,7 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
           Buat kode tautan
         </button>
       )}
+      {notice && <p className="mt-2 text-xs text-ink-soft">{notice}</p>}
       {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </section>
   );

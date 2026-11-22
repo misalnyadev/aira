@@ -52,3 +52,37 @@ export function verifySignature(
   try { b = Buffer.from(input.sig, "hex"); } catch { return false; }
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+/** Paket komunikasi dari AK Talent (ak-comm-package/1), sudah dibersihkan dan dibatasi panjangnya. */
+export type AkCommPackage = {
+  version: number;
+  updatedAt: string;
+  shared: string[];
+  character: { personality: string; shortBio: string; teamRole: string; bible: string };
+};
+
+const clean = (v: unknown, max: number) =>
+  String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
+
+export function parseCommPackage(raw: unknown, akPubId: string): AkCommPackage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (o.schema !== "ak-comm-package/1" || String(o.akPubId ?? "") !== akPubId) return null;
+  const version = Number(o.version);
+  if (!Number.isInteger(version) || version < 1) return null;
+  const c = (o.character && typeof o.character === "object" ? o.character : {}) as Record<string, unknown>;
+  const character = {
+    personality: clean(c.personality, 8000),
+    shortBio: clean(c.shortBio, 120),
+    teamRole: clean(c.teamRole, 120),
+    // bibleComm dipakai bila ada; bibleFull hanya bila pemilik AK Talent memilih membagikannya.
+    bible: clean(c.bibleFull || c.bibleComm, 24000),
+  };
+  if (!character.personality && !character.bible) return null;
+  return {
+    version,
+    updatedAt: clean(o.updatedAt, 40),
+    shared: Array.isArray(o.shared) ? o.shared.slice(0, 8).map((x) => clean(x, 20)).filter(Boolean) : [],
+    character,
+  };
+}
