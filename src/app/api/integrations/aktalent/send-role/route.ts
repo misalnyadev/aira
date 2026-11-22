@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   try {
     res = await fetch(base + path + "?kind=heytalent", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Link-Id": link.id, "X-Timestamp": String(ts), "X-Nonce": nonce, "X-Signature": signRequest(link.secret, "POST", path, bodyStr, ts, nonce) },
+      headers: { "Content-Type": "text/plain;charset=utf-8", "X-Link-Id": link.id, "X-Timestamp": String(ts), "X-Nonce": nonce, "X-Signature": signRequest(link.secret, "POST", path, bodyStr, ts, nonce) },
       body: bodyStr,
       signal: AbortSignal.timeout(10_000),
     });
