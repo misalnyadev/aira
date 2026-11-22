@@ -53,36 +53,49 @@ export function verifySignature(
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-/** Paket komunikasi dari AK Talent (ak-comm-package/1), sudah dibersihkan dan dibatasi panjangnya. */
-export type AkCommPackage = {
-  version: number;
-  updatedAt: string;
-  shared: string[];
-  character: { personality: string; shortBio: string; teamRole: string; bible: string };
-};
-
 const clean = (v: unknown, max: number) =>
   String(v ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max);
 
-export function parseCommPackage(raw: unknown, akPubId: string): AkCommPackage | null {
+/** Panduan aturan & fitur AK Talent (ak-guide/1) untuk membantu talent menyusun draf. Hanya teks; tidak pernah mengubah karakter. */
+export type AkGuide = { version: number; text: string };
+
+export function parseGuide(raw: unknown, akPubId: string): AkGuide | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
-  if (o.schema !== "ak-comm-package/1" || String(o.akPubId ?? "") !== akPubId) return null;
+  if (o.schema !== "ak-guide/1" || String(o.akPubId ?? "") !== akPubId) return null;
   const version = Number(o.version);
-  if (!Number.isInteger(version) || version < 1) return null;
-  const c = (o.character && typeof o.character === "object" ? o.character : {}) as Record<string, unknown>;
-  const character = {
-    personality: clean(c.personality, 8000),
-    shortBio: clean(c.shortBio, 120),
-    teamRole: clean(c.teamRole, 120),
-    // bibleComm dipakai bila ada; bibleFull hanya bila pemilik AK Talent memilih membagikannya.
-    bible: clean(c.bibleFull || c.bibleComm, 24000),
-  };
-  if (!character.personality && !character.bible) return null;
+  const text = clean(o.text, 6000);
+  if (!Number.isInteger(version) || version < 1 || text.length < 40) return null;
+  return { version, text };
+}
+
+export const DEFAULT_AK_BASE = "https://aktalent.vercel.app";
+
+/** Paket peran (ht-role-package/1): hasil pelatihan komunikasi di HeyTalent. Tidak memuat hubungan pemilik, memori, atau catatan tim. */
+export type RoleSource = {
+  name: string; shortBio: string | null; personality: string | null; greeting: string | null;
+  teamRole: string | null; skillPortfolio: string | null; bible: string | null;
+};
+
+export function buildRolePackage(akPubId: string, version: number, c: RoleSource) {
+  let skills: { title: string; description: string }[] = [];
+  try {
+    const parsed = JSON.parse(c.skillPortfolio || "[]");
+    if (Array.isArray(parsed)) skills = parsed.slice(0, 8).map((x) => ({ title: clean(x?.title, 80), description: clean(x?.description, 320) })).filter((x) => x.title);
+  } catch { /* abaikan */ }
   return {
+    schema: "ht-role-package/1",
+    akPubId,
     version,
-    updatedAt: clean(o.updatedAt, 40),
-    shared: Array.isArray(o.shared) ? o.shared.slice(0, 8).map((x) => clean(x, 20)).filter(Boolean) : [],
-    character,
+    updatedAt: new Date().toISOString(),
+    character: {
+      name: clean(c.name, 60),
+      shortBio: clean(c.shortBio, 120),
+      personality: clean(c.personality, 8000),
+      greeting: clean(c.greeting, 1000),
+      teamRole: clean(c.teamRole, 120),
+      skillPortfolio: skills,
+      bible: clean(c.bible, 24000),
+    },
   };
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type LinkStatus = { linked: boolean; version?: number; appliedVersion?: number; lastSyncAt?: string | null };
+type LinkStatus = { linked: boolean; roleSentVersion?: number; guideVersion?: number; lastSyncAt?: string | null };
 
 /** Tautan karakter ke AK Talent: buat kode sekali pakai, lalu tempel di AK Talent (Pengaturan → HeyTalent). */
 export function CharacterAkTalentSection({ characterId, characterName }: { characterId: string; characterName: string }) {
@@ -69,23 +69,24 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
     }
   }
 
-  async function applyPackage() {
+  async function sendRole() {
     if (busy) return;
-    if (!window.confirm(`Terapkan paket AK Talent ke ${characterName}? Bible, kepribadian, bio, dan peran akan diganti dengan isi paket.`)) return;
+    if (!window.confirm(`Kirim Bible peran ${characterName} ke AK Talent? Isinya Bible, kepribadian, sapaan, peran, dan keahlian. Catatan hubungan pemilik dan memori tidak ikut. Di AK Talent, kamu yang memutuskan menerapkannya.`)) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      const res = await fetch("/api/integrations/aktalent/apply", {
+      const res = await fetch("/api/integrations/aktalent/send-role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || "Gagal menerapkan paket.");
-      setNotice("Paket diterapkan. Muat ulang halaman agar tampilan karakter diperbarui.");
+      if (!res.ok) throw new Error(data?.error || "Gagal mengirim Bible peran.");
+      setNotice(`Terkirim (versi ${data.version}). Buka AK Talent → Pengaturan → HeyTalent untuk menerapkannya.`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menerapkan paket.");
+      setError(err instanceof Error ? err.message : "Gagal mengirim Bible peran.");
     } finally {
       setBusy(false);
     }
@@ -97,23 +98,19 @@ export function CharacterAkTalentSection({ characterId, characterName }: { chara
     <section className="rounded-2xl border border-accent/30 dark:border-accent/35 bg-accent/10 p-3.5">
       <h4 className="text-sm font-semibold text-accent-text">Tautan AK Talent</h4>
       <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-        Hubungkan {characterName} ke AK Talent agar karakter yang sama dipakai di kedua aplikasi. Buat kode di sini, lalu tempel di
-        AK Talent (Pengaturan → HeyTalent).
+        Hubungkan {characterName} ke AK Talent. Hasil pelatihan komunikasimu di sini bisa dikirim ke AK Talent sebagai Bible peran, dan AK Talent memberi {characterName} panduan cara menyusun draf proyek. Buat kode di sini, lalu tempel di AK Talent (Pengaturan → HeyTalent).
       </p>
       {status?.linked ? (
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-soft">
           <span>
             Tertaut ke AK Talent
-            {status.version
-              ? ` · paket versi ${status.version}${(status.appliedVersion ?? 0) >= status.version ? " (sudah diterapkan)" : " (belum diterapkan)"}`
-              : " · menunggu paket pertama"}
+            {status.roleSentVersion ? ` · Bible peran terkirim (versi ${status.roleSentVersion})` : " · Bible peran belum dikirim"}
+            {status.guideVersion ? ` · panduan AK Talent v${status.guideVersion}` : ""}
           </span>
           <span className="flex shrink-0 gap-2">
-            {status.version && (status.appliedVersion ?? 0) < status.version && (
-              <button type="button" onClick={applyPackage} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
-                Terapkan
-              </button>
-            )}
+            <button type="button" onClick={sendRole} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
+              Kirim Bible peran
+            </button>
             <button type="button" onClick={unlink} disabled={busy} className="rounded-xl border border-accent/30 px-3 py-1.5 text-xs disabled:opacity-50">
               Putuskan
             </button>

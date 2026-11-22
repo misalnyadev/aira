@@ -48,6 +48,8 @@ export type MemoryPromptContext = {
   voiceNoteReply?: boolean;
   /** Konteks Papan "Catatan & Janji Kita" (rencana, ide naskah, link, & target ber-tanggal). */
   sharedNotesBlock?: string;
+  /** Panduan aturan & fitur AK Talent (dari tautan AK Talent) agar talent tahu cara menyusun draf proyek. */
+  akTalentGuideBlock?: string;
   /** Aktivitas & suasana harian karakter saat ini mengikuti jam WIB (untuk konsistensi status). */
   dailyPresence?: string;
 };
@@ -163,6 +165,12 @@ ${extras.recalledArchive.trim()}
     blocks.push(`=== PAPAN "CATATAN & JANJI KITA" ===
 ${extras.sharedNotesBlock.trim()}
 === AKHIR PAPAN CATATAN ===`);
+  }
+
+  if (extras.akTalentGuideBlock?.trim()) {
+    blocks.push(`=== PANDUAN AK TALENT (menyusun draf proyek) ===
+${extras.akTalentGuideBlock.trim()}
+=== AKHIR PANDUAN AK TALENT ===`);
   }
 
   if (extras.dailyPresence?.trim()) {

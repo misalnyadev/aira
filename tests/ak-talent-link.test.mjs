@@ -33,15 +33,23 @@ test('kontrak: tanda tangan HeyTalent identik dengan sisi AK Talent', async () =
   assert.equal(h['X-Signature'], signRequest('s'.repeat(40), 'DELETE', '/api/integrations/aktalent/link', '{"a":1}', 1_700_000_000, 'n1n1n1n1n1n1'));
 });
 
-test('paket komunikasi: hanya skema dan akPubId yang cocok, dibersihkan dan dibatasi', async () => {
-  const { parseCommPackage } = await import('../src/lib/akTalentLink.ts');
-  const base = { schema: 'ak-comm-package/1', akPubId: 'p1', version: 3, updatedAt: '2026-11-22T00:00:00Z', shared: ['voice'], character: { personality: ' ramah\u0000 ', shortBio: 'x'.repeat(500), teamRole: 'Dev', bibleComm: 'B'.repeat(30000), bibleFull: null } };
-  const p = parseCommPackage(base, 'p1');
-  assert.equal(p.version, 3); assert.equal(p.character.personality, 'ramah'); assert.equal(p.character.shortBio.length, 120); assert.equal(p.character.bible.length, 24000);
-  assert.equal(parseCommPackage(base, 'lain'), null);
-  assert.equal(parseCommPackage({ ...base, schema: 'x' }, 'p1'), null);
-  assert.equal(parseCommPackage({ ...base, version: 0 }, 'p1'), null);
-  assert.equal(parseCommPackage({ ...base, character: { personality: '', bibleComm: '' } }, 'p1'), null);
-  assert.equal(parseCommPackage({ ...base, character: { personality: 'a', bibleComm: 'kecil', bibleFull: 'penuh' } }, 'p1').character.bible, 'penuh');
-  assert.equal(parseCommPackage(null, 'p1'), null);
+test('panduan AK Talent: skema, akPubId, versi, dan panjang diperiksa', async () => {
+  const { parseGuide } = await import('../src/lib/akTalentLink.ts');
+  const base = { schema: 'ak-guide/1', akPubId: 'p1', version: 2, text: 'Aturan draf proyek. '.repeat(10) };
+  assert.equal(parseGuide(base, 'p1').version, 2);
+  assert.equal(parseGuide(base, 'lain'), null);
+  assert.equal(parseGuide({ ...base, schema: 'x' }, 'p1'), null);
+  assert.equal(parseGuide({ ...base, version: 0 }, 'p1'), null);
+  assert.equal(parseGuide({ ...base, text: 'pendek' }, 'p1'), null);
+  assert.equal(parseGuide({ ...base, text: 'a'.repeat(9000) }, 'p1').text.length, 6000);
+});
+
+test('paket peran: hanya bagian komunikasi, tanpa hubungan pemilik dan catatan tim', async () => {
+  const { buildRolePackage } = await import('../src/lib/akTalentLink.ts');
+  const row = { name: 'Musthzen', shortBio: 'x'.repeat(300), personality: 'Karismatik', greeting: 'Yo kawan', teamRole: 'Lead', skillPortfolio: JSON.stringify([{ title: 'IT', description: 'bantu' }, { title: '', description: 'tanpa judul' }]), bible: 'BIBLE', ownerRelationship: 'RAHASIA', sharedTeamMemory: 'TIM' };
+  const p = buildRolePackage('pub1', 4, row);
+  assert.equal(p.schema, 'ht-role-package/1'); assert.equal(p.akPubId, 'pub1'); assert.equal(p.version, 4);
+  assert.equal(p.character.shortBio.length, 120); assert.equal(p.character.skillPortfolio.length, 1); assert.equal(p.character.bible, 'BIBLE');
+  assert.ok(!JSON.stringify(p).includes('RAHASIA') && !JSON.stringify(p).includes('TIM'));
+  assert.equal(buildRolePackage('p', 1, { ...row, skillPortfolio: 'rusak' }).character.skillPortfolio.length, 0);
 });

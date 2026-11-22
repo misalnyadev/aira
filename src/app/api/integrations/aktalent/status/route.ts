@@ -16,8 +16,8 @@ export async function GET(request: Request) {
   const characterId = String(new URL(request.url).searchParams.get("characterId") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(characterId) || !(await findOwnedCharacter(characterId, user.id)))
     return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
-  const r = await db.execute(sql`SELECT applied_version, package_applied_version, shared, last_sync_at FROM character_links WHERE character_id = ${characterId} AND status = 'active' LIMIT 1`);
-  const row = r.rows[0] as { applied_version: number; package_applied_version: number; shared: string; last_sync_at: string | null } | undefined;
+  const r = await db.execute(sql`SELECT role_sent_version, ak_guide_version, last_sync_at FROM character_links WHERE character_id = ${characterId} AND status = 'active' LIMIT 1`);
+  const row = r.rows[0] as { role_sent_version: number; ak_guide_version: number; last_sync_at: string | null } | undefined;
   if (!row) return NextResponse.json({ linked: false });
-  return NextResponse.json({ linked: true, version: row.applied_version, appliedVersion: row.package_applied_version, shared: row.shared.split(",").filter(Boolean), lastSyncAt: row.last_sync_at });
+  return NextResponse.json({ linked: true, roleSentVersion: row.role_sent_version, guideVersion: row.ak_guide_version, lastSyncAt: row.last_sync_at });
 }

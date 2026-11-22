@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiProviders, characters, messages, users, type ProviderType } from "@/db/schema";
 import {
@@ -400,8 +400,16 @@ export async function generateBubbles({
         },
         new Date()
       );
+  // Panduan AK Talent hanya ada bila karakter ini tertaut; kegagalan membacanya tidak boleh mengganggu chat.
+  let akTalentGuideBlock = "";
+  try {
+    const g = await db.execute(sql`SELECT ak_guide FROM character_links WHERE character_id = ${character.id} AND status = 'active' AND ak_guide IS NOT NULL LIMIT 1`);
+    akTalentGuideBlock = String((g.rows[0] as { ak_guide?: string } | undefined)?.ak_guide ?? "");
+  } catch {
+    akTalentGuideBlock = "";
+  }
   const mergedExtras: MemoryPromptContext | undefined =
-    memoryExtras || sceneAnchor || callMode || interactionMode || meetupExpressionMode || dailyPresence
+    memoryExtras || sceneAnchor || callMode || interactionMode || meetupExpressionMode || dailyPresence || akTalentGuideBlock
       ? {
           ...memoryExtras,
           ...(sceneAnchor ? { sceneAnchor } : {}),
@@ -412,6 +420,7 @@ export async function generateBubbles({
           interactionMode,
           ...(meetupExpressionMode ? { meetupExpressionMode: true } : {}),
           dailyPresence,
+          ...(akTalentGuideBlock ? { akTalentGuideBlock } : {}),
         }
       : undefined;
 
