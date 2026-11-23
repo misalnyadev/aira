@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { apiProviders, characters, messages, users, type ProviderType } from "@/db/schema";
+import { apiProviders, characters, contactMessages, messages, users, type ProviderType } from "@/db/schema";
 import {
   AiProviderError,
   BUBBLE_DELIMITER,
@@ -910,7 +910,7 @@ export function parseAkTalentDraftJson(text: string): AkTalentDraft | null {
 }
 
 /**
- * Susun draf proyek untuk AK Talent dari obrolan terbaru karakter dengan pemiliknya.
+ * Susun draf proyek untuk AK Talent dari obrolan di menu Panggilan antara klien (pengundang lewat PIN) dan karakter.
  * Hasilnya hanya usulan; pemilik memeriksa dan mengirimnya sendiri.
  */
 export async function generateAkTalentDraft({
@@ -918,26 +918,30 @@ export async function generateAkTalentDraft({
   character,
   candidates,
   guide,
+  contactId,
+  clientName,
 }: {
   userId: string;
   character: Character;
   candidates: Provider[];
   guide: string;
+  contactId: string;
+  clientName: string;
 }): Promise<AkTalentDraft> {
   const rows = await db
-    .select({ role: messages.role, content: messages.content })
-    .from(messages)
-    .where(eq(messages.characterId, character.id))
-    .orderBy(desc(messages.createdAt))
+    .select({ kind: contactMessages.senderKind, content: contactMessages.content })
+    .from(contactMessages)
+    .where(eq(contactMessages.contactId, contactId))
+    .orderBy(desc(contactMessages.createdAt))
     .limit(60);
   const transcript = rows
     .reverse()
     .filter((m) => m.content.trim())
-    .map((m) => `${m.role === "user" ? "Pemilik" : character.name}: ${m.content.trim().slice(0, 700)}`)
+    .map((m) => `${m.kind === "guest" ? clientName || "Klien" : character.name}: ${m.content.trim().slice(0, 700)}`)
     .join("\n");
-  if (transcript.length < 40) throw new AiProviderError("Belum ada obrolan yang cukup untuk dijadikan draf.");
+  if (transcript.length < 40) throw new AiProviderError("Belum ada obrolan klien yang cukup untuk dijadikan draf.");
 
-  const systemPrompt = `Kamu merangkum obrolan menjadi DRAF proyek untuk AK Talent. Kamu bukan karakter dalam tugas ini; jangan berperan.
+  const systemPrompt = `Kamu merangkum obrolan klien dengan talent menjadi DRAF proyek untuk AK Talent. Kamu bukan karakter dalam tugas ini; jangan berperan.
 ${guide.trim() ? `Aturan AK Talent:\n${guide.trim()}\n` : ""}
 Aturan keluaran:
 - Gunakan hanya hal yang benar-benar dibicarakan. Jangan mengarang anggaran, tenggat, harga, atau janji.

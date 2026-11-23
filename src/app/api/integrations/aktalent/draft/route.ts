@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { characterContacts, users } from "@/db/schema";
+import { effectiveContactState } from "@/lib/contactPin";
 import { requireUser } from "@/lib/auth";
 import { toUserFacingError } from "@/lib/ai";
 import {
@@ -21,17 +23,25 @@ export const maxDuration = 60;
 
 /**
  * Draf proyek untuk AK Talent.
- * action "generate": model menyusun usulan dari obrolan (tidak dikirim ke mana pun).
+ * action "generate": model menyusun usulan dari obrolan klien di menu Panggilan (tidak dikirim ke mana pun).
  * action "send": pemilik mengirim draf yang sudah ia periksa; di AK Talent masuk ke Pesanan dan menunggu keputusan pemilik di sana.
  */
 export async function POST(request: Request) {
   await ensureDb();
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Kamu belum masuk. Muat ulang halaman lalu masuk lagi." }, { status: 401 });
-  const body = (await request.json().catch(() => null)) as { characterId?: string; action?: string; brief?: unknown } | null;
-  const characterId = String(body?.characterId ?? "");
-  const character = /^[0-9a-f-]{36}$/i.test(characterId) ? await findOwnedCharacter(characterId, user.id) : null;
+  const body = (await request.json().catch(() => null)) as { contactId?: string; action?: string; brief?: unknown } | null;
+  const contactId = String(body?.contactId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(contactId)) return NextResponse.json({ error: "Pilih obrolan klien di menu Panggilan." }, { status: 400 });
+  const [contact] = await db.select().from(characterContacts).where(eq(characterContacts.id, contactId)).limit(1);
+  if (!contact || contact.ownerUserId !== user.id || effectiveContactState(contact.adminStatus, contact.ownerStatus) !== "active") {
+    return NextResponse.json({ error: "Obrolan klien tidak ditemukan atau belum aktif." }, { status: 404 });
+  }
+  const character = await findOwnedCharacter(contact.characterId, user.id);
   if (!character) return NextResponse.json({ error: "Karakter tidak ditemukan." }, { status: 404 });
+  const [guest] = await db.select({ displayName: users.displayName, nickname: users.nickname }).from(users).where(eq(users.id, contact.guestUserId)).limit(1);
+  const clientName = String(guest?.displayName || guest?.nickname || "").trim().slice(0, 60);
+  const characterId = character.id;
   const r = await db.execute(sql`SELECT id, secret, ak_pub_id, ak_base, ak_guide FROM character_links WHERE character_id = ${characterId} AND status = 'active' LIMIT 1`);
   const link = r.rows[0] as { id: string; secret: string; ak_pub_id: string; ak_base: string | null; ak_guide: string | null } | undefined;
   if (!link) return NextResponse.json({ error: "Karakter belum tertaut ke AK Talent." }, { status: 409 });
@@ -41,7 +51,7 @@ export async function POST(request: Request) {
     const candidates = await pickProviderCandidates(user.id, character.providerId, autoFallback);
     if (!candidates.length) return NextResponse.json({ error: NO_PROVIDER_ERROR }, { status: 412 });
     try {
-      const draft = await generateAkTalentDraft({ userId: user.id, character, candidates, guide: link.ak_guide ?? "" });
+      const draft = await generateAkTalentDraft({ userId: user.id, character, candidates, guide: link.ak_guide ?? "", contactId, clientName });
       return NextResponse.json({ draft });
     } catch (err) {
       return NextResponse.json({ error: toUserFacingError(err) }, { status: 502 });
@@ -55,9 +65,9 @@ export async function POST(request: Request) {
       schema: "ht-call-order/1",
       callId: crypto.randomUUID(),
       akPubId: link.ak_pub_id,
-      type: "chat",
+      type: "panggilan",
       occurredAt: new Date().toISOString(),
-      from: { displayName: String((user as { displayName?: string }).displayName ?? "").slice(0, 60) },
+      from: { displayName: clientName },
       brief,
     };
     const bodyStr = JSON.stringify(payload);

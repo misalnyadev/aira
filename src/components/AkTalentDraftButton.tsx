@@ -6,11 +6,11 @@ type Draft = { title: string; summary: string; requirements: string; budget: str
 const EMPTY: Draft = { title: "", summary: "", requirements: "", budget: "", deadline: "" };
 
 /**
- * Tombol "Susun draf AK Talent" di ruang chat. Hanya tampil bila karakter sudah tertaut.
+ * Tombol "Susun draf AK Talent" di obrolan menu Panggilan (klien yang masuk lewat PIN undangan). Hanya tampil bila karakter sudah tertaut.
  * Model menyusun usulan dari obrolan; pemilik memeriksa lalu mengirim. Di AK Talent draf masuk
  * ke Pesanan dan baru jadi proyek setelah pemilik menerimanya di sana.
  */
-export function AkTalentDraftButton({ characterId, characterName }: { characterId: string; characterName: string }) {
+export function AkTalentDraftButton({ characterId, contactId, characterName, clientName }: { characterId: string; contactId: string; characterName: string; clientName?: string }) {
   const [linked, setLinked] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -36,7 +36,7 @@ export function AkTalentDraftButton({ characterId, characterName }: { characterI
     const res = await fetch("/api/integrations/aktalent/draft", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ characterId, ...body }),
+      body: JSON.stringify({ contactId, ...body }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(String(data.error || "Gagal. Coba lagi."));
@@ -117,7 +117,7 @@ export function AkTalentDraftButton({ characterId, characterName }: { characterI
                 Draf terkirim. Buka AK Talent → Pesanan, lalu terima untuk menjadikannya Project berstatus Brief.
               </p>
             ) : busy && !draft.title && !error ? (
-              <p className="text-sm text-ink/70">{characterName} sedang menyusun draf dari obrolan kalian…</p>
+              <p className="text-sm text-ink/70">{characterName} sedang menyusun draf dari obrolan{clientName ? ` dengan ${clientName}` : ""}…</p>
             ) : (
               <>
                 <p className="text-xs text-ink/60">Periksa dan ubah dulu. Tidak ada yang terkirim sebelum kamu menekan Kirim.</p>

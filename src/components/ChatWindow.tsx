@@ -1001,7 +1001,14 @@ export function ChatWindow({
           </div>
         )}
 
-        {!hideMessages && <AkTalentDraftButton characterId={character.id} characterName={character.name} />}
+        {!hideMessages && character.threadKind === "owner_contact" && character.contactId && character.sourceCharacterId && (
+          <AkTalentDraftButton
+            characterId={character.sourceCharacterId}
+            contactId={character.contactId}
+            characterName={character.contactCharacterName || character.name}
+            clientName={character.partnerName}
+          />
+        )}
         {!hideMessages && !atBottom && onOpenNotes && (
           <div
             className="pointer-events-none absolute inset-x-0 z-20 px-3 sm:px-4"
